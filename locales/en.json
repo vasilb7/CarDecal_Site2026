@@ -1,0 +1,257 @@
+{
+  "nav": {
+    "models": "Models",
+    "about": "About",
+    "services": "Services",
+    "pricing": "Pricing",
+    "contact": "Contact",
+    "book_now": "Book Now",
+    "comp_card": "Comp Card",
+    "follow": "Follow",
+    "feed": "Feed",
+    "login": "Login",
+    "register": "Register"
+  },
+  "services": {
+    "title": "Professional Services",
+    "subtitle": "A full-service approach to creating exceptional fashion and commercial content.",
+    "list": {
+      "casting": {
+        "name": "Casting & Talent Booking",
+        "focus": "Fast, curated luxury talent",
+        "description": "We streamline the casting process, providing a curated selection of elite talent perfectly matched to your project's creative vision and brand identity. Our extensive network ensures access to the industry's most sought-after and emerging faces."
+      },
+      "production": {
+        "name": "Campaign Production Support",
+        "focus": "End-to-end execution",
+        "description": "Beyond talent, we offer comprehensive production support. From location scouting and crew assembly to logistics and on-set management, our team ensures a seamless execution of your campaign from concept to completion."
+      },
+      "creative": {
+        "name": "Creative Direction",
+        "focus": "Editorial-level aesthetics",
+        "description": "Collaborate with our in-house creative experts to develop and refine your campaign's aesthetic. We provide art direction, mood boarding, and styling consultation to ensure your vision is realized with sophistication and impact."
+      }
+    }
+  },
+  "home": {
+    "hero_title": "VB Models",
+    "hero_subtitle": "Editorial talent. Luxury presence.",
+    "explore_models": "View Models",
+    "apply_book": "Apply / Book",
+    "featured_spotlight": "Agency's Finest",
+    "top_model": "Top Model",
+    "model_view": "Model View",
+    "lookbook_showcase": "Lookbook Showcase",
+    "our_services": "Our Services",
+    "ready_to_create": "Ready to Create?",
+    "connect_with_us": "Connect with us to find the perfect talent for your next project.",
+    "book_model": "Book a Model",
+    "join_vb": "Join VB",
+    "learn_more": "Learn More",
+    "pamela": {
+      "desc1": "As the crowning jewel of VB Models, Pamela Nelson represents the absolute pinnacle of editorial elegance. With a magnetic presence that dominates the lens, she has become our most requested talent for high-fashion campaigns.",
+      "desc2": "A veteran of the runway and a favorite of avant-garde designers, Pamela has claimed victory on multiple international stages, redefining what it means to be a modern muse. Her portfolio is not just a collection of images—it is a testament to versatility, poise, and an unyielding dedication to the art of modeling.",
+      "view_portfolio": "View Full Portfolio",
+      "projects": "Projects",
+      "awards": "Awards"
+    }
+  },
+  "about": {
+    "title": "The Vision Behind VB",
+    "subtitle": "We are more than a model agency; we are curators of iconic talent and architects of luxury presence.",
+    "brand_title": "Brand Statement",
+    "brand_p1": "VB Models operates at the intersection of high fashion and high art. We represent a meticulously selected roster of talent who not only define trends but also embody the essence of modern luxury. Our commitment is to elevate brands by providing faces that tell a story, evoke emotion, and create unforgettable campaigns.",
+    "brand_p2": "Our approach is bespoke, our standards are exacting, and our vision is global. We connect the world's most prestigious brands with talent that possesses a rare combination of editorial appeal and commercial viability.",
+    "values_title": "Our Values",
+    "value1_title": "Exclusivity:",
+    "value1_desc": "We champion unique, undeniable talent. Quality over quantity is the cornerstone of our roster.",
+    "value2_title": "Professionalism:",
+    "value2_desc": "Integrity, reliability, and excellence are at the heart of every interaction and booking.",
+    "value3_title": "Partnership:",
+    "value3_desc": "We build lasting relationships with our models and clients, fostering careers and brand growth with strategic guidance.",
+    "join_title": "Join the Vision",
+    "join_subtitle": "Let's shape the future of fashion together."
+  },
+  "footer": {
+    "rights": "All rights reserved.",
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Service",
+    "navigate": "Navigate",
+    "connect": "Connect"
+  },
+  "models": {
+    "title": "Our Talent",
+    "search_placeholder": "Search by name...",
+    "all_categories": "All Categories",
+    "all_locations": "All Locations",
+    "all_hair": "All Hair Colors",
+    "all_eyes": "All Eye Colors",
+    "all": "All",
+    "no_matches": "No models match the current criteria.",
+    "view_profile": "View Profile"
+  },
+  "pricing": {
+    "title": "Client Services",
+    "subtitle": "Choose the level of casting and production support that fits your brand's campaign needs.",
+    "scouting": "Scout",
+    "casting": "Casting",
+    "campaign": "Campaign",
+    "basic": "Basic",
+    "standard": "Standard",
+    "custom": "Custom",
+    "for_indie": "For Photographers & Indie Brands",
+    "for_commercial": "For Commercial Campaigns",
+    "for_global": "For Global Brands & Editorials",
+    "cta_browse": "Browse Models",
+    "cta_start": "Start Casting",
+    "cta_contact": "Contact Director",
+    "benefits": {
+      "new_faces": "Access to New Faces",
+      "online_booking": "Online Booking Requests",
+      "response_24h": "24h Response Time",
+      "casting_reels": "Video Casting Reels",
+      "dedicated_agent": "Dedicated Agent",
+      "usage_rights": "Usage Rights Negotiation",
+      "mainboard": "Access to Mainboard & Talent",
+      "priority_booking": "Priority Booking Support",
+      "response_4h": "4h Response Time",
+      "production_logistics": "Production Logistics",
+      "full_database": "Full Database Access + Scouting",
+      "priority_247": "24/7 Priority Support",
+      "wholistic_rights": "Wholistic Usage Rights Mgmt",
+      "producer": "On-set Producer",
+      "travel": "Travel & Logistics Handling",
+      "creative_consult": "Creative Direction Consult"
+    }
+  },
+  "contact": {
+    "title": "Contact Us",
+    "subtitle": "We look forward to hearing from you.",
+    "tabs": {
+      "booking": "Booking Inquiry",
+      "application": "Model Application"
+    },
+    "booking": {
+      "full_name": "Full Name",
+      "name_placeholder": "Jane Doe",
+      "email_address": "Email Address",
+      "email_placeholder": "jane.doe@example.com",
+      "brand": "Brand or Agency",
+      "brand_placeholder": "Your Company Name",
+      "project_date": "Project Date",
+      "project_location": "Project Location",
+      "location_placeholder": "e.g., New York, NY",
+      "budget": "Budget Range",
+      "budget_select": "Select a range",
+      "message": "Message",
+      "message_placeholder": "Tell us about your project...",
+      "submit": "Submit Inquiry"
+    },
+    "application": {
+      "full_name": "Full Name",
+      "name_placeholder": "Your Name",
+      "email_address": "Email Address",
+      "email_placeholder": "your.email@example.com",
+      "age": "Age",
+      "age_placeholder": "18",
+      "height": "Height (cm/ft)",
+      "height_placeholder": "e.g., 5'11\" or 180cm",
+      "location": "Current Location",
+      "location_placeholder": "City, Country",
+      "portfolio": "Portfolio Link",
+      "portfolio_placeholder": "https://yourportfolio.com or Instagram",
+      "note": "Please include a link to your portfolio with clear, recent photos (including digitals). We do not accept DMs.",
+      "submit": "Submit Application"
+    },
+    "offices": {
+      "title": "Our Offices",
+      "sofia": {
+        "city": "Sofia",
+        "address": "15 Ekzarh Yosif St, 1000 Center"
+      },
+      "london": {
+        "city": "London",
+        "address": "180 The Strand, London WC2R 1EA"
+      }
+    },
+    "info": {
+      "title": "Contact Information",
+      "general": "General Inquiries",
+      "press": "Press & Media",
+      "booking": "Booking",
+      "hours": "Operating Hours",
+      "work_days": "Mon - Fri: 09:00 - 18:00",
+      "weekend": "Sat - Sun: Closed"
+    },
+    "socials": {
+      "title": "Follow Us",
+      "instagram": "@vb_models_global",
+      "twitter": "@vbmodels",
+      "linkedin": "VB Models Agency"
+    }
+  },
+  "profile": {
+    "not_found": "Model not found.",
+    "follow": "Follow",
+    "post_mobile": "Post",
+    "reply": "Reply",
+    "post_comment": "Post",
+    "add_comment": "Add a comment...",
+    "likes": "likes",
+    "days_ago": "2 DAYS AGO",
+    "about_title": "About",
+    "height": "Height",
+    "measurements": "Measurements",
+    "hair_color": "Hair Color",
+    "eye_color": "Eye Color",
+    "location": "Location",
+    "availability": "Availability",
+    "available": "Available",
+    "unavailable": "Unavailable",
+    "book_now": "Book Now",
+    "comp_card": "Comp Card",
+    "feed": "Feed"
+  },
+  "filter_values": {
+    "Editorial": "Editorial",
+    "Runway": "Runway",
+    "Commercial": "Commercial",
+    "Beauty": "Beauty",
+    "Lifestyle": "Lifestyle",
+    "London": "London",
+    "New York": "New York",
+    "Paris": "Paris",
+    "Milan": "Milan",
+    "Tokyo": "Tokyo",
+    "Blonde": "Blonde",
+    "Brunette": "Brunette",
+    "Dark Brown": "Dark Brown",
+    "Brown": "Brown",
+    "Red": "Red",
+    "Blue": "Blue",
+    "Green": "Green",
+    "Hazel": "Hazel"
+  },
+  "auth": {
+    "login_title": "Welcome Back",
+    "login_subtitle": "Access your profile and bookings",
+    "register_title": "Join Us",
+    "register_subtitle": "Create your account at VB Models",
+    "email": "Email Address",
+    "password": "Password",
+    "full_name": "Full Name",
+    "remember_me": "Remember me",
+    "forgot_password": "Forgot password?",
+    "sign_in": "Sign In",
+    "create_account": "Create Account",
+    "continue_with_google": "Google",
+    "or_continue_with": "Or continue with",
+    "already_have_account": "Already have an account?",
+    "dont_have_account": "Don't have an account?",
+    "login_now": "Log In now",
+    "register_now": "Register Now",
+    "terms": "I agree to the",
+    "terms_link": "Terms & Conditions",
+    "keep_signed_in": "Keep me signed in"
+  }
+}
