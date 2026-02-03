@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, Link, useSearchParams, useNavigate } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useModels } from '../hooks/useModels';
-import { GridIcon, UserCircleIcon, PinIcon, CloseIcon, HeartIcon, ChatBubbleIcon, BookmarkIcon, PaperAirplaneIcon, MoreHorizontalIcon, EmojiIcon } from '../components/IconComponents';
+import { GridIcon, PinIcon, CloseIcon, HeartIcon, ChatBubbleIcon, BookmarkIcon, PaperAirplaneIcon, MoreHorizontalIcon, EmojiIcon, VerifiedIcon } from '../components/IconComponents';
 import StoryViewer from '../components/StoryViewer';
 import type { Post, Highlight, Model } from '../types';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -17,6 +17,22 @@ const ImageLightbox: React.FC<{ post: Post; index: number; total: number; model:
     
     const [isLiked, setIsLiked] = useState(false);
     const [isZoomed, setIsZoomed] = useState(false);
+    const [showHeart, setShowHeart] = useState(false);
+    const lastTap = useRef<number>(0);
+
+    const handleDoubleTap = (e: React.MouseEvent | React.TouchEvent) => {
+        const now = Date.now();
+        if (now - lastTap.current < 300) {
+            handleLike();
+        }
+        lastTap.current = now;
+    };
+
+    const handleLike = () => {
+        setIsLiked(true);
+        setShowHeart(true);
+        setTimeout(() => setShowHeart(false), 1000);
+    };
 
     const setCurrentImageIndex = (newIndex: number | ((prev: number) => number)) => {
         const nextIdx = typeof newIndex === 'function' ? newIndex(currentImageIndex) : newIndex;
@@ -27,7 +43,20 @@ const ImageLightbox: React.FC<{ post: Post; index: number; total: number; model:
         }, { replace: true });
     };
 
-    // Lock body scroll
+    const nextPost = (e?: React.MouseEvent) => {
+        e?.stopPropagation();
+        const currentIndex = model.posts.findIndex(p => p.id === post.id);
+        const nextIdx = (currentIndex + 1) % model.posts.length;
+        setSearchParams({ post: model.posts[nextIdx].id, img: '0' }, { replace: true });
+    };
+
+    const prevPost = (e?: React.MouseEvent) => {
+        e?.stopPropagation();
+        const currentIndex = model.posts.findIndex(p => p.id === post.id);
+        const prevIdx = (currentIndex - 1 + model.posts.length) % model.posts.length;
+        setSearchParams({ post: model.posts[prevIdx].id, img: '0' }, { replace: true });
+    };
+
     useEffect(() => {
         document.body.style.overflow = 'hidden';
         if (!searchParams.get('img')) {
@@ -42,9 +71,20 @@ const ImageLightbox: React.FC<{ post: Post; index: number; total: number; model:
         };
     }, [post.id]);
 
-    // Keyboard navigation
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') onClose();
+            
+            // Post-to-post navigation (Always active)
+            if (e.key === 'ArrowRight' && e.shiftKey) {
+                nextPost();
+                return;
+            } else if (e.key === 'ArrowLeft' && e.shiftKey) {
+                prevPost();
+                return;
+            }
+
+            // Image-to-image navigation (If images exist)
             if (!post.images || post.images.length <= 1) return;
             
             if (e.key === 'ArrowRight') {
@@ -58,9 +98,8 @@ const ImageLightbox: React.FC<{ post: Post; index: number; total: number; model:
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [post.images, currentImageIndex]);
+    }, [post.images, currentImageIndex, post.id]);
 
-    const stats = React.useMemo(() => getPostStats(post.id), [post.id]);
     const hasMultipleImages = post.images && post.images.length > 1;
     const currentSrc = hasMultipleImages && post.images ? post.images[currentImageIndex] : post.src;
 
@@ -106,8 +145,19 @@ const ImageLightbox: React.FC<{ post: Post; index: number; total: number; model:
         const diffY = swipeStartY.current - touch.clientY;
         
         if (scaleRef.current < 1.1 && Math.abs(diffX) > 60 && Math.abs(diffX) > Math.abs(diffY)) {
-            if (diffX > 0) nextImage(e as any);
-            else prevImage(e as any);
+            if (diffX > 0) {
+                if (hasMultipleImages && currentImageIndex < post.images!.length - 1) {
+                    nextImage(e as any);
+                } else {
+                    nextPost();
+                }
+            } else {
+                if (hasMultipleImages && currentImageIndex > 0) {
+                    prevImage(e as any);
+                } else {
+                    prevPost();
+                }
+            }
         } else if (scaleRef.current > 1.05) {
             transformRef.current?.resetTransform();
         }
@@ -152,11 +202,6 @@ const ImageLightbox: React.FC<{ post: Post; index: number; total: number; model:
                     className="flex-grow md:flex-grow relative bg-black flex items-center justify-center overflow-hidden h-auto min-h-[50vh] md:h-full md:basis-auto group w-full"
                     onTouchStart={handleTouchStart}
                     onTouchEnd={handleTouchEnd}
-                    onMouseUp={() => {
-                        if (scaleRef.current > 1.05) {
-                            transformRef.current?.resetTransform();
-                        }
-                    }}
                 >
                      <div 
                         className="absolute inset-0 bg-cover bg-center blur-3xl opacity-50 transition-all duration-500 scale-110 pointer-events-none"
@@ -172,27 +217,21 @@ const ImageLightbox: React.FC<{ post: Post; index: number; total: number; model:
                             minScale={1}
                             maxScale={4}
                             centerOnInit={true}
-                            wheel={{ step: 0.1 }}
-                            doubleClick={{ disabled: true }} 
-                            panning={{ velocityDisabled: false }}
-                            alignmentAnimation={{ sizeX: 0, sizeY: 0 }}
                             onTransformed={(e) => {
                                 scaleRef.current = e.state.scale;
                                 setIsZoomed(e.state.scale > 1);
                             }}
-                            onPanningStop={() => transformRef.current?.resetTransform()}
-                            onZoomStop={() => transformRef.current?.resetTransform()}
                         >
                             <TransformComponent 
                                 wrapperStyle={{ width: "100%", height: "100%" }}
                                 contentStyle={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}
                             >
                                 <div 
-                                    onClick={() => {
+                                    onClick={(e) => {
                                         if (isZoomed) {
                                             transformRef.current?.resetTransform();
                                         } else {
-                                            transformRef.current?.zoomIn(2, 0); 
+                                            handleDoubleTap(e);
                                         }
                                     }}
                                     className={`relative w-full h-full flex items-center justify-center ${isZoomed ? 'cursor-zoom-out' : 'cursor-zoom-in'}`}
@@ -204,37 +243,54 @@ const ImageLightbox: React.FC<{ post: Post; index: number; total: number; model:
                                         transition={{ duration: 0.2 }}
                                         src={currentSrc} 
                                         alt={post.caption} 
-                                        className="max-w-full max-h-full object-contain" 
+                                        className="max-w-full max-h-full w-auto h-auto object-contain select-none shadow-2xl" 
                                     />
+                                    
+                                    <AnimatePresence>
+                                        {showHeart && (
+                                            <motion.div
+                                                initial={{ scale: 0, opacity: 0 }}
+                                                animate={{ scale: [0, 1.5, 1], opacity: [0, 1, 0] }}
+                                                exit={{ scale: 0, opacity: 0 }}
+                                                transition={{ duration: 0.8 }}
+                                                className="absolute z-30 text-white pointer-events-none"
+                                            >
+                                                <HeartIcon className="w-24 h-24 fill-current text-white shadow-xl" filled={true} />
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
                                 </div>
                             </TransformComponent>
                         </TransformWrapper>
                     </div>
 
+                    {/* Post Navigation Arrows */}
+                    <button onClick={prevPost} className="absolute left-4 z-40 p-2 rounded-full bg-black/20 text-white hover:bg-black/40 transition-all hidden lg:flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-8 h-8">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+                        </svg>
+                    </button>
+                    <button onClick={nextPost} className="absolute right-4 z-40 p-2 rounded-full bg-black/20 text-white hover:bg-black/40 transition-all hidden lg:flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-8 h-8">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                        </svg>
+                    </button>
+
                     {hasMultipleImages && (
                         <>
-                            <button 
-                                onClick={prevImage}
-                                className="absolute left-3 z-20 p-1.5 rounded-full bg-white/70 hover:bg-white text-black transition-all hidden md:group-hover:flex items-center justify-center shadow-md"
-                            >
+                            <button onClick={prevImage} className="absolute left-16 z-20 p-1.5 rounded-full bg-white/70 hover:bg-white text-black transition-all hidden md:group-hover:flex items-center justify-center shadow-md">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
                                 </svg>
                             </button>
-                            <button 
-                                onClick={nextImage}
-                                className="absolute right-3 z-20 p-1.5 rounded-full bg-white/70 hover:bg-white text-black transition-all hidden md:group-hover:flex items-center justify-center shadow-md"
-                            >
+                            <button onClick={nextImage} className="absolute right-16 z-20 p-1.5 rounded-full bg-white/70 hover:bg-white text-black transition-all hidden md:group-hover:flex items-center justify-center shadow-md">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
                                 </svg>
                             </button>
                             <div className="absolute bottom-4 left-0 right-0 z-20 flex justify-center space-x-1.5 pointer-events-none">
                                 {post.images!.map((_, idx) => (
-                                    <div 
-                                        key={idx} 
-                                        className={`w-1.5 h-1.5 rounded-full shadow-sm transition-all ${idx === currentImageIndex ? 'bg-white scale-110' : 'bg-white/40'}`}
-                                    />
+                                    <div key={idx} className={`w-1.5 h-1.5 rounded-full shadow-sm transition-all ${idx === currentImageIndex ? 'bg-white scale-110' : 'bg-white/40'}`} />
                                 ))}
                             </div>
                         </>
@@ -244,13 +300,12 @@ const ImageLightbox: React.FC<{ post: Post; index: number; total: number; model:
                 <div className="flex flex-col bg-surface w-full md:w-[335px] lg:w-[400px] shrink-0 h-auto md:h-full md:border-l md:border-border">
                     <div className="hidden md:flex items-center justify-between p-3.5 border-b border-border shrink-0">
                         <div className="flex items-center space-x-3">
-                            <div className="relative cursor-pointer">
-                                <img src={model.avatar} alt={model.name} className="w-8 h-8 rounded-full object-cover ring-1 ring-border" />
-                            </div>
+                            <img src={model.avatar} alt={model.name} className="w-8 h-8 rounded-full object-cover ring-1 ring-border" />
                             <div className="flex items-center">
-                                <span className="font-semibold text-sm text-text-primary hover:opacity-70 cursor-pointer mr-2">{model.name}</span>
-                                <span className="text-xs text-text-muted mr-2">•</span>
-                                <button className="text-xs font-semibold text-gold-accent hover:text-white transition-colors">{t('profile.follow')}</button>
+                                <span className="font-semibold text-sm text-text-primary mr-1">{model.name}</span>
+                                {model.isVerified && <VerifiedIcon className="w-4 h-4" />}
+                                <span className="text-xs text-text-muted mx-2">•</span>
+                                <button className="text-xs font-semibold text-gold-accent">{t('profile.follow')}</button>
                             </div>
                         </div>
                         <button className="text-text-primary hover:opacity-60">
@@ -258,96 +313,31 @@ const ImageLightbox: React.FC<{ post: Post; index: number; total: number; model:
                         </button>
                     </div>
 
-                    <div className="md:hidden flex items-center justify-between p-3 shrink-0">
-                         <div className="flex items-center space-x-3">
-                            <img src={model.avatar} alt={model.name} className="w-8 h-8 rounded-full object-cover shrink-0 ring-1 ring-border" />
-                            <span className="font-semibold text-sm text-text-primary">{model.name}</span>
-                        </div>
-                        <button className="text-text-primary">
-                            <MoreHorizontalIcon className="w-5 h-5" />
-                        </button>
-                    </div>
-
-                    <div className="p-4 md:p-4 md:flex-1 md:overflow-y-auto custom-scrollbar space-y-5 pb-24 md:pb-4">
+                    <div className="p-4 md:flex-1 md:overflow-y-auto custom-scrollbar space-y-5 pb-24 md:pb-4">
                         <div className="flex items-start space-x-3">
                             <img src={model.avatar} alt={model.name} className="w-8 h-8 rounded-full object-cover shrink-0 hidden md:block" />
                             <div className="flex-1 text-sm">
                                 <p className="text-text-primary leading-tight">
-                                    <span className="font-semibold mr-2 hidden md:inline cursor-pointer hover:opacity-80">{model.name}</span>
+                                    <span className="font-semibold mr-1 hidden md:inline">{model.name}</span>
+                                    {model.isVerified && <VerifiedIcon className="w-3.5 h-3.5 inline-block mr-2 align-text-top" />}
                                     {post.caption}
                                 </p>
-                                <div className="mt-2 flex flex-wrap gap-1">
-                                    {post.tags.map(tag => (
-                                        <span key={tag} className="text-blue-200/80 text-xs">#{tag}</span>
-                                    ))}
-                                </div>
-                                <div className="mt-2 text-[10px] text-text-muted uppercase tracking-wide cursor-pointer">2d</div>
                             </div>
-                        </div>
-
-                        <div className="space-y-4">
-                             {stats.comments.map(comment => (
-                                <div key={comment.id} className="flex items-start space-x-3 group">
-                                    <div className={`w-8 h-8 rounded-full ${comment.avatarColor} shrink-0`} />
-                                    <div className="flex-1 text-sm">
-                                        <div className="flex items-baseline justify-between">
-                                            <p className="text-text-primary leading-tight">
-                                                <span className="font-semibold mr-2 cursor-pointer hover:opacity-80">{comment.user}</span>
-                                                {comment.text}
-                                            </p>
-                                        </div>
-                                        <div className="flex items-center text-[10px] text-text-muted mt-1.5 space-x-3">
-                                            <span className="cursor-pointer">{comment.time}</span>
-                                            <span className="font-semibold cursor-pointer hover:text-text-muted/70">{t('profile.reply')}</span>
-                                            <span className="cursor-pointer hover:text-text-primary group-hover:block hidden transition-colors">
-                                                 <MoreHorizontalIcon className="w-3 h-3" />
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <button className="text-xs text-text-muted hover:text-text-muted/50 pt-1">
-                                         <HeartIcon className="w-3 h-3" />
-                                    </button>
-                                </div>
-                            ))}
                         </div>
                     </div>
 
-                    <div className="p-4 border-t border-border shrink-0 bg-surface sticky bottom-0 z-20">
+                    <div className="p-4 border-t border-border bg-surface sticky bottom-0 z-20">
                         <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center space-x-4">
-                                <button 
-                                    onClick={() => setIsLiked(!isLiked)}
-                                    className={`${isLiked ? 'text-red-500 hover:text-red-600' : 'text-text-primary hover:text-text-muted/70'} transition-colors transform active:scale-125 duration-200`}
-                                >
+                                <button onClick={() => setIsLiked(!isLiked)} className={`${isLiked ? 'text-red-500' : 'text-text-primary'} transition-colors transform active:scale-125 duration-200`}>
                                     <HeartIcon className="w-6 h-6" filled={isLiked} />
                                 </button>
-                                <button className="text-text-primary hover:text-text-muted/70 transition-colors">
-                                    <ChatBubbleIcon className="w-6 h-6" />
-                                </button>
-                                <button className="text-text-primary hover:text-text-muted/70 transition-colors">
-                                    <PaperAirplaneIcon className="w-6 h-6" />
-                                </button>
+                                <button className="text-text-primary"><ChatBubbleIcon className="w-6 h-6" /></button>
+                                <button className="text-text-primary"><PaperAirplaneIcon className="w-6 h-6" /></button>
                             </div>
-                            <button className="text-text-primary hover:text-text-muted/70 transition-colors">
-                                    <BookmarkIcon className="w-6 h-6" />
-                            </button>
+                            <button className="text-text-primary"><BookmarkIcon className="w-6 h-6" /></button>
                         </div>
-                        <div className="mb-2">
-                            <p className="text-sm font-semibold text-text-primary cursor-pointer">{(stats.likes + (isLiked ? 1 : 0)).toLocaleString()} {t('profile.likes')}</p>
-                            <p className="text-[10px] text-text-muted uppercase mt-1 tracking-wide">{t('profile.days_ago')}</p>
-                        </div>
-                        
-                        <div className="border-t border-border mt-3 pt-3 flex items-center md:pb-1">
-                            <button className="text-text-primary mr-3 hover:opacity-70">
-                                <EmojiIcon className="w-6 h-6" />
-                            </button>
-                            <input 
-                                type="text" 
-                                placeholder={t('profile.add_comment')} 
-                                className="bg-transparent border-none text-sm text-text-primary placeholder-text-muted flex-grow focus:ring-0 px-0 outline-none"
-                            />
-                            <button className="text-gold-accent font-semibold text-sm opacity-100 hover:text-white transition-colors disabled:opacity-30">{t('profile.post_comment')}</button>
-                        </div>
+                        <p className="text-sm font-semibold text-text-primary">{(post.likes + (isLiked ? 1 : 0)).toLocaleString()} {t('profile.likes')}</p>
                     </div>
                 </div>
             </motion.div>
@@ -360,7 +350,9 @@ const ModelProfilePage: React.FC = () => {
     const { slug } = useParams<{ slug: string }>();
     const { getModelBySlug } = useModels();
     const model = getModelBySlug(slug || '');
+    
     const [activeTab, setActiveTab] = useState('feed');
+    const [sortBy, setSortBy] = useState<'recent' | 'popular'>('recent');
     const [searchParams, setSearchParams] = useSearchParams();
 
     const selectedPost = searchParams.get('post') 
@@ -368,63 +360,43 @@ const ModelProfilePage: React.FC = () => {
         : null;
 
     const [selectedHighlight, setSelectedHighlight] = useState<Highlight | null>(null);
-    const [viewedHighlights, setViewedHighlights] = useState<string[]>(() => {
-        const saved = localStorage.getItem('viewedHits');
-        return saved ? JSON.parse(saved) : [];
-    });
-
-    useEffect(() => {
-        localStorage.setItem('viewedHits', JSON.stringify(viewedHighlights));
-    }, [viewedHighlights]);
-
-    const markAsViewed = (id: string) => {
-        if (!viewedHighlights.includes(id)) {
-            setViewedHighlights(prev => [...prev, id]);
-        }
-    };
 
     if (!model) {
         return <div className="text-center py-20 text-text-muted">{t('profile.not_found')}</div>;
     }
-    
-    const pinnedPosts = model.posts.filter(p => p.pinned);
-    const regularPosts = model.posts.filter(p => !p.pinned);
-
-    const StatItem = ({ value, label }: { value: string; label: string }) => (
-        <div className="text-center">
-            <span className="block font-bold text-lg text-text-primary">{value}</span>
-            <span className="block text-sm text-text-muted uppercase tracking-wider">{label}</span>
-        </div>
-    );
 
     const renderFeed = () => {
-        const allPosts = pinnedPosts.concat(regularPosts);
+        const allPosts = [...model.posts].sort((a, b) => {
+            if (sortBy === 'popular') return b.likes - a.likes;
+            return new Date(b.date).getTime() - new Date(a.date).getTime();
+        });
+
         return (
-            <div className="grid grid-cols-3 gap-1">
-                {allPosts.map((post, index) => (
-                    <div 
-                        key={post.id} 
-                        className="relative aspect-square group cursor-pointer" 
-                        onClick={() => setSearchParams({ post: post.id })}
-                    >
-                        <img src={post.src} alt={post.caption} className="w-full h-full object-cover" />
-                        {post.pinned && <PinIcon className="absolute top-2 right-2 w-5 h-5 text-white/80" />}
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity hidden md:flex items-center justify-center gap-6">
-                            <div className="flex items-center text-white">
-                                <HeartIcon className="w-6 h-6 mr-2" />
-                                <span className="font-bold">{120 + index * 12}</span>
-                            </div>
-                             <div className="flex items-center text-white">
-                                <ChatBubbleIcon className="w-6 h-6 mr-2" />
-                                <span className="font-bold">{15 + index}</span>
+            <div className="space-y-6">
+                <div className="flex justify-center space-x-6 py-4 border-b border-border/50">
+                    <button onClick={() => setSortBy('recent')} className={`text-xs uppercase tracking-widest transition-colors ${sortBy === 'recent' ? 'text-gold-accent font-bold' : 'text-text-muted hover:text-text-primary'}`}>
+                        {t('profile.sort_recent', 'Най-нови')}
+                    </button>
+                    <button onClick={() => setSortBy('popular')} className={`text-xs uppercase tracking-widest transition-colors ${sortBy === 'popular' ? 'text-gold-accent font-bold' : 'text-text-muted hover:text-text-primary'}`}>
+                        {t('profile.sort_popular', 'Най-харесвани')}
+                    </button>
+                </div>
+
+                <div className="grid grid-cols-3 gap-1">
+                    {allPosts.map((post) => (
+                        <div key={post.id} className="relative aspect-square group cursor-pointer" onClick={() => setSearchParams({ post: post.id })}>
+                            <img src={post.src} alt={post.caption} className="w-full h-full object-cover" />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity hidden md:flex items-center justify-center gap-6">
+                                <div className="flex items-center text-white"><HeartIcon className="w-6 h-6 mr-2" /><span className="font-bold">{post.likes}</span></div>
+                                <div className="flex items-center text-white"><ChatBubbleIcon className="w-6 h-6 mr-2" /><span className="font-bold">{Math.floor(post.likes / 10)}</span></div>
                             </div>
                         </div>
-                    </div>
-                ))}
+                    ))}
+                </div>
             </div>
         );
     };
-    
+
     const renderAbout = () => (
         <div className="p-6 md:p-10 text-text-primary bg-surface">
             <h3 className="text-2xl font-serif mb-4">{t('profile.about_title')} {model.name}</h3>
@@ -434,7 +406,6 @@ const ModelProfilePage: React.FC = () => {
                 <div><span className="text-text-muted">{t('profile.hair_color')}:</span> {t(`filter_values.${model.hairColor}`, model.hairColor)}</div>
                 <div><span className="text-text-muted">{t('profile.eye_color')}:</span> {t(`filter_values.${model.eyeColor}`, model.eyeColor)}</div>
                 <div><span className="text-text-muted">{t('profile.location')}:</span> {t(`filter_values.${model.location}`, model.location)}</div>
-                <div><span className="text-text-muted">{t('profile.availability')}:</span> <span className={`${model.availability === 'Available' ? 'text-green-400' : 'text-orange-400'}`}>{model.availability === 'Available' ? t('profile.available') : t('profile.unavailable')}</span></div>
             </div>
         </div>
     );
@@ -444,63 +415,31 @@ const ModelProfilePage: React.FC = () => {
             <header className="px-4 md:px-0 py-8 flex flex-col md:flex-row items-center md:items-start">
                 <img src={model.avatar} alt={model.name} className="w-32 h-32 md:w-40 md:h-40 rounded-full object-cover border-2 border-border" />
                 <div className="md:ml-10 mt-6 md:mt-0 text-center md:text-left flex-grow">
-                    <h1 className="text-3xl md:text-4xl font-serif">{model.name}</h1>
+                    <div className="flex items-center justify-center md:justify-start">
+                        <h1 className="text-3xl md:text-4xl font-serif">{model.name}</h1>
+                        {model.isVerified && <VerifiedIcon className="w-6 h-6 ml-2 mt-1" />}
+                    </div>
                     <div className="mt-2 flex justify-center md:justify-start space-x-2">
                         {model.categories.map(cat => (
                             <span key={cat} className="text-sm bg-surface text-text-muted px-3 py-1 rounded-full">{t(`filter_values.${cat}`, cat)}</span>
                         ))}
                     </div>
-                    <div className="mt-6 hidden md:flex space-x-8">
-                        <StatItem value={model.height} label={t('profile.height')} />
-                        <StatItem value={model.measurements} label={t('profile.measurements')} />
-                        <StatItem value={t(`filter_values.${model.location}`, model.location)} label={t('profile.location')} />
-                    </div>
                     <p className="mt-6 text-sm text-text-muted max-w-lg mx-auto md:mx-0">{model.bio}</p>
-                    <div className="mt-6 flex justify-center md:justify-start space-x-4">
-                        <Link to="/contact" className="px-6 py-2 bg-gold-accent text-background text-sm uppercase tracking-widest hover:bg-opacity-90 transition-colors duration-300">{t('profile.book_now')}</Link>
-                        <button className="px-6 py-2 border border-text-muted text-text-muted text-sm uppercase tracking-widest hover:border-gold-accent hover:text-gold-accent transition-colors duration-300">{t('profile.comp_card')}</button>
-                    </div>
                 </div>
             </header>
             
-            <div className="flex md:hidden justify-around p-4 border-y border-border bg-surface my-6">
-                <StatItem value={model.height} label={t('profile.height')} />
-                <StatItem value={model.measurements} label={t('profile.measurements')} />
-                <StatItem value={t(`filter_values.${model.location}`, model.location)} label={t('profile.location')} />
-            </div>
-
-            <section className="px-4 md:px-0 py-6 flex space-x-4 overflow-x-auto border-b border-border no-scrollbar mt-4">
-                {model.highlights.map(h => {
-                    const isViewed = viewedHighlights.includes(h.id);
-                    return (
-                        <div key={h.id} className="flex-shrink-0 text-center w-20 cursor-pointer group" onClick={() => setSelectedHighlight(h)}>
-                            <div className={`w-16 h-16 mx-auto rounded-full p-0.5 border-2 ${isViewed ? 'border-neutral-700' : 'border-gold-accent'} group-hover:scale-105 transition-transform`}>
-                               <img src={h.coverImage} alt={h.name} className="w-full h-full object-cover rounded-full p-0.5 bg-background"/>
-                            </div>
-                            <span className={`block text-xs mt-2 transition-colors ${isViewed ? 'text-text-muted/50' : 'text-text-muted group-hover:text-text-primary'}`}>{h.name}</span>
-                        </div>
-                    );
-                })}
-            </section>
-            
             <div className="flex border-b border-border">
-                <button 
-                    className={`flex-1 py-4 text-sm font-medium tracking-widest uppercase transition-colors relative ${activeTab === 'feed' ? 'text-gold-accent' : 'text-text-muted hover:text-text-primary'}`}
-                    onClick={() => setActiveTab('feed')}
-                >
+                <button className={`flex-1 py-4 text-sm font-medium tracking-widest uppercase transition-colors relative ${activeTab === 'feed' ? 'text-gold-accent' : 'text-text-muted hover:text-text-primary'}`} onClick={() => setActiveTab('feed')}>
                     {t('profile.feed')} <span className="ml-1 opacity-50 text-[10px]">({model.posts.length})</span>
                     {activeTab === 'feed' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gold-accent" />}
                 </button>
-                <button 
-                    className={`flex-1 py-4 text-sm font-medium tracking-widest uppercase transition-colors relative ${activeTab === 'about' ? 'text-gold-accent' : 'text-text-muted hover:text-text-primary'}`}
-                    onClick={() => setActiveTab('about')}
-                >
+                <button className={`flex-1 py-4 text-sm font-medium tracking-widest uppercase transition-colors relative ${activeTab === 'about' ? 'text-gold-accent' : 'text-text-muted hover:text-text-primary'}`} onClick={() => setActiveTab('about')}>
                     {t('profile.about_title')}
                     {activeTab === 'about' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gold-accent" />}
                 </button>
             </div>
 
-            <div>
+            <div className="mt-4">
                 {activeTab === 'feed' && renderFeed()}
                 {activeTab === 'about' && renderAbout()}
             </div>
@@ -513,18 +452,13 @@ const ModelProfilePage: React.FC = () => {
                         index={model.posts.findIndex(p => p.id === selectedPost.id)}
                         total={model.posts.length}
                         model={model}
-                        onClose={() => setSearchParams({})} 
+                        onClose={() => setSearchParams({}, { replace: true })} 
                     />
                 )}
             </AnimatePresence>
 
             {selectedHighlight && selectedHighlight.images && (
-                <StoryViewer 
-                    images={selectedHighlight.images} 
-                    title={model.name} 
-                    onClose={() => setSelectedHighlight(null)} 
-                    onAllStoriesEnd={() => markAsViewed(selectedHighlight.id)}
-                />
+                <StoryViewer images={selectedHighlight.images} title={model.name} onClose={() => setSelectedHighlight(null)} onAllStoriesEnd={() => {}} />
             )}
         </div>
     );

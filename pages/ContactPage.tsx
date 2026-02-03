@@ -173,7 +173,7 @@ const ContactPage: React.FC = () => {
       <div className="relative h-[40vh] md:h-[50vh] flex items-center justify-center overflow-hidden">
         <div 
           className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-40 scale-105"
-          style={{ backgroundImage: `url("/Stock Photos/Agency Models together/Whisk_695ee424952146ea834482a5a91fd447dr.jpeg")` }}
+          style={{ backgroundImage: `url("/Stock Photos/Agency Models together/100.jpeg")` }}
         ></div>
         <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-transparent to-background"></div>
         <div className="relative z-10 text-center px-6">
@@ -192,21 +192,21 @@ const ContactPage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-20 h-64 md:h-80">
           <div className="overflow-hidden group">
             <img 
-              src="/Stock Photos/Agency Models together/Whisk_c9e1d5a71c5586584c6474464b9a88d0dr.jpeg" 
+              src="/Stock Photos/Agency Models together/125.jpeg" 
               className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-700 hover:scale-105"
               alt="Model group 1"
             />
           </div>
           <div className="overflow-hidden group hidden md:block">
             <img 
-              src="/Stock Photos/Agency Models together/Whisk_823d9f4750d690c8c5e46c3b2014a0b8dr.jpeg" 
+              src="/Stock Photos/Agency Models together/98.jpeg" 
               className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-700 hover:scale-105"
               alt="Model group 2"
             />
           </div>
           <div className="overflow-hidden group">
             <img 
-              src="/Stock Photos/Agency Models together/Whisk_28bbaafdf0f14aaa3b24524da0015fd5dr.jpeg" 
+              src="/Stock Photos/Agency Models together/114.jpeg" 
               className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-700 hover:scale-105"
               alt="Model group 3"
             />

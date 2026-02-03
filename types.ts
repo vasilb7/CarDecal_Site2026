@@ -7,6 +7,8 @@ export interface Post {
   tags: string[];
   pinned?: boolean;
   images?: string[];
+  likes: number;
+  date: string;
 }
 
 export interface Highlight {
@@ -32,4 +34,7 @@ export interface Model {
   posts: Post[];
   coverImage: string;
   cardImages?: string[];
+  isTopModel?: boolean;
+  isVerified?: boolean;
+  nameBg?: string;
 }

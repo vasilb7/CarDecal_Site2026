@@ -10,7 +10,8 @@
     "follow": "Follow",
     "feed": "Feed",
     "login": "Login",
-    "register": "Register"
+    "register": "Register",
+    "contributions": "Contributions"
   },
   "services": {
     "title": "Professional Services",
@@ -76,6 +77,7 @@
     "rights": "All rights reserved.",
     "privacy": "Privacy Policy",
     "terms": "Terms of Service",
+    "legal": "Legal Information",
     "navigate": "Navigate",
     "connect": "Connect"
   },
@@ -253,5 +255,67 @@
     "terms": "I agree to the",
     "terms_link": "Terms & Conditions",
     "keep_signed_in": "Keep me signed in"
+  },
+  "sponsored": {
+    "label": "Partnership",
+    "title": "Natural Pills",
+    "subtitle": "The secret to vitality and focus during high-intensity sessions.",
+    "description": "Formulated for peak performance, Natural Pills provide the essential nutrients needed to maintain energy levels and mental clarity. Preferred by top talent for demanding production schedules.",
+    "cta": "Explore Product",
+    "promo_text": "NATURAL PILLS • ENERGY & FOCUS • PREMIUM SUPPLEMENT • LIMITED EDITION • ",
+    "promo_code_label": "Use Code:",
+    "promo_code_val": "VB7",
+    "promo_code_copied": "Copied!"
+  },
+  "privacy": {
+    "title": "Privacy Policy",
+    "intro_title": "1. Introduction",
+    "intro_text": "Your privacy is important to VB Models. This policy explains how we collect, use, and protect your personal information when you use our services.",
+    "collect_title": "2. Information We Collect",
+    "collect_text": "We collect information that you provide directly to us:",
+    "collect_item1": "Name, email address, and contact details during registration or inquiry.",
+    "collect_item2": "Physical data, portfolio, and measurements (for models).",
+    "collect_item3": "Brand and project information (for clients).",
+    "usage_title": "3. Use of Information",
+    "usage_text": "We use your data for:",
+    "usage_item1": "Managing castings and bookings.",
+    "usage_item2": "Communication regarding projects and services.",
+    "usage_item3": "Improving the functionality of our platform.",
+    "sharing_title": "4. Data Sharing",
+    "sharing_text": "We do not sell your data. We share information with potential clients (for models) or production teams solely for the purpose of fulfilling a professional engagement.",
+    "security_title": "5. Security",
+    "security_text": "We implement modern technical measures to protect information from unauthorized access or disclosure.",
+    "rights_title": "6. Your Rights",
+    "rights_text": "You have the right to request access, correction, or deletion of your personal data at any time by contacting us."
+  },
+  "terms_page": {
+    "title": "Terms of Service",
+    "gen_title": "1. General Provisions",
+    "gen_text": "By using the services of VB Models, you agree to these Terms of Service. These conditions govern the relationship between the agency, the models, and the clients.",
+    "reg_title": "2. Registration and Application",
+    "reg_text": "Users undertake to provide true and up-to-date information. Applying for a model position does not automatically guarantee representation by the agency.",
+    "book_title": "3. Bookings",
+    "book_text": "All model bookings are confirmed only through a written agreement. Image usage rights (Usage Rights) are negotiated individually for each project.",
+    "resp_title": "4. Responsibilities",
+    "resp_text": "VB Models acts as an intermediary between the model and the client. The agency is not responsible for the actions of third parties during the production shoots.",
+    "intel_title": "5. Intellectual Property",
+    "intel_text": "The content of this website, including the logo, design, and texts, is the property of VB Models and is protected by copyright laws.",
+    "term_title": "6. Termination",
+    "term_text": "The agency reserves the right to terminate access to its services for users who violate these terms or damage the brand's reputation."
+  },
+  "legal_page": {
+    "title": "Legal Information",
+    "comp_title": "Company Information",
+    "comp_name": "Company Name",
+    "hq": "Headquarters",
+    "addr": "Address",
+    "vat": "VAT Number",
+    "contacts_title": "Contacts",
+    "email": "Email",
+    "phone": "Phone",
+    "disclaimer_title": "Disclaimer",
+    "disclaimer_text": "VB Models makes every effort to ensure the accuracy of the information on this website. However, we do not guarantee that the content is always up-to-date or error-free. The use of information is at the user's own risk.",
+    "links_title": "External Links",
+    "links_text": "This site may contain links to external websites. VB Models is not responsible for the content or privacy policies of these external sites."
   }
 }

@@ -1,16 +1,16 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap");
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --gold-accent: #C9A227;
-  --background: #0B0B0C;
+  --gold-accent: #c9a227;
+  --background: #0b0b0c;
   --surface: #121214;
-  --border: #1C1C20;
-  --text-primary: #F2F2F2;
-  --text-muted: #A0A0A8;
+  --border: #1c1c20;
+  --text-primary: #f2f2f2;
+  --text-muted: #a0a0a8;
 }
 
 body {
@@ -18,7 +18,7 @@ body {
   padding: 0;
   background-color: var(--background);
   color: var(--text-primary);
-  font-family: 'Inter', sans-serif;
+  font-family: "Inter", sans-serif;
   overflow-x: hidden;
 }
 
@@ -42,18 +42,34 @@ body {
 
 /* Animations for Auth Pages */
 @keyframes fadeSlideIn {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes slideRightIn {
-  from { transform: translateX(100%); }
-  to { transform: translateX(0); }
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
 }
 
 @keyframes testimonialIn {
-  from { opacity: 0; transform: scale(0.9); }
-  to { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .animate-element {
@@ -70,17 +86,39 @@ body {
   animation: testimonialIn 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 
-.animate-delay-100 { animation-delay: 100ms; }
-.animate-delay-200 { animation-delay: 200ms; }
-.animate-delay-300 { animation-delay: 300ms; }
-.animate-delay-400 { animation-delay: 400ms; }
-.animate-delay-500 { animation-delay: 500ms; }
-.animate-delay-600 { animation-delay: 600ms; }
-.animate-delay-700 { animation-delay: 700ms; }
-.animate-delay-800 { animation-delay: 800ms; }
-.animate-delay-900 { animation-delay: 900ms; }
-.animate-delay-1000 { animation-delay: 1000ms; }
-.animate-delay-1200 { animation-delay: 1200ms; }
+.animate-delay-100 {
+  animation-delay: 100ms;
+}
+.animate-delay-200 {
+  animation-delay: 200ms;
+}
+.animate-delay-300 {
+  animation-delay: 300ms;
+}
+.animate-delay-400 {
+  animation-delay: 400ms;
+}
+.animate-delay-500 {
+  animation-delay: 500ms;
+}
+.animate-delay-600 {
+  animation-delay: 600ms;
+}
+.animate-delay-700 {
+  animation-delay: 700ms;
+}
+.animate-delay-800 {
+  animation-delay: 800ms;
+}
+.animate-delay-900 {
+  animation-delay: 900ms;
+}
+.animate-delay-1000 {
+  animation-delay: 1000ms;
+}
+.animate-delay-1200 {
+  animation-delay: 1200ms;
+}
 
 /* Page Transitions */
 .page-enter {
@@ -116,6 +154,92 @@ body {
 }
 
 @keyframes scroll {
-  from { transform: translateX(0); }
-  to { transform: translateX(-100%); }
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-100%);
+  }
+}
+/* --- Touch Animation Fix --- */
+
+@keyframes tap-flash {
+  0% {
+    transform: translateX(-50%) scaleX(0);
+    opacity: 0;
+  }
+  50% {
+    transform: translateX(-50%) scaleX(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(-50%) scaleX(0);
+    opacity: 0;
+  }
+}
+
+/* Изпълнява анимацията веднъж при докосване/натискане */
+.active-pulse:active .gold-line {
+  animation: tap-flash 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
+}
+
+/* Премахва системното "премигване" при натискане на мобилни устройства */
+* {
+  -webkit-tap-highlight-color: transparent;
+  outline: none !important;
+}
+
+/* Стандартните hover ефекти работят само с мишка */
+@media (hover: hover) {
+  .group:hover .gold-line {
+    transform: translateX(-50%) scaleX(1);
+  }
+}
+/* --- Responsive Button Layouts --- */
+
+/* Контейнер за бутони: на телефон са в колона, на десктоп са в ред */
+.btn-group-responsive {
+  @apply flex flex-col md:flex-row items-center justify-center gap-6 md:gap-8;
+}
+
+/* Обърнат ред само за Hero секцията на мобилни, ако искаме основният бутон да е най-отдолу */
+.btn-group-reverse-mobile {
+  @apply flex flex-col-reverse md:flex-row items-center justify-center gap-6 md:gap-8;
+}
+
+/* Бутони на мобилни: разтягат се на целия екран с достатъчно място */
+@media (max-width: 768px) {
+  .btn-mobile-full {
+    @apply w-full flex items-center justify-center text-center px-6 py-4 !important;
+  }
+}
+
+/* Instant Feedback for Buttons and Links */
+button:active,
+a:active,
+.active-press:active {
+  transform: scale(0.97);
+  transition: transform 0.1s ease-out;
+}
+
+/* Marquee Animation */
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 50s linear infinite;
+}
+
+.animate-marquee-reverse {
+  display: flex;
+  width: max-content;
+  animation: marquee 50s linear infinite reverse;
 }

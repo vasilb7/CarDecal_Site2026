@@ -45,7 +45,10 @@ const ModelsPage: React.FC = () => {
 
     const filteredModels = useMemo(() => {
         return allModels.filter(model => {
-            const searchMatch = model.name.toLowerCase().includes(searchTerm.toLowerCase());
+            const searchMatch = 
+                model.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                (model.nameBg && model.nameBg.toLowerCase().includes(searchTerm.toLowerCase()));
+                
             const categoryMatch = filters.category === 'All' || model.categories.includes(filters.category);
             const locationMatch = filters.location === 'All' || model.location === filters.location;
             const hairMatch = filters.hairColor === 'All' || model.hairColor === filters.hairColor;
@@ -56,34 +59,40 @@ const ModelsPage: React.FC = () => {
     }, [allModels, searchTerm, filters]);
     
     const FilterSelect: React.FC<{name: string, label: string, options: string[]}> = ({name, label, options}) => (
-        <select
-            name={name}
-            value={filters[name as keyof typeof filters]}
-            onChange={handleFilterChange}
-            className="bg-surface border border-border text-text-primary text-sm focus:ring-gold-accent focus:border-gold-accent block w-full p-2.5"
-        >
-            <option value="All">{label}</option>
-            {options.slice(1).map(opt => (
-                <option key={opt} value={opt}>
-                    {t(`filter_values.${opt}`, opt)}
-                </option>
-            ))}
-        </select>
+        <div className="relative group">
+            <select
+                name={name}
+                value={filters[name as keyof typeof filters]}
+                onChange={handleFilterChange}
+                className="bg-transparent border-0 border-b border-white/20 text-text-primary text-xs md:text-sm uppercase tracking-widest focus:ring-0 focus:border-gold-accent block w-full px-0 py-3 transition-all duration-300 cursor-pointer hover:border-white/40"
+            >
+                <option value="All" className="bg-background text-text-primary">{label}</option>
+                {options.slice(1).map(opt => (
+                    <option key={opt} value={opt} className="bg-background text-text-primary">
+                        {t(`filter_values.${opt}`, opt)}
+                    </option>
+                ))}
+            </select>
+            <div className="absolute bottom-0 left-0 w-0 h-[1px] bg-gold-accent transition-all duration-500 group-hover:w-full opacity-0 group-hover:opacity-100" />
+        </div>
     );
 
     return (
         <div className="container mx-auto px-6 py-12 md:py-20">
             <h1 className="text-4xl md:text-6xl font-serif text-text-primary text-center mb-12">{t('models.title')}</h1>
 
-            <div className="mb-12 p-4 border border-border bg-surface">
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                    <input
-                        type="text"
-                        placeholder={t('models.search_placeholder')}
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="md:col-span-1 bg-surface border border-border text-text-primary text-sm focus:ring-gold-accent focus:border-gold-accent block w-full p-2.5"
-                    />
+            <div className="mb-16 md:mb-24 pb-4">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-8 md:gap-12">
+                    <div className="relative group md:col-span-1">
+                        <input
+                            type="text"
+                            placeholder={t('models.search_placeholder')}
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="bg-transparent border-0 border-b border-white/20 text-text-primary text-xs md:text-sm uppercase tracking-widest focus:ring-0 focus:border-gold-accent block w-full px-0 py-3 transition-all duration-300 placeholder:text-text-muted/40"
+                        />
+                        <div className="absolute bottom-0 left-0 w-0 h-[1px] bg-gold-accent transition-all duration-500 group-hover:w-full opacity-0 group-hover:opacity-100" />
+                    </div>
                     <FilterSelect name="category" label={t('models.all_categories')} options={uniqueValues.categories} />
                     <FilterSelect name="location" label={t('models.all_locations')} options={uniqueValues.locations} />
                     <FilterSelect name="hairColor" label={t('models.all_hair')} options={uniqueValues.hairColors} />

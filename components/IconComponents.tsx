@@ -14,9 +14,15 @@ export const UserCircleIcon = ({ className }: { className?: string }) => (
 );
 
 export const PinIcon = ({ className }: { className?: string }) => (
-  <svg className={className} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
-    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25s-7.5-4.108-7.5-11.25a7.5 7.5 0 1115 0z" />
+  <svg className={className} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <line 
+        x1="9.914" x2="0.5" y1="14.086" y2="23.5" 
+        fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5"
+    />
+    <path 
+        d="M21.414,8.586a.707.707,0,0,0,1,0l.793-.793a1,1,0,0,0,0-1.414L17.621.793a1,1,0,0,0-1.414,0l-.793.793a.707.707,0,0,0,0,1,.707.707,0,0,1,0,1L11.207,7.793a1,1,0,0,1-.707.293H7.328a1,1,0,0,0-.707.293l-.5.5a1,1,0,0,0,0,1.414l7.586,7.586a1,1,0,0,0,1.414,0l.5-.5a1,1,0,0,0,.293-.707V13.5a1,1,0,0,1,.293-.707l4.207-4.207A.707.707,0,0,1,21.414,8.586Z" 
+        fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5"
+    />
   </svg>
 );
 
@@ -97,5 +103,12 @@ export const MoreHorizontalIcon = ({ className }: { className?: string }) => (
 export const EmojiIcon = ({ className }: { className?: string }) => (
     <svg className={className} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+);
+
+export const VerifiedIcon = ({ className }: { className?: string }) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M11.69 2.02a1.2 1.2 0 01.62 0l1.04.28a1.2 1.2 0 00.9.1l1.05-.22a1.2 1.2 0 011.08.33l.79.74a1.2 1.2 0 00.8.35l1.08.06a1.2 1.2 0 01.99.73l.4.98a1.2 1.2 0 00.58.64l.95.5a1.2 1.2 0 01.6 1.05v1.08a1.2 1.2 0 00.28.85l.69.84a1.2 1.2 0 010 1.54l-.69.84a1.2 1.2 0 00-.28.85v1.08a1.2 1.2 0 01-.6 1.05l-.95.5a1.2 1.2 0 00-.58.64l-.4.98a1.2 1.2 0 01-.99.73l-1.08.06a1.2 1.2 0 00-.8.35l-.79.74a1.2 1.2 0 01-1.08.33l-1.05-.22a1.2 1.2 0 00-.9.1l-1.04.28a1.2 1.2 0 01-1.24 0l-1.04-.28a1.2 1.2 0 00-.9-.1l-1.05.22a1.2 1.2 0 01-1.08-.33l-.79-.74a1.2 1.2 0 00-.8-.35l-1.08-.06a1.2 1.2 0 01-.99-.73l-.4-.98a1.2 1.2 0 00-.58-.64l-.95-.5a1.2 1.2 0 01-.6-1.05v-1.08a1.2 1.2 0 00-.28-.85l-.69-.84a1.2 1.2 0 010-1.54l.69-.84a1.2 1.2 0 00.28-.85v-1.08a1.2 1.2 0 01.6-1.05l.95-.5a1.2 1.2 0 00.58-.64l.4-.98a1.2 1.2 0 01.99-.73l1.08-.06a1.2 1.2 0 00.8-.35l.79-.74a1.2 1.2 0 011.08-.33l1.05.22a1.2 1.2 0 00.9-.1l1.04-.28z" fill="#0095F6"/>
+        <path d="M10.2 14.8a.63.63 0 01-.45-.19l-2.61-2.61a.63.63 0 11.9-.9l2.16 2.16 4.79-4.79a.63.63 0 01.9.9l-5.24 5.24a.63.63 0 01-.45.19z" fill="white"/>
     </svg>
 );

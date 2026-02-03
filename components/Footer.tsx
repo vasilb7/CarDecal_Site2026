@@ -32,8 +32,13 @@ const Footer: React.FC = () => {
             </ul>
           </div>
         </div>
-        <div className="mt-12 pt-8 border-t border-border text-center text-text-muted text-sm">
+        <div className="mt-12 pt-8 border-t border-border flex flex-col md:flex-row justify-between items-center gap-4 text-text-muted text-xs uppercase tracking-widest">
           <p>&copy; {new Date().getFullYear()} VB Models. {t('footer.rights')}</p>
+          <div className="flex flex-wrap justify-center gap-6">
+            <Link to="/privacy" className="hover:text-gold-accent transition-colors">{t('footer.privacy')}</Link>
+            <Link to="/terms" className="hover:text-gold-accent transition-colors">{t('footer.terms')}</Link>
+            <Link to="/legal" className="hover:text-gold-accent transition-colors">{t('footer.legal')}</Link>
+          </div>
         </div>
       </div>
     </footer>

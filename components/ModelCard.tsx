@@ -8,7 +8,7 @@ interface ModelCardProps {
 }
 
 const ModelCard: React.FC<ModelCardProps> = ({ model }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [currentImageIndex, setCurrentImageIndex] = React.useState(0);
   const [isHovering, setIsHovering] = React.useState(false);
   const timerRef = React.useRef<number | null>(null);
@@ -18,16 +18,19 @@ const ModelCard: React.FC<ModelCardProps> = ({ model }) => {
     : [model.coverImage];
 
   React.useEffect(() => {
-    if (isHovering && images.length > 1) {
+    // Check if the device stays in hover mode (prevents cycling on mobile/touch)
+    const supportsHover = window.matchMedia('(hover: hover)').matches;
+    
+    if (isHovering && images.length > 1 && supportsHover) {
       timerRef.current = window.setInterval(() => {
         setCurrentImageIndex((prev) => (prev + 1) % images.length);
-      }, 1000); // Change image every 1 second
+      }, 1000); 
     } else {
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
       }
-      setCurrentImageIndex(0); // Reset to first image when not hovering
+      setCurrentImageIndex(0); 
     }
 
     return () => {
@@ -38,11 +41,18 @@ const ModelCard: React.FC<ModelCardProps> = ({ model }) => {
   return (
     <Link 
       to={`/models/${model.slug}`} 
-      className="group block overflow-hidden bg-background"
+      className={`group block overflow-hidden bg-background relative transition-all duration-500 ${
+        model.isTopModel ? 'shadow-[0_0_20px_rgba(201,162,39,0.15)] ring-1 ring-gold-accent/30' : ''
+      }`}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
     >
       <div className="relative aspect-[9/16] w-full overflow-hidden bg-surface">
+        {model.isTopModel && (
+          <div className="absolute top-4 md:top-8 right-4 z-40 bg-gold-accent text-black px-3 py-1 text-[9px] font-black uppercase tracking-[0.2em] shadow-lg">
+            {t('home.top_model')}
+          </div>
+        )}
         {/* Main Image - Back to object-cover for a clean professional grid */}
         <img
           src={images[currentImageIndex]}
@@ -51,16 +61,16 @@ const ModelCard: React.FC<ModelCardProps> = ({ model }) => {
         />
         
         {/* Single Premium Overlay - Fixed to prevent bugging */}
-        <div className="absolute inset-0 z-20 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-80 group-hover:opacity-100 transition-opacity duration-500"></div>
+        <div className="absolute inset-0 z-20 bg-gradient-to-t from-black/100 via-black/20 to-transparent md:opacity-80 md:group-hover:opacity-100 transition-opacity duration-500"></div>
         
-        {/* Content Container - Animated to climb up on hover */}
+        {/* Content Container - Animated to climb up on hover only on desktop */}
         <div className="absolute inset-0 z-30 flex flex-col justify-end">
-          <div className="p-6 pb-4 md:pb-6 transform translate-y-8 group-hover:translate-y-0 transition-transform duration-500 ease-out">
-            <div className="backdrop-blur-[2px] inline-block">
-              <h3 className="text-xl md:text-2xl font-serif text-white mb-0.5 tracking-wide drop-shadow-md">
-                {model.name}
+          <div className="p-4 pb-6 md:p-6 md:pb-6 transform translate-y-0 md:translate-y-8 md:group-hover:translate-y-0 transition-transform duration-500 ease-out text-center md:text-left">
+            <div className="inline-block mx-auto md:mx-0">
+              <h3 className="text-lg md:text-2xl font-serif text-white mb-0.5 tracking-wide drop-shadow-md">
+                {i18n.language.startsWith('bg') && model.nameBg ? model.nameBg : model.name}
               </h3>
-              <p className="text-xs md:text-sm text-gold-accent uppercase tracking-[0.2em] font-semibold drop-shadow-sm">
+              <p className="text-[10px] md:text-sm text-gold-accent uppercase tracking-[0.2em] font-semibold drop-shadow-sm">
                 {t(`filter_values.${model.location}`, model.location)}
               </p>
             </div>
@@ -77,7 +87,7 @@ const ModelCard: React.FC<ModelCardProps> = ({ model }) => {
 
         {/* Image Indicators */}
         {images.length > 1 && isHovering && (
-          <div className="absolute top-4 left-0 right-0 px-6 flex space-x-1 z-40">
+          <div className="absolute top-4 left-0 right-0 px-6 hidden md:flex space-x-1 z-40">
             {images.map((_, idx) => (
               <div 
                 key={idx} 
