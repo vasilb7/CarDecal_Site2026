@@ -3,6 +3,7 @@ import { Eye, EyeOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // --- HELPER COMPONENTS (ICONS) ---
 
@@ -26,6 +27,7 @@ interface SignUpPageProps {
   title?: React.ReactNode;
   description?: React.ReactNode;
   heroImageSrc?: string;
+  heroImagePosition?: string;
   testimonials?: Testimonial[];
   onSignUp?: (event: React.FormEvent<HTMLFormElement>) => void;
   onGoogleSignUp?: () => void;
@@ -37,21 +39,27 @@ const GlassInputWrapper = ({ children }: { children: React.ReactNode }) => (
   </div>
 );
 
-const TestimonialCard = ({ testimonial, delay }: { testimonial: Testimonial, delay: string }) => (
-  <div className={cn("animate-testimonial flex items-start gap-3 bg-surface/80 backdrop-blur-xl border border-border p-5 w-64", delay)}>
+const TestimonialCard = ({ testimonial, index }: { testimonial: Testimonial, index: number }) => (
+  <motion.div 
+    initial={{ opacity: 0, scale: 0.9, y: 20 }}
+    animate={{ opacity: 1, scale: 1, y: 0 }}
+    transition={{ delay: 1 + index * 0.2, duration: 0.8, ease: "easeOut" }}
+    className="flex items-start gap-3 bg-surface/80 backdrop-blur-xl border border-border p-5 w-64"
+  >
     <img src={testimonial.avatarSrc} className="h-10 w-10 object-cover grayscale" alt="avatar" />
     <div className="text-sm leading-snug font-sans">
       <p className="flex items-center gap-1 font-medium text-text-primary">{testimonial.name}</p>
       <p className="text-text-muted">{testimonial.handle}</p>
       <p className="mt-1 text-text-primary/80">{testimonial.text}</p>
     </div>
-  </div>
+  </motion.div>
 );
 
 export const SignUpPage: React.FC<SignUpPageProps> = ({
   title,
   description,
   heroImageSrc,
+  heroImagePosition = "center 40%", // Default to faces, can be overridden
   testimonials = [],
   onSignUp,
   onGoogleSignUp,
@@ -67,27 +75,32 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
       <section className="flex-1 flex items-center justify-center p-8 z-10">
         <div className="w-full max-w-sm">
           <div className="flex flex-col gap-6">
-            <div className="space-y-1">
-              <h1 className="animate-element animate-delay-100 text-4xl md:text-5xl font-serif leading-tight">{displayTitle}</h1>
-              <p className="animate-element animate-delay-200 text-text-muted text-sm uppercase tracking-widest">{displayDescription}</p>
-            </div>
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2, duration: 0.6 }}
+              className="space-y-1"
+            >
+              <h1 className="text-4xl md:text-5xl font-serif leading-tight">{displayTitle}</h1>
+              <p className="text-text-muted text-sm uppercase tracking-widest">{displayDescription}</p>
+            </motion.div>
 
             <form className="space-y-4" onSubmit={onSignUp}>
-              <div className="animate-element animate-delay-300">
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
                 <label className="block mb-1 text-xs uppercase tracking-widest text-text-muted">{t('auth.full_name')}</label>
                 <GlassInputWrapper>
                   <input name="name" type="text" placeholder="John Doe" className="w-full bg-transparent text-sm p-4 text-text-primary outline-none" required />
                 </GlassInputWrapper>
-              </div>
+              </motion.div>
 
-              <div className="animate-element animate-delay-400">
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
                 <label className="block mb-1 text-xs uppercase tracking-widest text-text-muted">{t('auth.email')}</label>
                 <GlassInputWrapper>
                   <input name="email" type="email" placeholder="email@example.com" className="w-full bg-transparent text-sm p-4 text-text-primary outline-none" required />
                 </GlassInputWrapper>
-              </div>
+              </motion.div>
 
-              <div className="animate-element animate-delay-500">
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
                 <label className="block mb-1 text-xs uppercase tracking-widest text-text-muted">{t('auth.password')}</label>
                 <GlassInputWrapper>
                   <div className="relative">
@@ -97,33 +110,49 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
                     </button>
                   </div>
                 </GlassInputWrapper>
-              </div>
+              </motion.div>
 
-              <div className="animate-element animate-delay-600 flex items-center gap-3 cursor-pointer py-2">
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }} className="flex items-center gap-3 cursor-pointer py-2" id="auth-terms">
                 <input type="checkbox" id="terms" name="terms" className="accent-gold-accent w-4 h-4" required />
                 <label htmlFor="terms" className="text-[10px] uppercase tracking-widest text-text-muted">
-                  {t('auth.terms')} <a href="#" className="text-gold-accent underline">{t('auth.terms_link')}</a>
+                  {t('auth.terms')} <Link to="/terms" className="text-gold-accent underline ml-1">{t('auth.terms_link')}</Link>
                 </label>
-              </div>
+              </motion.div>
 
-              <button type="submit" className="animate-element animate-delay-700 w-full bg-gold-accent py-5 text-background font-bold text-xs uppercase tracking-widest hover:bg-white transition-all duration-300 transform active:scale-[0.98]">
+              <motion.button 
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.98 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.7 }}
+                type="submit" 
+                className="w-full bg-gold-accent py-5 text-background font-bold text-xs uppercase tracking-widest hover:bg-white transition-all duration-300"
+              >
                 {t('auth.create_account')}
-              </button>
+              </motion.button>
             </form>
 
-            <div className="animate-element animate-delay-800 relative flex items-center justify-center py-2">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }} className="relative flex items-center justify-center py-2">
               <span className="w-full border-t border-border"></span>
               <span className="px-4 text-[10px] uppercase tracking-[0.2em] text-text-muted bg-background absolute">{t('auth.or_continue_with')}</span>
-            </div>
+            </motion.div>
 
-            <button type="button" onClick={onGoogleSignUp} className="animate-element animate-delay-900 w-full flex items-center justify-center gap-3 border border-border py-4 text-xs font-bold uppercase tracking-widest hover:bg-surface transition-all duration-300">
+            <motion.button 
+              whileHover={{ backgroundColor: "rgba(255,255,255,0.05)" }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.9 }}
+              type="button" 
+              onClick={onGoogleSignUp} 
+              className="w-full flex items-center justify-center gap-3 border border-border py-4 text-xs font-bold uppercase tracking-widest transition-all duration-300"
+            >
                 <GoogleIcon />
                 {t('auth.continue_with_google')}
-            </button>
+            </motion.button>
 
-            <p className="animate-element animate-delay-1000 text-center text-[11px] uppercase tracking-widest text-text-muted">
+            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.0 }} className="text-center text-[11px] uppercase tracking-widest text-text-muted">
               {t('auth.already_have_account')} <Link to="/login" className="text-gold-accent hover:underline ml-1">{t('auth.login_now')}</Link>
-            </p>
+            </motion.p>
           </div>
         </div>
       </section>
@@ -131,12 +160,120 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
       {/* Right column: hero image + testimonials */}
       {heroImageSrc && (
         <section className="hidden md:block flex-1 relative p-6">
-          <div className="animate-slide-right animate-delay-300 absolute inset-0 bg-cover bg-center grayscale" style={{ backgroundImage: `url(${heroImageSrc})` }}>
-            <div className="absolute inset-0 bg-black/40"></div>
-          </div>
+          <motion.div 
+            layoutId="auth-hero-container"
+            className="absolute inset-0 bg-cover" 
+            style={{ 
+              backgroundImage: `url("${heroImageSrc}")`,
+              backgroundPosition: heroImagePosition
+            }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+          >
+            <div className="absolute inset-0 bg-black/10"></div>
+            
+            {/* Advertisement Blur Module */}
+            <motion.div 
+              initial={{ opacity: 0, y: 50 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 1.2, duration: 1 }}
+              className="absolute bottom-0 left-0 right-0 h-[22%] bg-surface/30 backdrop-blur-2xl border-t border-white/10 flex items-center justify-center overflow-visible select-none"
+            >
+              <div className="flex flex-col items-start px-12 md:px-24 relative z-10 w-full">
+                <span className="text-[10px] uppercase tracking-[0.5em] text-gold-accent mb-3 block font-bold opacity-90">
+                  MaxiNutrition
+                </span>
+                <h3 className="text-text-primary font-serif text-3xl md:text-4xl mb-4 leading-none tracking-tight">
+                  Classic Protein Bars
+                </h3>
+                <div className="flex flex-wrap gap-x-8 gap-y-2 text-[10px] uppercase tracking-[0.2em] text-gold-accent font-bold mb-6">
+                  <span className="flex items-center gap-2">20G Protein</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-gold-accent/40 self-center"></span>
+                  <span className="flex items-center gap-2">Low Sugar</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-gold-accent/40 self-center"></span>
+                  <span className="flex items-center gap-2">145 Kcal</span>
+                </div>
+                <p className="text-white/80 text-sm md:text-[13px] font-medium leading-[1.4] max-w-[400px] italic drop-shadow-sm">
+                  "High-quality whey blend for muscle growth and maintenance. The perfect treat without the cheat."
+                </p>
+              </div>
+
+              {/* Floating Product Images - Protein Box & Brownie */}
+              <div className="absolute right-0 bottom-0 w-full h-full pointer-events-none">
+                {/* Protein Box */}
+                <motion.div 
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 1.5, duration: 0.8 }}
+                  className="absolute right-[1%] bottom-[5%] w-[27%] z-40 pointer-events-auto"
+                >
+                  <img 
+                    src="/Stock Photos/SponsorShip/Protein_Snack/ProteinBox.png" 
+                    alt="Protein Box" 
+                    className="relative z-10 w-full h-auto"
+                    draggable="false"
+                  />
+                  <div className="absolute bottom-[-5%] left-1/2 -translate-x-1/2 w-[90%] h-[15%] bg-black/40 blur-xl rounded-[100%] z-0" />
+                </motion.div>
+
+                {/* Protein Brownie - Animates from right */}
+                <a 
+                  href="https://www.maxinutrition.com/products/classic-bars" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="absolute right-[23%] bottom-[8%] w-[14%] z-50 pointer-events-auto block"
+                >
+                  <motion.div 
+                    initial="initial"
+                    animate="animate"
+                    whileHover="hover"
+                    variants={{
+                      initial: { opacity: 0, x: 200, scale: 0.9 },
+                      animate: { x: 0, opacity: 1, scale: 1 }
+                    }}
+                    transition={{ 
+                      delay: 1.8, 
+                      duration: 1.2, 
+                      type: "spring",
+                      stiffness: 50
+                    }}
+                  >
+                    {/* The Product Image itself with lift and glow */}
+                    <motion.div
+                      variants={{
+                        initial: { y: 0, filter: "drop-shadow(0 0 0px rgba(212, 175, 55, 0))" },
+                        animate: { y: 0, filter: "drop-shadow(0 0 0px rgba(212, 175, 55, 0))" },
+                        hover: { y: -10, filter: "drop-shadow(0 0 15px rgba(212, 175, 55, 0.4))" }
+                      }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <img 
+                        src="/Stock Photos/SponsorShip/Protein_Snack/ProteinBrownie.png" 
+                        alt="Protein Brownie" 
+                        className="relative z-10 w-full h-auto"
+                        draggable="false"
+                      />
+                    </motion.div>
+                    
+                    {/* Golden Shadow - Appears ONLY on hover */}
+                    <motion.div 
+                      variants={{
+                        initial: { opacity: 0, scale: 0.5 },
+                        animate: { opacity: 0, scale: 0.5 },
+                        hover: { opacity: 1, scale: 1 }
+                      }}
+                      transition={{ duration: 0.3 }}
+                      className="absolute bottom-[-8%] left-1/2 -translate-x-1/2 w-[80%] h-[20%] bg-gold-accent/20 blur-xl rounded-[100%] z-0"
+                    />
+                  </motion.div>
+                </a>
+              </div>
+            </motion.div>
+          </motion.div>
           {testimonials.length > 0 && (
             <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex gap-4 px-8 w-full justify-center">
-              <TestimonialCard testimonial={testimonials[0]} delay="animate-delay-1000" />
+              <TestimonialCard testimonial={testimonials[0]} index={0} />
             </div>
           )}
         </section>
