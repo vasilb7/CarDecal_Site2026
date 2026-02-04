@@ -5,13 +5,13 @@ const PricingPage = () => {
   const { t } = useTranslation();
 
   return (
-    <section className="relative overflow-hidden bg-background text-foreground min-h-screen">
-      <div className="relative z-10 mx-auto max-w-5xl px-4 py-20 md:px-8">
-        <div className="mb-12 space-y-3">
-          <h2 className="text-center text-3xl font-semibold leading-tight sm:text-4xl sm:leading-tight md:text-5xl md:leading-tight">
+    <section className="relative overflow-hidden bg-background text-foreground min-h-screen flex items-center justify-center py-20 md:py-32">
+      <div className="relative z-10 mx-auto max-w-7xl px-6 md:px-12 w-full">
+        <div className="mb-20 space-y-6 text-center">
+          <h2 className="text-4xl md:text-6xl font-serif leading-tight">
             {t('pricing.title')}
           </h2>
-          <p className="text-center text-base text-muted-foreground md:text-lg">
+          <p className="text-base md:text-xl text-text-muted font-light max-w-2xl mx-auto">
             {t('pricing.subtitle')}
           </p>
         </div>

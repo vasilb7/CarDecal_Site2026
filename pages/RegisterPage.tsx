@@ -15,7 +15,7 @@ const RegisterPage: React.FC = () => {
 
   return (
     <SignUpPage
-      heroImageSrc="/Stock%20Photos/LogReg/Registration.jpeg"
+      heroImageSrc="/Site_Pics/LogReg/Registration.jpeg"
       testimonials={sampleTestimonials}
       onSignUp={handleSignUp}
       onGoogleSignUp={handleGoogleSignUp}

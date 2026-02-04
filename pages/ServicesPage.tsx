@@ -1,6 +1,6 @@
-
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import { motion } from 'framer-motion';
 
 const ServicesPage: React.FC = () => {
     const { t } = useTranslation();
@@ -27,28 +27,51 @@ const ServicesPage: React.FC = () => {
     ];
 
     return (
-        <div className="bg-background">
-            <div className="container mx-auto px-6 py-20 md:py-32">
-                <div className="max-w-4xl mx-auto text-center mb-20">
-                    <h1 className="text-4xl md:text-6xl font-serif text-text-primary">{t('services.title')}</h1>
-                    <p className="mt-6 text-lg text-text-muted">
+        <div className="bg-background text-text-primary min-h-screen">
+            <div className="container mx-auto px-6 py-24 md:py-40">
+                <div className="max-w-6xl mx-auto text-center mb-32 md:mb-48 space-y-8">
+                    <motion.h1 
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="text-5xl md:text-8xl font-serif leading-tight"
+                    >
+                        {t('services.title')}
+                    </motion.h1>
+                    <div className="w-24 h-px bg-gold-accent mx-auto" />
+                    <motion.p 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.3 }}
+                        className="text-xl md:text-2xl text-text-muted font-light max-w-3xl mx-auto leading-relaxed"
+                    >
                         {t('services.subtitle')}
-                    </p>
+                    </motion.p>
                 </div>
 
-                <div className="space-y-20">
+                <div className="space-y-40 md:space-y-64">
                     {services.map((service, index) => (
-                        <div key={service.name} className={`grid md:grid-cols-2 gap-10 md:gap-20 items-center ${index % 2 !== 0 ? 'md:grid-flow-row-dense' : ''}`}>
-                            <div className={index % 2 !== 0 ? 'md:col-start-2' : ''}>
-                                <img src={service.image} alt={service.name} className="w-full h-auto object-cover"/>
-                            </div>
-                            <div className={index % 2 !== 0 ? 'md:col-start-1 md:row-start-1' : ''}>
-                                <h2 className="text-gold-accent uppercase tracking-widest text-sm">{service.focus}</h2>
-                                <h3 className="text-3xl md:text-4xl font-serif text-text-primary mt-2 mb-6">{service.name}</h3>
-                                <p className="text-text-muted">
+                        <div key={service.name} className={`grid md:grid-cols-2 gap-16 md:gap-32 items-center ${index % 2 !== 0 ? 'md:grid-flow-row-dense' : ''}`}>
+                            <motion.div 
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                whileInView={{ opacity: 1, scale: 1 }}
+                                viewport={{ once: true }}
+                                className={index % 2 !== 0 ? 'md:col-start-2' : ''}
+                            >
+                                <img src={service.image} alt={service.name} className="w-full h-auto aspect-[4/5] object-cover grayscale hover:grayscale-0 transition-all duration-1000"/>
+                            </motion.div>
+                            <motion.div 
+                                initial={{ opacity: 0, x: index % 2 === 0 ? 50 : -50 }}
+                                whileInView={{ opacity: 1, x: 0 }}
+                                viewport={{ once: true }}
+                                className={`space-y-6 ${index % 2 !== 0 ? 'md:col-start-1 md:row-start-1' : ''}`}
+                            >
+                                <h2 className="text-gold-accent uppercase tracking-[0.3em] text-xs font-bold">{service.focus}</h2>
+                                <h3 className="text-4xl md:text-6xl font-serif text-text-primary leading-tight">{service.name}</h3>
+                                <div className="w-16 h-px bg-gold-accent/50" />
+                                <p className="text-xl text-text-muted font-light leading-relaxed">
                                     {service.description}
                                 </p>
-                            </div>
+                            </motion.div>
                         </div>
                     ))}
                 </div>

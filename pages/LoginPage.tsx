@@ -19,7 +19,7 @@ const LoginPage: React.FC = () => {
 
   return (
     <SignInPage
-      heroImageSrc="/Stock%20Photos/LogReg/Login.jpg"
+      heroImageSrc="/Site_Pics/LogReg/Login.jpg"
       testimonials={sampleTestimonials}
       onSignIn={handleSignIn}
       onGoogleSignIn={handleGoogleSignIn}

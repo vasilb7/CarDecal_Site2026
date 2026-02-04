@@ -3,7 +3,16 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { Trophy, Star, MapPin, Calendar, Award } from 'lucide-react';
+import { 
+  Calendar, 
+  Award,
+  // @ts-ignore
+  Trophy,
+  // @ts-ignore
+  Star,
+  // @ts-ignore
+  MapPin
+} from 'lucide-react';
 
 const contributions = [
     {
@@ -53,41 +62,55 @@ const ContributionsPage: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen bg-black text-text-primary pt-24 pb-20">
+        <div className="min-h-screen bg-black text-text-primary pt-0 pb-20">
             {/* Hero Section */}
-            <section className="relative h-[40vh] md:h-[50vh] flex items-center justify-center overflow-hidden border-b border-white/5">
+            <section className="relative h-[70vh] md:h-[85vh] flex items-center justify-center overflow-hidden border-b border-white/5">
                 <div className="absolute inset-0 z-0">
                     <img 
                         src="/Site_Pics/Contributions/Miami Swim Week/30.jpeg" 
                         alt="Miami Swim Week Hero" 
-                        className="w-full h-full object-cover object-top grayscale blur-sm brightness-50 opacity-40"
+                        className="w-full h-full object-cover object-[center_30%] grayscale blur-[2px] brightness-50 opacity-50"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-transparent to-black" />
                 </div>
                 
-                <div className="relative z-10 text-center space-y-6 px-4">
-                    <motion.span 
-                        initial={{ opacity: 0, letterSpacing: "0.2em" }}
-                        animate={{ opacity: 1, letterSpacing: "0.5em" }}
-                        className="text-gold-accent font-bold uppercase tracking-[0.5em] text-xs"
-                    >
-                        {isBg ? "ЕКСКЛУЗИВНИ ПРЕДСТАВЯНИЯ" : "EXCLUSIVE APPEARANCES"}
-                    </motion.span>
-                    <motion.h1 
+                <div className="relative z-10 text-center space-y-10 px-4 max-w-5xl">
+                    <motion.div 
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="text-5xl md:text-8xl font-serif leading-tight"
+                        className="space-y-4"
                     >
-                        Miami Swim Week
-                    </motion.h1>
+                        <motion.span 
+                            initial={{ opacity: 0, letterSpacing: "0.2em" }}
+                            animate={{ opacity: 1, letterSpacing: "0.8em" }}
+                            className="text-gold-accent font-bold uppercase tracking-[0.8em] text-[10px] md:text-xs block"
+                        >
+                            {isBg ? "ЕКСКЛУЗИВНИ ПРЕДСТАВЯНИЯ" : "EXCLUSIVE APPEARANCES"}
+                        </motion.span>
+                        <motion.h1 
+                            className="text-6xl md:text-9xl font-serif leading-[0.9] text-white"
+                        >
+                            Miami <br className="md:hidden" /> Swim Week
+                        </motion.h1>
+                    </motion.div>
+
                     <motion.div 
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
-                        transition={{ delay: 0.5 }}
-                        className="flex items-center justify-center space-x-6 text-sm text-text-muted font-light uppercase tracking-widest"
+                        transition={{ delay: 0.6 }}
+                        className="flex flex-col md:flex-row items-center justify-center gap-6 md:gap-12 text-xs md:text-sm text-white/60 font-light uppercase tracking-[0.3em]"
                     >
-                        <span className="flex items-center"><Calendar className="w-4 h-4 mr-2" /> July 2026</span>
-                        <span className="flex items-center"><MapPin className="w-4 h-4 mr-2" /> Miami, FL</span>
+                        <span className="flex items-center"><Calendar className="w-4 h-4 mr-3 text-gold-accent" /> {isBg ? "Юли 2026" : "July 2026"}</span>
+                        <span className="flex items-center"><MapPin className="w-4 h-4 mr-3 text-gold-accent" /> {isBg ? "Маями, САЩ" : "Miami, USA"}</span>
+                    </motion.div>
+
+                    <motion.div
+                        initial={{ opacity: 0, y: 30 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.9 }}
+                        className="pt-10"
+                    >
+                        <div className="w-px h-20 bg-gradient-to-b from-gold-accent to-transparent mx-auto animate-pulse" />
                     </motion.div>
                 </div>
             </section>
