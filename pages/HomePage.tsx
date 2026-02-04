@@ -173,7 +173,7 @@ const HomePage: React.FC = () => {
     return (
         <div>
             {/* Hero Section */}
-            <section className="relative h-screen min-h-[600px] flex items-center justify-center text-center overflow-hidden">
+            <section className="relative h-screen min-h-[500px] flex items-center justify-center text-center overflow-hidden !py-0">
                 <video
                     autoPlay
                     loop
@@ -187,7 +187,7 @@ const HomePage: React.FC = () => {
                 {/* Visual Overlay for contrast */}
                 <div className="absolute inset-0 z-[1] bg-gradient-to-b from-black/60 via-black/20 to-black/60 pointer-events-none" />
                 
-                <div className="container mx-auto px-6 relative z-10">
+                <div className="container relative z-10">
                     <motion.div
                         initial="hidden"
                         animate="visible"
@@ -203,15 +203,15 @@ const HomePage: React.FC = () => {
                         <motion.p 
                             variants={fadeInUp} 
                             style={{ fontSize: 'var(--fs-body)' }}
-                            className="mt-6 text-white/90 tracking-[0.2em] md:tracking-[0.25em] font-light uppercase drop-shadow-md max-w-[90%] mx-auto"
+                            className="mt-[3vh] text-white/90 tracking-[0.2em] md:tracking-[0.25em] font-light uppercase drop-shadow-md max-w-[90%] mx-auto"
                         >
                             {t('home.hero_subtitle')}
                         </motion.p>
-                        <motion.div variants={fadeInUp} className="mt-12 flex flex-col gap-y-8 md:flex-row md:gap-x-10 items-center justify-center">
-                            <Link to="/models" className="w-full md:w-auto text-center px-10 py-4 bg-gold-accent text-background text-xs font-bold uppercase tracking-[0.2em] hover:bg-white transition-all duration-500 shadow-gold">
+                        <motion.div variants={fadeInUp} className="mt-[6vh] flex flex-col gap-y-4 md:flex-row md:gap-x-10 items-center justify-center">
+                            <Link to="/models" className="w-full md:w-auto text-center px-10 py-4 bg-gold-accent text-background text-[10px] md:text-xs font-bold uppercase tracking-[0.2em] hover:bg-white transition-all duration-500 shadow-gold">
                                 {t('home.explore_models')}
                             </Link>
-                            <Link to="/book-now" className="w-full md:w-auto text-center px-10 py-4 border border-white/30 text-white text-xs font-bold uppercase tracking-[0.2em] hover:border-gold-accent hover:text-gold-accent transition-all duration-500 backdrop-blur-sm">
+                            <Link to="/book-now" className="w-full md:w-auto text-center px-10 py-4 border border-white/30 text-white text-[10px] md:text-xs font-bold uppercase tracking-[0.2em] hover:border-gold-accent hover:text-gold-accent transition-all duration-500 backdrop-blur-sm">
                                 {t('home.apply_book')}
                             </Link>
                         </motion.div>
@@ -286,10 +286,10 @@ const HomePage: React.FC = () => {
                             </div>
                         </div>
 
-                        <div className="space-y-8 text-left">
+                        <div className="space-y-[4vh] text-left">
                             <div>
-                                <h4 className="text-gold-accent font-bold uppercase tracking-[0.2em] text-sm mb-3">{t('home.featured_spotlight')}</h4>
-                                <h2 className="text-5xl md:text-7xl font-serif text-text-primary leading-none">
+                                <h4 className="text-gold-accent font-bold uppercase tracking-[0.2em] text-[10px] md:text-sm mb-3">{t('home.featured_spotlight')}</h4>
+                                <h2 className="font-serif text-text-primary leading-tight">
                                     Pamela <br/>
                                     <span className="text-text-muted/40 italic">Nelson</span>
                                 </h2>
@@ -348,15 +348,15 @@ const HomePage: React.FC = () => {
                         variants={fadeInUp}
                         className="grid grid-cols-1 lg:grid-cols-2 gap-12 md:gap-20 items-center"
                     >
-                        <div className="order-2 lg:order-1 space-y-8">
-                            <div className="space-y-4">
-                                <span className="inline-block px-3 py-1 bg-white/5 border border-white/10 text-gold-accent text-[10px] font-bold uppercase tracking-[0.3em] rounded-full">
+                        <div className="order-2 lg:order-1 space-y-[4vh]">
+                            <div className="space-y-[2vh]">
+                                <span className="inline-block px-3 py-1 bg-white/5 border border-white/10 text-gold-accent text-[9px] md:text-[10px] font-bold uppercase tracking-[0.3em] rounded-full">
                                     Ползи
                                 </span>
-                                <h2 className="text-3xl md:text-6xl font-serif text-text-primary leading-tight">
+                                <h2 className="font-serif text-text-primary leading-tight">
                                     Магнезий
                                 </h2>
-                                <p className="text-lg text-white/80 leading-relaxed max-w-xl font-light">
+                                <p className="text-white/80 leading-relaxed max-w-xl font-light">
                                     Магнезият е многостранен минерал с множество роли в тялото. Той поддържа основните функции на нервите, мускулите и сърцето, подпомага превръщането на храната в клетъчна енергия и спомага за релаксацията на тялото. Nature Made® Magnesium осигурява 250 mg в една удобна дневна таблетка.†
                                 </p>
                             </div>

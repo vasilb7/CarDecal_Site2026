@@ -8,6 +8,25 @@ const Header: React.FC = () => {
     const { t } = useTranslation();
     const location = useLocation();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [isMobileOrTablet, setIsMobileOrTablet] = useState(false);
+
+    // DEVICE DETECTION (Mobile/Tablet)
+    useEffect(() => {
+        const checkDevice = () => {
+            const ua = navigator.userAgent;
+            const isTablet = /(tablet|ipad|playbook|silk)|(android(?!.*mobi))/i.test(ua);
+            const isMobile = /Mobile|Android|iP(hone|od)|IEMobile|BlackBerry|Kindle|Silk-Accelerated|(hpwOS)/i.test(ua);
+            
+            // Special check for modern iPads that report as Macintosh
+            const isIPad = navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent);
+            
+            setIsMobileOrTablet(isTablet || isMobile || isIPad);
+        };
+
+        checkDevice();
+        window.addEventListener('resize', checkDevice);
+        return () => window.removeEventListener('resize', checkDevice);
+    }, []);
 
     // LOCK BODY SCROLL
     useEffect(() => {
@@ -78,8 +97,8 @@ const Header: React.FC = () => {
                     />
                 </Link>
 
-                {/* Desktop Nav */}
-                <nav className="hidden md:flex items-center space-x-12 ml-16 flex-grow">
+                {/* Desktop Nav - Hidden on mobile, tablets, and forced detection */}
+                <nav className={`${(isMobileOrTablet) ? 'hidden' : 'hidden lg:flex'} items-center space-x-12 ml-16 flex-grow`}>
                     {menuLinks.map(link => (
                         <NavLink key={link.path} to={link.path} className={({ isActive }) =>
                             `relative text-xs uppercase tracking-widest transition-colors duration-300 hover:text-gold-accent ${isActive ? 'text-gold-accent' : 'text-text-primary'
@@ -90,7 +109,7 @@ const Header: React.FC = () => {
                     ))}
                 </nav>
 
-                <div className="hidden md:flex items-center space-x-6 shrink-0 ml-auto">
+                <div className={`${(isMobileOrTablet) ? 'hidden' : 'hidden lg:flex'} items-center space-x-6 shrink-0 ml-auto`}>
                     <NavLink to="/login" className="text-xs uppercase tracking-widest text-white hover:text-gold-accent transition-colors">
                         {t('nav.login')}
                     </NavLink>
@@ -100,8 +119,8 @@ const Header: React.FC = () => {
                     </Link>
                 </div>
 
-                {/* Mobile Controls */}
-                <div className="md:hidden flex items-center gap-6 z-[110]">
+                {/* Mobile & Tablet Controls - Always shown on detected devices */}
+                <div className={`${(isMobileOrTablet) ? 'flex' : 'lg:hidden'} items-center gap-6 z-[110]`}>
                     <LanguageSwitcher />
                     <button
                         onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -123,7 +142,7 @@ const Header: React.FC = () => {
                     </button>
                 </div>
 
-                {/* Mobile Menu Overlay */}
+                {/* Mobile & Tablet Menu Overlay */}
                 <AnimatePresence>
                     {isMenuOpen && (
                         <motion.div 
@@ -131,7 +150,7 @@ const Header: React.FC = () => {
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             transition={{ duration: 0.3 }}
-                            className="fixed inset-0 bg-background md:hidden z-[100] flex flex-col items-center justify-center h-screen w-screen overflow-hidden"
+                            className={`fixed inset-0 bg-background ${(isMobileOrTablet) ? '' : 'lg:hidden'} z-[100] flex flex-col items-center justify-center h-screen w-screen overflow-hidden`}
                         >
                             <motion.nav 
                                 variants={containerVars}

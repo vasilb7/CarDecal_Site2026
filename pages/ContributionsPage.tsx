@@ -56,13 +56,13 @@ const ContributionsPage: React.FC = () => {
         <div className="min-h-screen bg-black text-text-primary pt-24 pb-20">
             {/* Hero Section */}
             <section className="relative h-[70vh] flex items-center justify-center overflow-hidden">
-                <div className="absolute inset-0 z-0 opacity-40">
+                <div className="absolute inset-0 z-0">
                     <img 
                         src="/Site_Pics/Contributions/Miami Swim Week/Pamela_Nelson.jpeg" 
                         alt="Miami Swim Week Hero" 
-                        className="w-full h-full object-cover grayscale brightness-50"
+                        className="w-full h-full object-cover object-[center_25%] grayscale brightness-50 opacity-40"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-black/20" />
                 </div>
                 
                 <div className="relative z-10 text-center space-y-6 px-4">
