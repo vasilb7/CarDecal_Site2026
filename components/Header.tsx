@@ -2,12 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { NavLink, Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
+import { User, LogOut, ChevronDown } from 'lucide-react';
 import LanguageSwitcher from './LanguageSwitcher';
+import { useAuth } from '../context/AuthContext';
 
 const Header: React.FC = () => {
     const { t } = useTranslation();
+    const { user, signOut } = useAuth();
     const location = useLocation();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
     const [isMobileOrTablet, setIsMobileOrTablet] = useState(false);
 
     // DEVICE DETECTION (Mobile/Tablet)
@@ -46,6 +50,7 @@ const Header: React.FC = () => {
     // Close menu on route change
     useEffect(() => {
         setIsMenuOpen(false);
+        setIsProfileMenuOpen(false);
     }, [location.pathname]);
 
     const logoHeightClass = "h-8 md:h-8"; 
@@ -110,9 +115,63 @@ const Header: React.FC = () => {
                 </nav>
 
                 <div className={`${(isMobileOrTablet) ? 'hidden' : 'hidden lg:flex'} items-center space-x-6 shrink-0 ml-auto`}>
-                    <NavLink to="/login" className="text-xs uppercase tracking-widest text-white hover:text-gold-accent transition-colors">
-                        {t('nav.login')}
-                    </NavLink>
+                    {user ? (
+                        <div className="relative">
+                            <button 
+                                onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+                                className="flex items-center gap-2 text-xs uppercase tracking-widest text-white hover:text-gold-accent transition-colors focus:outline-none"
+                            >
+                                <div className="w-8 h-8 rounded-full bg-surface border border-white/20 flex items-center justify-center">
+                                    <User className="w-4 h-4" />
+                                </div>
+                                <span className="hidden xl:inline-block">{user.email?.split('@')[0]}</span>
+                                <ChevronDown className={`w-3 h-3 transition-transform duration-300 ${isProfileMenuOpen ? 'rotate-180' : ''}`} />
+                            </button>
+
+                            <AnimatePresence>
+                                {isProfileMenuOpen && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                        transition={{ duration: 0.2 }}
+                                        className="absolute right-0 mt-4 w-48 bg-surface/95 backdrop-blur-xl border border-white/10 shadow-2xl overflow-hidden z-50"
+                                    >
+                                        <div className="py-2">
+                                            <div className="px-4 py-3 border-b border-white/5 mb-1">
+                                                <p className="text-[10px] text-text-muted uppercase tracking-wider">Signed in as</p>
+                                                <p className="text-xs text-white truncate font-medium mt-1">{user.email}</p>
+                                            </div>
+                                            
+                                            <Link 
+                                                to="/profile" 
+                                                onClick={() => setIsProfileMenuOpen(false)}
+                                                className="flex items-center gap-3 px-4 py-3 text-xs uppercase tracking-widest text-text-primary hover:bg-white/5 hover:text-gold-accent transition-colors"
+                                            >
+                                                <User className="w-3.5 h-3.5" />
+                                                {t('nav.profile')}
+                                            </Link>
+                                            
+                                            <button 
+                                                onClick={() => { signOut(); setIsProfileMenuOpen(false); }}
+                                                className="w-full flex items-center gap-3 px-4 py-3 text-xs uppercase tracking-widest text-text-primary hover:bg-white/5 hover:text-red-400 transition-colors text-left"
+                                            >
+                                                <LogOut className="w-3.5 h-3.5" />
+                                                {t('nav.logout')}
+                                            </button>
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </div>
+                    ) : (
+                        <NavLink to="/login" className="text-xs uppercase tracking-widest text-white hover:text-gold-accent transition-colors">
+                            {t('nav.login')}
+                        </NavLink>
+                    )}
+                    
+
+
                     <LanguageSwitcher />
                     <Link to="/book-now" className="px-6 py-2 border border-gold-accent text-gold-accent text-xs uppercase tracking-widest hover:bg-gold-accent hover:text-background transition-colors duration-300">
                         {t('nav.book_now')}
@@ -120,7 +179,15 @@ const Header: React.FC = () => {
                 </div>
 
                 {/* Mobile & Tablet Controls - Always shown on detected devices */}
-                <div className={`${(isMobileOrTablet) ? 'flex' : 'lg:hidden'} items-center gap-6 z-[110]`}>
+                <div className={`${(isMobileOrTablet) ? 'flex' : 'lg:hidden'} items-center gap-5 z-[110]`}>
+                    {user && (
+                         <Link to="/profile" className="flex items-center justify-center w-9 h-9 rounded-full border border-white/20 bg-white/5 text-white hover:border-gold-accent hover:text-gold-accent transition-all duration-300">
+                             <User className="w-6 h-6 sm:w-4 sm:h-4" />
+                         </Link>
+                    )}
+                    
+
+
                     <LanguageSwitcher />
                     <button
                         onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -173,13 +240,38 @@ const Header: React.FC = () => {
                                 
                                 <motion.div variants={linkVars} className="w-24 h-[1px] bg-gold-accent/30 my-4" />
                                 
-                                <motion.div variants={linkVars} className="flex flex-col items-center space-y-6">
-                                    <NavLink to="/login" onClick={closeMenu} className="text-white/60 uppercase tracking-[0.2em] text-sm hover:text-white transition-colors">
-                                        {t('nav.login')}
-                                    </NavLink>
-                                    <NavLink to="/register" onClick={closeMenu} className="text-white/60 uppercase tracking-[0.2em] text-sm hover:text-white transition-colors">
-                                        {t('nav.register')}
-                                    </NavLink>
+                                <motion.div variants={linkVars} className="flex flex-col items-center space-y-5">
+                                    {user ? (
+                                        <>
+                                            <span className="text-white/40 uppercase tracking-[0.2em] text-[10px] mb-1">
+                                                {user.email}
+                                            </span>
+                                            <Link 
+                                                to="/profile"
+                                                onClick={closeMenu}
+                                                className="flex items-center gap-2 text-gold-accent uppercase tracking-[0.2em] text-sm hover:text-white transition-colors"
+                                            >
+                                                <User className="w-4 h-4" />
+                                                {t('nav.profile')}
+                                            </Link>
+                                            <button 
+                                                onClick={() => { signOut(); closeMenu(); }} 
+                                                className="flex items-center gap-2 text-white/60 uppercase tracking-[0.2em] text-sm hover:text-red-400 transition-colors"
+                                            >
+                                                <LogOut className="w-4 h-4" />
+                                                {t('nav.logout')}
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <NavLink to="/login" onClick={closeMenu} className="text-white/60 uppercase tracking-[0.2em] text-sm hover:text-white transition-colors">
+                                                {t('nav.login')}
+                                            </NavLink>
+                                            <NavLink to="/register" onClick={closeMenu} className="text-white/60 uppercase tracking-[0.2em] text-sm hover:text-white transition-colors">
+                                                {t('nav.register')}
+                                            </NavLink>
+                                        </>
+                                    )}
                                 </motion.div>
 
                                 <motion.div variants={linkVars} className="pt-8">

@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+// Booking Page Component
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';

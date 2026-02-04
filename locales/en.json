@@ -11,7 +11,9 @@
     "feed": "Feed",
     "login": "Login",
     "register": "Register",
-    "contributions": "Contributions"
+    "contributions": "Contributions",
+    "profile": "Profile",
+    "logout": "Logout"
   },
   "services": {
     "title": "Professional Services",

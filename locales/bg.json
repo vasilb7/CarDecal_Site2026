@@ -11,7 +11,9 @@
     "feed": "Постове",
     "login": "Вход",
     "register": "Регистрация",
-    "contributions": "Участия"
+    "contributions": "Участия",
+    "profile": "Профил",
+    "logout": "Изход"
   },
   "services": {
     "title": "Професионални Услуги",

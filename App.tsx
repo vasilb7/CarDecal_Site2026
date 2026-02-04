@@ -17,6 +17,7 @@ import TermsPage from './pages/TermsPage';
 import LegalPage from './pages/LegalPage';
 import ContributionsPage from './pages/ContributionsPage';
 import BookingPage from './pages/BookingPage';
+import ProfilePage from './pages/ProfilePage';
 
 function AppContent() {
   const location = useLocation();
@@ -64,6 +65,7 @@ function AppContent() {
                 <Route path="/legal" element={<LegalPage />} />
                 <Route path="/contributions" element={<ContributionsPage />} />
                 <Route path="/book-now" element={<BookingPage />} />
+                <Route path="/profile" element={<ProfilePage />} />
               </Routes>
             </Layout>
           } />
