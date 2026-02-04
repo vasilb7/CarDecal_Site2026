@@ -64,8 +64,8 @@ const Header: React.FC = () => {
     };
 
     return (
-        <header className="sticky top-0 z-[100] w-full bg-background/90 backdrop-blur-md border-b border-white/5">
-            <div className="container mx-auto px-6 py-4 flex items-center justify-between relative h-20">
+        <header className="sticky top-0 z-[100] w-full bg-background/90 backdrop-blur-md border-b border-white/5 pt-[env(safe-area-inset-top)]">
+            <div className="container mx-auto px-6 pl-[calc(1.5rem+env(safe-area-inset-left))] pr-[calc(1.5rem+env(safe-area-inset-right))] py-4 flex items-center justify-between relative h-20">
                 <Link 
                     to="/" 
                     onClick={(e) => { handleLogoClick(e); closeMenu(); }}

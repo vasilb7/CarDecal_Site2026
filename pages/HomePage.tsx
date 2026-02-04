@@ -195,13 +195,15 @@ const HomePage: React.FC = () => {
                     >
                         <motion.h1 
                             variants={fadeInUp} 
-                            className="text-shimmer shadow-premium-gold text-5xl md:text-9xl font-serif font-bold leading-tight uppercase tracking-[0.15em]"
+                            style={{ fontSize: 'var(--fs-hero)' }}
+                            className="text-shimmer shadow-premium-gold font-serif font-bold leading-[1.1] uppercase tracking-[0.1em] md:tracking-[0.15em]"
                         >
                             {t('home.hero_title')}
                         </motion.h1>
                         <motion.p 
                             variants={fadeInUp} 
-                            className="mt-6 text-lg md:text-2xl text-white/90 tracking-[0.25em] font-light uppercase drop-shadow-md"
+                            style={{ fontSize: 'var(--fs-body)' }}
+                            className="mt-6 text-white/90 tracking-[0.2em] md:tracking-[0.25em] font-light uppercase drop-shadow-md max-w-[90%] mx-auto"
                         >
                             {t('home.hero_subtitle')}
                         </motion.p>
@@ -425,12 +427,13 @@ const HomePage: React.FC = () => {
                                 </div>
 
                                 {/* Floating Product Image (Bottle) - Bottom Left Corner - ENLARGED & ON TOP */}
-                                <div className="absolute bottom-[-10%] left-[-45%] md:left-[-60%] w-[120%] md:w-[140%] z-50 transform -rotate-[15deg] drop-shadow-[0_50px_100px_rgba(0,0,0,0.95)] transition-transform duration-700 ease-out group-hover:translate-y-[-10px] group-hover:rotate-[-10deg]">
+                                <div className="absolute bottom-[-10%] left-[-30%] md:left-[-50%] w-[100%] md:w-[130%] z-50 transform -rotate-[10deg] md:-rotate-[15deg] drop-shadow-[0_30px_60px_rgba(0,0,0,0.8)] md:drop-shadow-[0_50px_100px_rgba(0,0,0,0.95)] transition-transform duration-700 ease-out group-hover:translate-y-[-10px] group-hover:rotate-[-5deg]">
                                     <a href="https://www.naturemade.com/products/magnesium-250-mg-tablets?variant=17776033857607" target="_blank" rel="noopener noreferrer" className="block w-full h-full">
                                         <img
                                             src="/Site_Pics/SponsorShip/Pills.png"
                                             alt="Product Bottle"
                                             className="w-full h-auto cursor-pointer"
+                                            loading="lazy"
                                         />
                                     </a>
                                 </div>
@@ -508,11 +511,11 @@ const HomePage: React.FC = () => {
                             ))}
                         </div>
                         <div
-                            className="absolute inset-y-0 left-0 w-1/4 z-40 cursor-w-resize"
+                            className="absolute inset-y-0 left-0 w-1/3 z-40 cursor-w-resize"
                             onClick={handleLookbookBackward}
                         />
                         <div
-                            className="absolute inset-y-0 right-0 w-1/4 z-40 cursor-e-resize"
+                            className="absolute inset-y-0 right-0 w-1/3 z-40 cursor-e-resize"
                             onClick={handleLookbookForward}
                         />
                         <div className="absolute bottom-0 left-0 right-0 flex h-1 bg-white/5 z-30 space-x-1 px-1">
