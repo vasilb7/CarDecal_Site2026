@@ -10,19 +10,19 @@ const ServicesPage: React.FC = () => {
             name: t('services.list.casting.name'),
             focus: t('services.list.casting.focus'),
             description: t('services.list.casting.description'),
-            image: "/Stock Photos/Agency Models together/10.jpeg"
+            image: "/Site_Pics/Model_pics_together/10.jpeg"
         },
         {
             name: t('services.list.production.name'),
             focus: t('services.list.production.focus'),
             description: t('services.list.production.description'),
-            image: "/Stock Photos/Agency Models together/12.jpeg"
+            image: "/Site_Pics/Model_pics_together/12.jpeg"
         },
         {
             name: t('services.list.creative.name'),
             focus: t('services.list.creative.focus'),
             description: t('services.list.creative.description'),
-            image: "/Stock Photos/Agency Models together/5.jpeg"
+            image: "/Site_Pics/Model_pics_together/5.jpeg"
         }
     ];
 

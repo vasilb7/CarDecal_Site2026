@@ -9,7 +9,7 @@ const contributions = [
     {
         name: "Pamela Nelson",
         nameBg: "Памела Нелсън",
-        image: "/Stock Photos/Contributions/Miami Swim Week/Pamela_Nelson.jpeg",
+        image: "/Site_Pics/Contributions/Miami Swim Week/Pamela_Nelson.jpeg",
         role: "Headliner / Top Model",
         roleBg: "Хедлайнер / Топ Модел",
         award: "Global Editorial Excellence Award",
@@ -20,7 +20,7 @@ const contributions = [
     {
         name: "Alexandra White",
         nameBg: "Александра Уайт",
-        image: "/Stock Photos/Contributions/Miami Swim Week/Alexandra_White.jpeg",
+        image: "/Site_Pics/Contributions/Miami Swim Week/Alexandra_White.jpeg",
         role: "Lead Runway Specialist",
         roleBg: "Водещ подиумен специалист",
         award: "Best Walk Performance 2026",
@@ -31,7 +31,7 @@ const contributions = [
     {
         name: "Anastasia Victorieva",
         nameBg: "Анастасия Викториева",
-        image: "/Stock Photos/Contributions/Miami Swim Week/Anastasia_Victorieva.jpeg",
+        image: "/Site_Pics/Contributions/Miami Swim Week/Anastasia_Victorieva.jpeg",
         role: "Exclusive Feature Talent",
         roleBg: "Ексклузивен талант",
         award: "Rising Star Discovery Award",
@@ -58,7 +58,7 @@ const ContributionsPage: React.FC = () => {
             <section className="relative h-[70vh] flex items-center justify-center overflow-hidden">
                 <div className="absolute inset-0 z-0 opacity-40">
                     <img 
-                        src="/Stock Photos/Contributions/Miami Swim Week/Pamela_Nelson.jpeg" 
+                        src="/Site_Pics/Contributions/Miami Swim Week/Pamela_Nelson.jpeg" 
                         alt="Miami Swim Week Hero" 
                         className="w-full h-full object-cover grayscale brightness-50"
                     />
@@ -102,8 +102,8 @@ const ContributionsPage: React.FC = () => {
                         <div className="w-20 h-px bg-gold-accent" />
                         <p className="text-xl text-text-muted leading-relaxed font-light">
                             {isBg 
-                                ? "Тази година VB Models остави незаличима следа на най-престижното плажно събитие в света. Нашите топ модели бяха избрани да представят водещите дизайнерски къщи, демонстрирайки не само физическо съвършенство, но и артистична увереност."
-                                : "This year, VB Models left an indelible mark on the world's most prestigious beachwear event. Our top-tier talent was selected to represent leading design houses, showcasing not just physical perfection, but artistic poise."}
+                                ? "Тази година VB VISION остави незаличима следа на най-престижното плажно събитие в света. Нашите топ модели бяха избрани да представят водещите дизайнерски къщи, демонстрирайки не само физическо съвършенство, но и артистична увереност."
+                                : "This year, VB VISION left an indelible mark on the world's most prestigious beachwear event. Our top-tier talent was selected to represent leading design houses, showcasing not just physical perfection, but artistic poise."}
                         </p>
                     </motion.div>
                     

@@ -5,7 +5,7 @@ import type { Model, Post } from '../types';
 const generatePosts = (modelName: string, filenames: string[]): Post[] => {
   return filenames.map((name, index) => ({
     id: `${modelName.replace(/\s+/g, '-').toLowerCase()}-p${index}`,
-    src: `/Stock Photos/${modelName}/Page/${name}`,
+    src: `/Site_Pics/${modelName}/Page/${name}`,
     type: 'image',
     caption: `Portfolio ${index + 1}`,
     tags: ['fashion', 'model'],
@@ -15,13 +15,12 @@ const generatePosts = (modelName: string, filenames: string[]): Post[] => {
   }));
 };
 
-const generateGroupedPosts = (modelName: string, filenames: string[]): Post[] => {
+const generateGroupedPosts = (modelName: string, filenames: string[], categoryFolder?: string): Post[] => {
   const sourceFiles = filenames;
   const posts: Post[] = [];
   let fileIndex = 0;
   let postCount = 0;
   
-  // Starting date - about 2 years ago
   const startDate = new Date();
   startDate.setMonth(startDate.getMonth() - 24);
 
@@ -30,19 +29,19 @@ const generateGroupedPosts = (modelName: string, filenames: string[]): Post[] =>
       const pseudoRand = ((n * 9301 + 49297) % 233280) / 233280; 
 
       let groupSize = 1;
-      if (pseudoRand > 0.70) groupSize = 2; // 20% chance
-      if (pseudoRand > 0.90) groupSize = 3; // 10% chance
+      if (pseudoRand > 0.70) groupSize = 2;
+      if (pseudoRand > 0.90) groupSize = 3;
       
       if (fileIndex + groupSize > sourceFiles.length) {
           groupSize = sourceFiles.length - fileIndex;
       }
 
+      const categoryPath = categoryFolder ? `${categoryFolder}/${modelName}` : modelName;
       const group = sourceFiles.slice(fileIndex, fileIndex + groupSize);
-      const fullPaths = group.map(name => `/Stock Photos/${modelName}/Page/${name}`);
+      const fullPaths = group.map(name => `/Site_Pics/${categoryPath}/Page/${name}`);
       
-      // Generate a date that increases with index
       const postDate = new Date(startDate);
-      postDate.setDate(postDate.getDate() + (postCount * 3)); // New post every 3 days approx
+      postDate.setDate(postDate.getDate() + (postCount * 3));
 
       posts.push({
           id: `${modelName.replace(/\s+/g, '-').toLowerCase()}-p${postCount}`,
@@ -52,7 +51,7 @@ const generateGroupedPosts = (modelName: string, filenames: string[]): Post[] =>
           caption: `Portfolio ${postCount + 1}`,
           tags: ['fashion', 'model', 'editorial'],
           pinned: postCount === 0 || postCount === 1,
-          likes: Math.floor(pseudoRand * 1000) + 50, // 50 to 1050 likes
+          likes: Math.floor(pseudoRand * 1000) + 50,
           date: postDate.toISOString()
       });
       
@@ -82,8 +81,8 @@ export const modelsData: Model[] = [
   {
     slug: 'pamela-nelson',
     name: 'Pamela Nelson',
-    avatar: '/Stock Photos/Pamela Nelson/modelpage/1.jpeg',
-    coverImage: '/Stock Photos/Pamela Nelson/modelpage/1.jpeg',
+    avatar: '/Site_Pics/Top_models/Pamela Nelson/modelpage/1.jpeg',
+    coverImage: '/Site_Pics/Top_models/Pamela Nelson/modelpage/1.jpeg',
     categories: ['Editorial', 'Commercial', 'Top Model'],
     location: 'Paris',
     height: "180cm / 5'11\"",
@@ -93,8 +92,8 @@ export const modelsData: Model[] = [
     bio: 'Pamela is a high-fashion icon.',
     availability: 'Available',
     highlights: [],
-    posts: generateGroupedPosts('Pamela Nelson', pamelaFiles),
-    cardImages: getFileList(5).map(f => `/Stock Photos/Pamela Nelson/modelpage/${f}`),
+    posts: generateGroupedPosts('Pamela Nelson', pamelaFiles, 'Top_models'),
+    cardImages: getFileList(5).map(f => `/Site_Pics/Top_models/Pamela Nelson/modelpage/${f}`),
     isTopModel: true,
     isVerified: true,
     nameBg: 'Памела Нелсън'
@@ -102,9 +101,9 @@ export const modelsData: Model[] = [
   {
     slug: 'alexandra-white',
     name: 'Alexandra White',
-    avatar: '/Stock Photos/Alexandara White/modelpage/1.jpeg',
-    coverImage: '/Stock Photos/Alexandara White/modelpage/1.jpeg',
-    categories: ['Editorial', 'Runway'],
+    avatar: '/Site_Pics/New_Faces/Alexandara White/modelpage/1.jpeg',
+    coverImage: '/Site_Pics/New_Faces/Alexandara White/modelpage/1.jpeg',
+    categories: ['Editorial', 'Runway', 'New Faces'],
     location: 'London',
     height: "178cm / 5'10\"",
     measurements: "82-60-88",
@@ -113,36 +112,36 @@ export const modelsData: Model[] = [
     bio: 'Alexandra is a versatile model with a strong editorial presence.',
     availability: 'Available',
     highlights: [],
-    posts: generateGroupedPosts('Alexandara White', alexandaraFiles),
-    cardImages: getFileList(5).map(f => `/Stock Photos/Alexandara White/modelpage/${f}`),
+    posts: generateGroupedPosts('Alexandara White', alexandaraFiles, 'New_Faces'),
+    cardImages: getFileList(5).map(f => `/Site_Pics/New_Faces/Alexandara White/modelpage/${f}`),
     isVerified: true,
     nameBg: 'Александра Уайт'
   },
   {
     slug: 'kyla-gabriel',
     name: 'Kyla Gabriel',
-    avatar: '/Stock Photos/Kyla Gabriel/modelpage/1.jpeg',
-    coverImage: '/Stock Photos/Kyla Gabriel/modelpage/1.jpeg',
-    categories: ['Commercial', 'Beauty'],
+    avatar: '/Site_Pics/New_Faces/Kyla Gabriel/modelpage/1.jpeg',
+    coverImage: '/Site_Pics/New_Faces/Kyla Gabriel/modelpage/1.jpeg',
+    categories: ['Commercial', 'Beauty', 'New Faces'],
     location: 'New York',
     height: "175cm / 5'9\"",
     measurements: "84-62-90",
     hairColor: 'Brunette',
     eyeColor: 'Brown',
     bio: 'Kyla is known for her commercial appeal.',
-    availability: 'Available',
+    availability: 'Booked',
     highlights: [],
-    posts: generateGroupedPosts('Kyla Gabriel', kylaFiles),
-    cardImages: getFileList(5).map(f => `/Stock Photos/Kyla Gabriel/modelpage/${f}`),
+    posts: generateGroupedPosts('Kyla Gabriel', kylaFiles, 'New_Faces'),
+    cardImages: getFileList(5).map(f => `/Site_Pics/New_Faces/Kyla Gabriel/modelpage/${f}`),
     isVerified: true,
     nameBg: 'Кайла Габриел'
   },
   {
     slug: 'loren-torrente',
     name: 'Loren Torrente',
-    avatar: '/Stock Photos/Loren Torrente/Page/1.jpeg',
-    coverImage: '/Stock Photos/Loren Torrente/Page/1.jpeg',
-    categories: ['Editorial', 'Fashion'],
+    avatar: '/Site_Pics/New_Faces/Loren Torrente/Page/1.jpeg',
+    coverImage: '/Site_Pics/New_Faces/Loren Torrente/Page/1.jpeg',
+    categories: ['Editorial', 'Fashion', 'New Faces'],
     location: 'Milan',
     height: "177cm / 5'10\"",
     measurements: "83-61-89",
@@ -151,27 +150,46 @@ export const modelsData: Model[] = [
     bio: 'Loren is a rising star in the fashion industry.',
     availability: 'Available',
     highlights: [],
-    posts: generateGroupedPosts('Loren Torrente', lorenFiles),
-    cardImages: getFileList(5).map(f => `/Stock Photos/Loren Torrente/Page/${f}`),
+    posts: generateGroupedPosts('Loren Torrente', lorenFiles, 'New_Faces'),
+    cardImages: getFileList(5).map(f => `/Site_Pics/New_Faces/Loren Torrente/Page/${f}`),
     nameBg: 'Лорен Торенте'
   },
   {
     slug: 'victoria-james',
     name: 'Victoria James',
-    avatar: '/Stock Photos/Victoria James/model_page/1.png',
-    coverImage: '/Stock Photos/Victoria James/model_page/1.png',
-    categories: ['Editorial', 'Commercial'],
+    avatar: '/Site_Pics/Trending/Victoria James/model_page/1.png',
+    coverImage: '/Site_Pics/Trending/Victoria James/model_page/1.png',
+    categories: ['Editorial', 'Commercial', 'Trending'],
     location: 'London',
     height: "176cm / 5'9.5\"",
     measurements: "84-61-89",
     hairColor: 'Blonde',
     eyeColor: 'Brown',
     bio: 'Victoria brings a classic elegance to every shoot.',
-    availability: 'Available',
+    availability: 'Booked',
     highlights: [],
-    posts: generateGroupedPosts('Victoria James', victoriaFiles), // generateGroupedPosts uses /Page/ path by default
-    cardImages: victoriaCardFiles.map(f => `/Stock Photos/Victoria James/model_page/${f}`),
+    posts: generateGroupedPosts('Victoria James', victoriaFiles, 'Trending'),
+    cardImages: victoriaCardFiles.map(f => `/Site_Pics/Trending/Victoria James/model_page/${f}`),
     isVerified: true,
     nameBg: 'Виктория Джеймс'
+  },
+  {
+    slug: 'paula-young',
+    name: 'Paula Young',
+    nameBg: 'Паула Йънг',
+    avatar: '/Site_Pics/Visiting_models/Paula Young/pfp.jpeg',
+    coverImage: '/Site_Pics/Visiting_models/Paula Young/pfp.jpeg',
+    categories: ['Commercial', 'Visiting'],
+    location: 'Berlin',
+    height: "174cm / 5'8.5\"",
+    measurements: "83-60-88",
+    hairColor: 'Blonde',
+    eyeColor: 'Blue',
+    bio: 'Paula is a visiting model with a fresh and vibrant look, bringing international experience to our agency.',
+    availability: 'Available',
+    highlights: [],
+    posts: generateGroupedPosts('Paula Young', ['1.jpeg', '2.jpeg', '3.jpeg'], 'Visiting_models'),
+    cardImages: ['1.jpeg', '2.jpeg', '3.jpeg'].map(f => `/Site_Pics/Visiting_models/Paula Young/${f}`),
+    isVerified: true
   }
 ];

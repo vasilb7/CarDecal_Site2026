@@ -211,7 +211,7 @@ export const SignInPage: React.FC<SignInPageProps> = ({
                 className="absolute right-[1%] bottom-[5%] w-[32%] z-50 pointer-events-auto"
               >
                 <img 
-                  src="/Stock Photos/SponsorShip/Protein_Snack/ProteinLogin.png" 
+                  src="/Site_Pics/SponsorShip/Protein_Snack/ProteinLogin.png" 
                   alt="Protein Snack" 
                   className="relative z-10 w-full h-auto"
                   draggable="false"

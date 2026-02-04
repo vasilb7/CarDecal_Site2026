@@ -18,7 +18,7 @@ const AboutPage: React.FC = () => {
 
                 <div className="grid md:grid-cols-2 gap-10 md:gap-20 items-center mt-20 md:mt-32">
                     <div>
-                        <img src="/Stock Photos/Agency Models together/67.jpeg" alt="Behind the scenes" className="w-full h-auto object-cover"/>
+                        <img src="/Site_Pics/Model_pics_together/67.jpeg" alt="Behind the scenes" className="w-full h-auto object-cover"/>
                     </div>
                     <div>
                         <h2 className="text-3xl md:text-4xl font-serif text-text-primary mb-6">{t('about.brand_title')}</h2>
@@ -50,7 +50,7 @@ const AboutPage: React.FC = () => {
                         </ul>
                     </div>
                      <div className="order-1 md:order-2">
-                        <img src="/Stock Photos/Agency Models together/122.jpeg" alt="Studio shot" className="w-full h-auto object-cover"/>
+                        <img src="/Site_Pics/Model_pics_together/122.jpeg" alt="Studio shot" className="w-full h-auto object-cover"/>
                     </div>
                 </div>
 

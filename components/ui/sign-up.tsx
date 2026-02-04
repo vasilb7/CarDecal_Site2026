@@ -209,7 +209,7 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
                   className="absolute right-[1%] bottom-[5%] w-[27%] z-40 pointer-events-auto"
                 >
                   <img 
-                    src="/Stock Photos/SponsorShip/Protein_Snack/ProteinBox.png" 
+                    src="/Site_Pics/SponsorShip/Protein_Snack/ProteinBox.png" 
                     alt="Protein Box" 
                     className="relative z-10 w-full h-auto"
                     draggable="false"
@@ -249,7 +249,7 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
                       transition={{ duration: 0.3 }}
                     >
                       <img 
-                        src="/Stock Photos/SponsorShip/Protein_Snack/ProteinBrownie.png" 
+                        src="/Site_Pics/SponsorShip/Protein_Snack/ProteinBrownie.png" 
                         alt="Protein Brownie" 
                         className="relative z-10 w-full h-auto"
                         draggable="false"

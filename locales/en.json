@@ -35,8 +35,8 @@
     }
   },
   "home": {
-    "hero_title": "VB Models",
-    "hero_subtitle": "Editorial talent. Luxury presence.",
+    "hero_title": "VB VISION",
+    "hero_subtitle": "Your face. Your brand. Your career.",
     "explore_models": "View Models",
     "apply_book": "Apply / Book",
     "featured_spotlight": "Agency's Finest",
@@ -47,10 +47,10 @@
     "ready_to_create": "Ready to Create?",
     "connect_with_us": "Connect with us to find the perfect talent for your next project.",
     "book_model": "Book a Model",
-    "join_vb": "Join VB",
+    "join_vb": "Join VB VISION",
     "learn_more": "Learn More",
     "pamela": {
-      "desc1": "As the crowning jewel of VB Models, Pamela Nelson represents the absolute pinnacle of editorial elegance. With a magnetic presence that dominates the lens, she has become our most requested talent for high-fashion campaigns.",
+      "desc1": "As the crowning jewel of VB VISION, Pamela Nelson represents the absolute pinnacle of editorial elegance. With a magnetic presence that dominates the lens, she has become our most requested talent for high-fashion campaigns.",
       "desc2": "A veteran of the runway and a favorite of avant-garde designers, Pamela has claimed victory on multiple international stages, redefining what it means to be a modern muse. Her portfolio is not just a collection of images—it is a testament to versatility, poise, and an unyielding dedication to the art of modeling.",
       "view_portfolio": "View Full Portfolio",
       "projects": "Projects",
@@ -58,10 +58,10 @@
     }
   },
   "about": {
-    "title": "The Vision Behind VB",
+    "title": "The Vision Behind VB VISION",
     "subtitle": "We are more than a model agency; we are curators of iconic talent and architects of luxury presence.",
     "brand_title": "Brand Statement",
-    "brand_p1": "VB Models operates at the intersection of high fashion and high art. We represent a meticulously selected roster of talent who not only define trends but also embody the essence of modern luxury. Our commitment is to elevate brands by providing faces that tell a story, evoke emotion, and create unforgettable campaigns.",
+    "brand_p1": "VB VISION operates at the intersection of high fashion and high art. We represent a meticulously selected roster of talent who not only define trends but also embody the essence of modern luxury. Our commitment is to elevate brands by providing faces that tell a story, evoke emotion, and create unforgettable campaigns.",
     "brand_p2": "Our approach is bespoke, our standards are exacting, and our vision is global. We connect the world's most prestigious brands with talent that possesses a rare combination of editorial appeal and commercial viability.",
     "values_title": "Our Values",
     "value1_title": "Exclusivity:",
@@ -90,7 +90,22 @@
     "all_eyes": "All Eye Colors",
     "all": "All",
     "no_matches": "No models match the current criteria.",
-    "view_profile": "View Profile"
+    "view_profile": "View Profile",
+    "availability": {
+      "Available": "Available",
+      "Booked": "Booked",
+      "On Option": "On Option"
+    },
+    "welcome_modules": {
+      "top": "Top Models",
+      "new": "New Faces",
+      "trending": "Trending",
+      "visiting": "Visiting Models",
+      "all": "All Models"
+    },
+    "enter_catalog": "Enter Catalog",
+    "choice_title": "Welcome to VB VISION",
+    "choice_subtitle": "Select a category to begin"
   },
   "pricing": {
     "title": "Client Services",
@@ -214,25 +229,42 @@
     "comp_card": "Comp Card",
     "feed": "Feed"
   },
-  "filter_values": {
-    "Editorial": "Editorial",
-    "Runway": "Runway",
-    "Commercial": "Commercial",
-    "Beauty": "Beauty",
-    "Lifestyle": "Lifestyle",
-    "London": "London",
-    "New York": "New York",
-    "Paris": "Paris",
-    "Milan": "Milan",
-    "Tokyo": "Tokyo",
-    "Blonde": "Blonde",
-    "Brunette": "Brunette",
-    "Dark Brown": "Dark Brown",
-    "Brown": "Brown",
-    "Red": "Red",
-    "Blue": "Blue",
-    "Green": "Green",
-    "Hazel": "Hazel"
+  "attributes": {
+    "hair": {
+      "Blonde": "Blonde",
+      "Brunette": "Brunette",
+      "Black": "Black",
+      "Brown": "Brown",
+      "Dark Brown": "Dark Brown",
+      "Red": "Red",
+      "Silver": "Silver",
+      "Grey": "Grey"
+    },
+    "eyes": {
+      "Blue": "Blue",
+      "Green": "Green",
+      "Brown": "Brown",
+      "Hazel": "Hazel",
+      "Grey": "Grey",
+      "Black": "Black"
+    },
+    "categories": {
+      "Editorial": "Editorial",
+      "Runway": "Runway",
+      "Commercial": "Commercial",
+      "Beauty": "Beauty",
+      "Lifestyle": "Lifestyle",
+      "Fashion": "Fashion",
+      "Top Model": "Top Model"
+    },
+    "locations": {
+      "London": "London",
+      "New York": "New York",
+      "Paris": "Paris",
+      "Milan": "Milan",
+      "Tokyo": "Tokyo",
+      "Sofia": "Sofia"
+    }
   },
   "auth": {
     "login_title": "Welcome Back",
@@ -317,5 +349,31 @@
     "disclaimer_text": "VB Models makes every effort to ensure the accuracy of the information on this website. However, we do not guarantee that the content is always up-to-date or error-free. The use of information is at the user's own risk.",
     "links_title": "External Links",
     "links_text": "This site may contain links to external websites. VB Models is not responsible for the content or privacy policies of these external sites."
+  },
+  "booking_page": {
+    "title": "Book a Model",
+    "subtitle": "Secure elite talent for your project through our streamlined booking system.",
+    "select_model": "Select Model(s)",
+    "step": "Step",
+    "selection_limit": "You can select up to 3 models.",
+    "search_placeholder": "Search model by name...",
+    "selected": "Selected",
+    "select": "Select",
+    "no_models": "No models found with that name.",
+    "company_details": "Company Details",
+    "form": {
+      "company_name": "Company Name / Brand",
+      "vat_number": "Tax / VAT Number",
+      "contact_person": "Contact Person",
+      "email": "Email Address",
+      "phone": "Phone Number",
+      "website": "Website",
+      "project_type": "Project Type",
+      "shoot_date": "Shoot Date",
+      "location": "Location",
+      "message": "Additional Details",
+      "message_placeholder": "Describe your requirements...",
+      "submit": "Book Now"
+    }
   }
 }

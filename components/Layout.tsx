@@ -2,6 +2,7 @@
 import React from 'react';
 import Header from './Header';
 import Footer from './Footer';
+import PolicyModal from './PolicyModal';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -10,6 +11,7 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   return (
     <div className="min-h-screen bg-background font-sans flex flex-col">
+      <PolicyModal />
       <Header />
       <main className="flex-grow w-full">
         {children}

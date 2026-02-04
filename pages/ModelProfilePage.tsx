@@ -403,9 +403,9 @@ const ModelProfilePage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
                 <div><span className="text-text-muted">{t('profile.height')}:</span> {model.height}</div>
                 <div><span className="text-text-muted">{t('profile.measurements')}:</span> {model.measurements}</div>
-                <div><span className="text-text-muted">{t('profile.hair_color')}:</span> {t(`filter_values.${model.hairColor}`, model.hairColor)}</div>
-                <div><span className="text-text-muted">{t('profile.eye_color')}:</span> {t(`filter_values.${model.eyeColor}`, model.eyeColor)}</div>
-                <div><span className="text-text-muted">{t('profile.location')}:</span> {t(`filter_values.${model.location}`, model.location)}</div>
+                <div><span className="text-text-muted">{t('profile.hair_color')}:</span> {t(`attributes.hair.${model.hairColor}`, model.hairColor)}</div>
+                <div><span className="text-text-muted">{t('profile.eye_color')}:</span> {t(`attributes.eyes.${model.eyeColor}`, model.eyeColor)}</div>
+                <div><span className="text-text-muted">{t('profile.location')}:</span> {t(`attributes.locations.${model.location}`, model.location)}</div>
             </div>
         </div>
     );
@@ -421,7 +421,7 @@ const ModelProfilePage: React.FC = () => {
                     </div>
                     <div className="mt-2 flex justify-center md:justify-start space-x-2">
                         {model.categories.map(cat => (
-                            <span key={cat} className="text-sm bg-surface text-text-muted px-3 py-1 rounded-full">{t(`filter_values.${cat}`, cat)}</span>
+                            <span key={cat} className="text-sm bg-surface text-text-muted px-3 py-1 rounded-full">{t(`attributes.categories.${cat}`, cat)}</span>
                         ))}
                     </div>
                     <p className="mt-6 text-sm text-text-muted max-w-lg mx-auto md:mx-0">{model.bio}</p>

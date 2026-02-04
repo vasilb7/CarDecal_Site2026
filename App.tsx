@@ -16,6 +16,7 @@ import PrivacyPage from './pages/PrivacyPage';
 import TermsPage from './pages/TermsPage';
 import LegalPage from './pages/LegalPage';
 import ContributionsPage from './pages/ContributionsPage';
+import BookingPage from './pages/BookingPage';
 
 function AppContent() {
   const location = useLocation();
@@ -52,6 +53,7 @@ function AppContent() {
               <Routes>
                 <Route path="/" element={<HomePage />} />
                 <Route path="/models" element={<ModelsPage />} />
+                <Route path="/models/category/:category" element={<ModelsPage />} />
                 <Route path="/models/:slug" element={<ModelProfilePage />} />
                 <Route path="/about" element={<AboutPage />} />
                 <Route path="/services" element={<ServicesPage />} />
@@ -61,6 +63,7 @@ function AppContent() {
                 <Route path="/terms" element={<TermsPage />} />
                 <Route path="/legal" element={<LegalPage />} />
                 <Route path="/contributions" element={<ContributionsPage />} />
+                <Route path="/book-now" element={<BookingPage />} />
               </Routes>
             </Layout>
           } />

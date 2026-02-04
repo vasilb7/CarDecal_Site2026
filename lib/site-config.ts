@@ -1,6 +1,6 @@
 export const SITE_CONFIG = {
   company: {
-    name: "VB Models Agency Ltd.",
+    name: "VB VISION",
     headquarters: "София, България",
     headquartersEn: "Sofia, Bulgaria",
     address: "ул. Екзарх Йосиф 15, 1000 Център",
@@ -8,10 +8,10 @@ export const SITE_CONFIG = {
     vat: "BG7773337890",
   },
   contact: {
-    email: "info@vbmodels.com",
+    email: "info@vbvision.com",
     phone: "+359 89 777 7373",
   },
   socials: {
-    instagram: "https://instagram.com/vbmodels",
+    instagram: "https://instagram.com/vbvision",
   }
 };

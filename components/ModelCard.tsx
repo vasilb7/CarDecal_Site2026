@@ -48,11 +48,21 @@ const ModelCard: React.FC<ModelCardProps> = ({ model }) => {
       onMouseLeave={() => setIsHovering(false)}
     >
       <div className="relative aspect-[9/16] w-full overflow-hidden bg-surface">
-        {model.isTopModel && (
-          <div className="absolute top-4 md:top-8 right-4 z-40 bg-gold-accent text-black px-3 py-1 text-[9px] font-black uppercase tracking-[0.2em] shadow-lg">
-            {t('home.top_model')}
+        <div className="absolute top-2 md:top-8 right-2 md:right-4 z-40 flex flex-col items-end gap-1.5 md:gap-2">
+          {model.isTopModel && (
+            <div className="bg-gold-accent text-black px-2 md:px-3 py-0.5 md:py-1 text-[8px] md:text-[10px] font-black uppercase tracking-[0.15em] md:tracking-[0.2em] shadow-lg">
+              {t('home.top_model')}
+            </div>
+          )}
+          <div className={`px-2 md:px-3 py-0.5 md:py-1 text-[8px] md:text-[10px] font-bold uppercase tracking-[0.15em] md:tracking-[0.2em] shadow-lg backdrop-blur-sm ${
+            model.availability === 'Booked' 
+              ? 'bg-red-900/80 text-white border border-red-500/50' 
+              : 'bg-black/40 text-white border border-white/40'
+          }`}>
+            {t(`models.availability.${model.availability}`)}
           </div>
-        )}
+        </div>
+        
         {/* Main Image - Back to object-cover for a clean professional grid */}
         <img
           src={images[currentImageIndex]}
@@ -64,14 +74,14 @@ const ModelCard: React.FC<ModelCardProps> = ({ model }) => {
         <div className="absolute inset-0 z-20 bg-gradient-to-t from-black/100 via-black/20 to-transparent md:opacity-80 md:group-hover:opacity-100 transition-opacity duration-500"></div>
         
         {/* Content Container - Animated to climb up on hover only on desktop */}
-        <div className="absolute inset-0 z-30 flex flex-col justify-end">
-          <div className="p-4 pb-6 md:p-6 md:pb-6 transform translate-y-0 md:translate-y-8 md:group-hover:translate-y-0 transition-transform duration-500 ease-out text-center md:text-left">
-            <div className="inline-block mx-auto md:mx-0">
-              <h3 className="text-lg md:text-2xl font-serif text-white mb-0.5 tracking-wide drop-shadow-md">
+        <div className="absolute inset-x-0 bottom-0 z-30">
+          <div className="p-3 md:p-6 transform translate-y-0 md:translate-y-8 md:group-hover:translate-y-0 transition-transform duration-500 ease-out text-center md:text-left bg-gradient-to-t from-black/90 via-black/40 to-transparent">
+            <div className="inline-block mx-auto md:mx-0 max-w-full">
+              <h3 className="text-sm md:text-2xl font-serif text-white mb-0.5 tracking-wide drop-shadow-md truncate">
                 {i18n.language.startsWith('bg') && model.nameBg ? model.nameBg : model.name}
               </h3>
-              <p className="text-[10px] md:text-sm text-gold-accent uppercase tracking-[0.2em] font-semibold drop-shadow-sm">
-                {t(`filter_values.${model.location}`, model.location)}
+              <p className="text-[9px] md:text-sm text-gold-accent uppercase tracking-[0.15em] md:tracking-[0.2em] font-semibold drop-shadow-sm truncate">
+                {t(`attributes.locations.${model.location}`, model.location)}
               </p>
             </div>
             

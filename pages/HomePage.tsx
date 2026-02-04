@@ -39,14 +39,14 @@ const HomePage: React.FC = () => {
     const [isTopLocking, setIsTopLocking] = useState(false);
 
     const lookbookImages = [
-        '/Stock Photos/Homepage/models_review/1.jpeg',
-        '/Stock Photos/Homepage/models_review/2.jpeg',
-        '/Stock Photos/Homepage/models_review/3.jpeg',
-        '/Stock Photos/Homepage/models_review/4.jpeg',
-        '/Stock Photos/Homepage/models_review/5.jpeg',
-        '/Stock Photos/Homepage/models_review/6.jpeg',
-        '/Stock Photos/Homepage/models_review/7.jpeg',
-        '/Stock Photos/Homepage/models_review/8.jpeg',
+        '/Site_Pics/Homepage/models_review/1.jpeg',
+        '/Site_Pics/Homepage/models_review/2.jpeg',
+        '/Site_Pics/Homepage/models_review/3.jpeg',
+        '/Site_Pics/Homepage/models_review/4.jpeg',
+        '/Site_Pics/Homepage/models_review/5.jpeg',
+        '/Site_Pics/Homepage/models_review/6.jpeg',
+        '/Site_Pics/Homepage/models_review/7.jpeg',
+        '/Site_Pics/Homepage/models_review/8.jpeg',
     ];
 
     const topModelImages = [
@@ -179,24 +179,37 @@ const HomePage: React.FC = () => {
                     loop
                     muted
                     playsInline
-                    className="absolute z-0 w-auto min-w-full min-h-full max-w-none grayscale opacity-50 object-cover"
+                    className="absolute z-0 w-auto min-w-full min-h-full max-w-none grayscale opacity-40 object-cover"
                 >
-                    <source src="/Stock Photos/Homepage/homevid.mp4" type="video/mp4" />
+                    <source src="/Site_Pics/Homepage/homevid.mp4" type="video/mp4" />
                     Your browser does not support the video tag.
                 </video>
+                {/* Visual Overlay for contrast */}
+                <div className="absolute inset-0 z-[1] bg-gradient-to-b from-black/60 via-black/20 to-black/60 pointer-events-none" />
+                
                 <div className="container mx-auto px-6 relative z-10">
                     <motion.div
                         initial="hidden"
                         animate="visible"
                         variants={staggerContainer}
                     >
-                        <motion.h1 variants={fadeInUp} className="text-5xl md:text-8xl font-serif text-text-primary leading-tight">{t('home.hero_title')}</motion.h1>
-                        <motion.p variants={fadeInUp} className="mt-4 text-lg md:text-2xl text-text-muted tracking-wider">{t('home.hero_subtitle')}</motion.p>
-                        <motion.div variants={fadeInUp} className="mt-10 flex flex-col gap-y-8 md:flex-row md:gap-x-10 items-center justify-center">
-                            <Link to="/models" className="w-full md:w-auto text-center px-8 py-3 bg-gold-accent text-background text-sm uppercase tracking-widest hover:bg-opacity-90 transition-colors duration-300">
+                        <motion.h1 
+                            variants={fadeInUp} 
+                            className="text-shimmer shadow-premium-gold text-5xl md:text-9xl font-serif font-bold leading-tight uppercase tracking-[0.15em]"
+                        >
+                            {t('home.hero_title')}
+                        </motion.h1>
+                        <motion.p 
+                            variants={fadeInUp} 
+                            className="mt-6 text-lg md:text-2xl text-white/90 tracking-[0.25em] font-light uppercase drop-shadow-md"
+                        >
+                            {t('home.hero_subtitle')}
+                        </motion.p>
+                        <motion.div variants={fadeInUp} className="mt-12 flex flex-col gap-y-8 md:flex-row md:gap-x-10 items-center justify-center">
+                            <Link to="/models" className="w-full md:w-auto text-center px-10 py-4 bg-gold-accent text-background text-xs font-bold uppercase tracking-[0.2em] hover:bg-white transition-all duration-500 shadow-gold">
                                 {t('home.explore_models')}
                             </Link>
-                            <Link to="/contact" className="w-full md:w-auto text-center px-8 py-3 border border-text-muted text-text-muted text-sm uppercase tracking-widest hover:border-gold-accent hover:text-gold-accent transition-colors duration-300">
+                            <Link to="/book-now" className="w-full md:w-auto text-center px-10 py-4 border border-white/30 text-white text-xs font-bold uppercase tracking-[0.2em] hover:border-gold-accent hover:text-gold-accent transition-all duration-500 backdrop-blur-sm">
                                 {t('home.apply_book')}
                             </Link>
                         </motion.div>
@@ -228,7 +241,7 @@ const HomePage: React.FC = () => {
                                                 }`}
                                             >
                                                 <img
-                                                    src={`/Stock Photos/Top_Model/${img}`}
+                                                    src={`/Site_Pics/Top_Model/${img}`}
                                                     className="w-full h-full object-cover transform transition-transform duration-[8000ms] ease-out scale-100 group-hover:scale-105"
                                                     alt={`Pamela Nelson - Look ${i + 1}`}
                                                 />
@@ -280,7 +293,7 @@ const HomePage: React.FC = () => {
                                 </h2>
                             </div>
                             <div className="w-16 h-px bg-gold-accent/50" />
-                            <div className="space-y-6 text-text-muted text-lg font-light leading-relaxed">
+                            <div className="space-y-6 text-white/80 text-lg font-light leading-relaxed">
                                 <p>{t('home.pamela.desc1')}</p>
                                 <p>{t('home.pamela.desc2')}</p>
                             </div>
@@ -338,10 +351,10 @@ const HomePage: React.FC = () => {
                                 <span className="inline-block px-3 py-1 bg-white/5 border border-white/10 text-gold-accent text-[10px] font-bold uppercase tracking-[0.3em] rounded-full">
                                     Ползи
                                 </span>
-                                <h2 className="text-4xl md:text-6xl font-serif text-text-primary leading-tight">
+                                <h2 className="text-3xl md:text-6xl font-serif text-text-primary leading-tight">
                                     Магнезий
                                 </h2>
-                                <p className="text-lg text-text-muted leading-relaxed max-w-xl font-light">
+                                <p className="text-lg text-white/80 leading-relaxed max-w-xl font-light">
                                     Магнезият е многостранен минерал с множество роли в тялото. Той поддържа основните функции на нервите, мускулите и сърцето, подпомага превръщането на храната в клетъчна енергия и спомага за релаксацията на тялото. Nature Made® Magnesium осигурява 250 mg в една удобна дневна таблетка.†
                                 </p>
                             </div>
@@ -353,7 +366,7 @@ const HomePage: React.FC = () => {
                                     "Без синтетични оцветители, без изкуствени аромати, без глутен",
                                     "№1 марка витамини и хранителни добавки, препоръчана от фармацевти*"
                                 ].map((item, i) => (
-                                    <div key={i} className="flex items-start space-x-3 text-sm text-text-muted/70">
+                                    <div key={i} className="flex items-start space-x-3 text-sm text-white/60">
                                         <div className="w-1 h-1 bg-gold-accent rounded-full mt-2 shrink-0" />
                                         <span>{item}</span>
                                     </div>
@@ -404,7 +417,7 @@ const HomePage: React.FC = () => {
                                 {/* Model Image - Portrait / Fixed */}
                                 <div className="relative z-10 shadow-2xl">
                                     <img
-                                        src="/Stock Photos/SponsorShip/NaturalPills.png"
+                                        src="/Site_Pics/SponsorShip/NaturalPills.png"
                                         alt="Natural Pills"
                                         className="w-full h-auto object-cover rounded-sm border border-white/5"
                                     />
@@ -412,11 +425,10 @@ const HomePage: React.FC = () => {
                                 </div>
 
                                 {/* Floating Product Image (Bottle) - Bottom Left Corner - ENLARGED & ON TOP */}
-                                {/* Floating Product Image (Bottle) - Bottom Left Corner - ENLARGED & ON TOP */}
-                                <div className="absolute bottom-[-10%] left-[-60%] w-[140%] z-50 transform -rotate-[15deg] drop-shadow-[0_50px_100px_rgba(0,0,0,0.95)] transition-transform duration-700 ease-out group-hover:translate-y-[-10px] group-hover:rotate-[-10deg]">
+                                <div className="absolute bottom-[-10%] left-[-45%] md:left-[-60%] w-[120%] md:w-[140%] z-50 transform -rotate-[15deg] drop-shadow-[0_50px_100px_rgba(0,0,0,0.95)] transition-transform duration-700 ease-out group-hover:translate-y-[-10px] group-hover:rotate-[-10deg]">
                                     <a href="https://www.naturemade.com/products/magnesium-250-mg-tablets?variant=17776033857607" target="_blank" rel="noopener noreferrer" className="block w-full h-full">
                                         <img
-                                            src="/Stock Photos/SponsorShip/Pills.png"
+                                            src="/Site_Pics/SponsorShip/Pills.png"
                                             alt="Product Bottle"
                                             className="w-full h-auto cursor-pointer"
                                         />
@@ -427,7 +439,7 @@ const HomePage: React.FC = () => {
                                 <div className="absolute bottom-[-20px] left-1/2 -translate-x-1/2 z-30">
                                     <button
                                         onClick={copyToClipboard}
-                                        className="bg-[#111111]/95 border border-gold-accent/20 px-8 py-4 rounded-sm shadow-2xl backdrop-blur-md flex flex-col items-center min-w-[180px] active:scale-95 transition-transform"
+                                        className="bg-[#111111]/95 border border-gold-accent/20 px-6 py-3 md:px-8 md:py-4 rounded-sm shadow-2xl backdrop-blur-md flex flex-col items-center min-w-[150px] md:min-w-[180px] active:scale-95 transition-transform"
                                     >
                                         <span className="text-[10px] uppercase tracking-widest text-[#888888] mb-1">
                                             {copied ? t('sponsored.promo_code_copied') : t('sponsored.promo_code_label')}

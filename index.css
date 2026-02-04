@@ -243,3 +243,46 @@ a:active,
   width: max-content;
   animation: marquee 50s linear infinite reverse;
 }
+
+/* Gold Shimmer Effect */
+@keyframes shimmer {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+.text-shimmer {
+  background: linear-gradient(
+    90deg,
+    #c9a227 0%,
+    #ffffff 25%,
+    #c9a227 50%,
+    #ffffff 75%,
+    #c9a227 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 5s linear infinite;
+}
+
+/* Premium Glow Shadow */
+.shadow-premium-gold {
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.8))
+          drop-shadow(0 0 15px rgba(201, 162, 39, 0.4))
+          drop-shadow(0 0 40px rgba(201, 162, 39, 0.2));
+}
+/* Hide scrollbar for Chrome, Safari and Opera */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
