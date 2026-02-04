@@ -9,41 +9,41 @@ const TermsPage: React.FC = () => {
     <motion.div 
       initial={{ opacity: 0 }} 
       animate={{ opacity: 1 }} 
-      className="pt-32 pb-20 px-6 max-w-4xl mx-auto"
+      className="pt-24 pb-10 px-6 max-w-6xl mx-auto"
     >
-      <h1 className="text-4xl md:text-5xl font-serif mb-8 text-gold-accent">
+      <h1 className="text-3xl md:text-4xl font-serif mb-8 text-gold-accent text-center md:text-left border-b border-white/10 pb-4">
         {t('terms_page.title')}
       </h1>
       
-      <div className="prose prose-invert max-w-none space-y-8 text-text-muted leading-relaxed">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-10 text-text-muted text-sm leading-snug">
         <section>
-          <h2 className="text-2xl font-serif text-text-primary mb-4">{t('terms_page.gen_title')}</h2>
-          <p>{t('terms_page.gen_text')}</p>
+          <h2 className="text-base font-bold text-white mb-2 uppercase tracking-wide border-l-2 border-gold-accent pl-3">{t('terms_page.gen_title')}</h2>
+          <p className="pl-3.5">{t('terms_page.gen_text')}</p>
         </section>
 
         <section>
-          <h2 className="text-2xl font-serif text-text-primary mb-4">{t('terms_page.reg_title')}</h2>
-          <p>{t('terms_page.reg_text')}</p>
+          <h2 className="text-base font-bold text-white mb-2 uppercase tracking-wide border-l-2 border-gold-accent pl-3">{t('terms_page.reg_title')}</h2>
+          <p className="pl-3.5">{t('terms_page.reg_text')}</p>
         </section>
 
         <section>
-          <h2 className="text-2xl font-serif text-text-primary mb-4">{t('terms_page.book_title')}</h2>
-          <p>{t('terms_page.book_text')}</p>
+          <h2 className="text-base font-bold text-white mb-2 uppercase tracking-wide border-l-2 border-gold-accent pl-3">{t('terms_page.book_title')}</h2>
+          <p className="pl-3.5">{t('terms_page.book_text')}</p>
         </section>
 
         <section>
-          <h2 className="text-2xl font-serif text-text-primary mb-4">{t('terms_page.resp_title')}</h2>
-          <p>{t('terms_page.resp_text')}</p>
+          <h2 className="text-base font-bold text-white mb-2 uppercase tracking-wide border-l-2 border-gold-accent pl-3">{t('terms_page.resp_title')}</h2>
+          <p className="pl-3.5">{t('terms_page.resp_text')}</p>
         </section>
 
         <section>
-          <h2 className="text-2xl font-serif text-text-primary mb-4">{t('terms_page.intel_title')}</h2>
-          <p>{t('terms_page.intel_text')}</p>
+          <h2 className="text-base font-bold text-white mb-2 uppercase tracking-wide border-l-2 border-gold-accent pl-3">{t('terms_page.intel_title')}</h2>
+          <p className="pl-3.5">{t('terms_page.intel_text')}</p>
         </section>
 
         <section>
-          <h2 className="text-2xl font-serif text-text-primary mb-4">{t('terms_page.term_title')}</h2>
-          <p>{t('terms_page.term_text')}</p>
+          <h2 className="text-base font-bold text-white mb-2 uppercase tracking-wide border-l-2 border-gold-accent pl-3">{t('terms_page.term_title')}</h2>
+          <p className="pl-3.5">{t('terms_page.term_text')}</p>
         </section>
       </div>
     </motion.div>
