@@ -1,14 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { SignUpPage, Testimonial } from '../components/ui/sign-up';
 import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { hasProfanity } from '../lib/profanity';
+import { useToast } from '../hooks/useToast';
 
 const sampleTestimonials: Testimonial[] = [];
 
 const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const { t, i18n } = useTranslation();
+  const { showToast } = useToast();
 
   const handleSignUp = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -19,7 +23,17 @@ const RegisterPage: React.FC = () => {
     const password = formData.get('password') as string;
     const fullName = formData.get('name') as string;
 
-    console.log("Attempting sign up:", email);
+    if (fullName.length < 4) {
+        showToast(t('toast.register_short_name'), "warning");
+        setLoading(false);
+        return;
+    }
+
+    if (hasProfanity(fullName)) {
+        showToast(t('toast.register_profanity'), "error");
+        setLoading(false);
+        return;
+    }
 
     try {
       const { data, error } = await supabase.auth.signUp({
@@ -28,29 +42,32 @@ const RegisterPage: React.FC = () => {
         options: {
           data: {
             full_name: fullName,
-            role: 'user', // Default role
+            role: 'user', 
           },
         },
       });
 
       if (error) {
         console.error("Sign up error:", error.message);
-        alert(error.message);
+        if (error.message.includes("User already registered")) {
+            showToast(t('toast.register_error_exists'), "error");
+        } else {
+            showToast(error.message, "error");
+        }
       } else {
-        console.log("Sign up success:", data);
-        // Assuming email confirmation is disabled in Supabase, user is now logged in.
-        navigate('/');
+        showToast(t('toast.register_success'), "success");
+        const currentLang = i18n.language.split('-')[0];
+        navigate(`/${currentLang}/`);
       }
     } catch (err) {
-      console.error("Unexpected error:", err);
+      showToast(t('toast.register_error_generic'), "error");
     } finally {
       setLoading(false);
     }
   };
 
   const handleGoogleSignUp = () => {
-    // console.log("Google Sign Up clicked");
-    alert("Google Sign Up not configured yet.");
+    showToast(t('auth.google_signup_unavailable'), "info");
   };
 
   return (

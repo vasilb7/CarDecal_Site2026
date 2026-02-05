@@ -1,0 +1,8 @@
+# Restricted Hate Slurs Placeholder
+# Access governed by RBAC in production
+# Added for detection system structure
+# [Restricted Terms List]
+slur1
+slur2
+badword1
+badword2

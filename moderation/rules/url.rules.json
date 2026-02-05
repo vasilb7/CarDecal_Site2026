@@ -1,0 +1,12 @@
+[
+  {
+    "category": "sexual_explicit",
+    "score": 5,
+    "type": "domain"
+  },
+  {
+    "category": "evasion_attempt",
+    "score": 3,
+    "type": "shortener"
+  }
+]

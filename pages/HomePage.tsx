@@ -26,7 +26,7 @@ const staggerContainer = {
 };
 
 const HomePage: React.FC = () => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const { getFeaturedModels } = useModels();
     const featuredModels = getFeaturedModels(6);
     // ... existing state and logic ...
@@ -170,6 +170,8 @@ const HomePage: React.FC = () => {
         setTimeout(() => setCopied(false), 2000);
     };
 
+    const currentLang = i18n.language.split('-')[0];
+
     return (
         <div>
             {/* Hero Section */}
@@ -208,10 +210,10 @@ const HomePage: React.FC = () => {
                             {t('home.hero_subtitle')}
                         </motion.p>
                         <motion.div variants={fadeInUp} className="mt-[6vh] flex flex-col gap-y-4 md:flex-row md:gap-x-10 items-center justify-center">
-                            <Link to="/models" className="w-full md:w-auto text-center px-10 py-4 bg-gold-accent text-background text-[10px] md:text-xs font-bold uppercase tracking-[0.2em] hover:bg-white transition-all duration-500 shadow-gold">
+                            <Link to={`/${currentLang}/models`} className="w-full md:w-auto text-center px-10 py-4 bg-gold-accent text-background text-[10px] md:text-xs font-bold uppercase tracking-[0.2em] hover:bg-white transition-all duration-500 shadow-gold">
                                 {t('home.explore_models')}
                             </Link>
-                            <Link to="/book-now" className="w-full md:w-auto text-center px-10 py-4 border border-white/30 text-white text-[10px] md:text-xs font-bold uppercase tracking-[0.2em] hover:border-gold-accent hover:text-gold-accent transition-all duration-500 backdrop-blur-sm">
+                            <Link to={`/${currentLang}/book-now`} className="w-full md:w-auto text-center px-10 py-4 border border-white/30 text-white text-[10px] md:text-xs font-bold uppercase tracking-[0.2em] hover:border-gold-accent hover:text-gold-accent transition-all duration-500 backdrop-blur-sm">
                                 {t('home.apply_book')}
                             </Link>
                         </motion.div>
@@ -302,7 +304,7 @@ const HomePage: React.FC = () => {
 
                             <div className="pt-4 flex flex-col items-center md:items-start md:flex-row gap-6 md:gap-8">
                                 <Link
-                                    to="/models/pamela-nelson"
+                                    to={`/${currentLang}/models/pamela-nelson`}
                                     className="btn-mobile-full inline-flex items-center justify-center px-8 py-4 bg-text-primary text-background text-sm font-bold uppercase tracking-widest hover:bg-gold-accent transition-colors duration-300"
                                 >
                                     {t('home.pamela.view_portfolio')}
@@ -366,7 +368,7 @@ const HomePage: React.FC = () => {
                                     "Поддържа мускулната релаксация, здравето на сърцето, нервите и костите†",
                                     "1 таблетка дневно",
                                     "Без синтетични оцветители, без изкуствени аромати, без глутен",
-                                    "№1 марка витамини и хранителни добавки, препоръчана от фармацевти*"
+                                    "№1 марка витамини и хранителни добавки, препоръчана от фармацев*"
                                 ].map((item, i) => (
                                     <div key={i} className="flex items-start space-x-3 text-sm text-white/60">
                                         <div className="w-1 h-1 bg-gold-accent rounded-full mt-2 shrink-0" />
@@ -586,7 +588,7 @@ const HomePage: React.FC = () => {
                         variants={fadeInUp}
                         className="mt-12 flex justify-center"
                     >
-                        <Link to="/services" className="btn-mobile-full inline-block px-8 py-3 border border-gold-accent text-gold-accent text-sm uppercase tracking-widest hover:bg-gold-accent hover:text-background transition-colors duration-300">
+                        <Link to={`/${currentLang}/services`} className="btn-mobile-full inline-block px-8 py-3 border border-gold-accent text-gold-accent text-sm uppercase tracking-widest hover:bg-gold-accent hover:text-background transition-colors duration-300">
                             {t('home.learn_more')}
                         </Link>
                     </motion.div>
@@ -603,11 +605,11 @@ const HomePage: React.FC = () => {
                     >
                         <motion.h2 variants={fadeInUp} className="text-3xl md:text-4xl font-serif text-text-primary">{t('home.ready_to_create')}</motion.h2>
                         <motion.p variants={fadeInUp} className="mt-4 text-text-muted">{t('home.connect_with_us')}</motion.p>
-                        <motion.div variants={fadeInUp} className="mt-10 flex flex-col gap-y-8 md:flex-row md:gap-x-10 items-center justify-center">
-                            <Link to="/contact" className="w-full md:w-auto text-center px-8 py-3 bg-gold-accent text-background text-sm uppercase tracking-widest hover:bg-opacity-90 transition-colors duration-300">
+                         <motion.div variants={fadeInUp} className="mt-10 flex flex-col gap-y-8 md:flex-row md:gap-x-10 items-center justify-center">
+                            <Link to={`/${currentLang}/contact`} className="w-full md:w-auto text-center px-8 py-3 bg-gold-accent text-background text-sm uppercase tracking-widest hover:bg-opacity-90 transition-colors duration-300">
                                 {t('home.book_model')}
                             </Link>
-                            <Link to="/contact" className="w-full md:w-auto text-center px-8 py-3 border border-text-muted text-text-muted text-sm uppercase tracking-widest hover:border-gold-accent hover:text-gold-accent transition-colors duration-300">
+                            <Link to={`/${currentLang}/contact`} className="w-full md:w-auto text-center px-8 py-3 border border-text-muted text-text-muted text-sm uppercase tracking-widest hover:border-gold-accent hover:text-gold-accent transition-colors duration-300">
                                 {t('home.join_vb')}
                             </Link>
                         </motion.div>

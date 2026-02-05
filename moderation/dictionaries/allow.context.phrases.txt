@@ -1,0 +1,64 @@
+# Phrases that should NOT trigger moderation (false-positive guards)
+
+sex education
+sexual education
+sexual health
+reproductive health
+std
+sti
+hiv
+aids
+breast cancer
+prostate cancer
+cervical cancer
+testosterone
+estrogen
+contraception
+condom
+safe sex
+sexual assault prevention
+domestic violence prevention
+crime prevention
+self harm prevention
+suicide prevention
+mental health
+therapy
+counseling
+abuse hotline
+assess
+assessment
+analysis
+classical
+classic
+cocktail
+scunthorpe
+lingerie
+sexy
+hot
+glamour
+boudoir
+model
+fashion
+posing
+swimwear
+bikini
+underwear
+bra
+panties
+thong
+body
+physique
+figure
+curves
+curvy
+exotic
+sensual
+romantic
+passion
+intimate
+intimacy
+kisses
+dating
+love
+romance
+relationship

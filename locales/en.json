@@ -115,7 +115,6 @@
     "scouting": "Scout",
     "casting": "Casting",
     "campaign": "Campaign",
-    "basic": "Basic",
     "standard": "Standard",
     "custom": "Custom",
     "for_indie": "For Photographers & Indie Brands",
@@ -198,7 +197,8 @@
       "general": "General Inquiries",
       "press": "Press & Media",
       "booking": "Booking",
-      "hours": "Operating Hours",
+      "based_in": "Based in",
+      "hours": "Business Hours",
       "work_days": "Mon - Fri: 09:00 - 18:00",
       "weekend": "Sat - Sun: Closed"
     },
@@ -229,7 +229,116 @@
     "unavailable": "Unavailable",
     "book_now": "Book Now",
     "comp_card": "Comp Card",
-    "feed": "Feed"
+    "feed": "Feed",
+    "sort_recent": "Newest",
+    "sort_popular": "Most Liked",
+    "delete_warning": "WARNING! This action is irreversible. To confirm, type:",
+    "delete_confirm_phrase": "DELETE MY ACCOUNT",
+    "delete_wrong_confirm": "Confirmation is incorrect. Account not deleted."
+  },
+  "settings_page": {
+    "title": "Settings",
+    "subtitle": "Manage your professional profile",
+    "menu": {
+      "profile": { "title": "Profile", "desc": "Personal info, measurements and media" },
+      "security": { "title": "Security", "desc": "Password, 2FA and sessions" },
+      "privacy": { "title": "Privacy", "desc": "Control who can see your profile" },
+      "bookings": { "title": "Bookings", "desc": "Prices, payments and calendar" },
+      "notifications": { "title": "Notifications", "desc": "System alerts and emails" },
+      "danger": { "title": "Danger Zone", "desc": "Account deactivation" }
+    },
+    "tabs": {
+      "identity": "Identity",
+      "appearance": "Appearance",
+      "privacy": "Privacy",
+      "verification": "Verification",
+      "security": "Security"
+    },
+    "identity": {
+      "title": "Public Identity",
+      "subtitle": "How clients and agents see you",
+      "username": "Username (Nickname)",
+      "display_name": "Stage Name",
+      "bio": "Bio / About",
+      "location": "Current Location",
+      "website": "Website",
+      "instagram": "Instagram handle",
+      "telegram": "Telegram handle"
+    },
+    "appearance": {
+      "title": "Professional Measurements",
+      "subtitle": "Required data for elite fashion projects",
+      "height": "Height (cm)",
+      "bust": "Bust (cm)",
+      "waist": "Waist (cm)",
+      "hips": "Hips (cm)",
+      "shoes": "Shoe Size",
+      "hair": "Hair Color",
+      "eyes": "Eye Color",
+      "gender": "Gender",
+      "birth_date": "Birth Date"
+    },
+    "verification": {
+      "title": "Verification Center",
+      "subtitle": "Verified models get 5x more inquiries",
+      "status_label": "Current Status",
+      "status": {
+         "none": "Unverified",
+         "pending": "Review in Progress",
+         "verified": "Verified Talent",
+         "rejected": "Rejected (Action required)"
+      },
+      "upload_docs": "Upload Documents",
+      "doc_type": "Document Type",
+      "id_card": "ID Card",
+      "passport": "Passport",
+      "front_side": "Front Side (Photo)",
+      "back_side": "Back Side (Photo)",
+      "selfie_doc": "Selfie with Document",
+      "submit": "Submit for Review"
+    },
+    "privacy": {
+      "title": "Safety Settings",
+      "show_real_name": "Show my real name",
+      "hide_location": "Hide my exact location",
+      "show_measurements": "Show measurements publicly",
+      "watermark": "Add watermark to my photos"
+    }
+  },
+  "fashion_profile": {
+    "title": "Fashion Profile",
+    "subtitle": "Showcase your unique style and experience",
+    "categories": {
+      "title": "Categories",
+      "editorial": "Editorial",
+      "runway": "Runway",
+      "commercial": "Commercial",
+      "beauty": "Beauty",
+      "lifestyle": "Lifestyle",
+      "fashion": "Fashion"
+    },
+    "experience": {
+      "title": "Experience",
+      "years": "Years of Experience",
+      "recent_projects": "Recent Projects",
+      "add_project": "Add Project",
+      "project_name": "Project Name",
+      "client": "Client/Brand",
+      "role": "Role",
+      "year": "Year",
+      "description": "Description"
+    },
+    "skills": {
+      "title": "Skills",
+      "languages": "Languages Spoken",
+      "special_skills": "Special Skills (e.g., dancing, acting, sports)"
+    },
+    "portfolio": {
+      "title": "Portfolio",
+      "upload_photos": "Upload Photos",
+      "upload_videos": "Upload Videos",
+      "add_link": "Add External Link"
+    }
   },
   "attributes": {
     "hair": {
@@ -288,7 +397,11 @@
     "register_now": "Register Now",
     "terms": "I agree to the",
     "terms_link": "Terms & Conditions",
-    "keep_signed_in": "Keep me signed in"
+    "keep_signed_in": "Keep me signed in",
+    "password_too_short": "Password must be at least 8 characters long.",
+    "passwords_mismatch": "Passwords do not match!",
+    "forgot_password_prompt": "Enter your email for password reset:",
+    "google_signup_unavailable": "Google sign up is not available at the moment."
   },
   "sponsored": {
     "label": "Partnership",
@@ -377,5 +490,29 @@
       "message_placeholder": "Describe your requirements...",
       "submit": "Book Now"
     }
+  },
+  "toast": {
+    "login_success": "Welcome back, {{name}}",
+    "login_error_credentials": "Invalid email or password.",
+    "login_error_generic": "An unexpected error occurred during sign in.",
+    "google_not_configured": "Google Sign In is not configured yet.",
+    "password_reset_sent": "Password reset email sent!",
+    "register_short_name": "Name must be at least 4 characters long.",
+    "register_profanity": "Name contains inappropriate content. Please choose another name.",
+    "register_success": "Registration successful! Welcome to Agency.",
+    "register_error_generic": "An error occurred during registration.",
+    "register_error_exists": "This email is already registered.",
+    "logout_success": "You have logged out successfully!",
+    "profile_update_success": "Profile updated successfully!",
+    "profile_update_error": "Save error: {{message}}",
+    "image_blocked_profanity": "Image blocked: Inappropriate content detected.",
+    "booking_success": "Your booking request was sent successfully! We will contact you soon.",
+    "contact_success": "Message sent successfully!",
+    "link_copied": "Link copied to clipboard!",
+    "post_saved": "Post saved to your bookmarks!",
+    "password_update_success": "Password updated successfully!",
+    "password_update_error": "Error updating password: {{message}}",
+    "account_deleted_rpc_error": "Error deleting account from server. Please contact support.",
+    "account_deleted_generic_error": "Critical error: {{message}}"
   }
 }

@@ -64,8 +64,9 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
   onSignUp,
   onGoogleSignUp,
 }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [showPassword, setShowPassword] = useState(false);
+  const currentLang = i18n.language.split('-')[0];
 
   const displayTitle = title || <span className="font-serif text-text-primary tracking-tight">{t('auth.register_title')}</span>;
   const displayDescription = description || t('auth.register_subtitle');
@@ -115,7 +116,7 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }} className="flex items-center gap-3 cursor-pointer py-2" id="auth-terms">
                 <input type="checkbox" id="terms" name="terms" className="accent-gold-accent w-4 h-4" required />
                 <label htmlFor="terms" className="text-[10px] uppercase tracking-widest text-text-muted">
-                  {t('auth.terms')} <Link to="/terms" className="text-gold-accent underline ml-1">{t('auth.terms_link')}</Link>
+                  {t('auth.terms')} <Link to={`/${currentLang}/terms`} className="text-gold-accent underline ml-1">{t('auth.terms_link')}</Link>
                 </label>
               </motion.div>
 
@@ -151,7 +152,7 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
             </motion.button>
 
             <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.0 }} className="text-center text-[11px] uppercase tracking-widest text-text-muted">
-              {t('auth.already_have_account')} <Link to="/login" className="text-gold-accent hover:underline ml-1">{t('auth.login_now')}</Link>
+              {t('auth.already_have_account')} <Link to={`/${currentLang}/login`} className="text-gold-accent hover:underline ml-1">{t('auth.login_now')}</Link>
             </motion.p>
           </div>
         </div>

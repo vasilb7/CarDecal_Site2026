@@ -1,0 +1,17 @@
+[
+  { "category": "evasion_attempt", "score": 3, "pattern": "(f\\\\s*u\\\\s*c\\\\s*k)" },
+  { "category": "evasion_attempt", "score": 3, "pattern": "f[*]+ck" },
+  { "category": "evasion_attempt", "score": 3, "pattern": "(s\\\\W*h\\\\W*i\\\\W*t)" },
+  { "category": "evasion_attempt", "score": 3, "pattern": "(b\\\\W*i\\\\W*t\\\\W*c\\\\W*h)" },
+  { "category": "evasion_attempt", "score": 3, "pattern": "(p\\\\W*o\\\\W*r\\\\W*n)" },
+  { "category": "evasion_attempt", "score": 3, "pattern": "(x\\\\W*x\\\\W*x)" },
+
+  { "category": "evasion_attempt", "score": 3, "pattern": "(k\\\\W*y\\\\W*s)" },
+  { "category": "evasion_attempt", "score": 3, "pattern": "(k\\\\W*i\\\\W*l\\\\W*l\\\\W*\\\\s*y\\\\W*o\\\\W*u\\\\W*r\\\\W*s\\\\W*e\\\\W*l\\\\W*f)" },
+  { "category": "evasion_attempt", "score": 3, "pattern": "(n\\\\W*i\\\\W*g\\\\W*g)" },
+  { "category": "sexual_explicit", "score": 4, "pattern": "c\\\\W*o\\\\W*c\\\\W*k" },
+  { "category": "sexual_explicit", "score": 4, "pattern": "d\\\\W*i\\\\W*c\\\\W*k" },
+  { "category": "sexual_explicit", "score": 4, "pattern": "p\\\\W*o\\\\W*r\\\\W*n" },
+  { "category": "sexual_explicit", "score": 4, "pattern": "x\\\\W*x\\\\W*x" },
+  { "category": "sexual_explicit", "score": 4, "pattern": "d\\\\W*e\\\\W*e\\\\W*p\\\\W*t\\\\W*h\\\\W*r\\\\W*o\\\\W*a\\\\W*t" }
+]

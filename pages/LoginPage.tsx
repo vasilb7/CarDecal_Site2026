@@ -1,14 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { SignInPage, Testimonial } from '../components/ui/sign-in';
 import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useToast } from '../hooks/useToast';
 
 const sampleTestimonials: Testimonial[] = [];
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const { t, i18n } = useTranslation();
+  const { showToast } = useToast();
 
   const handleSignIn = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -28,12 +31,20 @@ const LoginPage: React.FC = () => {
 
       if (error) {
         console.error("Sign in error:", error.message);
-        alert(error.message); // Simple alert for now, can be improved UI-wise
+        if (error.message.includes("Invalid login credentials")) {
+            showToast(t('toast.login_error_credentials'), "error");
+        } else {
+            showToast(error.message, "error");
+        }
       } else {
         console.log("Sign in success:", data);
-        navigate('/'); // Redirect to home or profile
+        const name = data.user?.user_metadata?.full_name || data.user?.email?.split('@')[0] || '';
+        showToast(t('toast.login_success', { name }), "success");
+        const currentLang = i18n.language.split('-')[0];
+        navigate(`/${currentLang}/`); 
       }
     } catch (err) {
+      showToast(t('toast.login_error_generic'), "error");
       console.error("Unexpected error:", err);
     } finally {
       setLoading(false);
@@ -41,22 +52,18 @@ const LoginPage: React.FC = () => {
   };
 
   const handleGoogleSignIn = async () => {
-    // console.log("Google Sign In clicked");
-    // Implement Google Auth later if configured in Supabase
-    alert("Google Sign In not configured yet.");
+    showToast(t('toast.google_not_configured'), "info");
   };
 
   const handleResetPassword = () => {
-    console.log("Reset Password clicked");
-    // Implement password reset logic
-    const email = prompt("Enter your email to reset password:");
-    if (email) {
-       supabase.auth.resetPasswordForEmail(email)
-         .then(({ error }) => {
-            if (error) alert(error.message);
-            else alert("Password reset email sent!");
-         });
-    }
+    const email = prompt(t('auth.forgot_password_prompt'));
+     if (email) {
+        supabase.auth.resetPasswordForEmail(email)
+          .then(({ error }) => {
+             if (error) showToast(error.message, "error");
+             else showToast(t('toast.password_reset_sent'), "success");
+          });
+     }
   };
 
   return (

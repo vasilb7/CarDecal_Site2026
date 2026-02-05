@@ -4,7 +4,8 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 const Footer: React.FC = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const currentLang = i18n.language.split('-')[0];
   
   return (
     <footer className="bg-surface border-t border-border">
@@ -17,10 +18,10 @@ const Footer: React.FC = () => {
           <div>
             <h4 className="uppercase tracking-widest text-text-muted text-sm">{t('footer.navigate')}</h4>
             <ul className="mt-4 space-y-2">
-              <li><Link to="/models" className="hover:text-gold-accent transition-colors">{t('nav.models')}</Link></li>
-              <li><Link to="/about" className="hover:text-gold-accent transition-colors">{t('nav.about')}</Link></li>
-              <li><Link to="/services" className="hover:text-gold-accent transition-colors">{t('nav.services')}</Link></li>
-              <li><Link to="/contact" className="hover:text-gold-accent transition-colors">{t('nav.contact')}</Link></li>
+              <li><Link to={`/${currentLang}/models`} className="hover:text-gold-accent transition-colors">{t('nav.models')}</Link></li>
+              <li><Link to={`/${currentLang}/about`} className="hover:text-gold-accent transition-colors">{t('nav.about')}</Link></li>
+              <li><Link to={`/${currentLang}/services`} className="hover:text-gold-accent transition-colors">{t('nav.services')}</Link></li>
+              <li><Link to={`/${currentLang}/contact`} className="hover:text-gold-accent transition-colors">{t('nav.contact')}</Link></li>
             </ul>
           </div>
           <div>
@@ -51,9 +52,9 @@ const Footer: React.FC = () => {
         <div className="mt-12 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-text-muted text-xs uppercase tracking-widest">
           <p>&copy; {new Date().getFullYear()} VB VISION. {t('footer.rights')}</p>
           <div className="flex flex-wrap justify-center gap-6">
-            <Link to="/privacy" className="hover:text-gold-accent transition-colors">{t('footer.privacy')}</Link>
-            <Link to="/terms" className="hover:text-gold-accent transition-colors">{t('footer.terms')}</Link>
-            <Link to="/legal" className="hover:text-gold-accent transition-colors">{t('footer.legal')}</Link>
+            <Link to={`/${currentLang}/privacy`} className="hover:text-gold-accent transition-colors">{t('footer.privacy')}</Link>
+            <Link to={`/${currentLang}/terms`} className="hover:text-gold-accent transition-colors">{t('footer.terms')}</Link>
+            <Link to={`/${currentLang}/legal`} className="hover:text-gold-accent transition-colors">{t('footer.legal')}</Link>
           </div>
         </div>
       </div>

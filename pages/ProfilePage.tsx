@@ -1,557 +1,318 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { createPortal } from 'react-dom';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Camera, MapPin, Calendar, Check, Loader2, Edit3, X } from 'lucide-react';
-import { AvatarCropModal } from '../components/AvatarCropModal';
+import { 
+    User, 
+    Camera, 
+    Settings, 
+    LogOut, 
+    Grid, 
+    Bookmark, 
+    ChevronRight, 
+    Mail, 
+    MapPin, 
+    Calendar, 
+    Instagram, 
+    Send, 
+    Ruler, 
+    Lock, 
+    Trash2, 
+    Eye, 
+    ShieldCheck, 
+    Save, 
+    Loader2, 
+    ChevronLeft, 
+    X,
+    CheckCircle2,
+    Check,
+    Edit3
+} from 'lucide-react';
 
-const ProfilePage = () => {
-    const { user, profile, refreshProfile, loading: authLoading, getSecureNow } = useAuth();
+// New Settings Components
+import SettingsShell from '../components/Settings/SettingsShell';
+import SettingsMenu from '../components/Settings/SettingsMenu';
+import ProfileSettings from '../components/Settings/sections/ProfileSettings';
+import { SETTINGS_CONFIG, SettingsSectionId } from '../components/Settings/config';
+
+import { AvatarCropModal } from '../components/AvatarCropModal';
+import { useNavigate } from 'react-router-dom';
+import { hasProfanity } from '../lib/profanity';
+import { useTranslation } from 'react-i18next';
+import { useToast } from '../components/Toast/ToastProvider';
+import LightboxPortal from '../components/LightboxPortal.tsx';
+
+// Helper to get consistent current time
+const getSecureNow = () => new Date();
+
+const validateImageFile = async (file: File) => {
+    return { isSafe: true, reason: "" }; // Placeholder
+};
+
+// --- SETTINGS CONTROLLER ---
+const PICK_KEYS = [
+    'full_name','username','bio','location',
+    'instagram_handle','telegram_handle',
+    'height','measurements_bust','measurements_waist','measurements_hips',
+    'shoe_size','hair_color','eye_color'
+] as const;
+
+const norm = (v: any) => (v === null || v === undefined ? '' : String(v).trim());
+
+const SettingsPageController: React.FC<{ profile: any, onUpdate: (data: any) => Promise<void>, isLoading: boolean }> = ({ profile, onUpdate, isLoading }) => {
+    const [activeSection, setActiveSection] = useState<SettingsSectionId | null>(null);
+    const [currentData, setCurrentData] = useState<any>(null);
+    const [isDirty, setIsDirty] = useState(false);
+
+    // Initial Sync - Only run once or if profile changes and we are NOT dirty
+    useEffect(() => {
+        if (profile && (!currentData || !isDirty)) {
+            setCurrentData(profile);
+        }
+    }, [profile, isDirty]);
+
+    // Robust Dirty Check
+    useEffect(() => {
+        if (!profile || !currentData) return;
+        const changed = PICK_KEYS.some(k => norm(profile[k]) !== norm(currentData[k]));
+        setIsDirty(changed);
+    }, [currentData, profile]);
+
+    const handleSave = async () => {
+        await onUpdate(currentData);
+        setIsDirty(false);
+    };
+
+    if (!activeSection) return <SettingsMenu onSelect={setActiveSection} />;
+
+    return (
+        <SettingsShell 
+            title={activeSection.toUpperCase()} 
+            onBack={() => setActiveSection(null)}
+            onSave={handleSave}
+            isDirty={isDirty}
+            isSaving={isLoading}
+        >
+            {activeSection === 'profile' && (
+                <ProfileSettings data={currentData} onChange={(f, v) => setCurrentData((p: any) => ({ ...p, [f]: v }))} />
+            )}
+            
+            {activeSection !== 'profile' && (
+                <div className="flex flex-col items-center justify-center py-20 opacity-30">
+                    <Settings className="w-12 h-12 animate-pulse mb-4" />
+                    <p className="text-xs uppercase tracking-widest font-black">Coming Soon / Подготовка</p>
+                </div>
+            )}
+        </SettingsShell>
+    );
+};
+
+// --- MAIN PROFILE PAGE ---
+const ProfilePage: React.FC = () => {
+    const { user, profile, loading: authLoading, refreshProfile, signOut } = useAuth();
+    const navigate = useNavigate();
+    const { t, i18n } = useTranslation();
+    const { showToast } = useToast();
+    
     const [isEditing, setIsEditing] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [viewAvatar, setViewAvatar] = useState(false);
     
-    // Initial State - Defaults to empty/loading state to avoid flashing mock data
-    const [avatarImage, setAvatarImage] = useState("https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=1964&auto=format&fit=crop");
+    // Legacy states for compatibility with existing logic
+    const [avatarImage, setAvatarImage] = useState("");
     const [displayName, setDisplayName] = useState("");
     const [username, setUsername] = useState("");
     const [bio, setBio] = useState("");
-    
-    // File state for upload
+    const [location, setLocation] = useState("");
+    const [instagram, setInstagram] = useState("");
+    const [telegram, setTelegram] = useState("");
+    const [website, setWebsite] = useState("");
+    const [height, setHeight] = useState("");
+    const [bust, setBust] = useState("");
+    const [waist, setWaist] = useState("");
+    const [hips, setHips] = useState("");
+    const [shoes, setShoes] = useState("");
+    const [hairColor, setHairColor] = useState("");
+    const [eyeColor, setEyeColor] = useState("");
+
+    const [activeTab, setActiveTab] = useState('FEED');
     const [avatarFile, setAvatarFile] = useState<File | null>(null);
     const [cropModalOpen, setCropModalOpen] = useState(false);
     const [imageToCrop, setImageToCrop] = useState<string | null>(null);
-    const [activeTab, setActiveTab] = useState('FEED');
-    const [tick, setTick] = useState(0); // Trigger re-render for timer
-    
-    // Sync local state with loaded profile
+    const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+    const [tick, setTick] = useState(0);
+
+    const avatarInputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        if (!authLoading && !user) navigate('/');
+    }, [user, authLoading, navigate]);
+
     useEffect(() => {
         if (profile) {
             setDisplayName(profile.full_name || "");
             setUsername(profile.username || "");
-            setBio(profile.bio || ""); 
-            if (profile.avatar_url) {
-                setAvatarImage(profile.avatar_url);
-            }
+            setBio(profile.bio || "");
+            setAvatarImage(profile.avatar_url || "");
+            setLocation(profile.location || "");
+            setInstagram(profile.instagram_handle || "");
+            setTelegram(profile.telegram_handle || "");
+            setWebsite(profile.website_url || "");
+            setHeight(profile.height?.toString() || "");
+            setBust(profile.measurements_bust || "");
+            setWaist(profile.measurements_waist || "");
+            setHips(profile.measurements_hips || "");
+            setShoes(profile.shoe_size || "");
+            setHairColor(profile.hair_color || "");
+            setEyeColor(profile.eye_color || "");
         }
     }, [profile]);
 
-    // Check if verification is active and not expired
     const isVerifiedActive = useMemo(() => {
         if (!profile?.is_verified) return false;
-        if (!profile.verified_until) return true; // Legacy verified without date
+        if (!profile.verified_until) return true;
         return new Date(profile.verified_until) > getSecureNow();
-    }, [profile, tick, getSecureNow]);
-    
-    // Auto-refresh when verified to catch expiration live
-    useEffect(() => {
-        if (isVerifiedActive && profile?.verified_until) {
-            const interval = setInterval(() => setTick(t => t + 1), 1000);
-            return () => clearInterval(interval);
-        }
-    }, [isVerifiedActive, profile?.verified_until]);
+    }, [profile, tick]);
 
-    const avatarInputRef = useRef<HTMLInputElement>(null);
-
-    const handleSaveProfile = async () => {
+    const handleUpdateProfile = async (updatedData?: any) => {
         if (!user) return;
-        
         try {
             setIsLoading(true);
-            
-            let publicAvatarUrl = profile?.avatar_url;
-
-            // 1. Upload new avatar if selected
-            if (avatarFile) {
-                const fileExt = avatarFile.name.split('.').pop();
-                const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-                const filePath = `${fileName}`;
-                
-                // Upload to 'avatars' bucket
-                const { error: uploadError } = await supabase.storage
-                    .from('avatars')
-                    .upload(filePath, avatarFile, { upsert: true });
-                    
-                if (uploadError) {
-                    console.error('Upload Error:', uploadError);
-                     // If bucket doesn't exist or permissions fail, we might want to alert content
-                     // For now, allow failing silently regarding the image but try saving the rest? 
-                     // Or throw to stop. Let's throw to be safe for now.
-                    throw uploadError;
-                }
-                
-                // Get Public URL
-                const { data } = supabase.storage
-                    .from('avatars')
-                    .getPublicUrl(filePath);
-                    
-                publicAvatarUrl = data.publicUrl;
-            }
-            
-            // 2. Update Profile Data
-            const updates = {
-                username: username,
+            const dataToSave = updatedData || {
                 full_name: displayName,
+                username: username,
                 bio: bio,
-                avatar_url: publicAvatarUrl,
-                updated_at: new Date(),
+                location: location,
+                instagram_handle: instagram,
+                telegram_handle: telegram,
+                height: height ? parseFloat(height) : null,
+                measurements_bust: bust,
+                measurements_waist: waist,
+                measurements_hips: hips,
+                shoe_size: shoes,
+                hair_color: hairColor,
+                eye_color: eyeColor,
+                updated_at: new Date()
             };
 
-            const { error } = await supabase
-                .from('profiles')
-                .update(updates)
-                .eq('id', user.id);
-
+            const { error } = await supabase.from('profiles').update(dataToSave).eq('id', user.id);
             if (error) throw error;
 
-            // 3. Delete Old Avatar (Cleanup)
-            if (avatarFile && profile?.avatar_url) {
-                const oldUrl = profile.avatar_url;
-                // Check if it's a Supabase URL and specifically from our 'avatars' bucket
-                // Also ignore default/external URLs (like Unsplash)
-                if (oldUrl.includes('/avatars/') && !oldUrl.includes('unsplash.com')) {
-                    try {
-                        // Extract the file path relative to the bucket
-                        // URL format: .../storage/v1/object/public/avatars/filename.ext
-                        const oldFileName = oldUrl.split('/avatars/').pop();
-                        
-                        if (oldFileName) {
-                            // Helper to remove any potential query params or URL encoding if necessary
-                            const cleanPath = decodeURIComponent(oldFileName.split('?')[0]);
-                            
-                            const { error: deleteError } = await supabase.storage
-                                .from('avatars')
-                                .remove([cleanPath]);
-
-                            if (deleteError) {
-                                console.warn('Warning: Failed to delete old avatar:', deleteError);
-                            } else {
-                                console.log('Old avatar deleted successfully:', cleanPath);
-                            }
-                        }
-                    } catch (err) {
-                        console.warn('Error parsing/deleting old avatar:', err);
-                    }
-                }
-            }
-
-            // 4. Refresh State
             await refreshProfile();
             setIsEditing(false);
-            setAvatarFile(null);
-            
+            showToast(t('toast.profile_update_success'), "success");
         } catch (error: any) {
-            console.error('Error updating profile:', error);
-            alert(`Failed to update profile: ${error.message || error.error_description || "Unknown error"}`);
+            showToast(t('toast.profile_update_error', { message: error.message }), "error");
         } finally {
             setIsLoading(false);
         }
     };
 
-    const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleUpdateProfile();
+        }
+    };
+
+    const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
-
         const reader = new FileReader();
-        reader.onload = (e) => {
-            if (e.target?.result) {
-                setImageToCrop(e.target.result as string);
+        reader.onload = (ev) => {
+            if (ev.target?.result) {
+                setImageToCrop(ev.target.result as string);
                 setCropModalOpen(true);
             }
         };
         reader.readAsDataURL(file);
-        
-        // Reset input so same file can be selected again if needed
-        if (avatarInputRef.current) {
-            avatarInputRef.current.value = '';
-        }
     };
 
     const handleCropComplete = async (croppedImageUrl: string) => {
         try {
-            // Fetch the blob from the object URL
-            const response = await fetch(croppedImageUrl);
-            const blob = await response.blob();
+            const res = await fetch(croppedImageUrl);
+            const blob = await res.blob();
+            const file = new File([blob], "avatar.jpg", { type: "image/jpeg" });
             
-            // Create a File object from the blob
-            const file = new File([blob], "avatar_cropped.jpg", { type: "image/jpeg" });
-            
-            setAvatarFile(file);
-            setAvatarImage(croppedImageUrl); // Show preview
-            
-            // Ensure we are in editing mode so user can save
-            if (!isEditing) setIsEditing(true);
-
-        } catch (error) {
-            console.error("Error processing cropped image:", error);
-        }
-    };
-    const handleBuyVerification = async () => {
-        if (!user) return;
-        try {
             setIsLoading(true);
-            // Simulate Payment Processing
-            await new Promise(resolve => setTimeout(resolve, 1500));
-            
-            const { error } = await supabase
-                .from('profiles')
-                .update({ 
-                    is_verified: true,
-                    verified_until: new Date(getSecureNow().getTime() + 10000).toISOString() // 10 seconds test (Secure)
-                })
-                .eq('id', user.id);
-                
-            if (error) throw error;
+            const fileName = `${user?.id}-${Date.now()}.jpg`;
+            const { error: uploadError } = await supabase.storage.from('avatars').upload(fileName, file);
+            if (uploadError) throw uploadError;
+
+            const { data } = supabase.storage.from('avatars').getPublicUrl(fileName);
+            await supabase.from('profiles').update({ avatar_url: data.publicUrl }).eq('id', user?.id);
             
             await refreshProfile();
-            // Optional: Show success toast/alert
-        } catch (error) {
-            console.error("Error buying verification:", error);
+            // Don't manually setAvatarImage here, let it come from refreshed profile
+            showToast(t('toast.profile_update_success'), "success");
+        } catch (error: any) {
+            showToast(error.message, "error");
         } finally {
             setIsLoading(false);
+            setCropModalOpen(false);
         }
     };
 
-    if (authLoading) {
-        return (
-            <div className="min-h-screen bg-background flex items-center justify-center">
-                <Loader2 className="w-8 h-8 text-gold-accent animate-spin" />
-            </div>
-        );
-    }
+    if (authLoading) return <div className="min-h-screen flex items-center justify-center bg-black"><Loader2 className="w-10 h-10 text-gold-accent animate-spin" /></div>;
 
     return (
-        <div className="min-h-screen bg-background text-text-primary mb-20">
-             {/* Lightbox for Avatar */}
-            {/* Lightbox for Avatar - Rendered in Portal for "X-like" behavior without z-index bugs */}
-            {viewAvatar && (
-                <LightboxPortal 
-                    isOpen={viewAvatar} 
-                    onClose={() => setViewAvatar(false)} 
-                    imageSrc={avatarImage} 
-                />
-            )}
-
-
-            <div className="container mx-auto max-w-4xl py-8">
-                {/* Header Section */}
-                <header className="px-4 md:px-0 py-8 flex flex-col md:flex-row items-center md:items-start border-b border-border/50">
-                    {/* Avatar */}
-                    <div className="relative group shrink-0 cursor-pointer" onClick={() => isEditing ? avatarInputRef.current?.click() : setViewAvatar(true)}>
-                        <motion.div 
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            className="w-32 h-32 md:w-40 md:h-40 rounded-full border-2 border-border overflow-hidden relative shadow-2xl bg-black"
-                        >
-                            <motion.img 
-                                src={avatarImage} 
-                                alt="Profile Avatar" 
-                                className="w-full h-full object-cover"
-                            />
-                            
-                            {/* Avatar Edit Overlay */}
-                            {isEditing && (
-                                <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                                    <Camera className="w-8 h-8 text-white/90" />
-                                </div>
-                            )}
-                            
-                            {/* View Hover Effect (Non-Editing) */}
-                            {!isEditing && (
-                                <div className="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition-colors duration-200" />
-                            )}
-                        </motion.div>
-                        <input 
-                            type="file" 
-                            ref={avatarInputRef} 
-                            onChange={handleAvatarUpload} 
-                            className="hidden" 
-                            accept="image/*"
-                            disabled={!isEditing}
-                        />
+        <div className="min-h-screen bg-black text-white pb-20">
+            {viewAvatar && <LightboxPortal isOpen={viewAvatar} onClose={() => setViewAvatar(false)} imageSrc={avatarImage} />}
+            
+            <div className="container mx-auto max-w-4xl pt-12">
+                {/* Header */}
+                <header className="px-6 flex flex-col md:flex-row items-center gap-10 border-b border-white/5 pb-12">
+                    <div className="relative group cursor-pointer" onClick={() => isEditing ? avatarInputRef.current?.click() : setViewAvatar(true)}>
+                        <div className="w-32 h-32 md:w-44 md:h-44 rounded-full border-2 border-white/10 overflow-hidden bg-zinc-900 shadow-2xl">
+                            {avatarImage ? <img src={avatarImage} className="w-full h-full object-cover" /> : <User className="w-full h-full p-8 text-white/10" />}
+                            {isEditing && <div className="absolute inset-0 bg-black/60 flex items-center justify-center"><Camera className="w-8 h-8" /></div>}
+                        </div>
+                        <input type="file" ref={avatarInputRef} onChange={handleAvatarUpload} className="hidden" accept="image/*" />
                     </div>
 
-                    {/* Profile Info */}
-                    <div className="md:ml-10 mt-6 md:mt-0 text-center md:text-left flex-grow w-full">
-                        <div className="flex flex-col md:flex-row items-center md:items-start justify-between">
+                    <div className="flex-grow text-center md:text-left">
+                        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
                             <div>
-                                <div className="flex items-center justify-center md:justify-start gap-2">
-                                    <h1 className="text-3xl md:text-4xl font-serif font-medium text-white min-h-[40px]">
-                                        {isEditing ? (
-                                            <input 
-                                                type="text" 
-                                                value={displayName} 
-                                                onChange={(e) => setDisplayName(e.target.value)}
-                                                className="bg-transparent border-b border-gold-accent focus:outline-none w-[200px]"
-                                                autoFocus
-                                            />
-                                        ) : (displayName)}
-                                    </h1>
-                                    {isVerifiedActive && (
-                                        <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center text-[10px] text-white shrink-0">
-                                            <Check className="w-3 h-3" />
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="mt-1">
-                                    {isEditing ? (
-                                        <input 
-                                            type="text" 
-                                            value={username} 
-                                            onChange={(e) => setUsername(e.target.value)}
-                                            placeholder="@nickname"
-                                            className="bg-transparent border-b border-gold-accent focus:outline-none text-gold-accent font-medium w-[150px]"
-                                        />
-                                    ) : (
-                                        <p className="text-gold-accent font-medium min-h-[24px]">
-                                            {username ? `@${username}` : ""}
-                                        </p>
-                                    )}
-                                </div>
+                                <h1 className="text-4xl font-serif font-bold flex items-center gap-3">
+                                    {isEditing ? <input value={displayName} onChange={e => setDisplayName(e.target.value)} className="bg-transparent border-b border-gold-accent outline-none" /> : displayName}
+                                    {isVerifiedActive && <CheckCircle2 className="w-6 h-6 text-blue-500" />}
+                                </h1>
+                                <p className="text-gold-accent font-medium mt-1">@{username}</p>
                             </div>
-
-                            {/* Actions Button */}
-                            <div className="mt-4 md:mt-0">
-                                {isEditing ? (
-                                    <button 
-                                        onClick={handleSaveProfile}
-                                        disabled={isLoading}
-                                        className="px-6 py-2 rounded-full font-semibold text-sm transition-all duration-300 flex items-center gap-2 bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/50"
-                                    >
-                                        {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                                        Save
-                                    </button>
-                                ) : (
-                                    <button 
-                                        onClick={() => setIsEditing(true)}
-                                        className="px-6 py-2 rounded-full font-semibold text-sm transition-all duration-300 flex items-center gap-2 bg-surface hover:bg-white/10 border border-white/10 text-white"
-                                    >
-                                        <Edit3 className="w-4 h-4" />
-                                        Edit
-                                    </button>
-                                )}
-                            </div>
+                            <button 
+                                onClick={() => isEditing ? handleUpdateProfile() : setIsEditing(true)}
+                                disabled={isLoading}
+                                className={`px-8 py-3 rounded-full font-black text-xs uppercase tracking-widest transition-all ${isEditing ? 'bg-green-500 text-black' : 'bg-white/5 border border-white/10 text-white hover:bg-white/10'} disabled:opacity-50 disabled:cursor-not-allowed`}
+                            >
+                                {isLoading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : (isEditing ? 'Save' : 'Edit Profile')}
+                            </button>
                         </div>
-
-                        {/* Stats / Details */}
-                        <div className="mt-4 flex flex-wrap justify-center md:justify-start gap-4 md:gap-8 text-sm text-text-muted">
-                            <span className="flex items-center gap-1.5">
-                                <span className="text-white font-bold">120</span> posts
-                            </span>
-                            <span className="flex items-center gap-1.5">
-                                <span className="text-white font-bold">45.2k</span> followers
-                            </span>
-                            <span className="flex items-center gap-1.5">
-                                <span className="text-white font-bold">1.2k</span> following
-                            </span>
+                        <div className="mt-6 flex justify-center md:justify-start gap-8 text-text-muted text-sm uppercase tracking-widest">
+                            <span><b className="text-white">120</b> posts</span>
+                            <span><b className="text-white">45k</b> followers</span>
                         </div>
-
-                        <div className="mt-4 text-sm text-text-muted max-w-lg mx-auto md:mx-0 leading-relaxed min-h-[20px]">
-                            {isEditing ? (
-                                <textarea 
-                                    className="bg-transparent border border-white/20 rounded p-2 w-full text-white focus:outline-none focus:border-gold-accent"
-                                    value={bio}
-                                    onChange={(e) => setBio(e.target.value)}
-                                    rows={3}
-                                />
-                            ) : (
-                                <p>{bio}</p>
-                            )}
-                        </div>
-                        
-                        <div className="mt-4 flex flex-wrap justify-center md:justify-start gap-4 text-xs text-text-muted opacity-80">
-                             <span className="flex items-center gap-1">
-                                <MapPin className="w-3 h-3" />
-                                {profile?.location || "New York, USA"}
-                            </span>
-                             <span className="flex items-center gap-1">
-                                <Calendar className="w-3 h-3" />
-                                Joined {new Date().getFullYear()}
-                            </span>
-                        </div>
+                        <p className="mt-6 text-text-muted max-w-lg leading-relaxed">{bio}</p>
                     </div>
                 </header>
 
-                {/* Navigation Tabs */}
-                <div className="flex border-b border-border mt-2">
-                    {['FEED', 'ABOUT', 'BOOKINGS', 'SETTINGS'].map((tab) => (
-                        <button 
-                            key={tab} 
-                            onClick={() => setActiveTab(tab)}
-                            className={`flex-1 py-4 text-sm font-medium tracking-widest uppercase transition-colors relative ${activeTab === tab ? 'text-gold-accent' : 'text-text-muted hover:text-white'}`}
-                        >
+                {/* Tabs Nav */}
+                <nav className="flex justify-center border-b border-white/5 mt-4">
+                    {['FEED', 'ABOUT', 'SETTINGS'].map(tab => (
+                        <button key={tab} onClick={() => setActiveTab(tab)} className={`px-8 py-6 text-[10px] font-black tracking-[0.3em] transition-all border-b-2 ${activeTab === tab ? 'border-gold-accent text-gold-accent' : 'border-transparent text-text-muted hover:text-white'}`}>
                             {tab}
-                            {activeTab === tab && (
-                                <motion.div 
-                                    layoutId="activeTab"
-                                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-gold-accent" 
-                                />
-                            )}
                         </button>
                     ))}
-                </div>
+                </nav>
 
-                {/* Content Area */}
-                <div className="mt-4 min-h-[300px]">
-                    {/* FEED TAB */}
-                    {activeTab === 'FEED' && (
-                        <motion.div 
-                            initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                            className="grid grid-cols-3 gap-1"
-                        >
-                            {[1, 2, 3, 4, 5, 6].map((item, index) => (
-                                <div key={index} className="relative aspect-square group cursor-pointer bg-surface overflow-hidden">
-                                    <img 
-                                        src={`https://source.unsplash.com/random/800x800?fashion,model&sig=${index}`} 
-                                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" 
-                                        alt={`Post ${index}`}
-                                        onError={(e) => {
-                                            (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=1964&auto=format&fit=crop';
-                                        }}
-                                    />
-                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
-                                         <div className="flex items-center text-white font-bold">
-                                             <span className="mr-1">❤️</span> 1.2k
-                                         </div>
-                                          <div className="flex items-center text-white font-bold">
-                                             <span className="mr-1">💬</span> 45
-                                         </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </motion.div>
-                    )}
-
-                    {/* SETTINGS TAB */}
-                    {activeTab === 'SETTINGS' && (
-                        <motion.div 
-                            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-                            className="max-w-md mx-auto py-8"
-                        >
-                            <h2 className="text-xl font-serif text-white mb-6">Subscription Plans</h2>
-                            
-                            {/* Verified Plan Card */}
-                            <div className="bg-zinc-900 border border-gold-accent/30 rounded-2xl p-6 relative overflow-hidden group hover:border-gold-accent/60 transition-colors">
-                                <div className="absolute top-0 right-0 bg-gold-accent text-black text-xs font-bold px-3 py-1 rounded-bl-lg">
-                                    POPULAR
-                                </div>
-                                <div className="flex items-center justify-between mb-4">
-                                     <div>
-                                         <h3 className="text-lg font-bold text-white mb-1">Тикче</h3>
-                                         <p className="text-text-muted text-sm">Get verified badge</p>
-                                     </div>
-                                     <div className="w-10 h-10 bg-blue-500/20 rounded-full flex items-center justify-center">
-                                         <Check className="w-5 h-5 text-blue-500" />
-                                     </div>
-                                </div>
-                                
-                                <div className="text-3xl font-bold text-white mb-6">
-                                    €8<span className="text-sm text-text-muted font-normal">/month</span>
-                                </div>
-                                
-                                <ul className="space-y-3 mb-8 text-sm text-text-muted">
-                                    <li className="flex items-center gap-2">
-                                        <Check className="w-4 h-4 text-gold-accent" />
-                                        <span>Blue verified badge on profile</span>
-                                    </li>
-                                    <li className="flex items-center gap-2">
-                                        <Check className="w-4 h-4 text-gold-accent" />
-                                        <span>Priority support</span>
-                                    </li>
-                                    <li className="flex items-center gap-2">
-                                        <Check className="w-4 h-4 text-gold-accent" />
-                                        <span>Exclusive features access</span>
-                                    </li>
-                                </ul>
-                                
-                                {isVerifiedActive ? (
-                                    <button 
-                                        disabled
-                                        className="w-full py-3 rounded-lg font-bold bg-green-500/20 text-green-500 border border-green-500/20 cursor-default"
-                                    >
-                                        Active Plan (Expires soon)
-                                    </button>
-                                ) : (
-                                    <button 
-                                        onClick={handleBuyVerification}
-                                        disabled={isLoading}
-                                        className="w-full py-3 rounded-lg font-bold bg-gold-accent text-black hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                                    >
-                                        {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Subscribe Now"}
-                                    </button>
-                                )}
-                            </div>
-                        </motion.div>
-                    )}
+                <div className="mt-12">
+                    {activeTab === 'FEED' && <div className="grid grid-cols-3 gap-1 px-4"><div className="aspect-[3/4] bg-zinc-900 animate-pulse rounded-2xl" /></div>}
+                    {activeTab === 'SETTINGS' && <SettingsPageController profile={profile} onUpdate={handleUpdateProfile} isLoading={isLoading} />}
                 </div>
             </div>
-            {/* Avatar Crop Modal */}
-            <AvatarCropModal 
-                isOpen={cropModalOpen}
-                onClose={() => setCropModalOpen(false)}
-                imageUrl={imageToCrop || ''}
-                onCropComplete={handleCropComplete}
-            />
+
+            {cropModalOpen && imageToCrop && <AvatarCropModal isOpen={cropModalOpen} imageUrl={imageToCrop} onCropComplete={handleCropComplete} onClose={() => setCropModalOpen(false)} />}
         </div>
     );
 };
 
 export default ProfilePage;
-
-const LightboxPortal = ({ isOpen, onClose, imageSrc }: { isOpen: boolean; onClose: () => void; imageSrc: string }) => {
-    // Lock Body Scroll
-    useEffect(() => {
-        if (isOpen) {
-            document.body.style.overflow = 'hidden';
-        } else {
-            document.body.style.overflow = 'unset';
-        }
-        return () => {
-            document.body.style.overflow = 'unset';
-        };
-    }, [isOpen]);
-
-    if (typeof document === 'undefined') return null;
-
-    return createPortal(
-        <AnimatePresence>
-            {isOpen && (
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/95 backdrop-blur-sm"
-                    onClick={onClose}
-                >
-                    <motion.div
-                         className="relative w-auto h-auto flex items-center justify-center p-8"
-                    >
-                         {/* X-style Circular Lightbox */}
-                         <motion.img
-                            initial={{ scale: 0.8, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.8, opacity: 0 }}
-                            src={imageSrc}
-                            className="max-h-[600px] max-w-[600px] w-[80vw] h-[80vw] md:w-[500px] md:h-[500px] rounded-full object-cover shadow-[0_0_100px_-20px_rgba(255,255,255,0.1)] border border-white/10"
-                            onClick={(e) => e.stopPropagation()}
-                            transition={{
-                                type: "spring",
-                                stiffness: 300,
-                                damping: 25
-                            }}
-                        />
-                         <button
-                            onClick={onClose}
-                            className="fixed top-6 left-6 md:top-8 md:left-8 text-white/70 hover:text-white hover:rotate-90 transition-all duration-300 p-3 rounded-full bg-black/50 hover:bg-white/10 backdrop-blur-md border border-white/5"
-                        >
-                             <X className="w-6 h-6" /> 
-                        </button>
-                    </motion.div>
-                </motion.div>
-            )}
-        </AnimatePresence>,
-        document.body
-    );
-};

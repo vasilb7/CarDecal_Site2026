@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import { InstagramIcon, TwitterIcon, LinkedInIcon } from "../components/IconComponents";
+import { useToast } from "../hooks/useToast";
 
 const UnderlinedInput: React.FC<{
     id: string;
@@ -42,12 +43,15 @@ const UnderlinedInput: React.FC<{
 );
 
 const ContactPage: React.FC = () => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
+    const { showToast } = useToast();
     const [form, setForm] = useState({ name: "", email: "", message: "" });
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        alert("Message sent!"); 
+        console.log("Contact form submitted:", form);
+        showToast(t('toast.contact_success'), "success");
+        setForm({ name: "", email: "", message: "" });
     };
 
     return (
@@ -80,7 +84,7 @@ const ContactPage: React.FC = () => {
                         className="mb-8 md:mb-12"
                     >
                         <h1 className="text-5xl md:text-7xl font-serif text-white tracking-tight">
-                            Contact Us
+                            {t('contact.title')}
                         </h1>
                     </motion.div>
 
@@ -103,20 +107,20 @@ const ContactPage: React.FC = () => {
                             <form onSubmit={handleSubmit} className="space-y-8">
                                 <UnderlinedInput 
                                     id="fullname" 
-                                    label="Full Name" 
+                                    label={t('contact.booking.full_name')} 
                                     value={form.name} 
                                     onChange={(e) => setForm({...form, name: e.target.value})} 
                                 />
                                 <UnderlinedInput 
                                     id="email" 
-                                    label="E-mail" 
+                                    label={t('contact.booking.email_address')} 
                                     type="email"
                                     value={form.email} 
                                     onChange={(e) => setForm({...form, email: e.target.value})} 
                                 />
                                 <UnderlinedInput 
                                     id="message" 
-                                    label="Message" 
+                                    label={t('contact.booking.message')} 
                                     isTextArea
                                     value={form.message} 
                                     onChange={(e) => setForm({...form, message: e.target.value})} 
@@ -127,7 +131,7 @@ const ContactPage: React.FC = () => {
                                         type="submit" 
                                         className="bg-black border border-white/20 text-white px-8 py-3 rounded-full text-xs uppercase tracking-widest hover:bg-gold-accent hover:text-black hover:border-gold-accent transition-all duration-300 w-full md:w-auto"
                                     >
-                                        Contact Us
+                                        {t('contact.booking.submit')}
                                     </button>
                                 </div>
                             </form>
@@ -136,14 +140,14 @@ const ContactPage: React.FC = () => {
                             <div className="space-y-10 flex flex-col justify-between">
                                 <div className="space-y-8">
                                     <div>
-                                        <h3 className="text-lg font-serif text-white mb-1">Contact</h3>
+                                        <h3 className="text-lg font-serif text-white mb-1">{t('contact.info.title')}</h3>
                                         <a href="mailto:info@vbmodels.com" className="text-text-muted hover:text-gold-accent transition-colors text-sm">
                                             info@vbmodels.com
                                         </a>
                                     </div>
 
                                     <div>
-                                        <h3 className="text-lg font-serif text-white mb-1">Based in</h3>
+                                        <h3 className="text-lg font-serif text-white mb-1">{t('contact.info.based_in')}</h3>
                                         <p className="text-text-muted text-sm leading-relaxed">
                                             Sofia, Bulgaria<br/>
                                             London, UK

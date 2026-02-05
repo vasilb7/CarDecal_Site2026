@@ -73,7 +73,7 @@ export const SignInPage: React.FC<SignInPageProps> = ({
   onGoogleSignIn,
   onResetPassword,
 }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [showPassword, setShowPassword] = useState(false);
 
   const displayTitle = title || <span className="font-serif text-text-primary tracking-tight">{t('auth.login_title')}</span>;
@@ -155,7 +155,7 @@ export const SignInPage: React.FC<SignInPageProps> = ({
             </motion.button>
 
             <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.9 }} className="text-center text-[11px] uppercase tracking-widest text-text-muted">
-              {t('auth.dont_have_account')} <Link to="/register" className="text-gold-accent hover:underline ml-1">{t('auth.register_now')}</Link>
+              {t('auth.dont_have_account')} <Link to={`/${i18n.language.split('-')[0]}/register`} className="text-gold-accent hover:underline ml-1">{t('auth.register_now')}</Link>
             </motion.p>
           </div>
         </div>

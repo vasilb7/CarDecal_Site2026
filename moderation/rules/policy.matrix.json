@@ -1,0 +1,33 @@
+{
+  "thresholds": {
+    "mask": 1,
+    "quarantine": 3,
+    "block": 5
+  },
+  "categoryScores": {
+    "general_profanity": 3,
+    "sexual_explicit": 5,
+    "piracy": 6,
+    "unsafe_content": 7,
+    "violence": 7,
+    "malware": 10,
+    "selfharm": 10,
+    "hate_slur": 10,
+    "harassment_targeted": 8,
+    "evasion_attempt": 4
+  },
+  "zoneOverrides": {
+    "username": {
+      "thresholds": { "mask": 0, "quarantine": 0, "block": 1 }
+    },
+    "comments": {
+      "thresholds": { "mask": 1, "quarantine": 2, "block": 4 }
+    },
+    "chat": {
+      "thresholds": { "mask": 1, "quarantine": 3, "block": 5 }
+    },
+    "product_description": {
+      "thresholds": { "mask": 0, "quarantine": 2, "block": 4 }
+    }
+  }
+}

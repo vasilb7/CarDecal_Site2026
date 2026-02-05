@@ -5,10 +5,12 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { modelsData } from '../data/models';
 import { Model } from '../types';
+import { useToast } from '../hooks/useToast';
 
 const BookingPage: React.FC = () => {
     const { t, i18n } = useTranslation();
-    const currentLang = i18n.language as 'bg' | 'en';
+    const { showToast } = useToast();
+    const currentLang = (i18n.language || 'bg').split('-')[0] as 'bg' | 'en';
     
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedModels, setSelectedModels] = useState<Model[]>([]);
@@ -73,7 +75,7 @@ const BookingPage: React.FC = () => {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         console.log('Booking submitted:', { models: selectedModels.map(m => m.name), ...formData });
-        alert(currentLang === 'bg' ? 'Заявката е изпратена успешно!' : 'Booking request sent successfully!');
+        showToast(t('toast.booking_success'), "success");
         
         // Clear persistence on success
         localStorage.removeItem('booking_form_data');
@@ -191,12 +193,12 @@ const BookingPage: React.FC = () => {
                                             }}
                                         />
 
-                                        <Link to={`/models/${model.slug}`} className="relative z-10 w-16 h-16 rounded-xl overflow-hidden shrink-0 border border-white/10 hover:border-gold-accent transition-colors">
+                                        <Link to={`/${currentLang}/models/${model.slug}`} className="relative z-10 w-16 h-16 rounded-xl overflow-hidden shrink-0 border border-white/10 hover:border-gold-accent transition-colors">
                                             <img src={model.avatar} alt={model.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                                         </Link>
                                         
                                         <div className="relative z-10 flex-grow pointer-events-none">
-                                            <Link to={`/models/${model.slug}`} className="pointer-events-auto hover:text-gold-accent transition-colors">
+                                            <Link to={`/${currentLang}/models/${model.slug}`} className="pointer-events-auto hover:text-gold-accent transition-colors">
                                                 <h3 className="text-white text-sm font-medium tracking-wide">{currentLang === 'bg' ? (model.nameBg || model.name) : model.name}</h3>
                                             </Link>
                                             <p className="text-text-muted text-[10px] uppercase tracking-[0.2em] mt-1">{model.location}</p>
@@ -220,11 +222,11 @@ const BookingPage: React.FC = () => {
                                         className="p-4 bg-gold-accent/5 border border-gold-accent/20 rounded-2xl flex items-center justify-between gap-4"
                                     >
                                         <div className="flex items-center gap-4 min-w-0">
-                                            <Link to={`/models/${model.slug}`} className="w-12 h-12 rounded-lg overflow-hidden border border-gold-accent/30 shrink-0 hover:border-gold-accent transition-all">
+                                            <Link to={`/${currentLang}/models/${model.slug}`} className="w-12 h-12 rounded-lg overflow-hidden border border-gold-accent/30 shrink-0 hover:border-gold-accent transition-all">
                                                 <img src={model.avatar} alt={model.name} className="w-full h-full object-cover" />
                                             </Link>
                                             <div className="overflow-hidden">
-                                                <Link to={`/models/${model.slug}`} className="block hover:text-gold-accent transition-colors">
+                                                <Link to={`/${currentLang}/models/${model.slug}`} className="block hover:text-gold-accent transition-colors">
                                                     <h3 className="text-sm font-serif text-white truncate">{currentLang === 'bg' ? (model.nameBg || model.name) : model.name}</h3>
                                                 </Link>
                                                 <p className="text-gold-accent text-[8px] uppercase tracking-[0.2em] font-bold">{model.categories?.[0]}</p>

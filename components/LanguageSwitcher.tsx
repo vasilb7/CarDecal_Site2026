@@ -34,14 +34,30 @@ const EnglishFlag = () => (
     </svg>
 );
 
+import { useNavigate, useLocation } from 'react-router-dom';
+
 const LanguageSwitcher: React.FC = () => {
     const { i18n } = useTranslation();
+    const navigate = useNavigate();
+    const location = useLocation();
     const currentLang = i18n.language.split('-')[0];
 
     const toggleLanguage = (e: React.MouseEvent) => {
         e.stopPropagation();
         const nextLang = currentLang === 'en' ? 'bg' : 'en';
-        i18n.changeLanguage(nextLang);
+        
+        // Update URL to include the new language prefix
+        const pathParts = location.pathname.split('/');
+        // pathParts looks like ["", "bg", "models", "slug"]
+        if (pathParts[1] === 'bg' || pathParts[1] === 'en') {
+            pathParts[1] = nextLang;
+        } else {
+            // If for some reason there is no prefix, add it
+            pathParts.splice(1, 0, nextLang);
+        }
+        
+        const newPath = pathParts.join('/') || `/${nextLang}`;
+        navigate(newPath);
     };
 
     return (

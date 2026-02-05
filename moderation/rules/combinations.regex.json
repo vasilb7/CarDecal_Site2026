@@ -1,0 +1,44 @@
+[
+  {
+    "id": "threat_kill_en",
+    "pattern": "(i\\s+will\\s+kill\\s+you|die\\s+in\\s+a\\s+fire|hope\\s+you\\s+die|kill\\s+your(?:self|\\s+self))",
+    "tags": ["threat", "violence"],
+    "severity": "critical"
+  },
+  {
+    "id": "threat_rape_en",
+    "pattern": "(i\\s+will\\s+rape\\s+you|hope\\s+you\\s+get\\s+raped)",
+    "tags": ["threat", "sexual_violence"],
+    "severity": "critical"
+  },
+  {
+    "id": "hate_animal_comparison",
+    "pattern": "(you\\s+are\\s+a\\s+(monkey|ape|gorilla|pig|dog|rat|snake))",
+    "tags": ["harassment", "insult"],
+    "severity": "high"
+  },
+  {
+    "id": "sexual_proposition",
+    "pattern": "(send\\s+(nudes|pics)|show\\s+(me\\s+)?(tits|boobs|ass|pussy|dick|cock)|wanna\\s+(fuck|sex))",
+    "tags": ["sexual", "harassment"],
+    "severity": "high"
+  },
+  {
+    "id": "combo_insult_bg",
+    "pattern": "(ти\\s+си\\s+(боклук|идиот|тъпак|простак|курва|педал)|мръсен\\s+(циганин|турчин|евреин|педал))",
+    "tags": ["insult", "bg_insult"],
+    "severity": "high"
+  },
+  {
+    "id": "combo_threat_bg",
+    "pattern": "(ще\\s+те\\s+(убия|заколя|пребия|набия)|умри\\s+(в\\s+мъки|от\\s+рак))",
+    "tags": ["threat", "bg_threat"],
+    "severity": "critical"
+  },
+  {
+    "id": "sexual_proposition_bg",
+    "pattern": "(прати\\s+(снимки|цици)|искаш\\s+ли\\s+(секс|да\\s+се\\s+ебем)|лапай\\s+(ми\\s+)?(кура|пишката))",
+    "tags": ["sexual", "bg_sexual"],
+    "severity": "high"
+  }
+]

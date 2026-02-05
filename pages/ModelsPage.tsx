@@ -5,7 +5,8 @@ import { useModels } from '../hooks/useModels';
 import ModelCard from '../components/ModelCard';
 
 const ModelsPage: React.FC = () => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
+    const currentLang = i18n.language.split('-')[0];
     const { category: urlCategory } = useParams<{ category?: string }>();
     const navigate = useNavigate();
     const { getAllModels } = useModels();
@@ -167,7 +168,7 @@ const ModelsPage: React.FC = () => {
                         {categories.map((mod) => (
                             <Link 
                                 key={mod.id} 
-                                to={`/models/category/${mod.id}`}
+                                to={`/${currentLang}/models/category/${mod.id}`}
                                 className={`group relative h-72 md:h-[500px] bg-surface border border-white/10 rounded-sm overflow-hidden transition-all duration-1000 flex flex-col items-center justify-center ${mod.shadow}`}
                             >
                                 <div className="absolute inset-0 z-0 scale-105 group-hover:scale-110 transition-transform duration-1000">
@@ -213,7 +214,7 @@ const ModelsPage: React.FC = () => {
                         
                         <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6">
                             <Link 
-                                to="/models"
+                                to={`/${currentLang}/models`}
                                 className="mb-6 flex items-center gap-2 text-[10px] uppercase tracking-[0.3em] text-text-muted hover:text-white transition-all transform hover:-translate-x-2"
                             >
                                 <span className="text-lg">←</span> {t('models.welcome_modules.all')}

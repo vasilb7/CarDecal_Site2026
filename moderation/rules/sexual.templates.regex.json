@@ -1,0 +1,27 @@
+[
+  {
+    "category": "sexual_explicit",
+    "score": 4,
+    "pattern": "\\b(big|huge|massive|monster|thick|hard|giant)\\s+(cock|cokc|dick)\\b"
+  },
+  {
+    "category": "sexual_explicit",
+    "score": 4,
+    "pattern": "\\b(deep\\s*throat|deepthroat|cum\\s*shot|cumshot|cream\\s*pie|creampie|gang\\s*bang|gangbang|orgy)\\b"
+  },
+  {
+    "category": "sexual_explicit",
+    "score": 4,
+    "pattern": "\\b(porn|porno|xxx|hentai)\\b"
+  },
+  {
+    "category": "sexual_explicit",
+    "score": 4,
+    "pattern": "\\b(sex\\s*cam|live\\s*cam|camgirl|webcam\\s*sex)\\b"
+  },
+  {
+    "category": "sexual_explicit",
+    "score": 5,
+    "pattern": "(nude|milf|porn|xxx|hentai|sex)(\\s*|[._-]*)[a-zA-Z0-9]{2,}"
+  }
+]

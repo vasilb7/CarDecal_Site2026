@@ -5,10 +5,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { User, LogOut, ChevronDown } from 'lucide-react';
 import LanguageSwitcher from './LanguageSwitcher';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../hooks/useToast';
 
 const Header: React.FC = () => {
-    const { t } = useTranslation();
-    const { user, signOut } = useAuth();
+    const { t, i18n } = useTranslation();
+    const { user, profile, signOut } = useAuth();
+    const { showToast } = useToast();
     const location = useLocation();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
@@ -56,7 +58,7 @@ const Header: React.FC = () => {
     const logoHeightClass = "h-8 md:h-8"; 
 
     const handleLogoClick = (e: React.MouseEvent) => {
-        if (location.pathname === '/') {
+        if (location.pathname === `/${i18n.language.split('-')[0]}` || location.pathname === `/${i18n.language.split('-')[0]}/`) {
             e.preventDefault();
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
@@ -66,14 +68,15 @@ const Header: React.FC = () => {
         `relative text-xl md:text-sm uppercase tracking-[0.3em] font-light transition-all duration-500 hover:text-gold-accent ${isActive ? 'text-gold-accent' : 'text-white'}`;
 
     const closeMenu = () => setIsMenuOpen(false);
-
+    const currentLang = i18n.language.split('-')[0];
+    
     const menuLinks = [
-        { path: '/models', label: t('nav.models') },
-        { path: '/about', label: t('nav.about') },
-        { path: '/services', label: t('nav.services') },
-        { path: '/pricing', label: t('nav.pricing') },
-        { path: '/contributions', label: t('nav.contributions') },
-        { path: '/contact', label: t('nav.contact') },
+        { path: `/${currentLang}/models`, label: t('nav.models') },
+        { path: `/${currentLang}/about`, label: t('nav.about') },
+        { path: `/${currentLang}/services`, label: t('nav.services') },
+        { path: `/${currentLang}/pricing`, label: t('nav.pricing') },
+        { path: `/${currentLang}/contributions`, label: t('nav.contributions') },
+        { path: `/${currentLang}/contact`, label: t('nav.contact') },
     ];
 
     const containerVars = {
@@ -91,7 +94,7 @@ const Header: React.FC = () => {
         <header className="sticky top-0 z-[100] w-full bg-background/90 backdrop-blur-md border-b border-white/5 pt-[env(safe-area-inset-top)]">
             <div className="container mx-auto px-6 pl-[calc(1.5rem+env(safe-area-inset-left))] pr-[calc(1.5rem+env(safe-area-inset-right))] py-4 flex items-center justify-between relative h-20">
                 <Link 
-                    to="/" 
+                    to={`/${currentLang}`} 
                     onClick={(e) => { handleLogoClick(e); closeMenu(); }}
                     className="hover:opacity-80 transition-all shrink-0 z-[110]"
                 >
@@ -121,10 +124,20 @@ const Header: React.FC = () => {
                                 onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
                                 className="flex items-center gap-2 text-xs uppercase tracking-widest text-white hover:text-gold-accent transition-colors focus:outline-none"
                             >
-                                <div className="w-8 h-8 rounded-full bg-surface border border-white/20 flex items-center justify-center">
-                                    <User className="w-4 h-4" />
+                                <div className="w-8 h-8 rounded-full bg-surface border border-white/20 flex items-center justify-center overflow-hidden">
+                                    {profile?.avatar_url ? (
+                                        <img 
+                                            src={profile.avatar_url} 
+                                            alt="Profile" 
+                                            className="w-full h-full object-cover"
+                                        />
+                                    ) : (
+                                        <User className="w-4 h-4" />
+                                    )}
                                 </div>
-                                <span className="hidden xl:inline-block">{user.email?.split('@')[0]}</span>
+                                <span className="hidden xl:inline-block max-w-[120px] truncate">
+                                    {profile?.full_name || profile?.username || user.email?.split('@')[0]}
+                                </span>
                                 <ChevronDown className={`w-3 h-3 transition-transform duration-300 ${isProfileMenuOpen ? 'rotate-180' : ''}`} />
                             </button>
 
@@ -144,7 +157,7 @@ const Header: React.FC = () => {
                                             </div>
                                             
                                             <Link 
-                                                to="/profile" 
+                                                to={`/${currentLang}/profile`} 
                                                 onClick={() => setIsProfileMenuOpen(false)}
                                                 className="flex items-center gap-3 px-4 py-3 text-xs uppercase tracking-widest text-text-primary hover:bg-white/5 hover:text-gold-accent transition-colors"
                                             >
@@ -153,9 +166,13 @@ const Header: React.FC = () => {
                                             </Link>
                                             
                                             <button 
-                                                onClick={() => { signOut(); setIsProfileMenuOpen(false); }}
-                                                className="w-full flex items-center gap-3 px-4 py-3 text-xs uppercase tracking-widest text-text-primary hover:bg-white/5 hover:text-red-400 transition-colors text-left"
-                                            >
+                                                 onClick={async () => { 
+                                                     await signOut(); 
+                                                     setIsProfileMenuOpen(false);
+                                                     showToast(t('toast.logout_success'), "success");
+                                                 }}
+                                                 className="w-full flex items-center gap-3 px-4 py-3 text-xs uppercase tracking-widest text-text-primary hover:bg-white/5 hover:text-red-400 transition-colors text-left"
+                                             >
                                                 <LogOut className="w-3.5 h-3.5" />
                                                 {t('nav.logout')}
                                             </button>
@@ -165,7 +182,7 @@ const Header: React.FC = () => {
                             </AnimatePresence>
                         </div>
                     ) : (
-                        <NavLink to="/login" className="text-xs uppercase tracking-widest text-white hover:text-gold-accent transition-colors">
+                        <NavLink to={`/${currentLang}/login`} className="text-xs uppercase tracking-widest text-white hover:text-gold-accent transition-colors">
                             {t('nav.login')}
                         </NavLink>
                     )}
@@ -173,7 +190,7 @@ const Header: React.FC = () => {
 
 
                     <LanguageSwitcher />
-                    <Link to="/book-now" className="px-6 py-2 border border-gold-accent text-gold-accent text-xs uppercase tracking-widest hover:bg-gold-accent hover:text-background transition-colors duration-300">
+                    <Link to={`/${currentLang}/book-now`} className="px-6 py-2 border border-gold-accent text-gold-accent text-xs uppercase tracking-widest hover:bg-gold-accent hover:text-background transition-colors duration-300">
                         {t('nav.book_now')}
                     </Link>
                 </div>
@@ -181,8 +198,16 @@ const Header: React.FC = () => {
                 {/* Mobile & Tablet Controls - Always shown on detected devices */}
                 <div className={`${(isMobileOrTablet) ? 'flex' : 'lg:hidden'} items-center gap-5 z-[110]`}>
                     {user && (
-                         <Link to="/profile" className="flex items-center justify-center w-9 h-9 rounded-full border border-white/20 bg-white/5 text-white hover:border-gold-accent hover:text-gold-accent transition-all duration-300">
-                             <User className="w-6 h-6 sm:w-4 sm:h-4" />
+                         <Link to={`/${currentLang}/profile`} className="flex items-center justify-center w-9 h-9 rounded-full border border-white/20 bg-white/5 text-white hover:border-gold-accent hover:text-gold-accent transition-all duration-300 overflow-hidden">
+                             {profile?.avatar_url ? (
+                                 <img 
+                                     src={profile.avatar_url} 
+                                     alt="Profile" 
+                                     className="w-full h-full object-cover"
+                                 />
+                             ) : (
+                                 <User className="w-6 h-6 sm:w-4 sm:h-4" />
+                             )}
                          </Link>
                     )}
                     
@@ -247,7 +272,7 @@ const Header: React.FC = () => {
                                                 {user.email}
                                             </span>
                                             <Link 
-                                                to="/profile"
+                                                to={`/${currentLang}/profile`}
                                                 onClick={closeMenu}
                                                 className="flex items-center gap-2 text-gold-accent uppercase tracking-[0.2em] text-sm hover:text-white transition-colors"
                                             >
@@ -255,19 +280,23 @@ const Header: React.FC = () => {
                                                 {t('nav.profile')}
                                             </Link>
                                             <button 
-                                                onClick={() => { signOut(); closeMenu(); }} 
-                                                className="flex items-center gap-2 text-white/60 uppercase tracking-[0.2em] text-sm hover:text-red-400 transition-colors"
-                                            >
+                                                 onClick={async () => { 
+                                                     await signOut(); 
+                                                     closeMenu(); 
+                                                     showToast(t('toast.logout_success'), "success");
+                                                 }} 
+                                                 className="flex items-center gap-2 text-white/60 uppercase tracking-[0.2em] text-sm hover:text-red-400 transition-colors"
+                                             >
                                                 <LogOut className="w-4 h-4" />
                                                 {t('nav.logout')}
                                             </button>
                                         </>
                                     ) : (
                                         <>
-                                            <NavLink to="/login" onClick={closeMenu} className="text-white/60 uppercase tracking-[0.2em] text-sm hover:text-white transition-colors">
+                                            <NavLink to={`/${currentLang}/login`} onClick={closeMenu} className="text-white/60 uppercase tracking-[0.2em] text-sm hover:text-white transition-colors">
                                                 {t('nav.login')}
                                             </NavLink>
-                                            <NavLink to="/register" onClick={closeMenu} className="text-white/60 uppercase tracking-[0.2em] text-sm hover:text-white transition-colors">
+                                            <NavLink to={`/${currentLang}/register`} onClick={closeMenu} className="text-white/60 uppercase tracking-[0.2em] text-sm hover:text-white transition-colors">
                                                 {t('nav.register')}
                                             </NavLink>
                                         </>
@@ -276,7 +305,7 @@ const Header: React.FC = () => {
 
                                 <motion.div variants={linkVars} className="pt-8">
                                     <Link 
-                                        to="/book-now" 
+                                        to={`/${currentLang}/book-now`} 
                                         onClick={closeMenu} 
                                         className="px-12 py-5 bg-gold-accent text-background text-xs font-bold uppercase tracking-[0.4em] rounded-full hover:scale-105 transition-transform"
                                     >

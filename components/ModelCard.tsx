@@ -38,9 +38,11 @@ const ModelCard: React.FC<ModelCardProps> = ({ model }) => {
     };
   }, [isHovering, images.length]);
   
+  const currentLang = i18n.language.split('-')[0];
+  
   return (
     <Link 
-      to={`/models/${model.slug}`} 
+      to={`/${currentLang}/models/${model.slug}`} 
       className={`group block overflow-hidden bg-background relative transition-all duration-500 ${
         model.isTopModel ? 'shadow-[0_0_20px_rgba(201,162,39,0.15)] ring-1 ring-gold-accent/30' : ''
       }`}

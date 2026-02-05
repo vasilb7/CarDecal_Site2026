@@ -1,0 +1,20 @@
+# Trusted Domains
+yourdomain.com
+www.yourdomain.com
+cdn.yourdomain.com
+youtube.com
+youtu.be
+instagram.com
+facebook.com
+fb.com
+tiktok.com
+x.com
+twitter.com
+linkedin.com
+github.com
+gitlab.com
+npmjs.com
+vercel.com
+netlify.com
+cloudflare.com
+discord.com

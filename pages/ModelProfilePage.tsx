@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useModels } from '../hooks/useModels';
+import { useToast } from '../hooks/useToast';
 import { GridIcon, PinIcon, CloseIcon, HeartIcon, ChatBubbleIcon, BookmarkIcon, PaperAirplaneIcon, MoreHorizontalIcon, EmojiIcon, VerifiedIcon } from '../components/IconComponents';
 import StoryViewer from '../components/StoryViewer';
 import type { Post, Highlight, Model } from '../types';
@@ -10,7 +11,8 @@ import { getPostStats } from '../data/mock_social_data';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 
 const ImageLightbox: React.FC<{ post: Post; index: number; total: number; model: Model; onClose: () => void }> = ({ post, index, total, model, onClose }) => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
+    const { showToast } = useToast();
     const [searchParams, setSearchParams] = useSearchParams();
     const imgParam = searchParams.get('img');
     const currentImageIndex = imgParam ? parseInt(imgParam, 10) : 0;
@@ -32,6 +34,17 @@ const ImageLightbox: React.FC<{ post: Post; index: number; total: number; model:
         setIsLiked(true);
         setShowHeart(true);
         setTimeout(() => setShowHeart(false), 1000);
+    };
+
+    const handleShare = () => {
+        const url = window.location.href;
+        navigator.clipboard.writeText(url).then(() => {
+            showToast(t('toast.link_copied'), "success");
+        });
+    };
+
+    const handleSavePost = () => {
+        showToast(t('toast.post_saved'), "success");
     };
 
     const setCurrentImageIndex = (newIndex: number | ((prev: number) => number)) => {
@@ -333,9 +346,9 @@ const ImageLightbox: React.FC<{ post: Post; index: number; total: number; model:
                                     <HeartIcon className="w-6 h-6" filled={isLiked} />
                                 </button>
                                 <button className="text-text-primary"><ChatBubbleIcon className="w-6 h-6" /></button>
-                                <button className="text-text-primary"><PaperAirplaneIcon className="w-6 h-6" /></button>
+                                <button onClick={handleShare} className="text-text-primary"><PaperAirplaneIcon className="w-6 h-6" /></button>
                             </div>
-                            <button className="text-text-primary"><BookmarkIcon className="w-6 h-6" /></button>
+                            <button onClick={handleSavePost} className="text-text-primary"><BookmarkIcon className="w-6 h-6" /></button>
                         </div>
                         <p className="text-sm font-semibold text-text-primary">{(post.likes + (isLiked ? 1 : 0)).toLocaleString()} {t('profile.likes')}</p>
                     </div>
@@ -375,10 +388,10 @@ const ModelProfilePage: React.FC = () => {
             <div className="space-y-6">
                 <div className="flex justify-center space-x-6 py-4 border-b border-border/50">
                     <button onClick={() => setSortBy('recent')} className={`text-xs uppercase tracking-widest transition-colors ${sortBy === 'recent' ? 'text-gold-accent font-bold' : 'text-text-muted hover:text-text-primary'}`}>
-                        {t('profile.sort_recent', 'Най-нови')}
+                        {t('profile.sort_recent')}
                     </button>
                     <button onClick={() => setSortBy('popular')} className={`text-xs uppercase tracking-widest transition-colors ${sortBy === 'popular' ? 'text-gold-accent font-bold' : 'text-text-muted hover:text-text-primary'}`}>
-                        {t('profile.sort_popular', 'Най-харесвани')}
+                        {t('profile.sort_popular')}
                     </button>
                 </div>
 
