@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { VerifiedIcon } from './IconComponents';
 import type { Model } from '../types';
 
 interface ModelCardProps {
@@ -79,8 +80,9 @@ const ModelCard: React.FC<ModelCardProps> = ({ model }) => {
         <div className="absolute inset-x-0 bottom-0 z-30">
           <div className="p-3 md:p-6 transform translate-y-0 md:translate-y-8 md:group-hover:translate-y-0 transition-transform duration-500 ease-out text-center md:text-left bg-gradient-to-t from-black/90 via-black/40 to-transparent">
             <div className="inline-block mx-auto md:mx-0 max-w-full">
-              <h3 className="text-sm md:text-2xl font-serif text-white mb-0.5 tracking-wide drop-shadow-md truncate">
+              <h3 className="text-sm md:text-2xl font-serif text-white mb-0.5 tracking-wide drop-shadow-md truncate flex items-center justify-center md:justify-start gap-1">
                 {i18n.language.startsWith('bg') && model.nameBg ? model.nameBg : model.name}
+                {model.isVerified && <VerifiedIcon className="w-3.5 h-3.5 md:w-5 md:h-5 text-[#0095F6] flex-shrink-0" />}
               </h3>
               <p className="text-[9px] md:text-sm text-gold-accent uppercase tracking-[0.15em] md:tracking-[0.2em] font-semibold drop-shadow-sm truncate">
                 {t(`attributes.locations.${model.location}`, model.location)}

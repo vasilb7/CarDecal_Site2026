@@ -81,7 +81,10 @@
     "terms": "Terms of Service",
     "legal": "Legal Information",
     "navigate": "Navigate",
-    "connect": "Connect"
+    "connect": "Connect",
+    "title_part1": "LET'S",
+    "title_part2": "CREATE",
+    "title_part3": "VISION!"
   },
   "models": {
     "title": "Our Talent",
@@ -100,10 +103,17 @@
     },
     "welcome_modules": {
       "top": "Top Models",
+      "top_desc": "Elite faces defining modern standards of beauty and success.",
       "new": "New Faces",
+      "new_desc": "Discover the next generation of talent ready to conquer the runways.",
       "trending": "Trending",
+      "trending_desc": "The faces exciting the industry and dictating new trends right now.",
       "visiting": "Visiting Models",
-      "all": "All Models"
+      "visiting_desc": "Special guest models from international agencies for exclusive projects.",
+      "young": "Young Talents",
+      "young_desc": "Models with emerging goals in life and the world of fashion development (ages 16 to 18)",
+      "all": "All Models",
+      "all_desc": "Our full catalog of professional talent for every production."
     },
     "enter_catalog": "Enter Catalog",
     "choice_title": "Welcome to VB VISION",
@@ -366,7 +376,8 @@
       "Beauty": "Beauty",
       "Lifestyle": "Lifestyle",
       "Fashion": "Fashion",
-      "Top Model": "Top Model"
+      "Top Model": "Top Model",
+      "Young Talents": "Young Talents"
     },
     "locations": {
       "London": "London",

@@ -47,6 +47,10 @@ const HomePage: React.FC = () => {
         '/Site_Pics/Homepage/models_review/6.jpeg',
         '/Site_Pics/Homepage/models_review/7.jpeg',
         '/Site_Pics/Homepage/models_review/8.jpeg',
+        '/Site_Pics/Homepage/models_review/9.jpeg',
+        '/Site_Pics/Homepage/models_review/10.jpeg',
+        '/Site_Pics/Homepage/models_review/11.jpeg',
+        '/Site_Pics/Homepage/models_review/12.jpeg'
     ];
 
     const topModelImages = [
