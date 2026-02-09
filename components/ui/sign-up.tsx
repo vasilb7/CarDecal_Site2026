@@ -71,9 +71,15 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
   const displayTitle = title || <span className="font-serif text-text-primary tracking-tight">{t('auth.register_title')}</span>;
   const displayDescription = description || t('auth.register_subtitle');
 
+  const handleFocus = (e: React.FocusEvent) => {
+    setTimeout(() => {
+      (e.target as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 300);
+  };
+
   return (
-    <div className="h-screen flex flex-col md:flex-row w-full bg-background overflow-hidden relative">
-      <section className="flex-1 flex items-center justify-center p-8 z-10">
+    <div className="min-h-[100dvh] flex flex-col md:flex-row w-full bg-background relative overflow-x-hidden">
+      <section className="flex-1 flex items-start md:items-center justify-center p-8 pt-24 md:pt-8 z-10 overflow-y-auto">
         <div className="w-full max-w-sm">
           <div className="flex flex-col gap-6">
             <motion.div 
@@ -86,7 +92,7 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
               <p className="text-text-muted text-sm uppercase tracking-widest">{displayDescription}</p>
             </motion.div>
 
-            <form className="space-y-4" onSubmit={onSignUp}>
+            <form className="space-y-4" onSubmit={onSignUp} onFocus={handleFocus}>
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
                 <label className="block mb-1 text-xs uppercase tracking-widest text-text-muted">{t('auth.full_name')}</label>
                 <GlassInputWrapper>

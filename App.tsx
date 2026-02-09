@@ -1,7 +1,11 @@
 import React, { useEffect } from 'react';
-import { HashRouter, Routes, Route, useLocation, Navigate, useParams } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation, Navigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { AnimatePresence, motion } from 'framer-motion';
+import MaintenancePage from './pages/MaintenancePage';
+import { settingsService } from './lib/settingsService';
+import { supabase } from './lib/supabase';
+import { useAuth } from './context/AuthContext';
 import ScrollToTop from './components/ScrollToTop';
 import Layout from './components/Layout';
 import HomePage from './pages/HomePage';
@@ -19,6 +23,9 @@ import LegalPage from './pages/LegalPage';
 import ContributionsPage from './pages/ContributionsPage';
 import BookingPage from './pages/BookingPage';
 import ProfilePage from './pages/ProfilePage';
+import AdminDashboard from './pages/AdminDashboard';
+
+import AdminRoute from './components/AdminRoute';
 
 const LanguageWrapper: React.FC = () => {
   const { lang } = useParams<{ lang: string }>();
@@ -53,6 +60,11 @@ const LanguageWrapper: React.FC = () => {
         <Route path="/contributions" element={<ContributionsPage />} />
         <Route path="/book-now" element={<BookingPage />} />
         <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/admin" element={
+          <AdminRoute>
+            <AdminDashboard />
+          </AdminRoute>
+        } />
       </Routes>
     </Layout>
   );
@@ -60,7 +72,110 @@ const LanguageWrapper: React.FC = () => {
 
 function AppContent() {
   const location = useLocation();
+  const { isAdmin, loading: authLoading } = useAuth();
+  const [isMaintenance, setIsMaintenance] = React.useState(false);
+  const [maintenanceLoading, setMaintenanceLoading] = React.useState(true);
+
+  useEffect(() => {
+    const checkMaintenance = async () => {
+      try {
+        const active = await settingsService.getMaintenanceMode();
+        setIsMaintenance(active);
+      } catch (err) {
+        console.error('Maintenance check failed:', err);
+      } finally {
+        setMaintenanceLoading(false);
+      }
+    };
+    checkMaintenance();
+
+    // Listen for real-time changes
+    const channel = supabase
+      .channel('site_settings_maintenance')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'site_settings',
+          filter: 'key=eq.maintenance_mode'
+        },
+        (payload: any) => {
+          if (payload.new && payload.new.value !== undefined) {
+            setIsMaintenance(payload.new.value === 'true');
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  useEffect(() => {
+    // ONLY apply this on mobile/tablet devices to avoid breaking desktop experience
+    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    if (!isTouchDevice) return;
+
+    let focusCheckInterval: any = null;
+
+    const performBlurCheck = () => {
+      const v = window.visualViewport;
+      if (!v) return;
+
+      // Detect if the keyboard is likely gone
+      if (v.height >= window.innerHeight - 50) {
+        const active = document.activeElement;
+        if (active instanceof HTMLInputElement || 
+            active instanceof HTMLTextAreaElement || 
+            active instanceof HTMLSelectElement) {
+          (active as HTMLElement).blur();
+        }
+      }
+    };
+
+    const handleFocusIn = (e: FocusEvent) => {
+      if (e.target instanceof HTMLInputElement || 
+          e.target instanceof HTMLTextAreaElement || 
+          e.target instanceof HTMLSelectElement) {
+        if (focusCheckInterval) clearInterval(focusCheckInterval);
+        focusCheckInterval = setInterval(performBlurCheck, 200);
+      }
+    };
+
+    const handleFocusOut = () => {
+      if (focusCheckInterval) {
+        clearInterval(focusCheckInterval);
+        focusCheckInterval = null;
+      }
+    };
+
+    document.addEventListener('focusin', handleFocusIn);
+    document.addEventListener('focusout', handleFocusOut);
+
+    return () => {
+      document.removeEventListener('focusin', handleFocusIn);
+      document.removeEventListener('focusout', handleFocusOut);
+      if (focusCheckInterval) clearInterval(focusCheckInterval);
+    };
+  }, []);
   
+  if (maintenanceLoading) {
+    return <div className="fixed inset-0 bg-[#0B0B0C]" />;
+  }
+
+  const isManagementRoute = location.pathname.startsWith('/admin') || location.pathname.includes('/login');
+  
+  // Maintenance mode check - prioritizing it even if auth is still loading for public users
+  if (isMaintenance && !isAdmin && !isManagementRoute) {
+    return <MaintenancePage />;
+  }
+
+  if (authLoading) {
+    return <div className="fixed inset-0 bg-[#0B0B0C]" />;
+  }
+
   return (
     <>
       <ScrollToTop />
@@ -68,6 +183,12 @@ function AppContent() {
         <Routes location={location}>
           <Route path="/" element={<Navigate to="/bg" replace />} />
           
+          <Route path="/admin" element={
+            <AdminRoute>
+              <AdminDashboard />
+            </AdminRoute>
+          } />
+
           <Route path="/:lang/login" element={
             <motion.div 
               key="login"
@@ -105,11 +226,11 @@ import { ToastProvider } from './components/Toast/ToastProvider';
 
 function App() {
   return (
-    <HashRouter>
+    <BrowserRouter>
       <ToastProvider>
         <AppContent />
       </ToastProvider>
-    </HashRouter>
+    </BrowserRouter>
   );
 }
 

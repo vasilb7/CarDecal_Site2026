@@ -3,8 +3,10 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
+import { supabase } from '../lib/supabase';
 import { useModels } from '../hooks/useModels';
 import ModelCard from '../components/ModelCard';
+import type { Model } from '../types';
 
 const fadeInUp = {
     hidden: { opacity: 0, y: 60 },
@@ -27,9 +29,58 @@ const staggerContainer = {
 
 const HomePage: React.FC = () => {
     const { t, i18n } = useTranslation();
-    const { getFeaturedModels } = useModels();
-    const featuredModels = getFeaturedModels(6);
-    // ... existing state and logic ...
+    const { getFeaturedModels, getTopModel, loading } = useModels();
+    const [featuredModels, setFeaturedModels] = useState<Model[]>([]);
+    const [topModel, setTopModel] = useState<Model | null>(null);
+
+    useEffect(() => {
+        const fetch = async () => {
+            const [featured, top] = await Promise.all([
+                getFeaturedModels(6),
+                getTopModel()
+            ]);
+            setFeaturedModels(featured);
+            setTopModel(top);
+        };
+        fetch();
+
+        // Real-time Top Model update
+        const channel = supabase
+            .channel('public_top_model_home')
+            .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'models'
+                },
+                (payload) => {
+                    const m = payload.new as any;
+                    const mappedModel = {
+                        ...m,
+                        hairColor: m.hair_color,
+                        eyeColor: m.eye_color,
+                        coverImage: m.cover_image,
+                        cardImages: m.card_images,
+                        isTopModel: m.is_top_model,
+                        isVerified: m.is_verified,
+                        nameBg: m.name_bg
+                    };
+                    if (m.is_top_model) {
+                        setTopModel(mappedModel as Model);
+                    } else if (payload.old.is_top_model && !m.is_top_model) {
+                        // Re-fetch if the current top model was unset
+                        getTopModel().then(setTopModel);
+                    }
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [getFeaturedModels, getTopModel]);
+
     const [currentLookbookIndex, setCurrentLookbookIndex] = useState(0);
     const [isLookbookTransitioning, setIsLookbookTransitioning] = useState(true);
     const [isLookbookLocking, setIsLookbookLocking] = useState(false);
@@ -53,36 +104,12 @@ const HomePage: React.FC = () => {
         '/Site_Pics/Homepage/models_review/12.jpeg'
     ];
 
-    const topModelImages = [
-        '1.jpeg',
-        '2.jpeg',
-        '3.jpeg',
-        '4.jpeg',
-        '5.jpeg',
-        '6.jpeg',
-        '7.jpeg',
-        '8.jpeg',
-        '9.jpeg',
-        '10.jpeg',
-        '11.jpeg',
-        '12.jpeg',
-        '13.jpeg',
-        '14.jpeg',
-        '15.jpeg',
-        '16.jpeg',
-        '17.jpeg',
-        '18.jpeg',
-        '19.jpeg',
-        '20.jpeg',
-        '21.jpeg',
-        '22.jpeg',
-        '23.jpeg',
-        '24.jpeg',
-        '25.jpeg'
-    ];
+    const topImages = (topModel?.cardImages && topModel.cardImages.length > 0) 
+        ? topModel.cardImages 
+        : (topModel?.cardImages === undefined ? (topModel?.posts?.map(p => p.src) || []) : []);
 
     const extendedLookbookImages = [...lookbookImages, lookbookImages[0]];
-    const extendedTopImages = [...topModelImages, topModelImages[0]];
+    const extendedTopImages = topImages.length > 0 ? [...topImages, topImages[0]] : [];
 
     const handleLookbookForward = () => {
         if (isLookbookLocking) return;
@@ -120,7 +147,7 @@ const HomePage: React.FC = () => {
             setCurrentTopIndex(prev => prev - 1);
         } else {
             setIsTopTransitioning(false);
-            setCurrentTopIndex(topModelImages.length - 1);
+            setCurrentTopIndex(topImages.length - 1);
             requestAnimationFrame(() => {
                 setTimeout(() => setIsTopTransitioning(true), 20);
             });
@@ -154,7 +181,7 @@ const HomePage: React.FC = () => {
     }, [currentLookbookIndex, extendedLookbookImages.length]);
 
     useEffect(() => {
-        if (currentTopIndex === extendedTopImages.length - 1) {
+        if (topImages.length > 0 && currentTopIndex === extendedTopImages.length - 1) {
             const timer = setTimeout(() => {
                 setIsTopTransitioning(false);
                 setCurrentTopIndex(0);
@@ -164,7 +191,7 @@ const HomePage: React.FC = () => {
             }, 800);
             return () => clearTimeout(timer);
         }
-    }, [currentTopIndex, extendedTopImages.length]);
+    }, [currentTopIndex, extendedTopImages.length, topImages.length]);
 
     const [copied, setCopied] = useState(false);
 
@@ -225,111 +252,117 @@ const HomePage: React.FC = () => {
                 </div>
             </section>
 
-            {/* Featured Talent Spotlight: Pamela Nelson */}
-            <section className="py-24 md:py-32 bg-surface border-y border-border/5">
-                <div className="container mx-auto px-6">
-                    <motion.div
-                        initial="hidden"
-                        whileInView="visible"
-                        viewport={{ once: true, margin: "-100px" }}
-                        variants={fadeInUp}
-                        className="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-20 items-center"
-                    >
-                        <div className="max-w-md mx-auto w-full">
-                            <div className="relative aspect-[9/16] bg-black overflow-hidden rounded-sm shadow-2xl group">
-                                <div className="absolute inset-0 z-10">
-                                    {topModelImages.map((img, i) => {
-                                        const activeIndex = ((currentTopIndex % topModelImages.length) + topModelImages.length) % topModelImages.length;
-                                        const isActive = activeIndex === i;
-                                        return (
-                                            <div
-                                                key={i}
-                                                className={`absolute inset-0 w-full h-full transition-all duration-[1200ms] ease-in-out ${
-                                                    isActive ? 'opacity-100 scale-100 z-10' : 'opacity-0 scale-110 z-0'
-                                                }`}
-                                            >
-                                                <img
-                                                    src={`/Site_Pics/Top_Model/${img}`}
-                                                    className="w-full h-full object-cover transform transition-transform duration-[8000ms] ease-out scale-100 group-hover:scale-105"
-                                                    alt={`Pamela Nelson - Look ${i + 1}`}
-                                                />
-                                            </div>
-                                        );
-                                    })}
-
-                                    {/* Interaction zones */}
-                                    <div className="absolute inset-0 z-40">
-                                        <div
-                                            className="absolute inset-y-0 left-0 w-1/4 cursor-w-resize"
-                                            onClick={handleTopBackward}
-                                        />
-                                        <div
-                                            className="absolute inset-y-0 right-0 w-1/4 cursor-e-resize"
-                                            onClick={handleTopForward}
-                                        />
-                                    </div>
-
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent z-20 pointer-events-none" />
-                                    <div className="absolute top-6 left-6 z-30 bg-gold-accent text-black px-4 py-1.5 text-xs font-bold uppercase tracking-widest pointer-events-none">
-                                        {t('home.top_model')}
-                                    </div>
-                                    <div className="absolute bottom-6 left-6 right-6 z-30 flex items-center justify-between pointer-events-none">
-                                        <div className="flex space-x-2">
-                                            {topModelImages.map((_, i) => {
-                                                const activeIndex = ((currentTopIndex % topModelImages.length) + topModelImages.length) % topModelImages.length;
-                                                return (
-                                                    <div
-                                                        key={i}
-                                                        className={`h-1 rounded-full transition-all duration-300 ${
-                                                            activeIndex === i ? 'w-8 bg-gold-accent' : 'w-2 bg-white/50'
-                                                        }`}
+            {/* Featured Talent Spotlight: Dynamic */}
+            {topModel && topImages.length > 0 && (
+                <section className="py-24 md:py-32 bg-surface border-y border-border/5">
+                    <div className="container mx-auto px-6">
+                        <motion.div
+                            initial="hidden"
+                            whileInView="visible"
+                            viewport={{ once: true, margin: "-100px" }}
+                            variants={fadeInUp}
+                            className="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-20 items-center"
+                        >
+                            <div className="max-w-md mx-auto w-full">
+                                <div className="relative aspect-[9/16] bg-black overflow-hidden rounded-sm shadow-2xl group">
+                                    <div className="absolute inset-0 z-10">
+                                        {topImages.map((img, i) => {
+                                            const activeIndex = ((currentTopIndex % topImages.length) + topImages.length) % topImages.length;
+                                            const isActive = activeIndex === i;
+                                            return (
+                                                <div
+                                                    key={i}
+                                                    className={`absolute inset-0 w-full h-full transition-all duration-[1200ms] ease-in-out ${
+                                                        isActive ? 'opacity-100 scale-100 z-10' : 'opacity-0 scale-110 z-0'
+                                                    }`}
+                                                >
+                                                    <img
+                                                        src={img}
+                                                        className="w-full h-full object-cover transform transition-transform duration-[8000ms] ease-out scale-100 group-hover:scale-105"
+                                                        alt={`${topModel.name} - Look ${i + 1}`}
                                                     />
-                                                );
-                                            })}
+                                                </div>
+                                            );
+                                        })}
+
+                                        {/* Interaction zones */}
+                                        <div className="absolute inset-0 z-40">
+                                            <div
+                                                className="absolute inset-y-0 left-0 w-1/4 cursor-w-resize"
+                                                onClick={handleTopBackward}
+                                            />
+                                            <div
+                                                className="absolute inset-y-0 right-0 w-1/4 cursor-e-resize"
+                                                onClick={handleTopForward}
+                                            />
+                                        </div>
+
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent z-20 pointer-events-none" />
+                                        <div className="absolute top-6 left-6 z-30 bg-gold-accent text-black px-4 py-1.5 text-xs font-bold uppercase tracking-widest pointer-events-none">
+                                            {t('home.top_model')}
+                                        </div>
+                                        <div className="absolute bottom-6 left-6 right-6 z-30 flex items-center justify-between pointer-events-none">
+                                            <div className="flex space-x-2">
+                                                {topImages.slice(0, 10).map((_, i) => {
+                                                    const activeIndex = ((currentTopIndex % topImages.length) + topImages.length) % topImages.length;
+                                                    return (
+                                                        <div
+                                                            key={i}
+                                                            className={`h-1 rounded-full transition-all duration-300 ${
+                                                                activeIndex === i ? 'w-8 bg-gold-accent' : 'w-2 bg-white/50'
+                                                            }`}
+                                                        />
+                                                    );
+                                                })}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <div className="space-y-[4vh] text-left">
-                            <div>
-                                <h4 className="text-gold-accent font-bold uppercase tracking-[0.2em] text-[10px] md:text-sm mb-3">{t('home.featured_spotlight')}</h4>
-                                <h2 className="font-serif text-text-primary leading-tight">
-                                    Pamela <br/>
-                                    <span className="text-text-muted/40 italic">Nelson</span>
-                                </h2>
-                            </div>
-                            <div className="w-16 h-px bg-gold-accent/50" />
-                            <div className="space-y-6 text-white/80 text-lg font-light leading-relaxed">
-                                <p>{t('home.pamela.desc1')}</p>
-                                <p>{t('home.pamela.desc2')}</p>
-                            </div>
+                            <div className="space-y-[4vh] text-left">
+                                <div>
+                                    <h4 className="text-gold-accent font-bold uppercase tracking-[0.2em] text-[10px] md:text-sm mb-3">{t('home.featured_spotlight')}</h4>
+                                    <h2 className="font-serif text-6xl md:text-8xl text-text-primary leading-[0.85] tracking-tighter">
+                                        {topModel.name.split(' ')[0]} <br/>
+                                        <span className="text-text-muted/80 italic">{topModel.name.split(' ').slice(1).join(' ')}</span>
+                                    </h2>
+                                </div>
+                                <div className="w-16 h-px bg-gold-accent/50" />
+                                <div className="space-y-6 text-white/80 text-lg font-light leading-relaxed">
+                                    <p className="line-clamp-6">{topModel.spotlight_bio || topModel.bio}</p>
+                                </div>
 
-                            <div className="pt-4 flex flex-col items-center md:items-start md:flex-row gap-6 md:gap-8">
-                                <Link
-                                    to={`/${currentLang}/models/pamela-nelson`}
-                                    className="btn-mobile-full inline-flex items-center justify-center px-8 py-4 bg-text-primary text-background text-sm font-bold uppercase tracking-widest hover:bg-gold-accent transition-colors duration-300"
-                                >
-                                    {t('home.pamela.view_portfolio')}
-                                    <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
-                                </Link>
-                                <div className="flex items-center space-x-6 px-4 text-text-muted text-sm shrink-0">
-                                    <div className="flex flex-col items-center md:items-start text-center md:text-left">
-                                        <span className="font-serif text-2xl text-text-primary">240+</span>
-                                        <span className="uppercase tracking-wider text-[10px] whitespace-nowrap">{t('home.pamela.projects')}</span>
-                                    </div>
-                                    <div className="w-px h-8 bg-border" />
-                                    <div className="flex flex-col items-center md:items-start text-center md:text-left">
-                                        <span className="font-serif text-2xl text-text-primary">12</span>
-                                        <span className="uppercase tracking-wider text-[10px] whitespace-nowrap">{t('home.pamela.awards')}</span>
+                                <div className="pt-4 flex flex-col items-center md:items-start md:flex-row gap-6 md:gap-8">
+                                    <Link
+                                        to={`/${currentLang}/models/${topModel.slug}`}
+                                        className="btn-mobile-full inline-flex items-center justify-center px-8 py-4 bg-text-primary text-background text-sm font-bold uppercase tracking-widest hover:bg-gold-accent transition-colors duration-300"
+                                    >
+                                        {t('home.spotlight.view_portfolio')}
+                                        <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
+                                    </Link>
+                                    <div className="flex items-center space-x-6 px-4 text-text-muted text-sm shrink-0">
+                                        <div className="flex flex-col items-center md:items-start text-center md:text-left">
+                                            <span className="font-serif text-2xl text-text-primary">{topModel.spotlight_projects || 0}</span>
+                                            <span className="uppercase tracking-wider text-[10px] whitespace-nowrap">{t('home.spotlight.projects')}</span>
+                                        </div>
+                                        <div className="w-px h-8 bg-border" />
+                                        <div className="flex flex-col items-center md:items-start text-center md:text-left">
+                                            <span className="font-serif text-2xl text-text-primary">{topModel.spotlight_awards || 0}</span>
+                                            <span className="uppercase tracking-wider text-[10px] whitespace-nowrap">{t('home.spotlight.awards')}</span>
+                                        </div>
+                                        <div className="w-px h-8 bg-border" />
+                                        <div className="flex flex-col items-center md:items-start text-center md:text-left">
+                                            <span className="font-serif text-2xl text-text-primary">{topModel.posts?.length || 0}</span>
+                                            <span className="uppercase tracking-wider text-[10px] whitespace-nowrap">{t('home.spotlight.posts')}</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    </motion.div>
-                </div>
-            </section>
+                        </motion.div>
+                    </div>
+                </section>
+            )}
 
             {/* Top Promo Banner */}
             <div className="bg-gold-accent/10 border-y border-gold-accent/20 py-3 overflow-hidden">

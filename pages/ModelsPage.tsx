@@ -9,8 +9,16 @@ const ModelsPage: React.FC = () => {
   const currentLang = i18n.language.split("-")[0];
   const { category: urlCategory } = useParams<{ category?: string }>();
   const navigate = useNavigate();
-  const { getAllModels } = useModels();
-  const allModels = getAllModels();
+  const { getAllModels, loading } = useModels();
+  const [allModels, setAllModels] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetch = async () => {
+      const data = await getAllModels();
+      setAllModels(data);
+    };
+    fetch();
+  }, [getAllModels]);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [filters, setFilters] = useState({
@@ -165,8 +173,8 @@ const ModelsPage: React.FC = () => {
     allModels.forEach((model) => {
       model.categories.forEach((cat) => categoriesSet.add(cat));
       locations.add(model.location);
-      hairColors.add(model.hairColor);
-      eyeColors.add(model.eyeColor);
+      hairColors.add(model.hair_color);
+      eyeColors.add(model.eye_color);
     });
 
     return {
@@ -182,9 +190,9 @@ const ModelsPage: React.FC = () => {
       const searchMatch =
         !query ||
         model.name.toLowerCase().includes(query) ||
-        (model.nameBg && model.nameBg.toLowerCase().includes(query));
+        (model.name_bg && model.name_bg.toLowerCase().includes(query));
       let quickMatch = true;
-      if (urlCategory === "top") quickMatch = model.isTopModel || false;
+      if (urlCategory === "top") quickMatch = model.is_top_model || false;
       if (urlCategory === "new")
         quickMatch =
           model.categories.includes("New Faces") ||
@@ -203,9 +211,9 @@ const ModelsPage: React.FC = () => {
       const locationMatch =
         filters.location === "All" || model.location === filters.location;
       const hairMatch =
-        filters.hairColor === "All" || model.hairColor === filters.hairColor;
+        filters.hairColor === "All" || model.hair_color === filters.hairColor;
       const eyeMatch =
-        filters.eyeColor === "All" || model.eyeColor === filters.eyeColor;
+        filters.eyeColor === "All" || model.eye_color === filters.eyeColor;
 
       return (
         searchMatch &&
@@ -392,7 +400,12 @@ const ModelsPage: React.FC = () => {
               </div>
             </div>
 
-            {filteredModels.length > 0 ? (
+            {loading ? (
+              <div className="flex flex-col items-center justify-center py-32 gap-6">
+                <div className="w-12 h-12 border-2 border-gold-accent border-t-transparent animate-spin rounded-full" />
+                <p className="text-[10px] uppercase tracking-[0.4em] text-gold-accent animate-pulse">Synchronizing portfolio...</p>
+              </div>
+            ) : filteredModels.length > 0 ? (
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-10">
                 {filteredModels.map((model) => (
                   <ModelCard key={model.slug} model={model} />

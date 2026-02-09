@@ -72,6 +72,12 @@ const BookingPage: React.FC = () => {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
+    const handleFocus = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+        setTimeout(() => {
+            e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 300);
+    };
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         console.log('Booking submitted:', { models: selectedModels.map(m => m.name), ...formData });
@@ -153,6 +159,7 @@ const BookingPage: React.FC = () => {
                                     className="w-full bg-background/80 border border-white/10 rounded-2xl px-6 py-5 text-white placeholder-text-muted focus:outline-none focus:border-gold-accent/50 transition-all shadow-inner"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
+                                    onFocus={handleFocus}
                                 />
                                 <div className="absolute right-6 top-1/2 -translate-y-1/2 opacity-40">
                                     <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -269,6 +276,7 @@ const BookingPage: React.FC = () => {
                                         className="form-input-luxury"
                                         placeholder="Company Name"
                                         value={formData.companyName} onChange={handleInputChange}
+                                        onFocus={handleFocus}
                                     />
                                 </FormGroup>
                                 <FormGroup label={t('booking_page.form.vat_number')}>
@@ -277,6 +285,7 @@ const BookingPage: React.FC = () => {
                                         className="form-input-luxury"
                                         placeholder="Tax ID"
                                         value={formData.vatNumber} onChange={handleInputChange}
+                                        onFocus={handleFocus}
                                     />
                                 </FormGroup>
                                 <FormGroup label={t('booking_page.form.contact_person')}>
@@ -285,6 +294,7 @@ const BookingPage: React.FC = () => {
                                         className="form-input-luxury"
                                         placeholder="Full Name"
                                         value={formData.contactPerson} onChange={handleInputChange}
+                                        onFocus={handleFocus}
                                     />
                                 </FormGroup>
                                 <FormGroup label={t('booking_page.form.email')}>
@@ -293,6 +303,7 @@ const BookingPage: React.FC = () => {
                                         className="form-input-luxury"
                                         placeholder="email@example.com"
                                         value={formData.email} onChange={handleInputChange}
+                                        onFocus={handleFocus}
                                     />
                                 </FormGroup>
                                 <FormGroup label={t('booking_page.form.phone')}>
@@ -301,6 +312,7 @@ const BookingPage: React.FC = () => {
                                         className="form-input-luxury"
                                         placeholder="+359 ..."
                                         value={formData.phone} onChange={handleInputChange}
+                                        onFocus={handleFocus}
                                     />
                                 </FormGroup>
                                 <FormGroup label={t('booking_page.form.website')}>
@@ -309,6 +321,7 @@ const BookingPage: React.FC = () => {
                                         className="form-input-luxury"
                                         placeholder="https://..."
                                         value={formData.website} onChange={handleInputChange}
+                                        onFocus={handleFocus}
                                     />
                                 </FormGroup>
                                 <FormGroup label={t('booking_page.form.project_type')}>
@@ -316,6 +329,7 @@ const BookingPage: React.FC = () => {
                                         name="projectType" required
                                         className="form-input-luxury appearance-none"
                                         value={formData.projectType} onChange={handleInputChange}
+                                        onFocus={handleFocus}
                                     >
                                         <option value="" disabled>{currentLang === 'bg' ? 'Тип проект' : 'Project Type'}</option>
                                         <option value="editorial">Editorial</option>
@@ -330,6 +344,7 @@ const BookingPage: React.FC = () => {
                                         type="date" name="shootDate" required
                                         className="form-input-luxury"
                                         value={formData.shootDate} onChange={handleInputChange}
+                                        onFocus={handleFocus}
                                     />
                                 </FormGroup>
                             </div>
@@ -340,6 +355,7 @@ const BookingPage: React.FC = () => {
                                     className="form-input-luxury"
                                     placeholder="Sofia, London, Paris..."
                                     value={formData.location} onChange={handleInputChange}
+                                    onFocus={handleFocus}
                                 />
                             </FormGroup>
 
@@ -349,6 +365,7 @@ const BookingPage: React.FC = () => {
                                     className="form-input-luxury resize-none"
                                     placeholder={t('booking_page.form.message_placeholder')}
                                     value={formData.message} onChange={handleInputChange}
+                                    onFocus={handleFocus}
                                 />
                             </FormGroup>
 
@@ -377,6 +394,7 @@ const BookingPage: React.FC = () => {
                     color: white;
                     font-size: 0.9rem;
                     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                    scroll-margin-top: 6rem;
                 }
                 .form-input-luxury:focus {
                     outline: none;

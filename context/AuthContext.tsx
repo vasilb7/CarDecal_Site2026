@@ -162,7 +162,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setSession(null);
   };
   
-  const isAdmin = profile?.role === 'admin';
+  const isAdmin = profile?.role?.toLowerCase() === 'admin';
 
   return (
     <AuthContext.Provider value={{ user, session, profile, loading, signOut, isAdmin, refreshProfile, getSecureNow }}>

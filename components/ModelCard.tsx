@@ -14,9 +14,9 @@ const ModelCard: React.FC<ModelCardProps> = ({ model }) => {
   const [isHovering, setIsHovering] = React.useState(false);
   const timerRef = React.useRef<number | null>(null);
 
-  const images = model.cardImages && model.cardImages.length > 0 
-    ? model.cardImages 
-    : [model.coverImage];
+  const images = model.cover_image && model.cover_image.length > 0 
+    ? model.cover_image 
+    : ['/placeholder.png'];
 
   React.useEffect(() => {
     // Check if the device stays in hover mode (prevents cycling on mobile/touch)
@@ -45,14 +45,14 @@ const ModelCard: React.FC<ModelCardProps> = ({ model }) => {
     <Link 
       to={`/${currentLang}/models/${model.slug}`} 
       className={`group block overflow-hidden bg-background relative transition-all duration-500 ${
-        model.isTopModel ? 'shadow-[0_0_20px_rgba(201,162,39,0.15)] ring-1 ring-gold-accent/30' : ''
+        model.is_top_model ? 'shadow-[0_0_20px_rgba(201,162,39,0.15)] ring-1 ring-gold-accent/30' : ''
       }`}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
     >
       <div className="relative aspect-[9/16] w-full overflow-hidden bg-surface">
         <div className="absolute top-2 md:top-8 right-2 md:right-4 z-40 flex flex-col items-end gap-1.5 md:gap-2">
-          {model.isTopModel && (
+          {model.is_top_model && (
             <div className="bg-gold-accent text-black px-2 md:px-3 py-0.5 md:py-1 text-[8px] md:text-[10px] font-black uppercase tracking-[0.15em] md:tracking-[0.2em] shadow-lg">
               {t('home.top_model')}
             </div>
@@ -62,7 +62,7 @@ const ModelCard: React.FC<ModelCardProps> = ({ model }) => {
               ? 'bg-red-900/80 text-white border border-red-500/50' 
               : 'bg-black/40 text-white border border-white/40'
           }`}>
-            {t(`models.availability.${model.availability}`)}
+            {t(`models.availability.${model.availability}_${model.gender || 'Female'}`)}
           </div>
         </div>
         
@@ -81,8 +81,8 @@ const ModelCard: React.FC<ModelCardProps> = ({ model }) => {
           <div className="p-3 md:p-6 transform translate-y-0 md:translate-y-8 md:group-hover:translate-y-0 transition-transform duration-500 ease-out text-center md:text-left bg-gradient-to-t from-black/90 via-black/40 to-transparent">
             <div className="inline-block mx-auto md:mx-0 max-w-full">
               <h3 className="text-sm md:text-2xl font-serif text-white mb-0.5 tracking-wide drop-shadow-md truncate flex items-center justify-center md:justify-start gap-1">
-                {i18n.language.startsWith('bg') && model.nameBg ? model.nameBg : model.name}
-                {model.isVerified && <VerifiedIcon className="w-3.5 h-3.5 md:w-5 md:h-5 text-[#0095F6] flex-shrink-0" />}
+                {i18n.language.startsWith('bg') && model.name_bg ? model.name_bg : model.name}
+                {model.is_verified && <VerifiedIcon className="w-3.5 h-3.5 md:w-5 md:h-5 text-[#0095F6] flex-shrink-0" />}
               </h3>
               <p className="text-[9px] md:text-sm text-gold-accent uppercase tracking-[0.15em] md:tracking-[0.2em] font-semibold drop-shadow-sm truncate">
                 {t(`attributes.locations.${model.location}`, model.location)}

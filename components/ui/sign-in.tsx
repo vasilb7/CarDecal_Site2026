@@ -79,10 +79,16 @@ export const SignInPage: React.FC<SignInPageProps> = ({
   const displayTitle = title || <span className="font-serif text-text-primary tracking-tight">{t('auth.login_title')}</span>;
   const displayDescription = description || t('auth.login_subtitle');
 
+  const handleFocus = (e: React.FocusEvent) => {
+    setTimeout(() => {
+      (e.target as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 300);
+  };
+
   return (
-    <div className="h-screen flex flex-col md:flex-row w-full bg-background overflow-hidden relative">
+    <div className="min-h-[100dvh] flex flex-col md:flex-row w-full bg-background relative overflow-x-hidden">
       {/* Left column: sign-in form */}
-      <section className="flex-1 flex items-center justify-center p-8 z-10">
+      <section className="flex-1 flex items-start md:items-center justify-center p-8 pt-24 md:pt-8 z-10 overflow-y-auto">
         <div className="w-full max-w-sm">
           <div className="flex flex-col gap-8">
             <motion.div 
@@ -95,7 +101,7 @@ export const SignInPage: React.FC<SignInPageProps> = ({
               <p className="text-text-muted text-sm uppercase tracking-widest">{displayDescription}</p>
             </motion.div>
 
-            <form className="space-y-6" onSubmit={onSignIn}>
+            <form className="space-y-6" onSubmit={onSignIn} onFocus={handleFocus}>
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
                 <label className="block mb-2 text-xs uppercase tracking-widest text-text-muted">{t('auth.email')}</label>
                 <GlassInputWrapper>

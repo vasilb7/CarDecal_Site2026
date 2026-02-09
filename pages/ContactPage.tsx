@@ -12,35 +12,46 @@ const UnderlinedInput: React.FC<{
     value: string;
     onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
     isTextArea?: boolean;
-}> = ({ id, label, type = "text", placeholder, value, onChange, isTextArea = false }) => (
-    <div className="group relative pt-4">
-        <label 
-            htmlFor={id} 
-            className="block text-xs font-medium text-text-muted mb-2 uppercase tracking-wide group-focus-within:text-gold-accent transition-colors"
-        >
-            {label}
-        </label>
-        {isTextArea ? (
-            <textarea
-                id={id}
-                rows={1}
-                value={value}
-                onChange={onChange}
-                placeholder={placeholder}
-                className="w-full bg-transparent border-b border-white/20 py-2 text-white placeholder-white/10 focus:border-gold-accent outline-none transition-all resize-none"
-            />
-        ) : (
-            <input
-                type={type}
-                id={id}
-                value={value}
-                onChange={onChange}
-                placeholder={placeholder}
-                className="w-full bg-transparent border-b border-white/20 py-2 text-white placeholder-white/10 focus:border-gold-accent outline-none transition-all"
-            />
-        )}
-    </div>
-);
+}> = ({ id, label, type = "text", placeholder, value, onChange, isTextArea = false }) => {
+    const handleFocus = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        // Delayed scroll to allow keyboard to start opening and viewport to adjust
+        setTimeout(() => {
+            e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 300);
+    };
+
+    return (
+        <div className="group relative pt-4">
+            <label 
+                htmlFor={id} 
+                className="block text-xs font-medium text-text-muted mb-2 uppercase tracking-wide group-focus-within:text-gold-accent transition-colors"
+            >
+                {label}
+            </label>
+            {isTextArea ? (
+                <textarea
+                    id={id}
+                    rows={1}
+                    value={value}
+                    onChange={onChange}
+                    onFocus={handleFocus}
+                    placeholder={placeholder}
+                    className="w-full bg-transparent border-b border-white/20 py-2 text-white placeholder-white/10 focus:border-gold-accent outline-none transition-all resize-none scroll-mt-24"
+                />
+            ) : (
+                <input
+                    type={type}
+                    id={id}
+                    value={value}
+                    onChange={onChange}
+                    onFocus={handleFocus}
+                    placeholder={placeholder}
+                    className="w-full bg-transparent border-b border-white/20 py-2 text-white placeholder-white/10 focus:border-gold-accent outline-none transition-all scroll-mt-24"
+                />
+            )}
+        </div>
+    );
+};
 
 const ContactPage: React.FC = () => {
     const { t, i18n } = useTranslation();
@@ -55,8 +66,8 @@ const ContactPage: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen bg-background flex flex-col justify-center px-4 md:px-12 py-20">
-            <div className="max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+        <div className="min-h-[100dvh] bg-background flex flex-col lg:justify-center px-4 md:px-12 pt-28 pb-20 overflow-y-auto">
+            <div className="max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-2 gap-12 items-start lg:items-center">
                 
                 {/* Left Side: Image (Hidden on very small screens if preferred, or stacked) */}
                 <motion.div 

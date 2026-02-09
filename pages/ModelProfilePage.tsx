@@ -3,23 +3,40 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useModels } from '../hooks/useModels';
 import { useToast } from '../hooks/useToast';
+import { useAuth } from '../context/AuthContext';
+import { modelsService } from '../lib/modelsService';
+import { supabase } from '../lib/supabase';
+import { Upload, Trash2, Plus, Loader2 } from 'lucide-react';
 import { GridIcon, PinIcon, CloseIcon, HeartIcon, ChatBubbleIcon, BookmarkIcon, PaperAirplaneIcon, MoreHorizontalIcon, EmojiIcon, VerifiedIcon } from '../components/IconComponents';
 import StoryViewer from '../components/StoryViewer';
-import type { Post, Highlight, Model } from '../types';
+import StoriesRing from '../components/StoriesRing';
 import { AnimatePresence, motion } from 'framer-motion';
-import { getPostStats } from '../data/mock_social_data';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
+import type { Post, Highlight, Model, Comment, Story } from '../types';
 
-const ImageLightbox: React.FC<{ post: Post; index: number; total: number; model: Model; onClose: () => void }> = ({ post, index, total, model, onClose }) => {
-    const { t, i18n } = useTranslation();
+interface LightboxProps {
+    post: Post;
+    index: number;
+    total: number;
+    model: Model;
+    onClose: () => void;
+    onLike: (postId: string) => Promise<void>;
+    onComment: (postId: string, content: string) => Promise<void>;
+}
+
+const ImageLightbox: React.FC<LightboxProps> = ({ post, index, total, model, onClose, onLike, onComment }) => {
+    const { t } = useTranslation();
     const { showToast } = useToast();
+    const { user, profile } = useAuth();
     const [searchParams, setSearchParams] = useSearchParams();
     const imgParam = searchParams.get('img');
     const currentImageIndex = imgParam ? parseInt(imgParam, 10) : 0;
     
-    const [isLiked, setIsLiked] = useState(false);
+    const isLiked = user ? (post.liked_by_users || []).includes(user.id) : false;
     const [isZoomed, setIsZoomed] = useState(false);
     const [showHeart, setShowHeart] = useState(false);
+    const [commentText, setCommentText] = useState('');
+    const [isSubmittingComment, setIsSubmittingComment] = useState(false);
     const lastTap = useRef<number>(0);
 
     const handleDoubleTap = (e: React.MouseEvent | React.TouchEvent) => {
@@ -30,10 +47,33 @@ const ImageLightbox: React.FC<{ post: Post; index: number; total: number; model:
         lastTap.current = now;
     };
 
-    const handleLike = () => {
-        setIsLiked(true);
+    const handleLike = async () => {
+        if (!user) {
+            showToast(t('auth.login_required'), "error");
+            return;
+        }
         setShowHeart(true);
         setTimeout(() => setShowHeart(false), 1000);
+        await onLike(post.id);
+    };
+
+    const handleCommentSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!user) {
+            showToast(t('auth.login_required'), "error");
+            return;
+        }
+        if (!commentText.trim()) return;
+
+        try {
+            setIsSubmittingComment(true);
+            await onComment(post.id, commentText.trim());
+            setCommentText('');
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setIsSubmittingComment(false);
+        }
     };
 
     const handleShare = () => {
@@ -310,15 +350,15 @@ const ImageLightbox: React.FC<{ post: Post; index: number; total: number; model:
                     )}
                 </div>
 
-                <div className="flex flex-col bg-surface w-full md:w-[335px] lg:w-[400px] shrink-0 h-auto md:h-full md:border-l md:border-border">
-                    <div className="hidden md:flex items-center justify-between p-3.5 border-b border-border shrink-0">
+                <div className="flex flex-col bg-surface w-full md:w-[335px] lg:w-[400px] shrink-0 h-auto md:h-full">
+                    <div className="hidden md:flex items-center justify-between p-3.5 shrink-0">
                         <div className="flex items-center space-x-3">
                             <img src={model.avatar} alt={model.name} className="w-8 h-8 rounded-full object-cover ring-1 ring-border" />
                             <div className="flex items-center">
                                 <span className="font-semibold text-sm text-text-primary mr-1">{model.name}</span>
-                                {model.isVerified && <VerifiedIcon className="w-4 h-4" />}
+                                {model.is_verified && <VerifiedIcon className="w-4 h-4" />}
                                 <span className="text-xs text-text-muted mx-2">•</span>
-                                <button className="text-xs font-semibold text-gold-accent">{t('profile.follow')}</button>
+                                <span className="text-[10px] uppercase font-bold text-gold-accent">Official</span>
                             </div>
                         </div>
                         <button className="text-text-primary hover:opacity-60">
@@ -332,25 +372,65 @@ const ImageLightbox: React.FC<{ post: Post; index: number; total: number; model:
                             <div className="flex-1 text-sm">
                                 <p className="text-text-primary leading-tight">
                                     <span className="font-semibold mr-1 hidden md:inline">{model.name}</span>
-                                    {model.isVerified && <VerifiedIcon className="w-3.5 h-3.5 inline-block mr-2 align-text-top" />}
+                                    {model.is_verified && <VerifiedIcon className="w-3.5 h-3.5 inline-block mr-2 align-text-top" />}
                                     {post.caption}
                                 </p>
+                                <span className="text-[10px] text-text-muted mt-1 uppercase tracking-wider">{new Date(post.date).toLocaleDateString()}</span>
                             </div>
+                        </div>
+
+                        {/* Comments List */}
+                        <div className="space-y-4 pt-4">
+                            {post.comments?.map((comment) => (
+                                <div key={comment.id} className="flex items-start space-x-3">
+                                    <img src={comment.user_avatar || '/default-avatar.png'} alt={comment.username} className="w-8 h-8 rounded-full object-cover shrink-0" />
+                                    <div className="flex-1 text-sm">
+                                        <p className="text-text-primary leading-tight">
+                                            <span className="font-semibold mr-2">{comment.username}</span>
+                                            {comment.content}
+                                        </p>
+                                        <div className="flex items-center space-x-3 mt-1 text-[10px] text-text-muted">
+                                            <span>{new Date(comment.created_at).toLocaleDateString()}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     </div>
 
-                    <div className="p-4 border-t border-border bg-surface sticky bottom-0 z-20">
+                    <div className="p-4 bg-surface sticky bottom-0 z-20">
                         <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center space-x-4">
-                                <button onClick={() => setIsLiked(!isLiked)} className={`${isLiked ? 'text-red-500' : 'text-text-primary'} transition-colors transform active:scale-125 duration-200`}>
+                                <button onClick={handleLike} className={`${isLiked ? 'text-red-500' : 'text-text-primary'} transition-colors transform active:scale-125 duration-200`}>
                                     <HeartIcon className="w-6 h-6" filled={isLiked} />
                                 </button>
-                                <button className="text-text-primary"><ChatBubbleIcon className="w-6 h-6" /></button>
+                                <button className="text-text-primary" onClick={() => document.getElementById('comment-input')?.focus()}>
+                                    <ChatBubbleIcon className="w-6 h-6" />
+                                </button>
                                 <button onClick={handleShare} className="text-text-primary"><PaperAirplaneIcon className="w-6 h-6" /></button>
                             </div>
                             <button onClick={handleSavePost} className="text-text-primary"><BookmarkIcon className="w-6 h-6" /></button>
                         </div>
-                        <p className="text-sm font-semibold text-text-primary">{(post.likes + (isLiked ? 1 : 0)).toLocaleString()} {t('profile.likes')}</p>
+                        <p className="text-sm font-semibold text-text-primary mb-2">{(post.liked_by_users?.length || 0).toLocaleString()} {t('profile.likes')}</p>
+                        
+                        <form onSubmit={handleCommentSubmit} className="flex items-center space-x-2 border-t border-border/50 pt-3 mt-3">
+                            <EmojiIcon className="w-5 h-5 text-text-muted invisible md:visible" />
+                            <input 
+                                id="comment-input"
+                                type="text" 
+                                placeholder={t('profile.add_comment')}
+                                className="flex-1 bg-transparent text-sm text-text-primary outline-none"
+                                value={commentText}
+                                onChange={(e) => setCommentText(e.target.value)}
+                            />
+                            <button 
+                                type="submit" 
+                                disabled={!commentText.trim() || isSubmittingComment}
+                                className={`text-sm font-semibold text-gold-accent disabled:opacity-30`}
+                            >
+                                {isSubmittingComment ? <Loader2 className="w-4 h-4 animate-spin" /> : t('profile.post_comment')}
+                            </button>
+                        </form>
                     </div>
                 </div>
             </motion.div>
@@ -360,48 +440,289 @@ const ImageLightbox: React.FC<{ post: Post; index: number; total: number; model:
 
 const ModelProfilePage: React.FC = () => {
     const { t } = useTranslation();
+    const { showToast } = useToast();
+    const { isAdmin, user, profile } = useAuth();
     const { slug } = useParams<{ slug: string }>();
-    const { getModelBySlug } = useModels();
-    const model = getModelBySlug(slug || '');
+    const { getModelBySlug, loading, error } = useModels();
+    const [model, setModel] = useState<Model | null>(null);
+    const [isUploading, setIsUploading] = useState(false);
+
+    const handleLikePost = async (postId: string) => {
+        if (!user || !model) {
+            showToast(t('auth.login_required'), "error");
+            return;
+        }
+        
+        const updatedPosts = model.posts.map(p => {
+            if (p.id === postId) {
+                const liked_by_users = p.liked_by_users || [];
+                const isLiked = liked_by_users.includes(user.id);
+                
+                return {
+                    ...p,
+                    liked_by_users: isLiked 
+                        ? liked_by_users.filter(id => id !== user.id)
+                        : [...liked_by_users, user.id]
+                };
+            }
+            return p;
+        });
+
+        try {
+            await modelsService.updateModel(model.id, { posts: updatedPosts });
+            setModel({ ...model, posts: updatedPosts });
+        } catch (error: any) {
+            showToast(error.message, "error");
+        }
+    };
+
+    const handleAddComment = async (postId: string, content: string) => {
+        if (!user || !profile || !model) {
+            showToast(t('auth.login_required'), "error");
+            return;
+        }
+        
+        const newComment: Comment = {
+            id: `comment_${Date.now()}`,
+            user_id: user.id,
+            username: profile.username || profile.full_name || 'Anonymous',
+            user_avatar: profile.avatar_url,
+            content,
+            created_at: new Date().toISOString()
+        };
+
+        const updatedPosts = model.posts.map(p => {
+            if (p.id === postId) {
+                return {
+                    ...p,
+                    comments: [...(p.comments || []), newComment]
+                };
+            }
+            return p;
+        });
+
+        try {
+            await modelsService.updateModel(model.id, { posts: updatedPosts });
+            setModel({ ...model, posts: updatedPosts });
+            showToast(t('toast.comment_posted'), "success");
+        } catch (error: any) {
+            showToast(error.message, "error");
+        }
+    };
+    
+    useEffect(() => {
+        const fetch = async () => {
+            if (slug) {
+                const data = await getModelBySlug(slug);
+                setModel(data);
+            }
+        };
+        fetch();
+    }, [slug, getModelBySlug]);
+
+    // Real-time subscription
+    useEffect(() => {
+        if (!model?.id) return;
+
+        const channel = supabase
+            .channel(`model_${model.id}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'models',
+                    filter: `id=eq.${model.id}`
+                },
+                (payload) => {
+                    console.log('Real-time update received:', payload.new);
+                    const m = payload.new as any;
+                    
+                    setModel(prev => {
+                        if (!prev) return null;
+                        return {
+                            ...prev,
+                            ...m,
+                            // Ensure frontend-specific mappings are preserved if needed
+                            hairColor: m.hair_color || prev.hairColor,
+                            eyeColor: m.eye_color || prev.eyeColor,
+                            coverImage: m.cover_image || prev.coverImage,
+                            cardImages: m.card_images || prev.cardImages,
+                            isTopModel: m.is_top_model !== undefined ? m.is_top_model : prev.isTopModel,
+                            isVerified: m.is_verified !== undefined ? m.is_verified : prev.isVerified,
+                            nameBg: m.name_bg || prev.nameBg
+                        };
+                    });
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [model?.id]);
     
     const [activeTab, setActiveTab] = useState('feed');
     const [sortBy, setSortBy] = useState<'recent' | 'popular'>('recent');
     const [searchParams, setSearchParams] = useSearchParams();
 
-    const selectedPost = searchParams.get('post') 
-        ? model?.posts.find(p => p.id === searchParams.get('post')) 
+    const selectedPost = searchParams.get('post') && model
+        ? model.posts.find(p => p.id === searchParams.get('post')) 
         : null;
 
     const [selectedHighlight, setSelectedHighlight] = useState<Highlight | null>(null);
+    const [showStoryViewer, setShowStoryViewer] = useState(false);
+    const [activeStories, setActiveStories] = useState<Story[]>([]);
 
-    if (!model) {
+    if (loading) {
+        return (
+            <div className="min-h-[60vh] flex flex-col items-center justify-center gap-6">
+                <div className="w-16 h-16 border-2 border-gold-accent border-t-transparent animate-spin rounded-full" />
+                <p className="text-[10px] uppercase tracking-[0.4em] text-gold-accent animate-pulse font-bold">Accessing Profile Data...</p>
+            </div>
+        );
+    }
+
+    if (!model || error) {
         return <div className="text-center py-20 text-text-muted">{t('profile.not_found')}</div>;
     }
 
+    const handleDeletePost = async (postId: string) => {
+        if (!model || !window.confirm(t('admin.confirm_delete_post'))) return;
+
+        try {
+            const postToDelete = model.posts.find(p => p.id === postId);
+            const updatedPosts = model.posts.filter(p => p.id !== postId);
+            await modelsService.updateModel(model.id, { posts: updatedPosts });
+            
+            if (postToDelete && postToDelete.src.includes('supabase.co')) {
+                await modelsService.deleteFile(postToDelete.src);
+            }
+
+            setModel({ ...model, posts: updatedPosts });
+            showToast(t('toast.post_deleted'), "success");
+        } catch (error: any) {
+            showToast(error.message, "error");
+        }
+    };
+
+    const handleUpdateModel = async (updates: Partial<Model>) => {
+        if (!model) return;
+        try {
+            await modelsService.updateModel(model.id, updates);
+            setModel({ ...model, ...updates });
+        } catch (error: any) {
+            showToast(error.message, "error");
+        }
+    };
+
+    const handleBackgroundUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || !model) return;
+        try {
+            setIsUploading(true);
+            const path = `models/${model.slug}/background/${Date.now()}_${file.name}`;
+            const url = await modelsService.uploadFile(file, path);
+            await handleUpdateModel({ background_image: url });
+            showToast(t('toast.gallery_updated'), "success");
+        } catch (error: any) {
+            showToast(error.message, "error");
+        } finally {
+            setIsUploading(false);
+        }
+    };
+
+    const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files;
+        if (!files || files.length === 0 || !model) return;
+
+        try {
+            setIsUploading(true);
+            const uploadedPosts: Post[] = [];
+            
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                if (!file.type.startsWith('image/')) continue;
+
+                const path = `models/${model.slug}/gallery/${Date.now()}_${file.name}`;
+                const url = await modelsService.uploadFile(file, path);
+                
+                uploadedPosts.push({
+                    id: `post_${Date.now()}_${i}`,
+                    src: url,
+                    type: 'image',
+                    caption: '',
+                    liked_by_users: [],
+                    comments: [],
+                    date: new Date().toISOString(),
+                    tags: []
+                });
+            }
+
+            const updatedPosts = [...model.posts, ...uploadedPosts];
+            await modelsService.updateModel(model.id, { posts: updatedPosts });
+            setModel({ ...model, posts: updatedPosts });
+            showToast(t('toast.gallery_updated'), "success");
+        } catch (error: any) {
+            showToast(error.message, "error");
+        } finally {
+            setIsUploading(false);
+        }
+    };
+
     const renderFeed = () => {
         const allPosts = [...model.posts].sort((a, b) => {
-            if (sortBy === 'popular') return b.likes - a.likes;
+            if (sortBy === 'popular') return (b.liked_by_users?.length || 0) - (a.liked_by_users?.length || 0);
             return new Date(b.date).getTime() - new Date(a.date).getTime();
         });
 
         return (
             <div className="space-y-6">
-                <div className="flex justify-center space-x-6 py-4 border-b border-border/50">
-                    <button onClick={() => setSortBy('recent')} className={`text-xs uppercase tracking-widest transition-colors ${sortBy === 'recent' ? 'text-gold-accent font-bold' : 'text-text-muted hover:text-text-primary'}`}>
-                        {t('profile.sort_recent')}
-                    </button>
-                    <button onClick={() => setSortBy('popular')} className={`text-xs uppercase tracking-widest transition-colors ${sortBy === 'popular' ? 'text-gold-accent font-bold' : 'text-text-muted hover:text-text-primary'}`}>
-                        {t('profile.sort_popular')}
-                    </button>
+                <div className="flex flex-col md:flex-row justify-between items-center py-4 gap-4">
+                    <div className="flex space-x-6">
+                        <button onClick={() => setSortBy('recent')} className={`text-xs uppercase tracking-widest transition-colors ${sortBy === 'recent' ? 'text-gold-accent font-bold' : 'text-text-muted hover:text-text-primary'}`}>
+                            {t('profile.sort_recent')}
+                        </button>
+                        <button onClick={() => setSortBy('popular')} className={`text-xs uppercase tracking-widest transition-colors ${sortBy === 'popular' ? 'text-gold-accent font-bold' : 'text-text-muted hover:text-text-primary'}`}>
+                            {t('profile.sort_popular')}
+                        </button>
+                    </div>
+
+                    {isAdmin && (
+                        <div className="flex gap-2">
+                             <label className={`flex items-center gap-2 cursor-pointer bg-gold-accent/10 hover:bg-gold-accent/20 text-gold-accent px-4 py-2 border border-gold-accent/20 transition-all ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                                {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                                <span className="text-[10px] font-bold uppercase tracking-widest">{isUploading ? 'Uploading...' : 'Add Photos'}</span>
+                                <input 
+                                    type="file" 
+                                    multiple 
+                                    className="hidden" 
+                                    onChange={handleBulkUpload}
+                                    disabled={isUploading}
+                                    accept="image/*"
+                                />
+                            </label>
+                        </div>
+                    )}
                 </div>
 
                 <div className="grid grid-cols-3 gap-1">
                     {allPosts.map((post) => (
-                        <div key={post.id} className="relative aspect-square group cursor-pointer" onClick={() => setSearchParams({ post: post.id })}>
-                            <img src={post.src} alt={post.caption} className="w-full h-full object-cover" />
-                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity hidden md:flex items-center justify-center gap-6">
-                                <div className="flex items-center text-white"><HeartIcon className="w-6 h-6 mr-2" /><span className="font-bold">{post.likes}</span></div>
-                                <div className="flex items-center text-white"><ChatBubbleIcon className="w-6 h-6 mr-2" /><span className="font-bold">{Math.floor(post.likes / 10)}</span></div>
+                        <div key={post.id} className="relative aspect-square group cursor-pointer">
+                            <img src={post.src} alt={post.caption} className="w-full h-full object-cover" onClick={() => setSearchParams({ post: post.id })} />
+                            
+                            {isAdmin && (
+                                <button 
+                                    onClick={(e) => { e.stopPropagation(); handleDeletePost(post.id); }}
+                                    className="absolute top-2 right-2 p-2 bg-red-500/80 hover:bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                            )}
+
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity hidden md:flex items-center justify-center gap-6 pointer-events-none" onClick={() => setSearchParams({ post: post.id })}>
+                                <div className="flex items-center text-white"><HeartIcon className="w-6 h-6 mr-2" /><span className="font-bold">{post.liked_by_users?.length || 0}</span></div>
+                                <div className="flex items-center text-white"><ChatBubbleIcon className="w-6 h-6 mr-2" /><span className="font-bold">{post.comments?.length || 0}</span></div>
                             </div>
                         </div>
                     ))}
@@ -416,32 +737,73 @@ const ModelProfilePage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
                 <div><span className="text-text-muted">{t('profile.height')}:</span> {model.height}</div>
                 <div><span className="text-text-muted">{t('profile.measurements')}:</span> {model.measurements}</div>
-                <div><span className="text-text-muted">{t('profile.hair_color')}:</span> {t(`attributes.hair.${model.hairColor}`, model.hairColor)}</div>
-                <div><span className="text-text-muted">{t('profile.eye_color')}:</span> {t(`attributes.eyes.${model.eyeColor}`, model.eyeColor)}</div>
+                <div><span className="text-text-muted">{t('profile.hair_color')}:</span> {t(`attributes.hair.${model.hair_color}`, model.hair_color)}</div>
+                <div><span className="text-text-muted">{t('profile.eye_color')}:</span> {t(`attributes.eyes.${model.eye_color}`, model.eye_color)}</div>
                 <div><span className="text-text-muted">{t('profile.location')}:</span> {t(`attributes.locations.${model.location}`, model.location)}</div>
+                <div><span className="text-text-muted">{t('profile.availability')}:</span> {t(`models.availability.${model.availability}_${model.gender || 'Female'}`)}</div>
             </div>
         </div>
     );
 
     return (
-        <div className="container mx-auto max-w-4xl py-8">
-            <header className="px-4 md:px-0 py-8 flex flex-col md:flex-row items-center md:items-start">
-                <img src={model.avatar} alt={model.name} className="w-32 h-32 md:w-40 md:h-40 rounded-full object-cover border-2 border-border" />
-                <div className="md:ml-10 mt-6 md:mt-0 text-center md:text-left flex-grow">
+        <div className="min-h-screen bg-background relative">
+            {/* Background Image Hero */}
+            <div className={`relative h-[40vh] md:h-[50vh] overflow-hidden group/bg ${!model.background_image ? 'bg-zinc-900/50' : ''}`}>
+                {model.background_image ? (
+                    <img 
+                        src={model.background_image} 
+                        className="w-full h-full object-cover opacity-60 transition-all duration-1000 group-hover/bg:opacity-80" 
+                        alt="Background" 
+                    />
+                ) : (
+                    <div className="absolute inset-0 bg-zinc-900/50 backdrop-blur-3xl" />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent" />
+                
+                {isAdmin && (
+                    <label className="absolute bottom-4 right-4 z-20 cursor-pointer p-2 bg-black/40 hover:bg-black/60 rounded-full text-white transition-all opacity-0 group-hover/bg:opacity-100 border border-white/10">
+                        <Plus className="w-5 h-5" />
+                        <input type="file" className="hidden" onChange={handleBackgroundUpload} accept="image/*" />
+                    </label>
+                )}
+            </div>
+
+            <div className={`container mx-auto max-w-4xl px-4 md:px-0 relative z-10 pb-20 ${
+                model.background_image 
+                    ? 'pt-0' 
+                    : 'pt-24 md:pt-32'
+            }`}>
+            <header className="px-4 md:px-0 pb-8 flex flex-col items-center md:items-start group/header relative">
+                <div className="relative -mt-20 md:-mt-24 mb-6">
+                    <StoriesRing 
+                        model={model}
+                        isAdmin={isAdmin}
+                        onStoriesUpdate={(stories) => setModel({ ...model, stories })}
+                        onTriggerUpdate={handleUpdateModel}
+                        onViewStory={(stories) => {
+                            setActiveStories(stories);
+                            setShowStoryViewer(true);
+                        }}
+                    />
+                </div>
+                <div className="text-center md:text-left flex-grow">
                     <div className="flex items-center justify-center md:justify-start">
-                        <h1 className="text-3xl md:text-4xl font-serif">{model.name}</h1>
-                        {model.isVerified && <VerifiedIcon className="w-6 h-6 ml-2 mt-1" />}
+                        <h1 className="text-3xl md:text-5xl font-serif">{model.name}</h1>
+                        {model.is_verified && <VerifiedIcon className="w-6 h-6 ml-2 mt-1" />}
                     </div>
-                    <div className="mt-2 flex justify-center md:justify-start space-x-2">
+                    {model.nickname && (
+                        <p className="text-gold-accent text-base md:text-lg font-medium mt-1 lowercase">@{model.nickname}</p>
+                    )}
+                    <div className="mt-4 flex justify-center md:justify-start space-x-2">
                         {model.categories.map(cat => (
-                            <span key={cat} className="text-sm bg-surface text-text-muted px-3 py-1 rounded-full">{t(`attributes.categories.${cat}`, cat)}</span>
+                            <span key={cat} className="text-[10px] uppercase tracking-widest bg-white/5 border border-white/10 text-text-muted px-4 py-1.5 rounded-none">{t(`attributes.categories.${cat}`, cat)}</span>
                         ))}
                     </div>
-                    <p className="mt-6 text-sm text-text-muted max-w-lg mx-auto md:mx-0">{model.bio}</p>
+                    <p className="mt-6 text-sm md:text-base text-text-muted max-w-xl mx-auto md:mx-0 font-light leading-relaxed">{model.bio}</p>
                 </div>
             </header>
             
-            <div className="flex border-b border-border">
+            <div className="flex">
                 <button className={`flex-1 py-4 text-sm font-medium tracking-widest uppercase transition-colors relative ${activeTab === 'feed' ? 'text-gold-accent' : 'text-text-muted hover:text-text-primary'}`} onClick={() => setActiveTab('feed')}>
                     {t('profile.feed')} <span className="ml-1 opacity-50 text-[10px]">({model.posts.length})</span>
                     {activeTab === 'feed' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gold-accent" />}
@@ -466,13 +828,39 @@ const ModelProfilePage: React.FC = () => {
                         total={model.posts.length}
                         model={model}
                         onClose={() => setSearchParams({}, { replace: true })} 
+                        onLike={handleLikePost}
+                        onComment={handleAddComment}
                     />
                 )}
             </AnimatePresence>
 
             {selectedHighlight && selectedHighlight.images && (
-                <StoryViewer images={selectedHighlight.images} title={model.name} onClose={() => setSelectedHighlight(null)} onAllStoriesEnd={() => {}} />
+                <StoryViewer 
+                    images={selectedHighlight.images} 
+                    title={model.name} 
+                    avatar={model.avatar}
+                    onClose={() => setSelectedHighlight(null)} 
+                    onAllStoriesEnd={() => {}} 
+                />
             )}
+
+            {/* Story Viewer for Model Stories */}
+            {showStoryViewer && activeStories.length > 0 && (
+                <StoryViewer 
+                    stories={activeStories} 
+                    title={model.name}
+                    avatar={model.avatar}
+                    onClose={() => {
+                        setShowStoryViewer(false);
+                        setActiveStories([]);
+                    }} 
+                    onAllStoriesEnd={() => {
+                        setShowStoryViewer(false);
+                        setActiveStories([]);
+                    }} 
+                />
+            )}
+            </div>
         </div>
     );
 };

@@ -1,4 +1,13 @@
 
+export interface Comment {
+  id: string;
+  user_id: string;
+  username: string;
+  user_avatar?: string;
+  content: string;
+  created_at: string;
+}
+
 export interface Post {
   id: string;
   src: string;
@@ -7,7 +16,8 @@ export interface Post {
   tags: string[];
   pinned?: boolean;
   images?: string[];
-  likes: number;
+  liked_by_users: string[]; // Store IDs of users who liked
+  comments: Comment[];
   date: string;
 }
 
@@ -18,25 +28,47 @@ export interface Highlight {
   images?: string[];
 }
 
+export interface Story {
+  id: string;
+  src: string;
+  type: 'image' | 'video';
+  created_at: string;
+  expires_at?: string; // Optional: stories can expire after 24h
+  caption?: string;
+}
+
 export interface Model {
+  id: string;
   slug: string;
   name: string;
+  nickname?: string;
   avatar: string;
   categories: string[];
   location: string;
   height: string;
   measurements: string;
-  hairColor: string;
-  eyeColor: string;
+  hair_color: string;
+  eye_color: string;
   bio: string;
   availability: 'Available' | 'On Option' | 'Booked';
+  status?: 'pending' | 'active' | 'rejected';
   highlights: Highlight[];
   posts: Post[];
-  coverImage: string;
+  stories?: Story[];
+  cover_image: string[];
+  card_images?: string[];
   cardImages?: string[];
+  is_top_model?: boolean;
   isTopModel?: boolean;
+  is_verified?: boolean;
   isVerified?: boolean;
+  name_bg?: string;
   nameBg?: string;
+  gender: 'Male' | 'Female';
+  background_image?: string;
+  spotlight_projects?: number;
+  spotlight_awards?: number;
+  spotlight_bio?: string;
 }
 
 export interface UserProfile {
@@ -51,4 +83,20 @@ export interface UserProfile {
   role?: string;
   is_verified?: boolean;
   verified_until?: string;
+  background_image?: string;
+  stories?: any[];
+  posts?: any[];
+}
+
+export interface Casting {
+  id: string;
+  project_name: string;
+  client_name?: string;
+  description: string;
+  shoot_date?: string;
+  location?: string;
+  roles: string[];
+  status: 'active' | 'closed' | 'draft';
+  applicants_count?: number;
+  created_at?: string;
 }
