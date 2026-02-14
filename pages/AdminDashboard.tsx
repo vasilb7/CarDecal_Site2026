@@ -25,6 +25,7 @@ import {
   MoreVertical, 
   Edit2, 
   Maximize2,
+  Crop,
   Lock,
   Unlock,
   Clock,
@@ -43,7 +44,13 @@ import {
   UserPlus,
   ChevronRight,
   ArrowLeft,
-  ArrowRight
+  ArrowRight,
+  Gift,
+  TreePine,
+  Heart,
+  Snowflake,
+  Tag,
+  Percent
 } from 'lucide-react';
 import { adminService } from '../lib/adminService';
 import { modelsService } from '../lib/modelsService';
@@ -85,16 +92,42 @@ const AdminDashboard: React.FC = () => {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [editBio, setEditBio] = useState('');
   const [spotlightBio, setSpotlightBio] = useState('');
+  const [spotlightBioBg, setSpotlightBioBg] = useState('');
+  const [spotlightProjects, setSpotlightProjects] = useState(0);
+  const [spotlightAwards, setSpotlightAwards] = useState(0);
+  const [bioLang, setBioLang] = useState<'en' | 'bg'>('bg');
   const [selectedTopModelId, setSelectedTopModelId] = useState<string>('');
   const [cropModalOpen, setCropModalOpen] = useState(false);
   const [isMaintenance, setIsMaintenance] = useState(false);
   const [maintenanceMessage, setMaintenanceMessage] = useState('');
   const [maintenanceEndTime, setMaintenanceEndTime] = useState('');
-  const [maintenancePerks, setMaintenancePerks] = useState('');
   const [maintenanceUpdatesText, setMaintenanceUpdatesText] = useState('');
   const [isUpdatingMaintenance, setIsUpdatingMaintenance] = useState(false);
   const [isSavingMaintenance, setIsSavingMaintenance] = useState(false);
   const [imageToCrop, setImageToCrop] = useState<{ url: string; index: number } | null>(null);
+  
+  // Hero Settings State
+  const [heroType, setHeroType] = useState<'video' | 'image'>('video');
+  const [heroImageUrl, setHeroImageUrl] = useState('');
+  const [heroImageToCrop, setHeroImageToCrop] = useState<string | null>(null);
+  const [isHeroUploading, setIsHeroUploading] = useState(false);
+  const [modelBgToCrop, setModelBgToCrop] = useState<string | null>(null);
+  const [isModelBgUploading, setIsModelBgUploading] = useState(false);
+  const [heroVideoUrl, setHeroVideoUrl] = useState('');
+  const [heroGrayscale, setHeroGrayscale] = useState(true);
+  const [isSavingHero, setIsSavingHero] = useState(false);
+
+  // Promo State
+  const [activePromo, setActivePromo] = useState<string>('none');
+  const [isSavingPromo, setIsSavingPromo] = useState(false);
+
+  // Announcement State
+  const [announcement, setAnnouncement] = useState({ text: '', active: false });
+  const [isSavingAnnouncement, setIsSavingAnnouncement] = useState(false);
+
+  // Pricing Config State
+  const [pricingConfig, setPricingConfig] = useState<any>(settingsService.getDefaultPricingConfig());
+  const [isSavingPricing, setIsSavingPricing] = useState(false);
 
   const handleResetDatabase = async () => {
     if (!window.confirm("WARNING: ALL MODELS WILL BE DELETED AND RE-UPLOADED FROM SITE_PICS. CONTINUE?")) return;
@@ -159,22 +192,36 @@ const AdminDashboard: React.FC = () => {
       if (top) {
         setSelectedTopModelId(top.id);
         setSpotlightBio(top.spotlight_bio || top.bio || '');
+        setSpotlightBioBg(top.spotlight_bio_bg || top.bio_bg || '');
+        setSpotlightProjects(top.spotlight_projects || 0);
+        setSpotlightAwards(top.spotlight_awards || 0);
         // Sync both naming conventions
         setEditCardImages(top.card_images || top.cardImages || []);
       }
       
-      const [maintenance, message, endTime, perks, updateText] = await Promise.all([
+      const [maintenance, message, endTime, updateText, hSettings, promo, ann] = await Promise.all([
         settingsService.getMaintenanceMode(),
         settingsService.getMaintenanceMessage(),
         settingsService.getMaintenanceEndTime(),
-        settingsService.getMaintenancePerks(),
-        settingsService.getMaintenanceUpdatesText()
+        settingsService.getMaintenanceUpdatesText(),
+        settingsService.getHeroSettings(),
+        settingsService.getActivePromo(),
+        settingsService.getAnnouncement()
       ]);
       setIsMaintenance(maintenance);
       setMaintenanceMessage(message);
       setMaintenanceEndTime(endTime || '');
-      setMaintenancePerks(perks);
       setMaintenanceUpdatesText(updateText);
+      setHeroType(hSettings.hero_type as any);
+      setHeroImageUrl(hSettings.hero_image_url);
+      setHeroVideoUrl(hSettings.hero_video_url);
+      setHeroGrayscale(hSettings.hero_grayscale);
+      setActivePromo(promo);
+      setAnnouncement(ann);
+
+      // Fetch pricing config
+      const pConfig = await settingsService.getPricingConfig();
+      setPricingConfig(pConfig);
     } catch (error: any) {
       showToast(error.message, 'error');
     } finally {
@@ -200,8 +247,18 @@ const AdminDashboard: React.FC = () => {
         if (key === 'maintenance_mode') setIsMaintenance(value === 'true');
         if (key === 'maintenance_message') setMaintenanceMessage(value);
         if (key === 'maintenance_end_time') setMaintenanceEndTime(value);
-        if (key === 'maintenance_perks') setMaintenancePerks(value);
         if (key === 'maintenance_updates_text') setMaintenanceUpdatesText(value);
+        if (key === 'hero_type') setHeroType(value as any);
+        if (key === 'hero_image_url') setHeroImageUrl(value);
+        if (key === 'hero_video_url') setHeroVideoUrl(value);
+        if (key === 'hero_grayscale') setHeroGrayscale(value === 'true');
+        if (key === 'active_promo') setActivePromo(value || 'none');
+        if (key === 'site_announcement') {
+          try { setAnnouncement(JSON.parse(value)); } catch {}
+        }
+        if (key === 'pricing_config') {
+          try { setPricingConfig(JSON.parse(value)); } catch {}
+        }
       })
       .subscribe();
     
@@ -257,6 +314,18 @@ const AdminDashboard: React.FC = () => {
 
   useEffect(() => {
     fetchModels();
+
+    // Subscribe to real-time changes
+    const channel = supabase
+      .channel('admin_models_realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'models' }, () => {
+        fetchModels();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   // 1) BACKGROUND SCROLL LOCK
@@ -284,7 +353,7 @@ const AdminDashboard: React.FC = () => {
 
   useEffect(() => {
     if (editingModel) {
-      setEditCoverImages(editingModel.cover_image || editingModel.coverImage || []);
+      setEditCoverImages(editingModel.cover_image || []);
       setEditBackgroundImage(editingModel.background_image || '');
       setSelectedCategories(editingModel.categories || []);
       setEditBio(editingModel.bio || '');
@@ -337,13 +406,20 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
-  // Sync Spotlight Editor Fields
+  // Sync Spotlight Editor Fields — only when the selected model changes
+  const prevTopModelIdRef = React.useRef<string>('');
   useEffect(() => {
     if (!selectedTopModelId || !models.length) return;
+    // Only re-load fields when the selected model CHANGES, not on every models refresh
+    if (prevTopModelIdRef.current === selectedTopModelId) return;
+    prevTopModelIdRef.current = selectedTopModelId;
     
     const model = models.find(m => m.id === selectedTopModelId);
     if (model) {
       setSpotlightBio(model.spotlight_bio || model.bio || '');
+      setSpotlightBioBg(model.spotlight_bio_bg || '');
+      setSpotlightProjects(model.spotlight_projects || 0);
+      setSpotlightAwards(model.spotlight_awards || 0);
       setEditCardImages(model.card_images || model.cardImages || []);
       // Reset bulk selection
       setSelectedImages([]);
@@ -491,8 +567,8 @@ const AdminDashboard: React.FC = () => {
 
       <main className="flex-1 overflow-hidden flex flex-col">
         {activeTab === 'dashboard' && (
-          <div className="flex-1 overflow-auto p-8 bg-[#020202] custom-scrollbar">
-            <div className="max-w-[1600px] mx-auto space-y-8">
+          <div className="flex-1 overflow-auto p-5 bg-[#020202] custom-scrollbar">
+            <div className="max-w-[1600px] mx-auto space-y-5">
               {/* Header */}
               <div className="flex items-center justify-between">
                 <div>
@@ -511,7 +587,7 @@ const AdminDashboard: React.FC = () => {
               </div>
 
               {/* Quick Actions Toolbar */}
-              <div className="flex items-center gap-4 py-4 overflow-x-auto custom-scrollbar">
+              <div className="flex items-center gap-3 py-3 overflow-x-auto custom-scrollbar">
                 {[
                   { label: 'Create Casting', icon: <Plus size={14} />, action: () => setActiveTab('castings') },
                   { label: 'Invite Models', icon: <UserPlus size={14} />, action: () => setActiveTab('models') },
@@ -521,7 +597,7 @@ const AdminDashboard: React.FC = () => {
                   <button 
                     key={i} 
                     onClick={action.action}
-                    className="flex items-center gap-3 px-6 py-3 bg-white/5 border border-white/10 hover:bg-gold-accent hover:border-gold-accent hover:text-black transition-all group whitespace-nowrap"
+                    className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 hover:bg-gold-accent hover:border-gold-accent hover:text-black transition-all group whitespace-nowrap"
                   >
                     <div className="text-gold-accent group-hover:text-black transition-colors">{action.icon}</div>
                     <span className="text-[10px] font-bold uppercase tracking-widest">{action.label}</span>
@@ -530,7 +606,7 @@ const AdminDashboard: React.FC = () => {
               </div>
 
               {/* Stats Grid - OPERATIONAL KPIs */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
                   { 
                     label: 'New Applicants', 
@@ -568,9 +644,9 @@ const AdminDashboard: React.FC = () => {
                   <div 
                     key={i} 
                     onClick={stat.action}
-                    className="bg-white/[0.02] border border-white/5 p-6 hover:border-gold-accent/40 cursor-pointer transition-all group"
+                    className="bg-white/[0.02] border border-white/5 p-4 hover:border-gold-accent/40 cursor-pointer transition-all group"
                   >
-                    <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-start justify-between mb-3">
                       <div className="p-3 bg-white/5 rounded-lg group-hover:bg-gold-accent/10 transition-colors">
                         {stat.icon}
                       </div>
@@ -587,10 +663,10 @@ const AdminDashboard: React.FC = () => {
               </div>
 
               {/* Charts & Activity Section */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
                 {/* Main Funnel Area */}
-                <div className="lg:col-span-2 bg-white/[0.02] border border-white/5 p-8 flex flex-col">
-                  <div className="flex items-center justify-between mb-8">
+                <div className="lg:col-span-2 bg-white/[0.02] border border-white/5 p-5 flex flex-col">
+                  <div className="flex items-center justify-between mb-5">
                     <div className="flex items-center gap-3">
                       <TrendingUp className="w-4 h-4 text-gold-accent" />
                       <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-white">Casting Funnel</h3>
@@ -598,7 +674,7 @@ const AdminDashboard: React.FC = () => {
                   </div>
                   
                   {/* Funnel Chart */}
-                  <div className="flex-1 flex flex-col justify-end gap-6 h-64 w-full pt-4 relative px-4">
+                  <div className="flex-1 flex flex-col justify-end gap-4 h-52 w-full pt-2 relative px-3">
                     {[
                       { label: 'Applications', val: funnelStats.applications, max: 200, color: 'bg-white/10' },
                       { label: 'Shortlisted', val: funnelStats.shortlisted, max: 200, color: 'bg-white/20' },
@@ -632,7 +708,7 @@ const AdminDashboard: React.FC = () => {
                     </div>
                   </div>
                   
-                  <div className="flex-1 overflow-y-auto max-h-[400px] custom-scrollbar p-6 space-y-6">
+                  <div className="flex-1 overflow-y-auto max-h-[350px] custom-scrollbar p-4 space-y-4">
                     {/* Pending Approvals */}
                     {models.filter(m => m.status === 'pending').length > 0 ? (
                       <div className="space-y-4">
@@ -737,8 +813,8 @@ const AdminDashboard: React.FC = () => {
             </div>
 
             {/* GRID AREA */}
-            <div className="flex-1 overflow-auto p-8 custom-scrollbar">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="flex-1 overflow-auto p-5 custom-scrollbar">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {filteredModels.map(model => (
                   <motion.div 
                     layout
@@ -830,8 +906,8 @@ const AdminDashboard: React.FC = () => {
 
         {activeTab === 'content' && (
           /* REFINED COMPACT SPOTLIGHT TAB */
-          <div className="flex-1 overflow-auto p-6 bg-[#020202] custom-scrollbar">
-            <div className="max-w-[1600px] mx-auto space-y-4">
+          <div className="flex-1 overflow-auto p-4 bg-[#020202] custom-scrollbar">
+            <div className="max-w-[1600px] mx-auto space-y-3">
               {/* COMPACT TOP BAR */}
               <div className="sticky top-0 z-20 flex items-center justify-between bg-black/60 backdrop-blur-xl border border-white/10 p-4 shadow-2xl">
                 <div className="flex items-center gap-6">
@@ -848,6 +924,7 @@ const AdminDashboard: React.FC = () => {
                       className="bg-[#0a0a0a] border border-white/10 px-4 py-1.5 text-[10px] uppercase tracking-widest text-white outline-none focus:border-gold-accent min-w-[280px] transition-all hover:bg-white/5 cursor-pointer"
                       value={selectedTopModelId}
                       onChange={(e) => {
+                        prevTopModelIdRef.current = ''; // Reset so fields reload
                         setSelectedTopModelId(e.target.value);
                       }}
                     >
@@ -859,29 +936,112 @@ const AdminDashboard: React.FC = () => {
                       ))}
                     </select>
                   </div>
+
+                  {/* Model Quick Info */}
+                  {selectedTopModelId && (() => {
+                    const activeModel = models.find(m => m.id === selectedTopModelId);
+                    if (!activeModel) return null;
+                    return (
+                      <div className="flex items-center gap-3 ml-2 pl-4 border-l border-white/10">
+                        <img 
+                          src={activeModel.avatar} 
+                          alt={activeModel.name}
+                          className="w-8 h-8 rounded-full object-cover border border-white/10"
+                        />
+                        <div className="flex flex-col">
+                          <span className="text-[9px] font-bold text-white/80 tracking-wide">{activeModel.name}</span>
+                          <span className="text-[7px] text-white/30 tracking-wider">
+                            {activeModel.categories?.join(', ') || 'No category'} • {activeModel.location || '—'}
+                          </span>
+                        </div>
+                        {activeModel.is_top_model && (
+                          <div className="bg-gold-accent/10 border border-gold-accent/20 px-2 py-0.5 rounded-full">
+                            <span className="text-[7px] font-black uppercase tracking-widest text-gold-accent">TOP</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
 
-                <div className="flex items-center gap-6">
+                <div className="flex items-center gap-3">
                   <div className="flex items-center gap-2 px-3 py-1 bg-white/5 rounded-full border border-white/5">
                     <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                    <span className="text-[8px] uppercase tracking-widest text-white/60 font-bold">Live Sync Active</span>
+                    <span className="text-[8px] uppercase tracking-widest text-white/60 font-bold">Live Sync</span>
                   </div>
+
+                  {/* Preview Button */}
+                  {selectedTopModelId && (() => {
+                    const activeModel = models.find(m => m.id === selectedTopModelId);
+                    if (!activeModel) return null;
+                    return (
+                      <a
+                        href={`/bg/models/${activeModel.slug}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 bg-white/5 border border-white/10 text-white/60 hover:text-white hover:border-white/30 px-4 py-2 text-[9px] font-bold uppercase tracking-[0.15em] transition-all"
+                      >
+                        <Eye className="w-3 h-3" />
+                        Preview
+                      </a>
+                    );
+                  })()}
+
+                  {/* Draft Save — saves without is_top_model */}
                   <button 
                     disabled={isUploading || !selectedTopModelId}
                     onClick={async () => {
                       if (!selectedTopModelId) return;
+                      setIsUploading(true);
+                      try {
+                        await modelsService.updateModel(selectedTopModelId, { 
+                          spotlight_bio: spotlightBio,
+                          spotlight_bio_bg: spotlightBioBg,
+                          spotlight_projects: spotlightProjects,
+                          spotlight_awards: spotlightAwards,
+                          card_images: editCardImages
+                        });
+                        showToast('Чернова запазена!', 'success');
+                      } catch (err: any) {
+                        showToast(err.message, 'error');
+                      } finally {
+                        setIsUploading(false);
+                      }
+                    }}
+                    className="flex items-center gap-2 bg-white/5 border border-white/10 text-white/60 hover:text-white hover:border-white/20 px-4 py-2 text-[9px] font-bold uppercase tracking-[0.15em] transition-all disabled:opacity-20"
+                  >
+                    <Save className="w-3 h-3" />
+                    Save Draft
+                  </button>
+
+                  {/* Publish — sets is_top_model + all data */}
+                  <button 
+                    disabled={isUploading || !selectedTopModelId}
+                    onClick={async () => {
+                      if (!selectedTopModelId) return;
+                      
+                      // Soft validation — warn but don't block
+                      const activeBio = bioLang === 'en' ? spotlightBio : spotlightBioBg;
+                      if (activeBio.length > 0 && activeBio.length < 100) {
+                        const ok = window.confirm(`Био текстът (${bioLang.toUpperCase()}) е доста кратък (${activeBio.length} символа). Продължаване?`);
+                        if (!ok) return;
+                      }
+
                       const currentTop = models.find(m => m.is_top_model);
                       setIsUploading(true);
                       try {
                         if (currentTop && currentTop.id !== selectedTopModelId) {
                           await modelsService.updateModel(currentTop.id, { is_top_model: false });
                         }
-                                    await modelsService.updateModel(selectedTopModelId, { 
-                                      is_top_model: true,
-                                      spotlight_bio: spotlightBio,
-                                      card_images: editCardImages
-                                    });
-                                    showToast('Промените са запазени в Supabase!', 'success');
+                        await modelsService.updateModel(selectedTopModelId, { 
+                          is_top_model: true,
+                          spotlight_bio: spotlightBio,
+                          spotlight_bio_bg: spotlightBioBg,
+                          spotlight_projects: spotlightProjects,
+                          spotlight_awards: spotlightAwards,
+                          card_images: editCardImages
+                        });
+                        showToast('Промените са публикувани!', 'success');
                         fetchModels();
                       } catch (err: any) {
                         showToast(err.message, 'error');
@@ -900,7 +1060,7 @@ const AdminDashboard: React.FC = () => {
               </div>
 
               {/* SPLIT SCREEN ACTIONS */}
-              <div className="grid grid-cols-1 xl:grid-cols-5 gap-4 h-[calc(100vh-180px)] min-h-[500px]">
+              <div className="grid grid-cols-1 xl:grid-cols-5 gap-3 h-[calc(100vh-160px)] min-h-[400px]">
                 {/* GALLERY (Left 3/5) */}
                 <section className="xl:col-span-3 bg-black/40 border border-white/5 flex flex-col overflow-hidden group hover:border-white/10 transition-colors">
                   <div className="shrink-0 flex items-center justify-between px-5 py-3 border-b border-white/5 bg-white/[0.02]">
@@ -1144,38 +1304,149 @@ const AdminDashboard: React.FC = () => {
 
                 {/* MESSAGING (Right 2/5) */}
                 <section className="xl:col-span-2 flex flex-col gap-4">
+                  
+                  {/* METRICS CONFIG */}
+                  <div className="bg-black/40 border border-white/5 p-4 grid grid-cols-3 gap-3">
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[9px] uppercase tracking-widest text-white/40 font-bold pl-1">Projects</label>
+                      <input 
+                         type="number" 
+                         value={spotlightProjects} 
+                         onChange={(e) => setSpotlightProjects(parseInt(e.target.value) || 0)}
+                         className="w-full bg-white/[0.03] border border-white/10 p-2 text-white text-sm font-mono text-center outline-none focus:border-gold-accent transition-colors rounded-sm"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[9px] uppercase tracking-widest text-white/40 font-bold pl-1">Awards</label>
+                      <input 
+                         type="number" 
+                         value={spotlightAwards} 
+                         onChange={(e) => setSpotlightAwards(parseInt(e.target.value) || 0)}
+                         className="w-full bg-white/[0.03] border border-white/10 p-2 text-white text-sm font-mono text-center outline-none focus:border-gold-accent transition-colors rounded-sm"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-2 opacity-50 pointer-events-none grayscale">
+                       <label className="text-[9px] uppercase tracking-widest text-white/40 font-bold pl-1">Posts</label>
+                       <div className="w-full bg-white/[0.03] border border-white/5 p-2 text-white/50 text-sm font-mono text-center rounded-sm">
+                         {models.find(m => m.id === selectedTopModelId)?.posts?.length || 0}
+                       </div>
+                    </div>
+                  </div>
+
                   <div className="flex-1 bg-black/40 border border-white/5 flex flex-col overflow-hidden group hover:border-white/10 transition-colors">
                     <div className="shrink-0 flex items-center justify-between px-5 py-3 border-b border-white/5 bg-white/[0.02]">
                       <div className="flex items-center gap-3">
                         <Star className="w-3.5 h-3.5 text-gold-accent" />
                         <h3 className="text-[9px] uppercase tracking-[0.3em] font-bold text-white/80">Editorial Bio</h3>
                       </div>
-                      <Info className="w-3 h-3 text-white/20" />
+                      <div className="flex items-center gap-1 bg-black/40 rounded border border-white/5 p-0.5">
+                        <button 
+                          onClick={() => setBioLang('en')}
+                          className={`px-3 py-1 text-[8px] font-bold uppercase tracking-widest rounded transition-all ${bioLang === 'en' ? 'bg-gold-accent text-black shadow-lg' : 'text-white/40 hover:text-white'}`}
+                        >
+                          EN
+                        </button>
+                        <button 
+                          onClick={() => setBioLang('bg')}
+                          className={`px-3 py-1 text-[8px] font-bold uppercase tracking-widest rounded transition-all ${bioLang === 'bg' ? 'bg-gold-accent text-black shadow-lg' : 'text-white/40 hover:text-white'}`}
+                        >
+                          BG
+                        </button>
+                      </div>
                     </div>
                     
-                    <div className="flex-1 p-1 bg-black/40">
-                      <textarea 
-                        className="w-full h-full bg-transparent p-5 text-sm tracking-wide leading-relaxed text-white/80 outline-none resize-none placeholder:text-white/5 custom-scrollbar"
-                        value={spotlightBio}
-                        onChange={(e) => setSpotlightBio(e.target.value)}
-                        placeholder="Define the model's spirit and impact here... Use Markdown for emphasis."
-                      />
+                    <div className="flex-1 p-1 bg-black/40 relative">
+                        <AnimatePresence mode="wait">
+                            <motion.div
+                                key={bioLang}
+                                initial={{ opacity: 0, y: 5 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -5 }}
+                                transition={{ duration: 0.2 }}
+                                className="w-full h-full"
+                            >
+                              <textarea 
+                                className="w-full h-full bg-transparent p-5 text-sm tracking-wide leading-relaxed text-white/80 outline-none resize-none placeholder:text-white/5 custom-scrollbar break-words whitespace-pre-wrap"
+                                value={bioLang === 'en' ? spotlightBio : spotlightBioBg}
+                                onChange={(e) => bioLang === 'en' ? setSpotlightBio(e.target.value) : setSpotlightBioBg(e.target.value)}
+                                maxLength={500}
+                                placeholder={bioLang === 'en' 
+                                  ? 'Write the model editorial biography in English...' 
+                                  : 'Напишете биографията на модела на български...'}
+                              />
+                            </motion.div>
+                        </AnimatePresence>
                     </div>
-                  </div>
+                    </div>
 
-                  <div className="bg-white/[0.02] border border-white/5 p-5">
-                    <div className="flex flex-col gap-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[8px] uppercase tracking-widest text-white/40 font-black">Quality Check</span>
-                        <div className="h-[1px] flex-1 bg-white/5 mx-4" />
-                        <CheckCircle2 className="w-3 h-3 text-green-500/40" />
+                  {(() => {
+                    const bioText = bioLang === 'en' ? spotlightBio : spotlightBioBg;
+                    const len = bioText.length;
+                    const isShort = len < 100;
+                    const isGood = len >= 100 && len < 300;
+                    const isOptimal = len >= 300;
+                    const statusColor = isOptimal ? 'green-500' : isGood ? 'amber-400' : 'red-500';
+                    const statusLabel = isOptimal ? 'Отлично' : isGood ? 'Добре' : len === 0 ? 'Празно' : 'Кратко';
+                    const statusHint = isOptimal 
+                      ? 'Перфектна дължина за всички устройства.' 
+                      : isGood 
+                        ? 'Добра дължина. За оптимално показване — 300+ символа.' 
+                        : 'Препоръчваме поне 100 символа.';
+
+                    return (
+                      <div className={`border p-5 transition-all duration-500 bg-${statusColor}/[0.02] border-${statusColor}/20`}
+                        style={{ 
+                          borderColor: isOptimal ? 'rgba(34,197,94,0.2)' : isGood ? 'rgba(251,191,36,0.2)' : 'rgba(239,68,68,0.2)',
+                          background: isOptimal ? 'rgba(34,197,94,0.02)' : isGood ? 'rgba(251,191,36,0.02)' : 'rgba(239,68,68,0.02)'
+                        }}
+                      >
+                        <div className="flex flex-col gap-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[8px] uppercase tracking-widest font-black"
+                              style={{ color: isOptimal ? '#22c55e' : isGood ? '#fbbf24' : '#ef4444' }}
+                            >
+                              {statusLabel}
+                            </span>
+                            <div className="h-[1px] flex-1 mx-4"
+                              style={{ background: isOptimal ? 'rgba(34,197,94,0.2)' : isGood ? 'rgba(251,191,36,0.2)' : 'rgba(239,68,68,0.2)' }}
+                            />
+                            <span className="text-[8px] font-bold"
+                              style={{ color: isOptimal ? '#22c55e' : isGood ? '#fbbf24' : '#ef4444' }}
+                            >
+                              {isOptimal ? `${500 - len} символа remaining` : `${len}/500`}
+                            </span>
+                          </div>
+                          
+                          {/* Live Progress Bar */}
+                          <div className="relative w-full bg-white/5 h-1 rounded-full overflow-hidden">
+                            {/* Zone markers at 100 (20%) and 300 (60%) */}
+                            <div className="absolute left-[20%] top-0 bottom-0 w-0.5 bg-white/10 z-10" />
+                            <div className="absolute left-[60%] top-0 bottom-0 w-0.5 bg-white/10 z-10" />
+                            
+                            <div 
+                              className="h-full transition-all duration-500"
+                              style={{ 
+                                width: `${Math.min((len / 500) * 100, 100)}%`,
+                                background: isOptimal ? '#22c55e' : isGood ? '#fbbf24' : '#ef4444',
+                                boxShadow: isOptimal ? '0 0 10px rgba(34,197,94,0.5)' : isGood ? '0 0 10px rgba(251,191,36,0.5)' : '0 0 10px rgba(239,68,68,0.5)'
+                              }}
+                            />
+                          </div>
+
+                          <div className="flex justify-between items-end">
+                            <p className="text-[9px] leading-relaxed text-white/30 uppercase tracking-tight max-w-[80%]">
+                              {statusHint}
+                            </p>
+                            <span className="text-[9px] font-mono"
+                              style={{ color: isOptimal ? '#22c55e' : isGood ? '#fbbf24' : '#ef4444' }}
+                            >
+                              {len}<span className="text-white/20">/500</span>
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                      <p className="text-[9px] leading-relaxed text-white/30 uppercase tracking-tight">
-                        Visuals should be 4:5 portrait ratio for optimal display. 
-                        Bio text will be overlayed on mobile - keep it concise.
-                      </p>
-                    </div>
-                  </div>
+                    );
+                  })()}
                 </section>
               </div>
             </div>
@@ -1199,46 +1470,56 @@ const AdminDashboard: React.FC = () => {
         )}
 
         {activeTab === 'settings' && (
-          <div className="flex-1 overflow-auto p-8 bg-[#020202] custom-scrollbar">
-            <div className="max-w-4xl mx-auto space-y-12">
-              <header className="space-y-2">
-                <h2 className="text-xl font-bold uppercase tracking-[0.4em] text-white">Global <span className="text-gold-accent">Settings</span></h2>
-                <p className="text-[10px] uppercase tracking-[0.2em] text-white/30">Manage site-wide features and legal requirements</p>
-              </header>
-
-              {/* DANGER ZONE - DATABASE RESET */}
-              <section>
-                <div className="bg-red-900/10 border border-red-500/20 p-6 space-y-4 max-w-md mb-8">
-                  <div className="flex items-center justify-between">
-                     <div className="flex items-center gap-3">
-                        <AlertTriangle className="w-5 h-5 text-red-500" />
-                        <div>
-                           <h3 className="text-sm font-bold uppercase tracking-widest text-red-500">Emergency Reset</h3>
-                           <p className="text-[10px] text-red-400/60 uppercase tracking-widest leading-relaxed">Wipe DB & Reseed from Site_Pics</p>
-                        </div>
-                     </div>
-                      <button 
-                        onClick={handleResetDatabase}
-                        disabled={isUploading}
-                        className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 text-[10px] font-bold uppercase tracking-widest transition-all disabled:opacity-50 shadow-lg shadow-red-900/20"
-                      >
-                        {isUploading ? 'Reseeding...' : 'Reset Database'}
-                      </button>
+          <div className="flex-1 overflow-auto bg-[#020202] custom-scrollbar">
+            {/* Sticky Settings Header */}
+            <div className="sticky top-0 z-20 bg-black/80 backdrop-blur-xl border-b border-white/5 px-6 py-3">
+              <div className="max-w-[1400px] mx-auto flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="p-2 bg-white/5 rounded-lg">
+                    <Settings className="w-4 h-4 text-gold-accent" />
+                  </div>
+                  <div>
+                    <h2 className="text-sm font-bold uppercase tracking-[0.3em] text-white">Global <span className="text-gold-accent">Settings</span></h2>
+                    <p className="text-[8px] uppercase tracking-[0.2em] text-white/30 mt-0.5">Site configuration & maintenance</p>
                   </div>
                 </div>
-              </section>
 
-              {/* Maintenance Toggle */}
-              <section>
-                <div className="bg-white/[0.02] border border-white/5 p-6 space-y-4 hover:border-white/10 transition-all max-w-md">
+                <div className="flex items-center gap-3">
+                  {/* Live Status */}
+                  <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-[8px] font-bold uppercase tracking-widest ${
+                    isMaintenance 
+                      ? 'bg-red-500/10 border-red-500/30 text-red-400' 
+                      : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                  }`}>
+                    <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${isMaintenance ? 'bg-red-500' : 'bg-emerald-500'}`} />
+                    {isMaintenance ? 'Maintenance Active' : 'Site Live'}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="max-w-[1400px] mx-auto px-6 py-5 space-y-5">
+
+              {/* ═══════ ROW 1: Quick Controls ═══════ */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                {/* Maintenance Toggle Card */}
+                <div className={`relative overflow-hidden border p-5 transition-all duration-500 ${
+                  isMaintenance 
+                    ? 'bg-red-500/[0.03] border-red-500/20 hover:border-red-500/40' 
+                    : 'bg-white/[0.02] border-white/5 hover:border-white/10'
+                }`}>
+                  <div className="absolute left-0 top-0 bottom-0 w-[3px]" style={{ background: isMaintenance ? '#ef4444' : '#22c55e' }} />
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-red-500/10 rounded-sm">
-                        <Lock className="w-4 h-4 text-red-500" />
+                    <div className="flex items-center gap-4">
+                      <div className={`p-2.5 rounded-lg transition-colors ${isMaintenance ? 'bg-red-500/10' : 'bg-emerald-500/10'}`}>
+                        {isMaintenance ? <Lock className="w-5 h-5 text-red-400" /> : <Unlock className="w-5 h-5 text-emerald-400" />}
                       </div>
                       <div>
-                        <h3 className="text-[11px] font-bold uppercase tracking-widest text-white">Maintenance Mode</h3>
-                        <p className="text-[9px] text-white/30 uppercase tracking-tight">Lock the public site for updates</p>
+                        <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-white">Maintenance Mode</h3>
+                        <p className="text-[9px] text-white/30 uppercase tracking-wider mt-0.5">
+                          {isMaintenance ? 'Site is locked for visitors' : 'Site is publicly accessible'}
+                        </p>
                       </div>
                     </div>
                     <button 
@@ -1246,17 +1527,17 @@ const AdminDashboard: React.FC = () => {
                         const newState = !isMaintenance;
                         setConfirmModal({
                           isOpen: true,
-                          title: newState ? 'Activate Maintenance?' : 'Deactivate Maintenance?',
+                          title: newState ? 'Activate Maintenance?' : 'Go Live?',
                           message: newState 
-                            ? 'This will make the site inaccessible to the public. Are you sure?' 
-                            : 'This will make the site live for everyone. Are you sure?',
+                            ? 'The site will become inaccessible to the public.' 
+                            : 'The site will be live for everyone.',
                           type: newState ? 'danger' : 'info',
                           onConfirm: async () => {
                             try {
                               setIsUpdatingMaintenance(true);
                               await settingsService.setMaintenanceMode(newState);
                               setIsMaintenance(newState);
-                              showToast(newState ? 'Maintenance Mode Activated' : 'Maintenance Mode Deactivated', 'success');
+                              showToast(newState ? 'Maintenance Activated' : 'Site is Live', 'success');
                             } catch (error: any) {
                               showToast(error.message, 'error');
                             } finally {
@@ -1265,24 +1546,46 @@ const AdminDashboard: React.FC = () => {
                           }
                         });
                       }}
-                      className={`w-12 h-6 rounded-full relative transition-all ${isMaintenance ? 'bg-red-500' : 'bg-white/10'}`}
+                      className={`relative w-14 h-7 rounded-full transition-all duration-300 ${isMaintenance ? 'bg-red-500' : 'bg-white/10 hover:bg-white/15'}`}
                     >
-                      <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${isMaintenance ? 'left-7' : 'left-1'}`} />
+                      <div className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow-lg transition-all duration-300 ${isMaintenance ? 'left-8' : 'left-1'}`} />
                     </button>
                   </div>
                 </div>
-              </section>
 
-              {/* Maintenance Details */}
-              <section className="space-y-8">
-                <div className="flex items-center justify-between border-b border-white/5 pb-6">
-                  <div className="flex items-center gap-4">
-                    <div className="p-2.5 bg-gold-accent/10 rounded-sm">
-                      <Settings className="w-5 h-5 text-gold-accent" />
+                {/* Emergency Reset Card */}
+                <div className="relative overflow-hidden bg-white/[0.02] border border-white/5 hover:border-red-500/20 p-5 transition-all group">
+                  <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-red-900 group-hover:bg-red-500 transition-colors" />
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="p-2.5 bg-red-500/5 rounded-lg group-hover:bg-red-500/10 transition-colors">
+                        <AlertTriangle className="w-5 h-5 text-red-500/60 group-hover:text-red-500 transition-colors" />
+                      </div>
+                      <div>
+                        <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-red-500/80">Emergency Reset</h3>
+                        <p className="text-[9px] text-white/20 uppercase tracking-wider mt-0.5">Wipe & reseed DB from Site_Pics</p>
+                      </div>
                     </div>
+                    <button 
+                      onClick={handleResetDatabase}
+                      disabled={isUploading}
+                      className="bg-red-500/10 hover:bg-red-500 border border-red-500/30 text-red-400 hover:text-white px-5 py-2 text-[9px] font-bold uppercase tracking-widest transition-all disabled:opacity-30"
+                    >
+                      {isUploading ? 'Reseeding...' : 'Reset'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* ═══════ ROW 2: Maintenance Orchestrator ═══════ */}
+              <div className="border border-white/5 bg-white/[0.01]">
+                {/* Orchestrator Header */}
+                <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 bg-white/[0.02]">
+                  <div className="flex items-center gap-3">
+                    <Edit2 className="w-4 h-4 text-gold-accent" />
                     <div>
-                      <h3 className="text-base font-bold uppercase tracking-[0.3em] text-white">Maintenance Orchestrator</h3>
-                      <p className="text-[10px] text-white/30 uppercase tracking-widest mt-1">Configure the visitor experience during downtime</p>
+                      <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-white">Maintenance Orchestrator</h3>
+                      <p className="text-[8px] text-white/25 uppercase tracking-widest mt-0.5">Configure visitor experience during downtime</p>
                     </div>
                   </div>
                   <button 
@@ -1293,187 +1596,646 @@ const AdminDashboard: React.FC = () => {
                         await Promise.all([
                           settingsService.setMaintenanceMessage(maintenanceMessage),
                           settingsService.setMaintenanceEndTime(maintenanceEndTime),
-                          settingsService.setMaintenancePerks(maintenancePerks),
                           settingsService.setMaintenanceUpdatesText(maintenanceUpdatesText)
                         ]);
-                        showToast('Maintenance configuration deployed', 'success');
+                        showToast('Configuration saved', 'success');
                       } catch (err: any) {
                         showToast(err.message, 'error');
                       } finally {
                         setIsSavingMaintenance(false);
                       }
                     }}
-                    className="group relative overflow-hidden bg-white text-black px-10 py-3 text-[10px] font-black uppercase tracking-[0.3em] hover:text-white transition-colors disabled:opacity-20"
+                    className="flex items-center gap-2 bg-white text-black px-6 py-2 text-[9px] font-bold uppercase tracking-widest hover:bg-gold-accent transition-all disabled:opacity-20"
                   >
-                    <div className="absolute inset-0 bg-gold-accent translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
-                    <span className="relative z-10">{isSavingMaintenance ? 'Deploying...' : 'Save Configuration'}</span>
+                    <Save className="w-3 h-3" />
+                    {isSavingMaintenance ? 'Saving...' : 'Save All'}
                   </button>
                 </div>
 
-                <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-                  {/* Message & Perks */}
-                  <div className="xl:col-span-2 space-y-8">
-                    <div className="bg-white/[0.02] border border-white/5 p-8 space-y-6">
-                      <header className="flex items-center justify-between border-b border-white/5 pb-4">
-                        <div className="flex items-center gap-3">
-                          <Edit2 className="w-3.5 h-3.5 text-gold-accent" />
-                          <h4 className="text-[11px] font-bold uppercase tracking-[0.2em] text-white">Public Manifesto</h4>
-                        </div>
-                        <span className="text-[9px] text-white/20 uppercase tracking-widest">Main message displayed to visitors</span>
-                      </header>
-                      
-                      <div className="space-y-4 pt-2">
-                        <div className="space-y-2">
-                          <label className="text-[10px] uppercase tracking-widest text-white/40 flex justify-between">
-                            <span>Headline Message</span>
-                            <span className="text-[8px] italic">Supports multiple lines</span>
-                          </label>
-                          <textarea 
-                            rows={4}
-                            value={maintenanceMessage}
-                            onChange={(e) => setMaintenanceMessage(e.target.value)}
-                            placeholder="e.g. Сайтът е в процес на профилактика. / Our site is currently undergoing maintenance."
-                            className="w-full bg-black/40 border border-white/10 p-4 text-xs tracking-wide outline-none focus:border-gold-accent text-white resize-none transition-all placeholder:text-white/5"
-                          />
-                        </div>
-
-
-                        <div className="space-y-2">
-                          <label className="text-[10px] uppercase tracking-widest text-white/40 flex justify-between">
-                            <span>Planned Updates & Perks</span>
-                            <span className="text-[8px] italic">One benefit per line</span>
-                          </label>
-                          <div className="space-y-3">
-                            {maintenancePerks.split('\n').map((perk, index, arr) => (
-                              <div key={index} className="flex gap-2 group">
-                                <div className="flex flex-col gap-1 pt-1 opacity-0 group-hover:opacity-50 transition-opacity">
-                                  <button 
-                                    onClick={() => {
-                                      if (index === 0) return;
-                                      const newPerks = [...arr];
-                                      [newPerks[index - 1], newPerks[index]] = [newPerks[index], newPerks[index - 1]];
-                                      setMaintenancePerks(newPerks.join('\n'));
-                                    }}
-                                    disabled={index === 0}
-                                    className="hover:text-gold-accent disabled:opacity-30"
-                                  >
-                                    <ArrowUp size={10} />
-                                  </button>
-                                  <button 
-                                    onClick={() => {
-                                      if (index === arr.length - 1) return;
-                                      const newPerks = [...arr];
-                                      [newPerks[index + 1], newPerks[index]] = [newPerks[index], newPerks[index + 1]];
-                                      setMaintenancePerks(newPerks.join('\n'));
-                                    }}
-                                    disabled={index === arr.length - 1}
-                                    className="hover:text-gold-accent disabled:opacity-30"
-                                  >
-                                    <ArrowDown size={10} />
-                                  </button>
-                                </div>
-                                <input
-                                  value={perk}
-                                  onChange={(e) => {
-                                    const newPerks = [...arr];
-                                    newPerks[index] = e.target.value;
-                                    setMaintenancePerks(newPerks.join('\n'));
-                                  }}
-                                  placeholder="Enter update perk..."
-                                  className="flex-1 bg-black/40 border border-white/10 p-4 text-xs tracking-wide outline-none focus:border-gold-accent text-white transition-all placeholder:text-white/5"
-                                />
-                                <button 
-                                  onClick={() => {
-                                    const newPerks = arr.filter((_, i) => i !== index);
-                                    setMaintenancePerks(newPerks.join('\n'));
-                                  }}
-                                  className="px-3 border border-white/10 hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-500 text-white/20 transition-all"
-                                >
-                                  <Trash2 size={14} />
-                                </button>
-                              </div>
-                            ))}
-                            <button
-                              onClick={() => {
-                                const newPerks = maintenancePerks ? [...maintenancePerks.split('\n'), ''] : [''];
-                                setMaintenancePerks(newPerks.join('\n'));
-                              }}
-                              className="w-full py-3 border border-dashed border-white/10 hover:border-gold-accent/50 hover:bg-gold-accent/5 text-[10px] uppercase tracking-widest text-white/40 hover:text-gold-accent transition-all flex items-center justify-center gap-2"
-                            >
-                              <Plus size={12} />
-                              Add New Perk
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                {/* Orchestrator Body — 3 column grid */}
+                <div className="grid grid-cols-1 xl:grid-cols-3 divide-y xl:divide-y-0 xl:divide-x divide-white/5">
+                  
+                  {/* Col 1: Message */}
+                  <div className="p-5 space-y-3">
+                    <label className="text-[10px] uppercase tracking-widest text-gold-accent/80 font-bold flex items-center gap-2">
+                      <MessageSquare className="w-3 h-3" />
+                      Headline Message
+                    </label>
+                    <textarea 
+                      rows={5}
+                      value={maintenanceMessage}
+                      onChange={(e) => setMaintenanceMessage(e.target.value)}
+                      placeholder="Съобщение за посетителите..."
+                      className="w-full bg-black/30 border border-white/5 rounded-lg p-3 text-xs tracking-wide leading-relaxed outline-none focus:border-gold-accent/50 text-white resize-none transition-all placeholder:text-white/10"
+                    />
+                    <p className="text-[8px] text-white/15 uppercase tracking-wider">Shown as the primary message on maintenance screen</p>
                   </div>
 
-                  {/* Sidebar Tools */}
-                  <div className="space-y-8">
-                    <div className="bg-white/[0.02] border border-white/5 p-8 space-y-6">
-                      <header className="flex items-center justify-between border-b border-white/5 pb-4">
-                        <div className="flex items-center gap-3">
-                          <Clock className="w-3.5 h-3.5 text-gold-accent" />
-                          <h4 className="text-[11px] font-bold uppercase tracking-[0.2em] text-white">Projected Timeline</h4>
-                        </div>
-                      </header>
-                      
-                      <div className="space-y-4 pt-2">
-                        <div className="space-y-2">
-                          <label className="text-[10px] uppercase tracking-widest text-white/40">Expected Completion</label>
-                          <input 
-                            type="datetime-local"
-                            value={maintenanceEndTime}
-                            onChange={(e) => setMaintenanceEndTime(e.target.value)}
-                            className="w-full bg-black/40 border border-white/10 p-4 text-xs outline-none focus:border-gold-accent text-white transition-all invert-calendar-icon"
-                          />
-                          
-                          <div className="grid grid-cols-3 gap-2 mt-3">
-                            {[
-                              { label: '+30 Mins', mins: 30 },
-                              { label: '+1 Hour', mins: 60 },
-                              { label: '+6 Hours', mins: 360 },
-                              { label: '+24 Hours', mins: 1440 },
-                              { label: '+3 Days', mins: 4320 },
-                              { label: '+1 Week', mins: 10080 },
-                            ].map((time) => (
-                              <button
-                                key={time.label}
-                                type="button" 
-                                onClick={() => {
-                                  const now = new Date();
-                                  now.setMinutes(now.getMinutes() + time.mins);
-                                  // Adjust for local timezone offset to ensure correct datetime-local value
-                                  const localIsoString = new Date(now.getTime() - (now.getTimezoneOffset() * 60000))
-                                    .toISOString()
-                                    .slice(0, 16);
-                                  setMaintenanceEndTime(localIsoString);
-                                }}
-                                className="bg-white/5 border border-white/10 hover:border-gold-accent/50 hover:bg-gold-accent/10 hover:text-gold-accent text-[9px] uppercase tracking-widest text-white/40 py-2.5 transition-all duration-300"
-                              >
-                                {time.label}
-                              </button>
-                            ))}
-                          </div>
-                          <p className="text-[9px] text-white/20 leading-relaxed uppercase tracking-tight mt-4">
-                            The countdown timer will automatically reveal itself if a future date and time is specified.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
 
-                    <div className="bg-gold-accent/5 border border-gold-accent/10 p-6">
-                      <div className="flex items-start gap-4">
-                        <Info className="w-4 h-4 text-gold-accent shrink-0 mt-0.5" />
-                        <p className="text-[9px] text-gold-accent/60 uppercase tracking-widest leading-relaxed">
-                          Maintenance mode locks the entire public application. Admin panel remains accessible only via direct URL.
+
+                  {/* Col 3: Timeline */}
+                  <div className="p-5 space-y-3">
+                    <label className="text-[10px] uppercase tracking-widest text-gold-accent/80 font-bold flex items-center gap-2">
+                      <Clock className="w-3 h-3" />
+                      Expected Completion
+                    </label>
+                    <input 
+                      type="datetime-local"
+                      value={maintenanceEndTime}
+                      onChange={(e) => setMaintenanceEndTime(e.target.value)}
+                      className="w-full bg-black/30 border border-white/5 rounded-lg p-3 text-xs outline-none focus:border-gold-accent/50 text-white transition-all invert-calendar-icon"
+                    />
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {[
+                        { label: '+30m', mins: 30 },
+                        { label: '+1h', mins: 60 },
+                        { label: '+6h', mins: 360 },
+                        { label: '+24h', mins: 1440 },
+                        { label: '+3d', mins: 4320 },
+                        { label: '+1w', mins: 10080 },
+                      ].map((time) => (
+                        <button
+                          key={time.label}
+                          type="button" 
+                          onClick={() => {
+                            const now = new Date();
+                            now.setMinutes(now.getMinutes() + time.mins);
+                            const localIsoString = new Date(now.getTime() - (now.getTimezoneOffset() * 60000))
+                              .toISOString()
+                              .slice(0, 16);
+                            setMaintenanceEndTime(localIsoString);
+                          }}
+                          className="bg-white/[0.03] border border-white/5 hover:border-gold-accent/40 hover:bg-gold-accent/5 hover:text-gold-accent text-[9px] uppercase tracking-widest text-white/30 py-2 rounded-md transition-all duration-200"
+                        >
+                          {time.label}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="mt-3 bg-gold-accent/5 border border-gold-accent/10 rounded-lg p-3">
+                      <div className="flex items-start gap-2">
+                        <Info className="w-3 h-3 text-gold-accent/50 shrink-0 mt-0.5" />
+                        <p className="text-[8px] text-gold-accent/40 uppercase tracking-wider leading-relaxed">
+                          Timer auto-starts when a future date is set. Admin panel stays accessible.
                         </p>
                       </div>
                     </div>
                   </div>
                 </div>
-              </section>
+              </div>
+
+              {/* ═══════ ROW 3: Hero Media Settings ═══════ */}
+              <div className="border border-white/5 bg-white/[0.01]">
+                {/* Hero Header */}
+                <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 bg-white/[0.02]">
+                  <div className="flex items-center gap-3">
+                    <ImageIcon className="w-4 h-4 text-gold-accent" />
+                    <div>
+                      <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-white">Homepage Hero Media</h3>
+                      <p className="text-[8px] text-white/25 uppercase tracking-widest mt-0.5">Background visual for landing page</p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={async () => {
+                      try {
+                        setIsSavingHero(true);
+                        await Promise.all([
+                          settingsService.setHeroSetting('hero_type', heroType),
+                          settingsService.setHeroSetting('hero_image_url', heroImageUrl),
+                          settingsService.setHeroSetting('hero_video_url', heroVideoUrl),
+                          settingsService.setHeroSetting('hero_grayscale', String(heroGrayscale)),
+                        ]);
+                        showToast('Hero updated', 'success');
+                      } catch (err: any) {
+                        showToast(err.message, 'error');
+                      } finally {
+                        setIsSavingHero(false);
+                      }
+                    }}
+                    disabled={isSavingHero}
+                    className="flex items-center gap-2 bg-white text-black px-6 py-2 text-[9px] font-bold uppercase tracking-widest hover:bg-gold-accent transition-all disabled:opacity-20"
+                  >
+                    <Save className="w-3 h-3" />
+                    {isSavingHero ? 'Saving...' : 'Save Hero'}
+                  </button>
+                </div>
+
+                {/* Hero Body */}
+                <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-white/5">
+                  {/* Media Type */}
+                  <div className="p-5 space-y-3">
+                    <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Media Type</label>
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => setHeroType('video')}
+                        className={`flex-1 py-2.5 border rounded-md transition-all text-[10px] uppercase tracking-widest font-bold ${
+                          heroType === 'video' 
+                            ? 'bg-white text-black border-white' 
+                            : 'border-white/10 text-white/30 hover:border-gold-accent/40 hover:text-white/60'
+                        }`}
+                      >
+                        Video
+                      </button>
+                      <button 
+                        onClick={() => setHeroType('image')}
+                        className={`flex-1 py-2.5 border rounded-md transition-all text-[10px] uppercase tracking-widest font-bold ${
+                          heroType === 'image' 
+                            ? 'bg-white text-black border-white' 
+                            : 'border-white/10 text-white/30 hover:border-gold-accent/40 hover:text-white/60'
+                        }`}
+                      >
+                        Image
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Visual Filter */}
+                  <div className="p-5 space-y-3">
+                    <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Visual Filter</label>
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => setHeroGrayscale(true)}
+                        className={`flex-1 py-2.5 border rounded-md transition-all text-[10px] uppercase tracking-widest font-bold ${
+                          heroGrayscale 
+                            ? 'bg-white text-black border-white' 
+                            : 'border-white/10 text-white/30 hover:border-gold-accent/40 hover:text-white/60'
+                        }`}
+                      >
+                        Grayscale
+                      </button>
+                      <button 
+                        onClick={() => setHeroGrayscale(false)}
+                        className={`flex-1 py-2.5 border rounded-md transition-all text-[10px] uppercase tracking-widest font-bold ${
+                          !heroGrayscale 
+                            ? 'bg-white text-black border-white' 
+                            : 'border-white/10 text-white/30 hover:border-gold-accent/40 hover:text-white/60'
+                        }`}
+                      >
+                        Color
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* URL Input */}
+                  <div className="p-5 space-y-3">
+                    <div className="flex justify-between items-center">
+                        <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold">
+                        {heroType === 'image' ? 'Image Source' : 'Video URL'}
+                        </label>
+                        {heroType === 'image' && (
+                            <label className="cursor-pointer bg-white/5 hover:bg-white/10 text-[9px] uppercase tracking-widest text-gold-accent px-3 py-1 rounded transition-colors flex items-center gap-2">
+                                <Upload size={10} />
+                                Upload & Crop
+                                <input 
+                                    type="file" 
+                                    className="hidden" 
+                                    accept="image/*"
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                            const url = URL.createObjectURL(file);
+                                            setHeroImageToCrop(url);
+                                            e.target.value = ''; // Reset so same file can be selected again
+                                        }
+                                    }}
+                                />
+                            </label>
+                        )}
+                    </div>
+                    <input 
+                      type="text"
+                      value={heroType === 'image' ? heroImageUrl : heroVideoUrl}
+                      onChange={(e) => heroType === 'image' ? setHeroImageUrl(e.target.value) : setHeroVideoUrl(e.target.value)}
+                      placeholder={heroType === 'image' ? 'https://... .jpg / .png' : 'https://... .mp4'}
+                      className="w-full bg-black/30 border border-white/5 rounded-lg p-3 text-xs outline-none focus:border-gold-accent/50 text-white transition-all placeholder:text-white/10"
+                    />
+                    <p className="text-[8px] text-white/15 uppercase tracking-wider">
+                      {heroType === 'image' ? 'Recommended: 1920×1080 or higher' : 'Direct link to hosted .mp4 file'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* ═══════ ROW 3.5: Site Announcement ═══════ */}
+              <div className="relative overflow-hidden bg-white/[0.02] border border-white/5 hover:border-blue-500/20 transition-all">
+                <div className="absolute left-0 top-0 bottom-0 w-[3px]" style={{ background: announcement.active ? '#3b82f6' : '#3f3f46' }} />
+                
+                {/* Header */}
+                <div className="flex items-center justify-between p-5 border-b border-white/5">
+                  <div className="flex items-center gap-4">
+                    <div className={`p-2.5 rounded-lg transition-colors ${announcement.active ? 'bg-blue-500/10' : 'bg-white/5'}`}>
+                      <MessageSquare className={`w-5 h-5 ${announcement.active ? 'text-blue-400' : 'text-white/30'}`} />
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-white">Broadcast Message</h3>
+                      <p className="text-[9px] text-white/30 uppercase tracking-wider mt-0.5">
+                        {announcement.active ? 'Message is visible to all visitors' : 'No active broadcast'}
+                      </p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={async () => {
+                      const newState = !announcement.active;
+                      try {
+                        setIsSavingAnnouncement(true);
+                        const updated = { ...announcement, active: newState };
+                        await settingsService.setAnnouncement(updated);
+                        setAnnouncement(updated);
+                        showToast(newState ? 'Broadcast Activated! 📢' : 'Broadcast Disabled', 'success');
+                      } catch (e: any) {
+                        showToast(e.message, 'error');
+                      } finally {
+                        setIsSavingAnnouncement(false);
+                      }
+                    }}
+                    disabled={isSavingAnnouncement}
+                    className={`relative w-14 h-7 rounded-full transition-all duration-300 ${announcement.active ? 'bg-blue-500' : 'bg-white/10'}`}
+                  >
+                    <div className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow-lg transition-all duration-300 ${announcement.active ? 'left-8' : 'left-1'}`} />
+                  </button>
+                </div>
+
+                {/* Body */}
+                <div className="p-5 space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Announcement Text</label>
+                    <div className="flex gap-3">
+                      <input 
+                        type="text"
+                        value={announcement.text}
+                        onChange={(e) => setAnnouncement({ ...announcement, text: e.target.value })}
+                        placeholder="Type your message here..."
+                        className="flex-1 bg-black/30 border border-white/10 rounded-lg p-3 text-xs text-white outline-none focus:border-blue-500/50 transition-all"
+                      />
+                      <button 
+                        onClick={async () => {
+                          try {
+                            setIsSavingAnnouncement(true);
+                            await settingsService.setAnnouncement(announcement);
+                            showToast('Message text saved!', 'success');
+                          } catch (e: any) {
+                            showToast(e.message, 'error');
+                          } finally {
+                            setIsSavingAnnouncement(false);
+                          }
+                        }}
+                        disabled={isSavingAnnouncement}
+                        className="bg-white/5 hover:bg-white/10 border border-white/10 px-4 py-1 rounded-lg text-[10px] uppercase font-bold text-white transition-all"
+                      >
+                        {isSavingAnnouncement ? '...' : 'Save Text'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* ═══════ ROW 4: Promotions Management ═══════ */}
+              <div className="relative overflow-hidden bg-white/[0.02] border border-white/5 hover:border-emerald-500/20 transition-all">
+                <div className="absolute left-0 top-0 bottom-0 w-[3px]" style={{ background: activePromo !== 'none' ? '#10b981' : '#3f3f46' }} />
+                
+                {/* Header */}
+                <div className="flex items-center justify-between p-5 border-b border-white/5">
+                  <div className="flex items-center gap-4">
+                    <div className={`p-2.5 rounded-lg transition-colors ${activePromo !== 'none' ? 'bg-emerald-500/10' : 'bg-white/5'}`}>
+                      <Tag className={`w-5 h-5 ${activePromo !== 'none' ? 'text-emerald-400' : 'text-white/30'}`} />
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-white">Promotions</h3>
+                      <p className="text-[9px] text-white/30 uppercase tracking-wider mt-0.5">
+                        {activePromo === 'none' ? 'No active promotion' 
+                          : activePromo === 'valentines' ? "Valentine's Day promo active" 
+                          : activePromo === 'christmas' ? 'Christmas promo active'
+                          : 'Photoshoot promo active'}
+                      </p>
+                    </div>
+                  </div>
+                  {activePromo !== 'none' && (
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30">
+                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      <span className="text-[8px] font-bold uppercase tracking-widest text-emerald-400">Live</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Promo Options */}
+                <div className="p-5 space-y-4">
+                  <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Banner Type</label>
+                  <div className="grid grid-cols-3 gap-3">
+                    {/* None */}
+                    <button
+                      onClick={async () => {
+                        try {
+                          setIsSavingPromo(true);
+                          await settingsService.setActivePromo('none');
+                          setActivePromo('none');
+                          showToast('Promotion disabled', 'success');
+                        } catch (e: any) {
+                          showToast(e.message, 'error');
+                        } finally {
+                          setIsSavingPromo(false);
+                        }
+                      }}
+                      disabled={isSavingPromo}
+                      className={`relative flex flex-col items-center gap-3 p-4 border rounded-lg transition-all ${
+                        activePromo === 'none'
+                          ? 'bg-white/10 border-white/30 ring-2 ring-white/20'
+                          : 'bg-white/[0.02] border-white/5 hover:border-white/15'
+                      }`}
+                    >
+                      <X className={`w-6 h-6 ${activePromo === 'none' ? 'text-white' : 'text-white/30'}`} />
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-white/60">None</span>
+                    </button>
+
+                    {/* Valentines */}
+                    <button
+                      onClick={async () => {
+                        try {
+                          setIsSavingPromo(true);
+                          await settingsService.setActivePromo('valentines');
+                          setActivePromo('valentines');
+                          showToast("Valentine's promo activated! 💕", 'success');
+                        } catch (e: any) {
+                          showToast(e.message, 'error');
+                        } finally {
+                          setIsSavingPromo(false);
+                        }
+                      }}
+                      disabled={isSavingPromo}
+                      className={`relative flex flex-col items-center gap-3 p-4 border rounded-lg transition-all ${
+                        activePromo === 'valentines'
+                          ? 'bg-pink-500/10 border-pink-500/40 ring-2 ring-pink-500/20'
+                          : 'bg-white/[0.02] border-white/5 hover:border-pink-500/20'
+                      }`}
+                    >
+                      <Heart className={`w-6 h-6 ${activePromo === 'valentines' ? 'text-pink-400 fill-pink-400' : 'text-pink-400/30'}`} />
+                      <span className={`text-[10px] font-bold uppercase tracking-widest ${activePromo === 'valentines' ? 'text-pink-300' : 'text-white/60'}`}>Valentine's</span>
+                    </button>
+
+                    {/* Christmas */}
+                    <button
+                      onClick={async () => {
+                        try {
+                          setIsSavingPromo(true);
+                          await settingsService.setActivePromo('christmas');
+                          setActivePromo('christmas');
+                          showToast('Christmas promo activated! 🎄', 'success');
+                        } catch (e: any) {
+                          showToast(e.message, 'error');
+                        } finally {
+                          setIsSavingPromo(false);
+                        }
+                      }}
+                      disabled={isSavingPromo}
+                      className={`relative flex flex-col items-center gap-3 p-4 border rounded-lg transition-all ${
+                        activePromo === 'christmas'
+                          ? 'bg-emerald-500/10 border-emerald-500/40 ring-2 ring-emerald-500/20'
+                          : 'bg-white/[0.02] border-white/5 hover:border-emerald-500/20'
+                      }`}
+                    >
+                      <TreePine className={`w-6 h-6 ${activePromo === 'christmas' ? 'text-emerald-400' : 'text-emerald-400/30'}`} />
+                      <span className={`text-[10px] font-bold uppercase tracking-widest ${activePromo === 'christmas' ? 'text-emerald-300' : 'text-white/60'}`}>Christmas</span>
+                    </button>
+
+                    {/* Photoshoot */}
+                    <button
+                      onClick={async () => {
+                        try {
+                          setIsSavingPromo(true);
+                          await settingsService.setActivePromo('photoshoot');
+                          setActivePromo('photoshoot');
+                          showToast('Photoshoot promo activated! 📸', 'success');
+                        } catch (e: any) {
+                          showToast(e.message, 'error');
+                        } finally {
+                          setIsSavingPromo(false);
+                        }
+                      }}
+                      disabled={isSavingPromo}
+                      className={`relative flex flex-col items-center gap-3 p-4 border rounded-lg transition-all ${
+                        activePromo === 'photoshoot'
+                          ? 'bg-gold-accent/10 border-gold-accent/40 ring-2 ring-gold-accent/20'
+                          : 'bg-white/[0.02] border-white/5 hover:border-gold-accent/20'
+                      }`}
+                    >
+                      <Camera className={`w-6 h-6 ${activePromo === 'photoshoot' ? 'text-gold-accent' : 'text-gold-accent/30'}`} />
+                      <span className={`text-[10px] font-bold uppercase tracking-widest ${activePromo === 'photoshoot' ? 'text-gold-accent' : 'text-white/60'}`}>Photoshoot</span>
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* ═══════ ROW 5: Pricing Configuration ═══════ */}
+              <div className="relative overflow-hidden bg-white/[0.02] border border-white/5 hover:border-yellow-500/20 transition-all">
+                <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-yellow-500 to-amber-600" />
+                
+                {/* Header */}
+                <div className="flex items-center justify-between p-5 border-b border-white/5">
+                  <div className="flex items-center gap-4">
+                    <div className="p-2.5 rounded-lg bg-yellow-500/10">
+                      <DollarSign className="w-5 h-5 text-yellow-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-white">Ценоразпис & Отстъпки</h3>
+                      <p className="text-[9px] text-white/30 uppercase tracking-wider mt-0.5">
+                        Базови цени и % отстъпка за всяка промоция
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Base Prices */}
+                <div className="p-5 space-y-4">
+                  <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold flex items-center gap-2">
+                    <DollarSign className="w-3 h-3" /> Базови цени (€)
+                  </label>
+                  <div className="grid grid-cols-3 gap-3">
+                    {/* Starter */}
+                    <div className="space-y-1.5">
+                      <label className="text-[9px] uppercase tracking-widest text-white/30 font-bold">Стартов</label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={pricingConfig.basePrices.starter}
+                        onChange={(e) => setPricingConfig({
+                          ...pricingConfig,
+                          basePrices: { ...pricingConfig.basePrices, starter: Number(e.target.value) }
+                        })}
+                        className="w-full bg-black/30 border border-white/10 rounded-lg p-2.5 text-sm font-bold text-white outline-none focus:border-yellow-500/50 transition-all text-center"
+                      />
+                      <p className="text-[8px] text-white/20 text-center">{pricingConfig.basePrices.starter}€</p>
+                    </div>
+                    {/* Pro */}
+                    <div className="space-y-1.5">
+                      <label className="text-[9px] uppercase tracking-widest text-white/30 font-bold">Про</label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={pricingConfig.basePrices.pro}
+                        onChange={(e) => setPricingConfig({
+                          ...pricingConfig,
+                          basePrices: { ...pricingConfig.basePrices, pro: Number(e.target.value) }
+                        })}
+                        className="w-full bg-black/30 border border-white/10 rounded-lg p-2.5 text-sm font-bold text-white outline-none focus:border-yellow-500/50 transition-all text-center"
+                      />
+                      <p className="text-[8px] text-white/20 text-center">{pricingConfig.basePrices.pro}€</p>
+                    </div>
+                    {/* Director */}
+                    <div className="space-y-1.5">
+                      <label className="text-[9px] uppercase tracking-widest text-white/30 font-bold">Директорски</label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={pricingConfig.basePrices.director}
+                        onChange={(e) => setPricingConfig({
+                          ...pricingConfig,
+                          basePrices: { ...pricingConfig.basePrices, director: Number(e.target.value) }
+                        })}
+                        className="w-full bg-black/30 border border-white/10 rounded-lg p-2.5 text-sm font-bold text-white outline-none focus:border-yellow-500/50 transition-all text-center"
+                      />
+                      <p className="text-[8px] text-white/20 text-center">{pricingConfig.basePrices.director}€</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Valentine's Discounts */}
+                <div className="p-5 border-t border-white/5 space-y-4">
+                  <label className="text-[10px] uppercase tracking-widest text-pink-400/70 font-bold flex items-center gap-2">
+                    <Heart className="w-3 h-3 fill-pink-400 text-pink-400" /> Valentine's Day отстъпки (%)
+                  </label>
+                  <div className="grid grid-cols-3 gap-3">
+                    {(['starter', 'pro', 'director'] as const).map((tier) => (
+                      <div key={`val-${tier}`} className="space-y-1.5">
+                        <label className="text-[9px] uppercase tracking-widest text-white/30 font-bold">
+                          {tier === 'starter' ? 'Стартов' : tier === 'pro' ? 'Про' : 'Директорски'}
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            min={0}
+                            max={100}
+                            value={pricingConfig.promos.valentines[tier]}
+                            onChange={(e) => setPricingConfig({
+                              ...pricingConfig,
+                              promos: {
+                                ...pricingConfig.promos,
+                                valentines: { ...pricingConfig.promos.valentines, [tier]: Number(e.target.value) }
+                              }
+                            })}
+                            className="w-full bg-pink-500/5 border border-pink-500/20 rounded-lg p-2.5 text-sm font-bold text-pink-300 outline-none focus:border-pink-500/50 transition-all text-center"
+                          />
+                          <Percent className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-pink-400/40" />
+                        </div>
+                        <p className="text-[8px] text-pink-300/40 text-center">
+                          {pricingConfig.promos.valentines[tier] > 0
+                            ? `${pricingConfig.basePrices[tier]}€ → ${settingsService.calcDiscountedPrice(pricingConfig.basePrices[tier], pricingConfig.promos.valentines[tier])}€`
+                            : 'Без отстъпка'
+                          }
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Christmas Discounts */}
+                <div className="p-5 border-t border-white/5 space-y-4">
+                  <label className="text-[10px] uppercase tracking-widest text-emerald-400/70 font-bold flex items-center gap-2">
+                    <TreePine className="w-3 h-3 text-emerald-400" /> Christmas отстъпки (%)
+                  </label>
+                  <div className="grid grid-cols-3 gap-3">
+                    {(['starter', 'pro', 'director'] as const).map((tier) => (
+                      <div key={`xmas-${tier}`} className="space-y-1.5">
+                        <label className="text-[9px] uppercase tracking-widest text-white/30 font-bold">
+                          {tier === 'starter' ? 'Стартов' : tier === 'pro' ? 'Про' : 'Директорски'}
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            min={0}
+                            max={100}
+                            value={pricingConfig.promos.christmas[tier]}
+                            onChange={(e) => setPricingConfig({
+                              ...pricingConfig,
+                              promos: {
+                                ...pricingConfig.promos,
+                                christmas: { ...pricingConfig.promos.christmas, [tier]: Number(e.target.value) }
+                              }
+                            })}
+                            className="w-full bg-emerald-500/5 border border-emerald-500/20 rounded-lg p-2.5 text-sm font-bold text-emerald-300 outline-none focus:border-emerald-500/50 transition-all text-center"
+                          />
+                          <Percent className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-emerald-400/40" />
+                        </div>
+                        <p className="text-[8px] text-emerald-300/40 text-center">
+                          {pricingConfig.promos.christmas[tier] > 0
+                            ? `${pricingConfig.basePrices[tier]}€ → ${settingsService.calcDiscountedPrice(pricingConfig.basePrices[tier], pricingConfig.promos.christmas[tier])}€`
+                            : 'Без отстъпка'
+                          }
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Photoshoot Discounts */}
+                <div className="p-5 border-t border-white/5 space-y-4">
+                  <label className="text-[10px] uppercase tracking-widest text-gold-accent font-bold flex items-center gap-2">
+                    <Camera className="w-3 h-3 text-gold-accent" /> Photoshoot отстъпки (%)
+                  </label>
+                  <div className="grid grid-cols-3 gap-3">
+                    {(['starter', 'pro', 'director'] as const).map((tier) => (
+                      <div key={`photo-${tier}`} className="space-y-1.5">
+                        <label className="text-[9px] uppercase tracking-widest text-white/30 font-bold">
+                          {tier === 'starter' ? 'Стартов' : tier === 'pro' ? 'Про' : 'Директорски'}
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            min={0}
+                            max={100}
+                            value={pricingConfig.promos.photoshoot?.[tier] || 0}
+                            onChange={(e) => setPricingConfig({
+                              ...pricingConfig,
+                              promos: {
+                                ...pricingConfig.promos,
+                                photoshoot: { ...pricingConfig.promos.photoshoot, [tier]: Number(e.target.value) }
+                              }
+                            })}
+                            className="w-full bg-gold-accent/5 border border-gold-accent/20 rounded-lg p-2.5 text-sm font-bold text-gold-accent outline-none focus:border-gold-accent/50 transition-all text-center"
+                          />
+                          <Percent className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gold-accent/40" />
+                        </div>
+                        <p className="text-[8px] text-gold-accent/40 text-center">
+                          {pricingConfig.promos.photoshoot?.[tier] > 0
+                            ? `${pricingConfig.basePrices[tier]}€ → ${settingsService.calcDiscountedPrice(pricingConfig.basePrices[tier], pricingConfig.promos.photoshoot[tier])}€`
+                            : 'Без отстъпка'
+                          }
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Save Button */}
+                <div className="p-5 border-t border-white/5 flex justify-end">
+                  <button
+                    onClick={async () => {
+                      setIsSavingPricing(true);
+                      try {
+                        await settingsService.setPricingConfig(pricingConfig);
+                        showToast('Ценоразпис запазен! 💰', 'success');
+                      } catch (e: any) {
+                        showToast(e.message, 'error');
+                      } finally {
+                        setIsSavingPricing(false);
+                      }
+                    }}
+                    disabled={isSavingPricing}
+                    className="bg-yellow-500 text-black px-6 py-2.5 text-[9px] font-bold uppercase tracking-widest hover:bg-yellow-400 transition-all disabled:opacity-30 rounded-md"
+                  >
+                    {isSavingPricing ? 'Запазване...' : '💰 Запази ценоразпис'}
+                  </button>
+                </div>
+              </div>
+
             </div>
           </div>
         )}
@@ -1706,6 +2468,49 @@ const AdminDashboard: React.FC = () => {
                       </div>
                     </div>
 
+                    {/* Background Image (Cover) */}
+                    <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                            <label className="text-[9px] uppercase tracking-widest text-white/40">Profile Background</label>
+                            {editBackgroundImage && (
+                                <button 
+                                    type="button"
+                                    onClick={() => setModelBgToCrop(editBackgroundImage)}
+                                    className="text-[9px] uppercase tracking-widest text-gold-accent hover:text-white transition-colors flex items-center gap-1"
+                                >
+                                    <Crop size={10} /> Adjust Crop
+                                </button>
+                            )}
+                        </div>
+                        <div className="relative aspect-video bg-black/40 border border-white/10 group overflow-hidden">
+                             {editBackgroundImage ? (
+                                <img src={editBackgroundImage} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" />
+                             ) : (
+                                <ImageIcon className="w-8 h-8 text-white/10 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                             )}
+                             
+                             <label className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                                 <span className="text-[10px] uppercase tracking-widest text-white font-bold flex items-center gap-2">
+                                     <Upload size={12} /> Upload
+                                 </span>
+                                 <input 
+                                    type="file" 
+                                    className="hidden" 
+                                    accept="image/*"
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                            const url = URL.createObjectURL(file);
+                                            setModelBgToCrop(url);
+                                            e.target.value = '';
+                                        }
+                                    }}
+                                 />
+                             </label>
+                        </div>
+                        <input name="background_image" type="hidden" value={editBackgroundImage} />
+                    </div>
+
                     {/* Column 2: Portfolio Gallery */}
                     <div className="col-span-1 md:col-span-2 space-y-3">
                       <div className="flex items-center justify-between">
@@ -1851,6 +2656,63 @@ const AdminDashboard: React.FC = () => {
         />
       )}
 
+      {/* Hero Background Crop Modal */}
+      {heroImageToCrop && (
+        <SpotlightCropModal 
+          isOpen={!!heroImageToCrop}
+          imageUrl={heroImageToCrop}
+          onClose={() => setHeroImageToCrop(null)}
+          aspectRatio={16/9}
+          onCropComplete={async (croppedUrl) => {
+             try {
+               setIsHeroUploading(true);
+               const res = await fetch(croppedUrl);
+               const blob = await res.blob();
+               const file = new File([blob], `hero_bg_${Date.now()}.jpg`, { type: 'image/jpeg' });
+               
+               const path = `site_assets/hero_bg_${Date.now()}`;
+               const publicUrl = await modelsService.uploadFile(file, path);
+               
+               setHeroImageUrl(publicUrl);
+               showToast('Hero background set!', 'success');
+             } catch (err: any) {
+               showToast(err.message, 'error');
+             } finally {
+               setHeroImageToCrop(null);
+               setIsHeroUploading(false);
+             }
+          }}
+        />
+      )}
+
+      {modelBgToCrop && (
+        <SpotlightCropModal 
+          isOpen={!!modelBgToCrop}
+          imageUrl={modelBgToCrop}
+          onClose={() => setModelBgToCrop(null)}
+          aspectRatio={16/9} // Background should be landscape
+          onCropComplete={async (croppedUrl) => {
+             try {
+               setIsModelBgUploading(true);
+               const res = await fetch(croppedUrl);
+               const blob = await res.blob();
+               const file = new File([blob], `model_bg_${Date.now()}.jpg`, { type: 'image/jpeg' });
+               
+               const path = `models/${editingModel?.slug || 'new'}/background_${Date.now()}`;
+               const publicUrl = await modelsService.uploadFile(file, path);
+               
+               setEditBackgroundImage(publicUrl);
+               showToast('Background updated!', 'success');
+             } catch (err: any) {
+               showToast(err.message, 'error');
+             } finally {
+               setModelBgToCrop(null);
+               setIsModelBgUploading(false);
+             }
+          }}
+        />
+      )}
+      
       {/* CUSTOM CONFIRMATION MODAL */}
       <AnimatePresence>
         {confirmModal.isOpen && (

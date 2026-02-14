@@ -1,4 +1,30 @@
 {
+  "photoshoot": {
+    "promo_text": "WIN UP TO 1000$ FOR A PHOTOSHOOT — THE BEST ONE GOES TO THE BLOG AND WINS THE PRIZE",
+    "view": "READ MORE"
+  },
+  "valentines": {
+    "promo_text": "NEW VALENTINE'S PROMO PACKAGES",
+    "bonus_label": "CHOOSE YOUR DESTINATION",
+    "locations": {
+      "London": "London",
+      "Italy": "Italy",
+      "Los Angeles": "Los Angeles",
+      "Canada": "Canada",
+      "Greece": "Greece",
+      "Bulgaria": "Bulgaria"
+    },
+    "choose": "Choose Now"
+  },
+  "christmas": {
+    "promo_text": "CHRISTMAS PROMO PACKAGES — SPECIAL PRICES",
+    "choose": "Choose Now",
+    "special_label": "Christmas Special",
+    "basic_price": "59€",
+    "standard_price": "179€",
+    "promo_deadline": "Christmas promo until Dec 31",
+    "promo_footer": "Promotional prices valid until December 31, 2026. All packages include personal consultation."
+  },
   "nav": {
     "models": "Models",
     "about": "About",
@@ -11,9 +37,10 @@
     "feed": "Feed",
     "login": "Login",
     "register": "Register",
-    "contributions": "Contributions",
+    "contributions": "Blog",
     "profile": "Profile",
-    "logout": "Logout"
+    "logout": "Logout",
+    "back": "Back"
   },
   "services": {
     "title": "Professional Services",
@@ -124,16 +151,21 @@
   "pricing": {
     "title": "Client Services",
     "subtitle": "Choose the level of casting and production support that fits your brand's campaign needs.",
-    "scouting": "Scout",
-    "casting": "Casting",
-    "campaign": "Campaign",
-    "standard": "Standard",
-    "custom": "Custom",
+    "scouting": "STARTER",
+    "casting": "PRO",
+    "campaign": "DIRECTOR’S CHOICE",
+    "basic": "49€",
+    "basic_original": "99€",
+    "standard": "149€",
+    "standard_original": "299€",
+    "custom": "Contact",
+    "custom_original": "",
+    "current_plan": "Current Plan",
     "for_indie": "For Photographers & Indie Brands",
     "for_commercial": "For Commercial Campaigns",
     "for_global": "For Global Brands & Editorials",
-    "cta_browse": "Browse Models",
-    "cta_start": "Start Casting",
+    "cta_browse": "Activate Access",
+    "cta_start": "Activate Access",
     "cta_contact": "Contact Director",
     "benefits": {
       "new_faces": "Access to New Faces",
@@ -149,10 +181,67 @@
       "full_database": "Full Database Access + Scouting",
       "priority_247": "24/7 Priority Support",
       "wholistic_rights": "Wholistic Usage Rights Mgmt",
-      "producer": "On-set Producer",
-      "travel": "Travel & Logistics Handling",
-      "creative_consult": "Creative Direction Consult"
+      "producer": "On-Location Producer",
+      "travel": "Travel & Logistics",
+      "creative_consult": "Creative Consultation"
     }
+  },
+  "checkout": {
+    "title": "Secure Booking",
+    "subtitle": "Campaign Ready.",
+    "exit": "Exit",
+    "agency_division": "Agency Division",
+    "secure_3d": "3D Secure",
+    "trusted_by": "Trusted by photographers & brands across EU",
+    "package_selected": "Package Selected",
+    "no_hidden_fees": "No hidden fees",
+    "commercial_usage": "Commercial usage included",
+    "gdpr_release": "GDPR Model Release",
+    "booking_director": "Booking Director",
+    "reply_within": "Reply within 4h",
+    "step_client": "Client Entity",
+    "step_details": "Corporate Details",
+    "step_intent": "Project Intent",
+    "client_types": {
+      "Brand": "Brand",
+      "Photographer": "Photographer",
+      "Agency": "Agency",
+      "Production": "Production"
+    },
+    "fields": {
+      "full_name": "Full Name",
+      "full_name_placeholder": "Contact Person",
+      "email": "Work Email",
+      "email_placeholder": "corporate@mail.com",
+      "company_name": "Company Name",
+      "company_placeholder": "Legal Entity S.A.",
+      "vat": "VAT / EU VAT",
+      "vat_placeholder": "EU12345678",
+      "billing_address": "Billing Address",
+      "billing_placeholder": "St. Square 10, City, Country",
+      "phone": "Phone",
+      "phone_placeholder": "+44 20 1234 5678",
+      "notes": "Additional Notes",
+      "notes_placeholder": "Special requirements or project details..."
+    },
+    "intents": {
+      "Campaign": "Campaign",
+      "E-commerce": "E-commerce",
+      "Editorial": "Editorial",
+      "Social": "Social Media",
+      "Runway": "Runway",
+      "Lookbook": "Lookbook"
+    },
+    "payment": {
+      "title": "Secure Booking Confirmation",
+      "subtitle": "Payment unlocks full model board access.",
+      "legal_notice": "By clicking below, you confirm that your company details are correct. You will receive a formal invoice and model release contract within 2 hours. No automatic renewals. EU Consumer Rights apply.",
+      "submit": "Activate Production Plan",
+      "loading": "Activating Access...",
+      "help": "Need help? Talk to Booking Director"
+    },
+    "profile_loaded": "Your profile data has been loaded automatically",
+    "review_data": "Please review and complete the details"
   },
   "contact": {
     "title": "Contact Us",

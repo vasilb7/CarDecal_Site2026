@@ -113,7 +113,7 @@ export const adminService = {
             card_images: cardImages,
             is_top_model: modelData.category === 'Top Model',
             is_verified: true,
-            bio: `Official portfolio of ${modelData.name}. Represented by Antigravity Agency.`
+            bio: ''
           });
         
         if (insertError) {

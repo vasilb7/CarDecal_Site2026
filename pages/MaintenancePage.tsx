@@ -7,49 +7,28 @@ import { settingsService } from '../lib/settingsService';
 const MaintenancePage: React.FC = () => {
   const [message, setMessage] = useState('');
   const [endTime, setEndTime] = useState<string | null>(null);
-  const [perks, setPerks] = useState<string[]>([]);
-  const [updateText, setUpdateText] = useState('');
   const [timeLeft, setTimeLeft] = useState<{ d: number; h: number; m: number; s: number } | null>(null);
+  const [email, setEmail] = useState('');
 
   useEffect(() => {
     const fetchData = async () => {
-      const [msg, end, perksData, updateTxt] = await Promise.all([
+      const [msg, end] = await Promise.all([
         settingsService.getMaintenanceMessage(),
-        settingsService.getMaintenanceEndTime(),
-        settingsService.getMaintenancePerks(),
-        settingsService.getMaintenanceUpdatesText()
+        settingsService.getMaintenanceEndTime()
       ]);
       if (msg) setMessage(msg);
       if (end) setEndTime(end);
-      if (perksData) {
-        setPerks(perksData.split('\n').filter(p => p.trim() !== ''));
-      }
-      if (updateTxt) setUpdateText(updateTxt);
+
     };
     fetchData();
 
-    // Realtime subscription
     const channel = supabase
       .channel('maintenance_updates')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'site_settings'
-        },
-        (payload) => {
-          const newData = payload.new as { key: string; value: any };
-          if (newData && newData.key) {
-            if (newData.key === 'maintenance_message') setMessage(newData.value);
-            if (newData.key === 'maintenance_end_time') setEndTime(newData.value);
-            if (newData.key === 'maintenance_perks') {
-              setPerks((newData.value as string).split('\n').filter(p => p.trim() !== ''));
-            }
-            if (newData.key === 'maintenance_updates_text') setUpdateText(newData.value);
-          }
-        }
-      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'site_settings' }, (payload) => {
+        const newData = payload.new as { key: string; value: any };
+        if (newData?.key === 'maintenance_message') setMessage(newData.value);
+        if (newData?.key === 'maintenance_end_time') setEndTime(newData.value);
+      })
       .subscribe();
 
     return () => {
@@ -58,22 +37,16 @@ const MaintenancePage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (!endTime) {
-      setTimeLeft(null);
-      return;
-    }
-
+    if (!endTime) return;
     const timer = setInterval(() => {
       const now = new Date().getTime();
       const target = new Date(endTime).getTime();
       const distance = target - now;
-
       if (distance < 0) {
         setTimeLeft(null);
         clearInterval(timer);
         return;
       }
-
       setTimeLeft({
         d: Math.floor(distance / (1000 * 60 * 60 * 24)),
         h: Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
@@ -81,171 +54,118 @@ const MaintenancePage: React.FC = () => {
         s: Math.floor((distance % (1000 * 60)) / 1000)
       });
     }, 1000);
-
     return () => clearInterval(timer);
   }, [endTime]);
 
   return (
-    <div 
-      className="fixed inset-0 z-[99999] bg-[#000000] flex flex-col items-center justify-start p-6 text-center overflow-y-auto custom-scrollbar"
-      style={{ backgroundColor: '#000000' }}
-    >
-      {/* Background Animated Elements */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-[#C9A227]/5 rounded-full blur-[140px] animate-pulse" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-[#C9A227]/10 rounded-full blur-[140px] animate-pulse" style={{ animationDelay: '2s' }} />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-[1px] bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-20" />
+    <div className="fixed inset-0 z-[99999] bg-[#000] flex items-center justify-center overflow-hidden">
+      {/* Background with subtle overlay */}
+      <div className="absolute inset-0 z-0">
+        <img 
+          src="/Site_Pics/Maintance/Maintace.png" 
+          alt="Maintenance" 
+          className="w-full h-full object-cover opacity-60"
+        />
+        <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px]" />
       </div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8 }}
-        className="relative z-10 max-w-4xl w-full pt-12 pb-24"
-      >
-        {/* Gear Icon */}
-        <div className="flex justify-center mb-12">
-          <div className="relative">
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
-              className="w-20 h-20 sm:w-28 h-28 border border-dashed border-gold-accent/20 rounded-full flex items-center justify-center p-4"
-            >
-              <div className="w-full h-full border border-gold-accent/40 rounded-full flex items-center justify-center">
-                <Settings className="w-10 h-10 sm:w-14 h-14 text-gold-accent" />
-              </div>
-            </motion.div>
-            <div className="absolute inset-0 bg-gold-accent/20 blur-[40px] rounded-full animate-pulse" />
-          </div>
-        </div>
-
-        {/* Title */}
-        <h1 className="text-4xl sm:text-5xl md:text-7xl font-serif text-white mb-8 tracking-tighter uppercase leading-[0.9]">
-          MAINTENANCE <span className="text-gold-accent block">IN PROGRESS</span>
-        </h1>
-        
-        {/* Main Message */}
-        <p className="text-white/40 text-xs sm:text-sm md:text-base uppercase tracking-[0.3em] font-medium mb-16 max-w-xl mx-auto leading-relaxed border-x border-white/10 px-8 italic">
-          {message}
-        </p>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-start text-left">
+      <div className="relative z-10 container mx-auto px-6 h-full flex items-center">
+        <div className="w-full grid grid-cols-1 lg:grid-cols-[1fr,1px,1fr] gap-12 lg:gap-0 items-center">
           
-          {/* Countdown Section */}
-          <div className="space-y-8 bg-white/[0.02] border border-white/5 p-8 sm:p-12 backdrop-blur-xl">
-            <div className="flex items-center gap-3 border-b border-white/10 pb-4 mb-8">
-              <Clock className="w-4 h-4 text-gold-accent" />
-              <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-white">Projected Return</h3>
+          {/* Left Side: Brand & Status */}
+          <motion.div 
+            initial={{ opacity: 0, x: -50 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8 }}
+            className="flex flex-col items-center lg:items-end lg:pr-20 text-center lg:text-right"
+          >
+            <div className="w-48 lg:w-64 mb-10 overflow-hidden">
+              <img 
+                src="/Site_Pics/Homepage/logo.png" 
+                alt="Logo" 
+                className="w-full h-auto object-contain brightness-0 invert" 
+              />
             </div>
+            <h1 className="text-5xl lg:text-7xl font-sans font-black text-white mb-6 tracking-tight uppercase leading-none">
+              COMING <br className="hidden lg:block" /> SOON!
+            </h1>
+            <p className="max-w-md text-white/80 text-sm lg:text-base leading-relaxed font-light">
+              {message || "Our Website is under Maintenance. We'll be here soon with our new awesome site."}
+            </p>
+          </motion.div>
 
-            {timeLeft ? (
-              <div className="grid grid-cols-4 gap-4">
-                {[
-                  { label: 'Days', value: timeLeft.d },
-                  { label: 'Hrs', value: timeLeft.h },
-                  { label: 'Min', value: timeLeft.m },
-                  { label: 'Sec', value: timeLeft.s }
-                ].map((unit, i) => (
-                  <div key={i} className="flex flex-col items-center">
-                    <span className="text-3xl sm:text-4xl font-serif text-white tabular-nums leading-none">
-                      {String(unit.value).padStart(2, '0')}
-                    </span>
-                    <span className="text-[7px] sm:text-[8px] uppercase tracking-[0.2em] text-gold-accent/50 mt-3 font-black">
-                      {unit.label}
+          {/* Vertical Divider */}
+          <div className="hidden lg:block h-96 w-[1px] bg-white/20 self-center" />
+
+          {/* Right Side: Interaction & Info */}
+          <motion.div 
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8 }}
+            className="flex flex-col items-center lg:items-start lg:pl-20 text-center lg:text-left"
+          >
+            <span className="text-white/60 text-xs lg:text-sm uppercase tracking-[0.2em] mb-6">
+              The maintenance will end on
+            </span>
+
+            {/* Countdown Grid */}
+            <div className="flex gap-4 mb-12">
+              {[
+                { label: 'Days', val: timeLeft?.d || 0 },
+                { label: 'Hours', val: timeLeft?.h || 0 },
+                { label: 'Minutes', val: timeLeft?.m || 0 },
+                { label: 'Seconds', val: timeLeft?.s || 0 }
+              ].map((unit, i) => (
+                <div key={i} className="flex flex-col items-center">
+                  <div className="w-16 h-16 lg:w-20 lg:h-20 border border-white/30 rounded-lg flex items-center justify-center mb-2 backdrop-blur-md">
+                    <span className="text-2xl lg:text-3xl font-bold text-white tabular-nums">
+                      {String(unit.val).padStart(2, '0')}
                     </span>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center">
-                <div className="flex items-center gap-2 px-4 py-2 bg-gold-accent/5 border border-gold-accent/20 rounded-full">
-                  <div className="w-1.5 h-1.5 rounded-full bg-gold-accent animate-ping" />
-                  <span className="text-[10px] uppercase tracking-widest text-gold-accent font-black">Optimization Live</span>
+                  <span className="text-[10px] uppercase text-white/40 tracking-widest">{unit.label}</span>
                 </div>
-                <p className="text-[9px] text-white/20 uppercase tracking-widest mt-4">Calculated time remaining...</p>
+              ))}
+            </div>
+
+            {/* Newsletter */}
+            <div className="w-full max-w-md mb-12">
+              <p className="text-white/60 text-xs lg:text-sm mb-4 uppercase tracking-wider">
+                Get mail for exclusive offers in your inbox
+              </p>
+              <div className="flex w-full">
+                <input 
+                  type="email" 
+                  placeholder="Your email address"
+                  className="flex-1 bg-white px-4 py-3 text-black text-sm outline-none rounded-l-sm"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+                <button className="bg-black/80 hover:bg-black text-white px-6 py-3 text-xs uppercase font-bold tracking-widest border border-white/20 transition-all rounded-r-sm">
+                  Notify me
+                </button>
               </div>
-            )}
-            
-            <div className="pt-8 border-t border-white/5 space-y-4">
-              <span className="text-[9px] uppercase tracking-[0.3em] text-white/30 font-bold block mb-4">Connect with us:</span>
+            </div>
+
+            {/* Socials */}
+            <div className="flex flex-col lg:items-start items-center">
+              <span className="text-white/40 text-[10px] uppercase tracking-[0.3em] mb-4">Connect with us</span>
               <div className="flex gap-4">
                 {[
-                  { 
-                    icon: (
-                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
-                        <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
-                        <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
-                      </svg>
-                    ), 
-                    label: 'Instagram', 
-                    color: 'hover:text-[#E1306C]' 
-                  },
-                  { 
-                    icon: (
-                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M4 4l11.733 16h4.67L6.6 4H4z"></path>
-                        <path d="M20 5l-7.775 10.643 6.643 8.357H5.21l6.643-8.357L4 5h16z" opacity="0.5"></path>
-                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" fill="currentColor" stroke="none"></path>
-                      </svg>
-                    ), 
-                    label: 'X', 
-                    color: 'hover:text-white' 
-                  },
-                  { 
-                    icon: (
-                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none">
-                        <path d="M12 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 0 1 .042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 0 1 4.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 0 1 .14-.197.35.35 0 0 1 .238-.042l2.906.617a1.214 1.214 0 0 1 1.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 0 0-.231.094.33.33 0 0 0 0 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 0 0 .029-.463.33.33 0 0 0-.464 0c-.547.533-1.684.73-2.512.73-.828 0-1.979-.196-2.512-.73a.326.326 0 0 0-.232-.095z"></path>
-                      </svg>
-                    ), 
-                    label: 'Reddit', 
-                    color: 'hover:text-[#FF4500]' 
-                  }
-                ].map((social, i) => (
-                  <button key={i} className={`flex items-center gap-2 text-white/20 transition-all ${social.color}`}>
-                    {social.icon}
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z"/></svg>,
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/></svg>,
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 1.17.054 1.805.249 2.227.412.558.217.957.477 1.376.896.419.419.679.818.896 1.376.163.422.358 1.057.412 2.227.058 1.266.07 1.646.07 4.85s-.012 3.584-.07 4.85c-.054 1.17-.249 1.805-.412 2.227-.217.558-.477.957-.896 1.376-.419.419-.818.679-1.376.896-.422.163-1.057.358-2.227.412-1.266.058-1.646.07-4.85.07s-3.584-.012-4.85-.07c-1.17-.054-1.805-.249-2.227-.412-.558-.217-.957-.477-1.376-.896-.419-.419-.679-.818-.896-1.376-.163-.422-.358-1.057-.412-2.227-.058-1.266-.07-1.646-.07-4.85s.012-3.584.07-4.85c.054-1.17.249-1.805.412-2.227.217-.558.477-.957.896-1.376.419-.419.818-.679 1.376-.896.422-.163 1.057-.358 2.227-.412 1.266-.058 1.646-.07 4.85-.07zm0-2.163c-3.259 0-3.667.014-4.947.072-1.277.057-2.15.26-2.914.557-.79.306-1.459.717-2.126 1.384-.667.667-1.078 1.336-1.384 2.126-.297.764-.5 1.637-.557 2.914-.058 1.28-.072 1.688-.072 4.947s.014 3.667.072 4.947c.057 1.277.26 2.15.557 2.914.306.79.717 1.459 1.384 2.126.667.667 1.336 1.078 2.126 1.384.764.297 1.637.5 2.914.557 1.28.058 1.688.072 4.947.072s3.667-.014 4.947-.072c1.277-.057 2.15-.26 2.914-.557.79-.306 1.459-.717 2.126-1.384.667-.667 1.078-1.336 1.384-2.126.297-.764.5-1.637.557-2.914.058-1.28.072-1.688.072-4.947s-.014-3.667-.072-4.947c-.057-1.277-.26-2.15-.557-2.914-.306-.79-.717-1.459-1.384-2.126-.667-.667-1.336-1.078-2.126-1.384-.764-.297-1.637-.5-2.914-.557-1.28-.058-1.688-.072-4.947-.072zM12 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>,
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M22.675 0h-21.35c-.732 0-1.325.593-1.325 1.325v21.351c0 .731.593 1.324 1.325 1.324h11.495v-9.294h-3.128v-3.622h3.128v-2.671c0-3.1 1.893-4.788 4.659-4.788 1.325 0 2.463.099 2.795.143v3.24l-1.918.001c-1.504 0-1.795.715-1.795 1.763v2.313h3.587l-.467 3.622h-3.12v9.293h6.116c.73 0 1.323-.593 1.323-1.325v-21.35c0-.732-.593-1.325-1.325-1.325z"/></svg>
+                ].map((icon, i) => (
+                  <button key={i} className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all border border-white/10">
+                    {icon}
                   </button>
                 ))}
               </div>
             </div>
-          </div>
+          </motion.div>
 
-          {perks.length > 0 && (
-            <div className="space-y-8">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="h-[1px] flex-1 bg-gold-accent/20" />
-                <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-gold-accent">What's Coming</h3>
-                <div className="h-[1px] flex-1 bg-gold-accent/20" />
-              </div>
-
-              <div className="space-y-6">
-                {perks.map((perk, i) => (
-                  <motion.div 
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.1 * i }}
-                    key={i} 
-                    className="flex items-start gap-4 group"
-                  >
-                    <div className="relative">
-                       <div className="w-5 h-5 rounded-full border border-gold-accent/30 flex items-center justify-center bg-gold-accent/5 group-hover:bg-gold-accent/20 group-hover:border-gold-accent/60 transition-all duration-300">
-                         <Plus className="w-3 h-3 text-gold-accent" />
-                       </div>
-                       <div className="absolute inset-0 bg-gold-accent/20 blur-md rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                    </div>
-                    <div>
-                      <h4 className="text-[11px] font-bold uppercase tracking-widest text-white group-hover:text-gold-accent transition-colors leading-tight">{perk}</h4>
-                      <div className="h-0.5 w-0 group-hover:w-full bg-gold-accent/30 transition-all duration-500 mt-1" />
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
-
-      </motion.div>
-
+      </div>
     </div>
   );
 };

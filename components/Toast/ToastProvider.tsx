@@ -30,7 +30,11 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   const showToast = useCallback((message: string, type: ToastType = 'info', duration: number = 4000) => {
     const id = Math.random().toString(36).substring(2, 9);
-    setToasts((prev) => [...prev, { id, message, type, duration }]);
+    const maxToasts = window.innerWidth < 768 ? 1 : 2;
+    setToasts((prev) => {
+      const next = [...prev, { id, message, type, duration }];
+      return next.length > maxToasts ? next.slice(-maxToasts) : next;
+    });
   }, []);
 
   const removeToast = useCallback((id: string) => {

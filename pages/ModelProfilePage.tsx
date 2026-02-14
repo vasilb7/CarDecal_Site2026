@@ -6,7 +6,8 @@ import { useToast } from '../hooks/useToast';
 import { useAuth } from '../context/AuthContext';
 import { modelsService } from '../lib/modelsService';
 import { supabase } from '../lib/supabase';
-import { Upload, Trash2, Plus, Loader2 } from 'lucide-react';
+import { SpotlightCropModal } from '../components/SpotlightCropModal';
+import { Upload, Trash2, Plus, Loader2, Pencil } from 'lucide-react';
 import { GridIcon, PinIcon, CloseIcon, HeartIcon, ChatBubbleIcon, BookmarkIcon, PaperAirplaneIcon, MoreHorizontalIcon, EmojiIcon, VerifiedIcon } from '../components/IconComponents';
 import StoryViewer from '../components/StoryViewer';
 import StoriesRing from '../components/StoriesRing';
@@ -446,6 +447,8 @@ const ModelProfilePage: React.FC = () => {
     const { getModelBySlug, loading, error } = useModels();
     const [model, setModel] = useState<Model | null>(null);
     const [isUploading, setIsUploading] = useState(false);
+    const [bgToCrop, setBgToCrop] = useState<string | null>(null);
+    const [avatarToCrop, setAvatarToCrop] = useState<string | null>(null);
 
     const handleLikePost = async (postId: string) => {
         if (!user || !model) {
@@ -543,15 +546,15 @@ const ModelProfilePage: React.FC = () => {
                         return {
                             ...prev,
                             ...m,
-                            // Ensure frontend-specific mappings are preserved if needed
-                            hairColor: m.hair_color || prev.hairColor,
-                            eyeColor: m.eye_color || prev.eyeColor,
-                            coverImage: m.cover_image || prev.coverImage,
-                            cardImages: m.card_images || prev.cardImages,
+                            // Map database fields to frontend fields for instant UI update
+                            hairColor: m.hair_color ?? prev.hairColor,
+                            eyeColor: m.eye_color ?? prev.eye_color,
+                            coverImage: m.cover_image ?? prev.coverImage,
+                            cardImages: m.card_images ?? prev.cardImages,
                             isTopModel: m.is_top_model !== undefined ? m.is_top_model : prev.isTopModel,
                             isVerified: m.is_verified !== undefined ? m.is_verified : prev.isVerified,
-                            nameBg: m.name_bg || prev.nameBg
-                        };
+                            nameBg: m.name_bg ?? prev.name_bg
+                        } as Model;
                     });
                 }
             )
@@ -616,18 +619,56 @@ const ModelProfilePage: React.FC = () => {
         }
     };
 
-    const handleBackgroundUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleBackgroundUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file || !model) return;
+        const url = URL.createObjectURL(file);
+        setBgToCrop(url);
+        e.target.value = '';
+    };
+
+    const handleCroppedBackground = async (croppedUrl: string) => {
+        if (!model) return;
         try {
             setIsUploading(true);
+            const res = await fetch(croppedUrl);
+            const blob = await res.blob();
+            const file = new File([blob], `bg_${Date.now()}.jpg`, { type: 'image/jpeg' });
             const path = `models/${model.slug}/background/${Date.now()}_${file.name}`;
-            const url = await modelsService.uploadFile(file, path);
-            await handleUpdateModel({ background_image: url });
+            const publicUrl = await modelsService.uploadFile(file, path);
+            await handleUpdateModel({ background_image: publicUrl });
             showToast(t('toast.gallery_updated'), "success");
         } catch (error: any) {
             showToast(error.message, "error");
         } finally {
+            setBgToCrop(null);
+            setIsUploading(false);
+        }
+    };
+
+    const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || !model) return;
+        const url = URL.createObjectURL(file);
+        setAvatarToCrop(url);
+        e.target.value = '';
+    };
+
+    const handleCroppedAvatar = async (croppedUrl: string) => {
+        if (!model) return;
+        try {
+            setIsUploading(true);
+            const res = await fetch(croppedUrl);
+            const blob = await res.blob();
+            const file = new File([blob], `avatar_${Date.now()}.jpg`, { type: 'image/jpeg' });
+            const path = `models/${model.slug}/avatar/${Date.now()}_${file.name}`;
+            const publicUrl = await modelsService.uploadFile(file, path);
+            await handleUpdateModel({ avatar: publicUrl });
+            showToast(t('toast.gallery_updated'), "success");
+        } catch (error: any) {
+            showToast(error.message, "error");
+        } finally {
+            setAvatarToCrop(null);
             setIsUploading(false);
         }
     };
@@ -747,18 +788,40 @@ const ModelProfilePage: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-background relative">
-            {/* Background Image Hero */}
-            <div className={`relative h-[40vh] md:h-[50vh] overflow-hidden group/bg ${!model.background_image ? 'bg-zinc-900/50' : ''}`}>
+            {/* Background Image Hero — Twitter/X-style */}
+            <div className={`relative w-full overflow-hidden group/bg ${!model.background_image ? 'bg-zinc-900/50 h-[200px] md:h-[300px]' : ''}`}
+                 style={model.background_image ? { aspectRatio: '3/1', maxHeight: '420px' } : undefined}
+            >
                 {model.background_image ? (
-                    <img 
-                        src={model.background_image} 
-                        className="w-full h-full object-cover opacity-60 transition-all duration-1000 group-hover/bg:opacity-80" 
-                        alt="Background" 
-                    />
+                    <>
+                        {/* Layer 1: Blurred backdrop fill for any edge gaps */}
+                        <div 
+                            className="absolute inset-0 scale-110"
+                            style={{
+                                backgroundImage: `url("${model.background_image}")`,
+                                backgroundSize: 'cover',
+                                backgroundPosition: 'center',
+                                filter: 'blur(30px) brightness(0.35) saturate(1.3)',
+                            }}
+                        />
+                        {/* Layer 2: Main cover image — fits 16:9 nicely in 3:1 */}
+                        <img 
+                            src={model.background_image} 
+                            className="absolute inset-0 w-full h-full object-cover z-[1] transition-all duration-700 group-hover/bg:scale-[1.015]" 
+                            alt="Background" 
+                        />
+                        {/* Subtle vignette */}
+                        <div className="absolute inset-0 z-[2] pointer-events-none" style={{
+                            background: 'radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.45) 100%)'
+                        }} />
+                    </>
                 ) : (
                     <div className="absolute inset-0 bg-zinc-900/50 backdrop-blur-3xl" />
                 )}
-                <div className="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent" />
+                {/* Bottom gradient fade to page bg */}
+                <div className="absolute inset-x-0 bottom-0 h-[50%] z-[3] pointer-events-none" style={{
+                    background: 'linear-gradient(to top, var(--background) 0%, rgba(11,11,12,0.5) 45%, transparent 100%)'
+                }} />
                 
                 {isAdmin && (
                     <label className="absolute bottom-4 right-4 z-20 cursor-pointer p-2 bg-black/40 hover:bg-black/60 rounded-full text-white transition-all opacity-0 group-hover/bg:opacity-100 border border-white/10">
@@ -785,6 +848,14 @@ const ModelProfilePage: React.FC = () => {
                             setShowStoryViewer(true);
                         }}
                     />
+                    {isAdmin && (
+                        <label className="absolute inset-0 z-30 cursor-pointer flex items-center justify-center bg-black/40 opacity-0 hover:opacity-100 transition-opacity rounded-full border-4 border-transparent group-hover:border-gold-accent/20">
+                            <div className="bg-gold-accent w-10 h-10 rounded-full flex items-center justify-center shadow-2xl transform scale-75 hover:scale-100 transition-transform">
+                                <Pencil className="w-5 h-5 text-black" />
+                            </div>
+                            <input type="file" className="hidden" onChange={handleAvatarUpload} accept="image/*" />
+                        </label>
+                    )}
                 </div>
                 <div className="text-center md:text-left flex-grow">
                     <div className="flex items-center justify-center md:justify-start">
@@ -861,6 +932,28 @@ const ModelProfilePage: React.FC = () => {
                 />
             )}
             </div>
+
+            {/* Background Crop Modal */}
+            {bgToCrop && (
+                <SpotlightCropModal 
+                    isOpen={!!bgToCrop}
+                    imageUrl={bgToCrop}
+                    onClose={() => setBgToCrop(null)}
+                    aspectRatio={32/9}
+                    onCropComplete={handleCroppedBackground}
+                />
+            )}
+
+            {/* Avatar Crop Modal */}
+            {avatarToCrop && (
+                <SpotlightCropModal 
+                    isOpen={!!avatarToCrop}
+                    imageUrl={avatarToCrop}
+                    onClose={() => setAvatarToCrop(null)}
+                    aspectRatio={1/1}
+                    onCropComplete={handleCroppedAvatar}
+                />
+            )}
         </div>
     );
 };

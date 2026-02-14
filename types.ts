@@ -48,7 +48,9 @@ export interface Model {
   height: string;
   measurements: string;
   hair_color: string;
+  hairColor?: string;
   eye_color: string;
+  eyeColor?: string;
   bio: string;
   availability: 'Available' | 'On Option' | 'Booked';
   status?: 'pending' | 'active' | 'rejected';
@@ -56,6 +58,7 @@ export interface Model {
   posts: Post[];
   stories?: Story[];
   cover_image: string[];
+  coverImage?: string[];
   card_images?: string[];
   cardImages?: string[];
   is_top_model?: boolean;
@@ -69,6 +72,7 @@ export interface Model {
   spotlight_projects?: number;
   spotlight_awards?: number;
   spotlight_bio?: string;
+  spotlight_bio_bg?: string;
 }
 
 export interface UserProfile {
@@ -86,6 +90,16 @@ export interface UserProfile {
   background_image?: string;
   stories?: any[];
   posts?: any[];
+  categories?: string[];
+  height?: string;
+  measurements?: string;
+  measurements_bust?: string;
+  measurements_waist?: string;
+  measurements_hips?: string;
+  hair_color?: string;
+  eye_color?: string;
+  availability?: 'Available' | 'On Option' | 'Booked';
+  active_plan?: string;
 }
 
 export interface Casting {

@@ -4,6 +4,10 @@
 @tailwind components;
 @tailwind utilities;
 
+.grayscale {
+  filter: grayscale(100%);
+}
+
 :root {
   --gold-accent: #c9a227;
   --red-accent: #e31b23;
@@ -100,7 +104,7 @@ body {
   :root {
     --gold-accent: #d4af37;
   }
-  
+
   body {
     @apply bg-black text-white antialiased;
   }
@@ -120,6 +124,21 @@ body {
   }
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background: #f1c40f;
+  }
+
+  /* Premium Horizontal Scrollbar for Filters */
+  .scrollbar-premium::-webkit-scrollbar {
+    height: 4px;
+    display: block !important;
+  }
+  .scrollbar-premium::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    margin-right: 20px;
+  }
+  .scrollbar-premium::-webkit-scrollbar-thumb {
+    background: linear-gradient(90deg, #d4af37, #f1c40f);
+    border-radius: 10px;
   }
 }
 
@@ -387,4 +406,161 @@ body.story-viewer-open {
 .no-scrollbar {
   -ms-overflow-style: none; /* IE and Edge */
   scrollbar-width: none; /* Firefox */
+}
+
+.pattern-spaghetti {
+  background:
+    radial-gradient(
+      at bottom right,
+      #7b125b 0,
+      #7b125b 6.25px,
+      rgba(123, 18, 91, 0.2) 6.25px,
+      rgba(123, 18, 91, 0.2) 12.5px,
+      rgba(123, 18, 91, 0.75) 12.5px,
+      rgba(123, 18, 91, 0.75) 18.75px,
+      rgba(123, 18, 91, 0.25) 18.75px,
+      rgba(123, 18, 91, 0.25) 25px,
+      rgba(123, 18, 91, 0.3) 25px,
+      rgba(123, 18, 91, 0.3) 31.25px,
+      rgba(123, 18, 91, 0.75) 31.25px,
+      rgba(123, 18, 91, 0.75) 37.5px,
+      rgba(123, 18, 91, 0.2) 37.5px,
+      rgba(123, 18, 91, 0.2) 43.75px,
+      transparent 43.75px,
+      transparent 50px
+    ),
+    radial-gradient(
+      at top left,
+      transparent 0,
+      transparent 6.25px,
+      rgba(123, 18, 91, 0.2) 6.25px,
+      rgba(123, 18, 91, 0.2) 12.5px,
+      rgba(123, 18, 91, 0.75) 12.5px,
+      rgba(123, 18, 91, 0.75) 18.75px,
+      rgba(123, 18, 91, 0.3) 18.75px,
+      rgba(123, 18, 91, 0.3) 25px,
+      rgba(123, 18, 91, 0.25) 25px,
+      rgba(123, 18, 91, 0.25) 31.25px,
+      rgba(123, 18, 91, 0.75) 31.25px,
+      rgba(123, 18, 91, 0.75) 37.5px,
+      rgba(123, 18, 91, 0.2) 37.5px,
+      rgba(123, 18, 91, 0.2) 43.75px,
+      #7b125b 43.75px,
+      #7b125b 50px,
+      transparent 50px,
+      transparent 125px
+    );
+  background-blend-mode: multiply;
+  background-size:
+    50px 50px,
+    50px 50px;
+  background-color: #db2626;
+  width: 100%;
+}
+
+.pattern-hearts {
+  background: linear-gradient(135deg, #be123c 0%, #9f1239 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.pattern-hearts::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='%23ffffff'%3E%3Cpath d='M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z'/%3E%3C/svg%3E");
+  background-size: 60px 60px;
+  opacity: 0.05;
+  pointer-events: none;
+}
+
+.pattern-hearts::after {
+  content: "";
+  position: absolute;
+  inset: -100%;
+  background: linear-gradient(
+    45deg,
+    transparent 45%,
+    rgba(255, 255, 255, 0.1) 48%,
+    rgba(255, 255, 255, 0.4) 50%,
+    rgba(255, 255, 255, 0.1) 52%,
+    transparent 55%
+  );
+  animation: shine 1.5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes shine {
+  0% {
+    transform: translateX(-50%) translateY(-50%) rotate(0deg);
+  }
+  100% {
+    transform: translateX(50%) translateY(50%) rotate(0deg);
+  }
+}
+
+/* ===== CHRISTMAS PATTERN ===== */
+.pattern-snowflakes {
+  background: linear-gradient(135deg, #065f46 0%, #047857 50%, #064e3b 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.pattern-snowflakes::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='2' y1='12' x2='22' y2='12'/%3E%3Cline x1='12' y1='2' x2='12' y2='22'/%3E%3Cline x1='4.93' y1='4.93' x2='19.07' y2='19.07'/%3E%3Cline x1='19.07' y1='4.93' x2='4.93' y2='19.07'/%3E%3C/svg%3E");
+  background-size: 50px 50px;
+  opacity: 0.04;
+  pointer-events: none;
+}
+
+.pattern-snowflakes::after {
+  content: "";
+  position: absolute;
+  inset: -100%;
+  background: linear-gradient(
+    45deg,
+    transparent 45%,
+    rgba(255, 255, 255, 0.08) 48%,
+    rgba(255, 255, 255, 0.3) 50%,
+    rgba(255, 255, 255, 0.08) 52%,
+    transparent 55%
+  );
+  animation: shine 2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* ===== PHOTOSHOOT PATTERN ===== */
+.pattern-photoshoot {
+  background: linear-gradient(135deg, #1a1a1a 0%, #000000 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.pattern-photoshoot::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23d4af37' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z'/%3E%3Ccircle cx='12' cy='13' r='3'/%3E%3C/svg%3E");
+  background-size: 50px 50px;
+  opacity: 0.1;
+  pointer-events: none;
+}
+
+.pattern-photoshoot::after {
+  content: "";
+  position: absolute;
+  inset: -100%;
+  background: linear-gradient(
+    45deg,
+    transparent 45%,
+    rgba(212, 175, 55, 0.1) 48%,
+    rgba(212, 175, 55, 0.4) 50%,
+    rgba(212, 175, 55, 0.1) 52%,
+    transparent 55%
+  );
+  animation: shine 3s ease-in-out infinite;
+  pointer-events: none;
 }

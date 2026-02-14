@@ -319,7 +319,7 @@ const SettingsPageController: React.FC<{ profile: any, onUpdate: (data: any) => 
 
 // --- MAIN PROFILE PAGE ---
 const ProfilePage: React.FC = () => {
-    const { user, profile, loading: authLoading, refreshProfile, isAdmin } = useAuth();
+    const { user, profile, loading: authLoading, refreshProfile, isAdmin, isVerified } = useAuth();
     const navigate = useNavigate();
     const { t, i18n } = useTranslation();
     const currentLang = i18n.language.split("-")[0] || "bg";
@@ -345,7 +345,7 @@ const ProfilePage: React.FC = () => {
             avatar: profile.avatar_url || '',
             stories: profile.stories || [],
             posts: posts || [],
-            is_verified: profile.is_verified,
+            is_verified: isVerified,
             nickname: profile.username,
             bio: profile.bio,
             background_image: profile.background_image,
@@ -359,9 +359,11 @@ const ProfilePage: React.FC = () => {
             ].filter(Boolean).join('-'),
             hair_color: profile.hair_color,
             eye_color: profile.eye_color,
-            availability: profile.availability || 'Available'
-        };
-    }, [profile, posts]);
+            highlights: [],
+            cover_image: [],
+            gender: 'Female' as const
+        } as Model;
+    }, [profile, posts, isVerified]);
 
     const selectedPost = searchParams.get('post') && modelLike
         ? modelLike.posts.find((p: any) => p.id === searchParams.get('post')) 

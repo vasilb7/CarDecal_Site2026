@@ -69,6 +69,7 @@ const LoginPage: React.FC = () => {
   return (
     <SignInPage
       heroImageSrc="/Site_Pics/LogReg/Login.jpg"
+      mobileHeroImagePosition="center 10%"
       testimonials={sampleTestimonials}
       onSignIn={handleSignIn}
       onGoogleSignIn={handleGoogleSignIn}

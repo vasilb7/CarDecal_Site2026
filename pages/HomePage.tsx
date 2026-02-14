@@ -2,13 +2,21 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { supabase } from '../lib/supabase';
 import { useModels } from '../hooks/useModels';
 import ModelCard from '../components/ModelCard';
+import { settingsService } from '../lib/settingsService';
 import type { Model } from '../types';
 
-const fadeInUp = {
+interface HeroSettings {
+    hero_type: string;
+    hero_image_url: string;
+    hero_video_url: string;
+    hero_grayscale: boolean;
+}
+
+const fadeInUp: Variants = {
     hidden: { opacity: 0, y: 60 },
     visible: {
         opacity: 1,
@@ -17,7 +25,7 @@ const fadeInUp = {
     }
 };
 
-const staggerContainer = {
+const staggerContainer: Variants = {
     hidden: { opacity: 0 },
     visible: {
         opacity: 1,
@@ -32,45 +40,76 @@ const HomePage: React.FC = () => {
     const { getFeaturedModels, getTopModel, loading } = useModels();
     const [featuredModels, setFeaturedModels] = useState<Model[]>([]);
     const [topModel, setTopModel] = useState<Model | null>(null);
+    const [heroSettings, setHeroSettings] = useState<HeroSettings | null>(() => {
+        const cached = localStorage.getItem('hero_settings');
+        if (cached) {
+            const parsed = JSON.parse(cached);
+            return {
+                ...parsed,
+                hero_grayscale: parsed.hero_grayscale ?? true
+            };
+        }
+        return null;
+    });
+    const isFirstRender = React.useRef(true);
+
+    useEffect(() => {
+	    isFirstRender.current = false;
+    }, []);
 
     useEffect(() => {
         const fetch = async () => {
-            const [featured, top] = await Promise.all([
+            const [featured, top, hSettings] = await Promise.all([
                 getFeaturedModels(6),
-                getTopModel()
+                getTopModel(),
+                settingsService.getHeroSettings() as Promise<HeroSettings>
             ]);
             setFeaturedModels(featured);
             setTopModel(top);
+            setHeroSettings(hSettings);
+            localStorage.setItem('hero_settings', JSON.stringify(hSettings));
         };
         fetch();
 
-        // Real-time Top Model update
+        // Real-time Models update
         const channel = supabase
-            .channel('public_top_model_home')
+            .channel('public_models_home')
             .on(
                 'postgres_changes',
                 {
-                    event: 'UPDATE',
+                    event: '*',
                     schema: 'public',
                     table: 'models'
                 },
                 (payload) => {
-                    const m = payload.new as any;
-                    const mappedModel = {
-                        ...m,
-                        hairColor: m.hair_color,
-                        eyeColor: m.eye_color,
-                        coverImage: m.cover_image,
-                        cardImages: m.card_images,
-                        isTopModel: m.is_top_model,
-                        isVerified: m.is_verified,
-                        nameBg: m.name_bg
-                    };
-                    if (m.is_top_model) {
-                        setTopModel(mappedModel as Model);
-                    } else if (payload.old.is_top_model && !m.is_top_model) {
-                        // Re-fetch if the current top model was unset
-                        getTopModel().then(setTopModel);
+                    // Refresh both for any change to keep it simple and accurate
+                    getFeaturedModels(6).then(setFeaturedModels);
+                    getTopModel().then(setTopModel);
+                }
+            )
+            .subscribe();
+
+        // Real-time Hero Settings update
+        const heroChannel = supabase
+            .channel('public_hero_settings_home')
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'site_settings'
+                },
+                (payload: any) => {
+                    const { key, value } = payload.new || payload.old || {};
+                    if (['hero_type', 'hero_image_url', 'hero_video_url', 'hero_grayscale'].includes(key)) {
+                        setHeroSettings(prev => {
+                            const val = key === 'hero_grayscale' ? value === 'true' : value;
+                            const updated = prev ? { ...prev, [key]: val } : prev;
+                            if (updated) {
+                                localStorage.setItem('hero_settings', JSON.stringify(updated));
+                            }
+                            return updated;
+                        });
                     }
                 }
             )
@@ -78,6 +117,7 @@ const HomePage: React.FC = () => {
 
         return () => {
             supabase.removeChannel(channel);
+            supabase.removeChannel(heroChannel);
         };
     }, [getFeaturedModels, getTopModel]);
 
@@ -207,16 +247,39 @@ const HomePage: React.FC = () => {
         <div>
             {/* Hero Section */}
             <section className="relative h-screen min-h-[500px] flex items-center justify-center text-center overflow-hidden !py-0">
-                <video
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                    className="absolute z-0 w-auto min-w-full min-h-full max-w-none grayscale opacity-40 object-cover"
-                >
-                    <source src="/Site_Pics/Homepage/homevid.mp4" type="video/mp4" />
-                    Your browser does not support the video tag.
-                </video>
+                <AnimatePresence>
+                    {heroSettings ? (
+                        <motion.div
+                            key={`${heroSettings.hero_type}-${heroSettings.hero_image_url}-${heroSettings.hero_video_url}`}
+                            initial={{ opacity: 0, scale: 1.1 }}
+                            animate={{ opacity: 0.4, scale: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 1.5, ease: "easeOut" }}
+                            className="absolute inset-0 z-0"
+                        >
+                            {heroSettings.hero_type?.trim().toLowerCase() === 'image' ? (
+                                <img 
+                                    src={heroSettings.hero_image_url} 
+                                    alt="Hero" 
+                                    className={`w-full h-full object-cover ${heroSettings.hero_grayscale ? 'grayscale' : ''}`}
+                                />
+                            ) : (
+                                <video
+                                    autoPlay
+                                    loop
+                                    muted
+                                    playsInline
+                                    className={`w-full h-full object-cover ${heroSettings.hero_grayscale ? 'grayscale' : ''}`}
+                                >
+                                    <source src={heroSettings.hero_video_url} type="video/mp4" />
+                                </video>
+                            )}
+                        </motion.div>
+                    ) : (
+                        <div className="absolute inset-0 z-0 bg-black opacity-40" />
+                    )}
+                </AnimatePresence>
+                
                 {/* Visual Overlay for contrast */}
                 <div className="absolute inset-0 z-[1] bg-gradient-to-b from-black/60 via-black/20 to-black/60 pointer-events-none" />
                 
@@ -303,13 +366,13 @@ const HomePage: React.FC = () => {
                                         </div>
                                         <div className="absolute bottom-6 left-6 right-6 z-30 flex items-center justify-between pointer-events-none">
                                             <div className="flex space-x-2">
-                                                {topImages.slice(0, 10).map((_, i) => {
+                                                {topImages.map((_, i) => {
                                                     const activeIndex = ((currentTopIndex % topImages.length) + topImages.length) % topImages.length;
                                                     return (
                                                         <div
                                                             key={i}
                                                             className={`h-1 rounded-full transition-all duration-300 ${
-                                                                activeIndex === i ? 'w-8 bg-gold-accent' : 'w-2 bg-white/50'
+                                                                activeIndex === i ? 'w-8 bg-gold-accent shadow-[0_0_10px_rgba(212,175,55,0.3)]' : 'w-2 bg-white/30'
                                                             }`}
                                                         />
                                                     );
@@ -329,8 +392,12 @@ const HomePage: React.FC = () => {
                                     </h2>
                                 </div>
                                 <div className="w-16 h-px bg-gold-accent/50" />
-                                <div className="space-y-6 text-white/80 text-lg font-light leading-relaxed">
-                                    <p className="line-clamp-6">{topModel.spotlight_bio || topModel.bio}</p>
+                                <div className="space-y-6 text-white/80 text-sm md:text-lg font-light leading-relaxed max-w-2xl">
+                                    <p className="break-words whitespace-pre-wrap line-clamp-[8] md:line-clamp-none">
+                                        {i18n.language === 'bg' 
+                                          ? (topModel.spotlight_bio_bg || topModel.spotlight_bio || topModel.bio)
+                                          : (topModel.spotlight_bio || topModel.bio)}
+                                    </p>
                                 </div>
 
                                 <div className="pt-4 flex flex-col items-center md:items-start md:flex-row gap-6 md:gap-8">
@@ -558,16 +625,19 @@ const HomePage: React.FC = () => {
                             onClick={handleLookbookForward}
                         />
                         <div className="absolute bottom-0 left-0 right-0 flex h-1 bg-white/5 z-30 space-x-1 px-1">
-                            {lookbookImages.map((_, i) => (
-                                <div key={i} className="flex-1 h-full bg-white/10 overflow-hidden rounded-full">
-                                    {i === (currentLookbookIndex % lookbookImages.length) && (
-                                        <div className="h-full bg-gold-accent animate-[timeline_5s_linear_forwards]" />
-                                    )}
-                                    {i < (currentLookbookIndex % lookbookImages.length) && (
-                                        <div className="h-full bg-gold-accent w-full" />
-                                    )}
-                                </div>
-                            ))}
+                            {lookbookImages.map((_, i) => {
+                                const activeIndex = ((currentLookbookIndex % lookbookImages.length) + lookbookImages.length) % lookbookImages.length;
+                                return (
+                                    <div key={i} className="flex-1 h-full bg-white/10 overflow-hidden rounded-full">
+                                        {i === activeIndex && (
+                                            <div className="h-full bg-gold-accent animate-[timeline_5s_linear_forwards]" />
+                                        )}
+                                        {i < activeIndex && (
+                                            <div className="h-full bg-gold-accent w-full" />
+                                        )}
+                                    </div>
+                                );
+                            })}
                         </div>
                         <div className="absolute bottom-6 left-6 flex items-center space-x-3 z-40 bg-black/60 backdrop-blur-md px-4 py-2 rounded-sm border border-white/5">
                             <div className="flex items-center space-x-2">

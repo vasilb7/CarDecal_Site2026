@@ -14,15 +14,17 @@ import ModelProfilePage from './pages/ModelProfilePage';
 import AboutPage from './pages/AboutPage';
 import ServicesPage from './pages/ServicesPage';
 import ContactPage from './pages/ContactPage';
-import PricingPage from './pages/PricingPage';
+import PricingRouter from './pages/PricingRouter';
+import ChristmasPricingPage from './pages/ChristmasPricingPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import PrivacyPage from './pages/PrivacyPage';
 import TermsPage from './pages/TermsPage';
 import LegalPage from './pages/LegalPage';
-import ContributionsPage from './pages/ContributionsPage';
+import Blog from './pages/ContributionsPage';
 import BookingPage from './pages/BookingPage';
 import ProfilePage from './pages/ProfilePage';
+import CheckoutPage from './pages/CheckoutPage';
 import AdminDashboard from './pages/AdminDashboard';
 
 import AdminRoute from './components/AdminRoute';
@@ -53,12 +55,14 @@ const LanguageWrapper: React.FC = () => {
         <Route path="/about" element={<AboutPage />} />
         <Route path="/services" element={<ServicesPage />} />
         <Route path="/contact" element={<ContactPage />} />
-        <Route path="/pricing" element={<PricingPage />} />
+        <Route path="/pricing" element={<PricingRouter />} />
+        <Route path="/christmas-pricing" element={<ChristmasPricingPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/terms" element={<TermsPage />} />
         <Route path="/legal" element={<LegalPage />} />
-        <Route path="/contributions" element={<ContributionsPage />} />
+        <Route path="/blog" element={<Blog />} />
         <Route path="/book-now" element={<BookingPage />} />
+        <Route path="/checkout/:planId" element={<CheckoutPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/admin" element={
           <AdminRoute>
@@ -115,21 +119,24 @@ function AppContent() {
 
   useEffect(() => {
     // ONLY apply this on mobile/tablet devices to avoid breaking desktop experience
-    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    // Even if it's a touch device, we don't want this on large desktop screens (Windows touch laptops)
+    const isTouchDevice = ('ontouchstart' in window || navigator.maxTouchPoints > 0) && window.innerWidth < 1024;
     if (!isTouchDevice) return;
 
-    let focusCheckInterval: any = null;
+    let lastFocusTime = 0;
 
     const performBlurCheck = () => {
       const v = window.visualViewport;
       if (!v) return;
 
-      // Detect if the keyboard is likely gone
-      if (v.height >= window.innerHeight - 50) {
+      // Only check if we are not in the middle of a focus event (give keyboard time to open)
+      if (Date.now() - lastFocusTime < 1000) return;
+
+      // Detect if the keyboard is gone (viewport height is back to nearly full)
+      if (v.height >= window.innerHeight - 80) {
         const active = document.activeElement;
         if (active instanceof HTMLInputElement || 
-            active instanceof HTMLTextAreaElement || 
-            active instanceof HTMLSelectElement) {
+            active instanceof HTMLTextAreaElement) {
           (active as HTMLElement).blur();
         }
       }
@@ -139,25 +146,16 @@ function AppContent() {
       if (e.target instanceof HTMLInputElement || 
           e.target instanceof HTMLTextAreaElement || 
           e.target instanceof HTMLSelectElement) {
-        if (focusCheckInterval) clearInterval(focusCheckInterval);
-        focusCheckInterval = setInterval(performBlurCheck, 200);
+        lastFocusTime = Date.now();
       }
     };
 
-    const handleFocusOut = () => {
-      if (focusCheckInterval) {
-        clearInterval(focusCheckInterval);
-        focusCheckInterval = null;
-      }
-    };
-
+    window.visualViewport?.addEventListener('resize', performBlurCheck);
     document.addEventListener('focusin', handleFocusIn);
-    document.addEventListener('focusout', handleFocusOut);
 
     return () => {
+      window.visualViewport?.removeEventListener('resize', performBlurCheck);
       document.removeEventListener('focusin', handleFocusIn);
-      document.removeEventListener('focusout', handleFocusOut);
-      if (focusCheckInterval) clearInterval(focusCheckInterval);
     };
   }, []);
   

@@ -1,4 +1,30 @@
 {
+  "photoshoot": {
+    "promo_text": "СПЕЧЕЛЕТЕ ДО 1000$ ЗА ФОТОСЕСИЯ — НАЙ-ДОБРАТА ОТИВА В БЛОГА И ПЕЧЕЛИ НАГРАДАТА",
+    "view": "ПРОЧЕТИ ПОВЕЧЕ"
+  },
+  "valentines": {
+    "promo_text": "НОВИ ПРОМО ПАКЕТИ ЗА СВЕТИ ВАЛЕНТИН",
+    "bonus_label": "ИЗБЕРИ СВОЯТА ДЕСТИНАЦИЯ",
+    "locations": {
+      "London": "Лондон",
+      "Italy": "Италия",
+      "Los Angeles": "Лос Анджелис",
+      "Canada": "Канада",
+      "Greece": "Гърция",
+      "Bulgaria": "България"
+    },
+    "choose": "Избери сега"
+  },
+  "christmas": {
+    "promo_text": "КОЛЕДНИ ПРОМО ПАКЕТИ — СПЕЦИАЛНИ ЦЕНИ",
+    "choose": "Избери сега",
+    "special_label": "Christmas Special",
+    "basic_price": "59€",
+    "standard_price": "179€",
+    "promo_deadline": "Коледна промоция до 31.12",
+    "promo_footer": "Промоционалните цени са валидни до 31 декември 2026. Всички пакети включват персонална консултация."
+  },
   "nav": {
     "models": "Модели",
     "about": "За нас",
@@ -11,9 +37,10 @@
     "feed": "Постове",
     "login": "Вход",
     "register": "Регистрация",
-    "contributions": "Участия",
+    "contributions": "Блог",
     "profile": "Профил",
-    "logout": "Изход"
+    "logout": "Изход",
+    "back": "Назад"
   },
   "services": {
     "title": "Професионални Услуги",
@@ -124,17 +151,21 @@
   "pricing": {
     "title": "Услуги за клиенти",
     "subtitle": "Изберете нивото на подкрепа за кастинг и продукция, което отговаря на нуждите на вашата кампания.",
-    "scouting": "Скаутинг",
-    "casting": "Кастинг",
-    "campaign": "Кампания",
-    "basic": "Базов",
-    "standard": "Стандарт",
-    "custom": "Персонален",
+    "scouting": "СТАРТОВ",
+    "casting": "ПРО",
+    "campaign": "ДИРЕКТОРСКИ ИЗБОР",
+    "basic": "49€",
+    "basic_original": "99€",
+    "standard": "149€",
+    "standard_original": "299€",
+    "custom": "Контакт",
+    "custom_original": "",
+    "current_plan": "Текущ план",
     "for_indie": "За фотографи и независими брандове",
     "for_commercial": "За комерсиални кампании",
     "for_global": "За световни брандове и едиториал",
-    "cta_browse": "Разгледай модели",
-    "cta_start": "Започни кастинг",
+    "cta_browse": "Активирай плана",
+    "cta_start": "Активирай плана",
     "cta_contact": "Свържи се с директор",
     "benefits": {
       "new_faces": "Достъп до нови лица",
@@ -150,10 +181,67 @@
       "full_database": "Пълен достъп до базата + Скаутинг",
       "priority_247": "24/7 Приоритетна поддръжка",
       "wholistic_rights": "Пълно управление на правата",
-      "producer": "Продуцент на терен",
+      "producer": "Личен продуцент на локация",
       "travel": "Логистика и пътувания",
       "creative_consult": "Креативна консултация"
     }
+  },
+  "checkout": {
+    "title": "Сигурна Резервация",
+    "subtitle": "Готови за Кампания.",
+    "exit": "Изход",
+    "agency_division": "Agency Division",
+    "secure_3d": "3D Secure",
+    "trusted_by": "С доверието на фотографи и брандове в ЕС",
+    "package_selected": "Избран пакет",
+    "no_hidden_fees": "Без скрити такси",
+    "commercial_usage": "Комерсиално ползване включено",
+    "gdpr_release": "GDPR Model Release",
+    "booking_director": "Директор Букинг",
+    "reply_within": "Отговор до 4ч",
+    "step_client": "Тип Клиент",
+    "step_details": "Корпоративни Данни",
+    "step_intent": "Цел на Проекта",
+    "client_types": {
+      "Brand": "Бранд",
+      "Photographer": "Фотограф",
+      "Agency": "Агенция",
+      "Production": "Продукция"
+    },
+    "fields": {
+      "full_name": "Три имена",
+      "full_name_placeholder": "Лице за контакт",
+      "email": "Работен имейл",
+      "email_placeholder": "corporate@mail.com",
+      "company_name": "Име на фирмата",
+      "company_placeholder": "Юридическо лице ООД",
+      "vat": "ДДС / ЕИК Номер",
+      "vat_placeholder": "BG123456789",
+      "billing_address": "Адрес за фактуриране",
+      "billing_placeholder": "ул. Площад 10, Град, Държава",
+      "phone": "Телефон",
+      "phone_placeholder": "+359 888 123 456",
+      "notes": "Допълнителни бележки",
+      "notes_placeholder": "Специални изисквания или детайли по проекта..."
+    },
+    "intents": {
+      "Campaign": "Кампания",
+      "E-commerce": "Е-Комерс",
+      "Editorial": "Едиториал",
+      "Social": "Социални Медии",
+      "Runway": "Подиум",
+      "Lookbook": "Лукбук"
+    },
+    "payment": {
+      "title": "Потвърждение на Резервацията",
+      "subtitle": "Плащането отключва пълен достъп до борда с модели.",
+      "legal_notice": "Натискайки бутона по-долу, потвърждавате коректността на фирмените данни. Ще получите фактура и договор за Model Release в рамките на 2 часа. Без автоматични подновявания. Приложими са правата на потребителите в ЕС.",
+      "submit": "Активирай Продукционен План",
+      "loading": "Активиране на Достъпа...",
+      "help": "Нужна ви е помощ? Говорете с Директор Букинг"
+    },
+    "profile_loaded": "Данните от профила ви бяха заредени автоматично",
+    "review_data": "Моля, прегледайте и допълнете данните"
   },
   "contact": {
     "title": "Свържете се с нас",

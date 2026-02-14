@@ -11,6 +11,8 @@ interface AuthContextType {
   loading: boolean;
   signOut: () => Promise<void>;
   isAdmin: boolean;
+  isVerified: boolean;
+  activePlan: string | null;
   refreshProfile: () => Promise<void>;
   getSecureNow: () => Date;
 }
@@ -34,18 +36,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return new Date(timeOffset + performance.now() - startRef.current);
   };
   
-  const isVerified = React.useMemo(() => {
-     if (!profile?.is_verified) return false;
-     if (!profile.verified_until) return true; // Lifetime
-     
-     // Use secure time for check
-     return new Date(profile.verified_until) > getSecureNow();
-     
-     // Note: We need this to update as time passes. 
-     // Since this is a boolean value in context, consumers should poll if they need exact second precision,
-     // or we rely on re-renders via Realtime updates or local ticks.
-     // For safety, we return the calculation.
-  }, [profile, timeOffset]); // Dependent on profile changes. Note: Time flowing doesn't auto-update this memo without external tick.
+  const [isVerified, setIsVerified] = useState(false);
+  const [activePlan, setActivePlan] = useState<string | null>(null);
+
+  useEffect(() => {
+    const check = () => {
+      if (!profile?.is_verified) return false;
+      if (!profile.verified_until) return true;
+      return new Date(profile.verified_until) > getSecureNow();
+    };
+
+    const isCurrentlyVerified = check();
+    setIsVerified(isCurrentlyVerified);
+
+    if (profile?.active_plan) {
+      // If it's a test plan (starter/pro), it should expire with verification
+      const isTestPlan = ['scouting', 'casting', 'starter', 'pro'].includes(profile.active_plan.toLowerCase());
+      if (isTestPlan) {
+        setActivePlan(isCurrentlyVerified ? profile.active_plan : null);
+      } else {
+        setActivePlan(profile.active_plan);
+      }
+    } else {
+      setActivePlan(null);
+    }
+
+    if (profile?.is_verified && profile.verified_until) {
+      const remaining = new Date(profile.verified_until).getTime() - getSecureNow().getTime();
+      if (remaining > 0) {
+        const timer = setTimeout(() => {
+          setIsVerified(false);
+          // Also update activePlan if it was a test plan
+          const isTestPlan = profile.active_plan && ['scouting', 'casting', 'starter', 'pro'].includes(profile.active_plan.toLowerCase());
+          if (isTestPlan) {
+            setActivePlan(null);
+          }
+        }, remaining + 100); 
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [profile, timeOffset]);
   
   // Actually, exposes a function is better for real-time checks in components
   const checkIsVerified = () => {
@@ -165,7 +195,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const isAdmin = profile?.role?.toLowerCase() === 'admin';
 
   return (
-    <AuthContext.Provider value={{ user, session, profile, loading, signOut, isAdmin, refreshProfile, getSecureNow }}>
+    <AuthContext.Provider value={{ user, session, profile, loading, signOut, isAdmin, isVerified, activePlan, refreshProfile, getSecureNow }}>
       {children}
     </AuthContext.Provider>
   );

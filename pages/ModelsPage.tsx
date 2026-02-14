@@ -1,8 +1,9 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useModels } from "../hooks/useModels";
 import ModelCard from "../components/ModelCard";
+import { supabase } from "../lib/supabase";
 
 const ModelsPage: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -11,6 +12,7 @@ const ModelsPage: React.FC = () => {
   const navigate = useNavigate();
   const { getAllModels, loading } = useModels();
   const [allModels, setAllModels] = useState<any[]>([]);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const fetch = async () => {
@@ -18,6 +20,18 @@ const ModelsPage: React.FC = () => {
       setAllModels(data);
     };
     fetch();
+
+    // Subscribe to real-time changes
+    const channel = supabase
+      .channel('models_catalog_realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'models' }, () => {
+        fetch();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [getAllModels]);
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -147,7 +161,7 @@ const ModelsPage: React.FC = () => {
             />
           </svg>
         ),
-        img: "/Site_Pics/All_models/Models_Cover.png",
+        img: "/Site_Pics/All_models/Models_Cover.jpeg",
         shadow: "group-hover:shadow-[0_0_30px_rgba(255,255,255,0.1)]",
       },
     ],
@@ -162,6 +176,19 @@ const ModelsPage: React.FC = () => {
   const handleFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFilters((prev) => ({ ...prev, [name]: value }));
+    // Dismiss keyboard/highlight if search was focused
+    searchInputRef.current?.blur();
+  };
+
+  const handleSearchFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      setTimeout(() => {
+        e.target.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center'
+        });
+      }, 500); // Give the keyboard a bit more time to appear fully
+    }
   };
 
   const uniqueValues = useMemo(() => {
@@ -240,12 +267,12 @@ const ModelsPage: React.FC = () => {
     const attrKey = translationKeyMap[name] || name;
 
     return (
-      <div className="relative group">
+      <div className="relative flex-1">
         <select
           name={name}
           value={filters[name as keyof typeof filters]}
           onChange={handleFilterChange}
-          className="bg-transparent border-0 border-b border-white/20 text-text-primary text-xs md:text-sm uppercase tracking-widest focus:ring-0 focus:border-gold-accent block w-full px-0 py-3 transition-all duration-300 cursor-pointer hover:border-white/40"
+          className="bg-transparent border-0 border-b border-white/20 text-text-primary text-xs md:text-sm uppercase tracking-widest focus:ring-0 focus:border-gold-accent block w-full px-0 py-3 cursor-pointer hover:border-white/40 appearance-none pr-6"
         >
           <option value="All" className="bg-background text-text-primary">
             {label}
@@ -260,7 +287,11 @@ const ModelsPage: React.FC = () => {
             </option>
           ))}
         </select>
-        <div className="absolute bottom-0 left-0 w-0 h-[1px] bg-gold-accent transition-all duration-500 group-hover:w-full opacity-0 group-hover:opacity-100" />
+        <div className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none opacity-40">
+          <svg className="w-3 h-3 text-text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
       </div>
     );
   };
@@ -358,38 +389,46 @@ const ModelsPage: React.FC = () => {
               <div className="flex flex-col gap-6">
                 <div className="relative group w-full">
                   <input
+                    ref={searchInputRef}
+                    id="search-input"
                     type="text"
                     placeholder={t("models.search_placeholder")}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
+                    onFocus={handleSearchFocus}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        (e.target as HTMLInputElement).blur();
+                      }
+                    }}
                     className="bg-transparent border-0 border-b border-white/10 text-text-primary text-xs md:text-sm uppercase tracking-[0.2em] focus:ring-0 focus:border-gold-accent block w-full px-0 py-4 transition-all duration-300 placeholder:text-text-muted/40"
                   />
-                  <div className="absolute bottom-0 left-0 w-0 h-[1px] bg-gold-accent transition-all duration-500 group-hover:w-full opacity-0 group-hover:opacity-100" />
+                  <div className="absolute bottom-0 left-0 w-0 h-[1px] bg-gold-accent transition-all duration-500 md:group-hover:w-full opacity-0 md:group-hover:opacity-100 hidden md:block" />
                 </div>
 
-                <div className="flex overflow-x-auto no-scrollbar pb-2 md:grid md:grid-cols-4 gap-6">
-                  <div className="min-w-[140px] md:min-w-0 flex-shrink-0">
+                <div className="flex overflow-x-auto scrollbar-premium pb-6 md:grid md:grid-cols-4 gap-6">
+                  <div className="min-w-[160px] md:min-w-0 flex-shrink-0">
                     <FilterSelect
                       name="category"
                       label={t("models.all_categories")}
                       options={uniqueValues.categories}
                     />
                   </div>
-                  <div className="min-w-[140px] md:min-w-0 flex-shrink-0">
+                  <div className="min-w-[160px] md:min-w-0 flex-shrink-0">
                     <FilterSelect
                       name="location"
                       label={t("models.all_locations")}
                       options={uniqueValues.locations}
                     />
                   </div>
-                  <div className="min-w-[140px] md:min-w-0 flex-shrink-0">
+                  <div className="min-w-[160px] md:min-w-0 flex-shrink-0">
                     <FilterSelect
                       name="hairColor"
                       label={t("models.all_hair")}
                       options={uniqueValues.hairColors}
                     />
                   </div>
-                  <div className="min-w-[140px] md:min-w-0 flex-shrink-0">
+                  <div className="min-w-[160px] md:min-w-0 flex-shrink-0">
                     <FilterSelect
                       name="eyeColor"
                       label={t("models.all_eyes")}

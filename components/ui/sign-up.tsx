@@ -28,6 +28,8 @@ interface SignUpPageProps {
   description?: React.ReactNode;
   heroImageSrc?: string;
   heroImagePosition?: string;
+  mobileHeroImageSrc?: string;
+  mobileHeroImagePosition?: string;
   testimonials?: Testimonial[];
   onSignUp?: (event: React.FormEvent<HTMLFormElement>) => void;
   onGoogleSignUp?: () => void;
@@ -60,6 +62,8 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
   description,
   heroImageSrc,
   heroImagePosition = "center 40%", // Default to faces, can be overridden
+  mobileHeroImageSrc,
+  mobileHeroImagePosition,
   testimonials = [],
   onSignUp,
   onGoogleSignUp,
@@ -72,14 +76,21 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
   const displayDescription = description || t('auth.register_subtitle');
 
   const handleFocus = (e: React.FocusEvent) => {
+    // Only scroll into view on mobile devices to prevent keyboard overlap
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
+    if (!isMobile) return;
+
     setTimeout(() => {
-      (e.target as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'center' });
+      (e.target as HTMLElement).scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
     }, 300);
   };
 
   return (
-    <div className="min-h-[100dvh] flex flex-col md:flex-row w-full bg-background relative overflow-x-hidden">
-      <section className="flex-1 flex items-start md:items-center justify-center p-8 pt-24 md:pt-8 z-10 overflow-y-auto">
+    <div className="min-h-[100dvh] flex flex-col-reverse md:flex-row w-full bg-background relative overflow-x-hidden">
+      <section className="flex-1 flex items-start md:items-center justify-center p-8 pt-8 md:pt-8 z-10">
         <div className="w-full max-w-sm">
           <div className="flex flex-col gap-6">
             <motion.div 
@@ -164,15 +175,15 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
         </div>
       </section>
 
-      {/* Right column: hero image + testimonials */}
+      {/* Right column on desktop / Top card on mobile: hero image + testimonials */}
       {heroImageSrc && (
-        <section className="hidden md:block flex-1 relative p-6">
+        <section className="relative p-4 pt-24 md:pt-6 md:p-6 md:flex-1 h-[320px] md:h-auto flex-shrink-0 overflow-hidden">
           <motion.div 
             layoutId="auth-hero-container"
-            className="absolute inset-0 bg-cover" 
+            className="absolute inset-4 md:inset-0 bg-cover bg-center rounded-[2rem] md:rounded-none overflow-hidden" 
             style={{ 
-              backgroundImage: `url("${heroImageSrc}")`,
-              backgroundPosition: heroImagePosition
+              backgroundImage: `url("${mobileHeroImageSrc && typeof window !== 'undefined' && window.innerWidth < 768 ? mobileHeroImageSrc : heroImageSrc}")`,
+              backgroundPosition: mobileHeroImagePosition && typeof window !== 'undefined' && window.innerWidth < 768 ? mobileHeroImagePosition : heroImagePosition || heroImagePosition
             }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -185,23 +196,23 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
               initial={{ opacity: 0, y: 50 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 1.2, duration: 1 }}
-              className="absolute bottom-0 left-0 right-0 h-[22%] bg-surface/30 backdrop-blur-2xl border-t border-white/10 flex items-center justify-center overflow-visible select-none"
+              className="absolute bottom-0 left-0 right-0 h-[50%] md:h-[22%] bg-surface/30 backdrop-blur-2xl border-t border-white/10 flex items-center justify-center overflow-visible select-none"
             >
-              <div className="flex flex-col items-start px-12 md:px-24 relative z-10 w-full">
-                <span className="text-[10px] uppercase tracking-[0.5em] text-gold-accent mb-3 block font-bold opacity-90">
+              <div className="flex flex-col items-start px-6 md:px-24 relative z-10 w-full">
+                <span className="text-[9px] md:text-[10px] uppercase tracking-[0.3em] md:tracking-[0.5em] text-gold-accent mb-1 md:mb-3 block font-bold opacity-90">
                   MaxiNutrition
                 </span>
-                <h3 className="text-text-primary font-serif text-3xl md:text-4xl mb-4 leading-none tracking-tight">
+                <h3 className="text-text-primary font-serif text-xl md:text-4xl mb-1 md:mb-4 leading-none tracking-tight">
                   Classic Protein Bars
                 </h3>
-                <div className="flex flex-wrap gap-x-8 gap-y-2 text-[10px] uppercase tracking-[0.2em] text-gold-accent font-bold mb-6">
+                <div className="hidden md:flex flex-wrap gap-x-4 md:gap-x-8 gap-y-2 text-[9px] md:text-[10px] uppercase tracking-[0.2em] text-gold-accent font-bold mb-4 md:mb-6">
                   <span className="flex items-center gap-2">20G Protein</span>
-                  <span className="w-1.5 h-1.5 rounded-full bg-gold-accent/40 self-center"></span>
+                  <span className="w-1 h-1 md:w-1.5 md:h-1.5 rounded-full bg-gold-accent/40 self-center"></span>
                   <span className="flex items-center gap-2">Low Sugar</span>
-                  <span className="w-1.5 h-1.5 rounded-full bg-gold-accent/40 self-center"></span>
+                  <span className="w-1 h-1 md:w-1.5 md:h-1.5 rounded-full bg-gold-accent/40 self-center"></span>
                   <span className="flex items-center gap-2">145 Kcal</span>
                 </div>
-                <p className="text-white/80 text-sm md:text-[13px] font-medium leading-[1.4] max-w-[400px] italic drop-shadow-sm">
+                <p className="hidden md:block text-white/80 text-sm md:text-[13px] font-medium leading-[1.4] max-w-[400px] italic drop-shadow-sm">
                   "High-quality whey blend for muscle growth and maintenance. The perfect treat without the cheat."
                 </p>
               </div>
@@ -279,7 +290,7 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
             </motion.div>
           </motion.div>
           {testimonials.length > 0 && (
-            <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex gap-4 px-8 w-full justify-center">
+            <div className="hidden md:flex absolute bottom-12 left-1/2 -translate-x-1/2 gap-4 px-8 w-full justify-center">
               <TestimonialCard testimonial={testimonials[0]} index={0} />
             </div>
           )}

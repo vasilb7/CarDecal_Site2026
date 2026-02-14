@@ -73,6 +73,7 @@ const RegisterPage: React.FC = () => {
   return (
     <SignUpPage
       heroImageSrc="/Site_Pics/LogReg/Registration.jpeg"
+      mobileHeroImagePosition="center 10%"
       testimonials={sampleTestimonials}
       onSignUp={handleSignUp}
       onGoogleSignUp={handleGoogleSignUp}
