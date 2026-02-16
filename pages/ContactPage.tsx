@@ -1,8 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import { InstagramIcon, TwitterIcon, LinkedInIcon } from "../components/IconComponents";
 import { useToast } from "../hooks/useToast";
+import { settingsService } from "../lib/settingsService";
+import { supabase } from "../lib/supabase";
 
 const UnderlinedInput: React.FC<{
     id: string;
@@ -57,6 +59,24 @@ const ContactPage: React.FC = () => {
     const { t, i18n } = useTranslation();
     const { showToast } = useToast();
     const [form, setForm] = useState({ name: "", email: "", message: "" });
+    const [bgImage, setBgImage] = useState("");
+
+    useEffect(() => {
+        const loadBg = async () => {
+            const bgs = await settingsService.getPageBackgrounds();
+            setBgImage(bgs.bg_contact);
+        };
+        loadBg();
+
+        const channel = supabase
+            .channel('contact_bg_changes')
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'site_settings' }, (payload: any) => {
+                if (payload.new.key === 'bg_contact') setBgImage(payload.new.value);
+            })
+            .subscribe();
+
+        return () => { supabase.removeChannel(channel); };
+    }, []);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -78,7 +98,7 @@ const ContactPage: React.FC = () => {
                 >
                      <div 
                         className="absolute inset-0 bg-cover bg-left"
-                        style={{ backgroundImage: `url("/Site_Pics/Contact_Page/VB.png")` }} // Using a premium model image
+                        style={{ backgroundImage: `url("${bgImage}")` }} // Using a premium model image
                     >
                         {/* Overlay to blend with dark theme if needed, or keep raw for contrast */}
                         <div className="absolute inset-0 bg-black/10" /> 

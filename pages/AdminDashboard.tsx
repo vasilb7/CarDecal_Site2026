@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SpotlightCropModal } from '../components/SpotlightCropModal';
 import { ExpandingMenu, MenuItem } from '../components/ExpandingMenu';
@@ -35,12 +35,14 @@ import {
   Briefcase,
   FileImage,
   MessageSquare,
+  Palette,
   CreditCard,
   Clapperboard,
+  Calendar,
   TrendingUp,
+  Video,
   DollarSign,
   Activity,
-  Calendar,
   UserPlus,
   ChevronRight,
   ArrowLeft,
@@ -48,9 +50,11 @@ import {
   Gift,
   TreePine,
   Heart,
+  Sparkles,
   Snowflake,
   Tag,
-  Percent
+  Percent,
+  Zap
 } from 'lucide-react';
 import { adminService } from '../lib/adminService';
 import { modelsService } from '../lib/modelsService';
@@ -63,6 +67,10 @@ import { dashboardService } from '../lib/dashboardService';
 
 
 
+const sanitizeFileName = (name: string) => {
+  return name.replace(/[^a-zA-Z0-9.-]/g, '_');
+};
+
 const AdminDashboard: React.FC = () => {
   const { t, i18n } = useTranslation();
   const { showToast } = useToast();
@@ -71,8 +79,9 @@ const AdminDashboard: React.FC = () => {
   // State
   const [models, setModels] = useState<Model[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'models' | 'castings' | 'clients' | 'content' | 'communication' | 'finance' | 'settings'>(() => {
-    return (localStorage.getItem('admin_active_tab') as any) || 'models';
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'models' | 'spotlight' | 'events' | 'lookbook' | 'design' | 'system'>(() => {
+    const saved = localStorage.getItem('admin_active_tab') as any;
+    return (saved === 'hero' ? 'events' : saved) || 'models';
   });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingModel, setEditingModel] = useState<Model | null>(null);
@@ -115,19 +124,97 @@ const AdminDashboard: React.FC = () => {
   const [isModelBgUploading, setIsModelBgUploading] = useState(false);
   const [heroVideoUrl, setHeroVideoUrl] = useState('');
   const [heroGrayscale, setHeroGrayscale] = useState(true);
+  const [heroBlur, setHeroBlur] = useState(0);
+  const [heroBrightness, setHeroBrightness] = useState(100);
+  const [heroContrast, setHeroContrast] = useState(100);
+  const [heroSaturation, setHeroSaturation] = useState(100);
+  const [isHeroVideoUploading, setIsHeroVideoUploading] = useState(false);
   const [isSavingHero, setIsSavingHero] = useState(false);
+  const [heroTitleBg, setHeroTitleBg] = useState('VB VISION');
+  const [heroTitleEn, setHeroTitleEn] = useState('VB VISION');
+  const [heroSubtitleBg, setHeroSubtitleBg] = useState('Твоето лице. Твоят бранд. Твоята кариера.');
+  const [heroSubtitleEn, setHeroSubtitleEn] = useState('Your Face. Your Brand. Your Career.');
+
 
   // Promo State
   const [activePromo, setActivePromo] = useState<string>('none');
+  const [promoEndTime, setPromoEndTime] = useState('');
   const [isSavingPromo, setIsSavingPromo] = useState(false);
 
+  const [pricingBgStandard, setPricingBgStandard] = useState('');
+  const [pricingBgValentines, setPricingBgValentines] = useState('');
+  const [pricingBgChristmas, setPricingBgChristmas] = useState('');
+  const [pricingBgPhotoshoot, setPricingBgPhotoshoot] = useState('');
+  const [isPricingBgUploading, setIsPricingBgUploading] = useState(false);
+  const [pricingTypeStandard, setPricingTypeStandard] = useState<'image' | 'video'>('image');
+  const [pricingTypeValentines, setPricingTypeValentines] = useState<'image' | 'video'>('image');
+  const [pricingTypeChristmas, setPricingTypeChristmas] = useState<'image' | 'video'>('image');
+  const [pricingTypePhotoshoot, setPricingTypePhotoshoot] = useState<'image' | 'video'>('image');
+
+  // Page Backgrounds State
+  const [bgAbout1, setBgAbout1] = useState('');
+  const [bgAbout2, setBgAbout2] = useState('');
+  const [bgServices1, setBgServices1] = useState('');
+  const [bgServices2, setBgServices2] = useState('');
+  const [bgServices3, setBgServices3] = useState('');
+  const [bgContact, setBgContact] = useState('');
+  const [bgBlog, setBgBlog] = useState('');
+  const [isPageBgUploading, setIsPageBgUploading] = useState(false);
+  const [pageBgToCrop, setPageBgToCrop] = useState<string | null>(null);
+  const [activePageBgKey, setActivePageBgKey] = useState<string>('');
+  const [lookbookImages, setLookbookImages] = useState<string[]>([]);
+  const [lookbookToCrop, setLookbookToCrop] = useState<string | null>(null);
+  const [lookbookEditIndex, setLookbookEditIndex] = useState<number>(-1);
+  const [isLookbookSaving, setIsLookbookSaving] = useState(false);
+  const [fastDelete, setFastDelete] = useState(false);
+  
+
+  const [lookbookTitleBg, setLookbookTitleBg] = useState('Lookbook Витрина');
+  const [lookbookTitleEn, setLookbookTitleEn] = useState('Lookbook Showcase');
+  const [lookbookDescBg, setLookbookDescBg] = useState('');
+  const [lookbookDescEn, setLookbookDescEn] = useState('');
+  const [lookbookFont, setLookbookFont] = useState('Playfair Display');
+  const [lookbookDescFont, setLookbookDescFont] = useState('Inter');
+  const [lookbookStartDate, setLookbookStartDate] = useState('');
+  const [lookbookEndDate, setLookbookEndDate] = useState('');
+  const [lookbookIsPermanent, setLookbookIsPermanent] = useState(false);
+  const [lookbookPresets, setLookbookPresets] = useState<any[]>([]);
+  const [editingPresetId, setEditingPresetId] = useState<string | null>(null);
+  const [draggedImageIndex, setDraggedImageIndex] = useState<number | null>(null);
+  
+  // Connector State
+  const [showConnector, setShowConnector] = useState(false);
+  const [connectorPresetA, setConnectorPresetA] = useState('');
+  const [connectorPresetB, setConnectorPresetB] = useState('');
+  const [connectorDuration, setConnectorDuration] = useState(30);
+
   // Announcement State
-  const [announcement, setAnnouncement] = useState({ text: '', active: false });
+  const [announcement, setAnnouncement] = useState({ 
+    text_bg: '', 
+    text_en: '',
+    active: false,
+    buttonText_bg: '',
+    buttonText_en: '',
+    buttonLink: '',
+    buttonType: 'internal' as 'internal' | 'external',
+    customSvg: '',
+    iconColor: '#3b82f6',
+    buttonColor: '#3b82f6',
+    textColor: '#ffffff',
+    iconSize: 14,
+    buttonTextColor: '#000000',
+    bannerColor: '#09090b',
+    bannerColor2: '#09090b',
+    bannerGradient: false,
+    buttonFontSize: 9
+  });
   const [isSavingAnnouncement, setIsSavingAnnouncement] = useState(false);
 
   // Pricing Config State
   const [pricingConfig, setPricingConfig] = useState<any>(settingsService.getDefaultPricingConfig());
   const [isSavingPricing, setIsSavingPricing] = useState(false);
+
+
 
   const handleResetDatabase = async () => {
     if (!window.confirm("WARNING: ALL MODELS WILL BE DELETED AND RE-UPLOADED FROM SITE_PICS. CONTINUE?")) return;
@@ -178,6 +265,111 @@ const AdminDashboard: React.FC = () => {
     type: 'info'
   });
 
+  const handleHeroVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Extra validation: ensure it's actually a video
+    if (!file.type.startsWith('video/')) {
+      showToast('Please select a valid video file.', 'error');
+      if (e.target) e.target.value = '';
+      return;
+    }
+
+    // Optional: restrict to specific formats
+    const allowedExtensions = ['.mp4', '.webm', '.ogg'];
+    const fileName = file.name.toLowerCase();
+    const hasValidExtension = allowedExtensions.some(ext => fileName.endsWith(ext));
+    
+    if (!hasValidExtension) {
+      showToast('Supported formats: MP4, WebM, Ogg', 'error');
+      if (e.target) e.target.value = '';
+      return;
+    }
+
+    try {
+      setIsHeroVideoUploading(true);
+      
+      // 1. Get current URL to potentially delete
+      const currentUrl = heroVideoUrl;
+
+      const now = Date.now();
+      const path = `site_assets/hero_video_${now}_${sanitizeFileName(file.name)}`;
+      const publicUrl = await modelsService.uploadFile(file, path);
+      
+      // Update state and DB
+      setHeroVideoUrl(publicUrl);
+      await settingsService.setHeroSetting('hero_video_url', publicUrl);
+      
+      // 2. Delete old file if it was a user upload
+      if (currentUrl && !currentUrl.includes('Site_Pics/')) {
+        await modelsService.deleteFile(currentUrl);
+      }
+
+      showToast('Video uploaded successfully!', 'success');
+    } catch (err: any) {
+      showToast(err.message, 'error');
+    } finally {
+      setIsHeroVideoUploading(false);
+      if (e.target) e.target.value = '';
+    }
+  };
+
+  const handlePricingBgUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'standard' | 'valentines' | 'christmas' | 'photoshoot') => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsPricingBgUploading(true);
+      const isVideo = file.type.startsWith('video/');
+      
+      // 1. Get current URL to potentially delete
+      let currentUrl = '';
+      if (type === 'standard') currentUrl = pricingBgStandard;
+      if (type === 'valentines') currentUrl = pricingBgValentines;
+      if (type === 'christmas') currentUrl = pricingBgChristmas;
+      if (type === 'photoshoot') currentUrl = pricingBgPhotoshoot;
+
+      const now = Date.now();
+      const path = `site_assets/pricing_bg_${type}_${now}_${sanitizeFileName(file.name)}`;
+      const publicUrl = await modelsService.uploadFile(file, path);
+      
+      const dbKey = `pricing_bg_${type}`;
+      await settingsService.setHeroSetting(dbKey, publicUrl);
+
+      const typeKey = `pricing_type_${type}`;
+      const newType = isVideo ? 'video' : 'image';
+      await settingsService.setHeroSetting(typeKey, newType);
+      
+      if (type === 'standard') { setPricingBgStandard(publicUrl); setPricingTypeStandard(newType); }
+      if (type === 'valentines') { setPricingBgValentines(publicUrl); setPricingTypeValentines(newType); }
+      if (type === 'christmas') { setPricingBgChristmas(publicUrl); setPricingTypeChristmas(newType); }
+      if (type === 'photoshoot') { setPricingBgPhotoshoot(publicUrl); setPricingTypePhotoshoot(newType); }
+      
+      // 2. Delete old file if it was a user upload
+      if (currentUrl && !currentUrl.includes('Site_Pics/')) {
+        await modelsService.deleteFile(currentUrl);
+      }
+
+      showToast('Background media uploaded!', 'success');
+    } catch (err: any) {
+      showToast(err.message, 'error');
+    } finally {
+      setIsPricingBgUploading(false);
+      if (e.target) e.target.value = '';
+    }
+  };
+
+  const handlePageBgUpload = async (e: React.ChangeEvent<HTMLInputElement>, key: string) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const url = URL.createObjectURL(file);
+    setPageBgToCrop(url);
+    setActivePageBgKey(key);
+    e.target.value = '';
+  };
+
   const AVAILABLE_CATEGORIES = [
     'Top Model', 'New Faces', 'Trending', 'Visiting', 'Young Talents',
     'Editorial', 'Runway', 'Commercial', 'Fashion'
@@ -198,30 +390,86 @@ const AdminDashboard: React.FC = () => {
         // Sync both naming conventions
         setEditCardImages(top.card_images || top.cardImages || []);
       }
-      
-      const [maintenance, message, endTime, updateText, hSettings, promo, ann] = await Promise.all([
+      const [maintenance, message, endTime, updateText, hSettings, promo, promoExpires, ann, pBgs, pSettings, pConfig, lbPresets] = await Promise.all([
         settingsService.getMaintenanceMode(),
         settingsService.getMaintenanceMessage(),
         settingsService.getMaintenanceEndTime(),
         settingsService.getMaintenanceUpdatesText(),
         settingsService.getHeroSettings(),
         settingsService.getActivePromo(),
-        settingsService.getAnnouncement()
+        settingsService.getPromoExpiration(),
+        settingsService.getAnnouncement(),
+        settingsService.getPageBackgrounds(),
+        settingsService.getPricingSettings(), 
+        settingsService.getPricingConfig(),
+        settingsService.getLookbookPresets()
       ]);
+
       setIsMaintenance(maintenance);
       setMaintenanceMessage(message);
       setMaintenanceEndTime(endTime || '');
       setMaintenanceUpdatesText(updateText);
+      
       setHeroType(hSettings.hero_type as any);
       setHeroImageUrl(hSettings.hero_image_url);
       setHeroVideoUrl(hSettings.hero_video_url);
       setHeroGrayscale(hSettings.hero_grayscale);
+      setHeroBlur(hSettings.hero_blur || 0);
+      setHeroBrightness(hSettings.hero_brightness || 100);
+      setHeroContrast(hSettings.hero_contrast || 100);
+      setHeroSaturation(hSettings.hero_saturation || 100);
+      setHeroTitleBg(hSettings.hero_title_bg || 'VB VISION');
+      setHeroTitleEn(hSettings.hero_title_en || 'VB VISION');
+      setHeroSubtitleBg(hSettings.hero_subtitle_bg || 'Твоето лице. Твоят бранд. Твоята кариера.');
+      setHeroSubtitleEn(hSettings.hero_subtitle_en || 'Your Face. Your Brand. Your Career.');
+      
       setActivePromo(promo);
+      setPromoEndTime(promoExpires || '');
       setAnnouncement(ann);
 
-      // Fetch pricing config
-      const pConfig = await settingsService.getPricingConfig();
+      setPricingBgStandard(pSettings.pricing_bg_standard);
+      setPricingBgValentines(pSettings.pricing_bg_valentines);
+      setPricingBgChristmas(pSettings.pricing_bg_christmas);
+      setPricingBgPhotoshoot(pSettings.pricing_bg_photoshoot || '');
+      // @ts-ignore
+      setPricingTypeStandard(pSettings.pricing_type_standard || 'image');
+      // @ts-ignore
+      setPricingTypeValentines(pSettings.pricing_type_valentines || 'image');
+      // @ts-ignore
+      setPricingTypeChristmas(pSettings.pricing_type_christmas || 'image');
+      // @ts-ignore
+      setPricingTypePhotoshoot(pSettings.pricing_type_photoshoot || 'image');
+
+      setBgAbout1(pBgs.bg_about_1);
+      setBgAbout2(pBgs.bg_about_2);
+      setBgServices1(pBgs.bg_services_1);
+      setBgServices2(pBgs.bg_services_2);
+      setBgServices3(pBgs.bg_services_3);
+      setBgContact(pBgs.bg_contact);
+      setBgBlog(pBgs.bg_blog);
+
       setPricingConfig(pConfig);
+        setLookbookPresets(lbPresets);
+        
+        setLoading(false);
+      
+      // Select first preset by default if none selected
+      if (lbPresets.length > 0) {
+        const p = lbPresets[0];
+        setEditingPresetId(p.id);
+        setLookbookImages(p.images || []);
+        setLookbookTitleBg(p.titleBg || '');
+        setLookbookTitleEn(p.titleEn || '');
+        setLookbookDescBg(p.descBg || '');
+        setLookbookDescEn(p.descEn || '');
+        setLookbookFont(p.font || 'Playfair Display');
+        setLookbookDescFont(p.descFont || 'Inter');
+        setLookbookStartDate(p.startDate || '');
+        setLookbookEndDate(p.endDate || '');
+        setLookbookIsPermanent(!!p.isPermanent);
+      }
+
+
     } catch (error: any) {
       showToast(error.message, 'error');
     } finally {
@@ -229,10 +477,247 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
+  // в•ђв•ђв•ђв•ђв•ђв•ђв•ђ LOOKBOOK PRESET HELPERS в•ђв•ђв•ђв•ђв•ђв•ђв•ђ
+
+  const handleCreatePreset = () => {
+    const newId = `preset_${Date.now()}`;
+    const newPreset = {
+      id: newId,
+      name: `New Preset ${lookbookPresets.length + 1}`,
+      images: [], 
+      titleBg: '',
+      titleEn: '',
+      descBg: '',
+      descEn: '',
+      font: 'Playfair Display',
+      descFont: 'Inter',
+      startDate: '',
+      endDate: '',
+      isPermanent: false
+    };
+    
+    // Set UI states to empty first, then set editing ID
+    setLookbookImages([]);
+    setLookbookTitleBg('');
+    setLookbookTitleEn('');
+    setLookbookDescBg('');
+    setLookbookDescEn('');
+    setLookbookFont('Playfair Display');
+    setLookbookDescFont('Inter');
+    
+    setLookbookPresets(prev => [...prev, newPreset]);
+    setEditingPresetId(newId);
+    showToast('Empty preset created!', 'success');
+  };
+
+  const handleDeletePreset = (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this preset?')) return;
+    const remaining = lookbookPresets.filter(p => p.id !== id);
+    setLookbookPresets(remaining);
+    
+    if (editingPresetId === id) {
+      if (remaining.length > 0) {
+        handleSwitchPreset(remaining[0].id);
+      } else {
+        setEditingPresetId(null);
+        setLookbookImages([]);
+        setLookbookTitleBg('');
+        setLookbookTitleEn('');
+        setLookbookDescBg('');
+        setLookbookDescEn('');
+        setLookbookFont('Playfair Display');
+        setLookbookDescFont('Inter');
+        setLookbookStartDate('');
+        setLookbookEndDate('');
+        setLookbookIsPermanent(false);
+      }
+    }
+    showToast('Preset removed. Save to apply changes.', 'info');
+  };
+
+  const handleSwitchPreset = (id: string) => {
+    const preset = lookbookPresets.find(p => p.id === id);
+    if (!preset) return;
+
+    setEditingPresetId(id);
+    setLookbookImages(preset.images || []);
+    setLookbookTitleBg(preset.titleBg || '');
+    setLookbookTitleEn(preset.titleEn || '');
+    setLookbookDescBg(preset.descBg || '');
+    setLookbookDescEn(preset.descEn || '');
+    setLookbookFont(preset.font || 'Playfair Display');
+    setLookbookDescFont(preset.descFont || 'Inter');
+    setLookbookStartDate(preset.startDate || '');
+    setLookbookEndDate(preset.endDate || '');
+    setLookbookIsPermanent(!!preset.isPermanent);
+  };
+
+
+
+  const handleUpdatePresetField = (id: string, field: string, value: any) => {
+    setLookbookPresets(prev => prev.map(p => p.id === id ? { ...p, [field]: value } : p));
+  };
+
+  const handleLaunchLookbookLive = async () => {
+    try {
+      setIsLookbookSaving(true);
+      const tasks: Promise<any>[] = [
+        settingsService.saveLookbookPresets(lookbookPresets)
+      ];
+
+      if (editingPresetId) {
+        const updatedPresets = lookbookPresets.map(p => p.id === editingPresetId ? {
+          ...p,
+          images: lookbookImages,
+          titleBg: lookbookTitleBg,
+          titleEn: lookbookTitleEn,
+          descBg: lookbookDescBg,
+          descEn: lookbookDescEn,
+          font: lookbookFont,
+          descFont: lookbookDescFont,
+          startDate: lookbookStartDate,
+          endDate: lookbookEndDate,
+          isPermanent: lookbookIsPermanent
+        } : p);
+        tasks[0] = settingsService.saveLookbookPresets(updatedPresets);
+        setLookbookPresets(updatedPresets);
+      }
+
+      await Promise.all(tasks);
+      showToast('Lookbook is now LIVE with the new schedule!', 'success');
+    } catch (e: any) {
+      showToast(e.message, 'error');
+    } finally {
+      setIsLookbookSaving(false);
+    }
+  };
+
+  const handleConnectorApply = async () => {
+    if (!connectorPresetA || !connectorPresetB) {
+      showToast('Please select two presets to connect.', 'error');
+      return;
+    }
+    
+    setIsLookbookSaving(true);
+    try {
+      const now = new Date();
+      // Step 1: Preset A runs from NOW to NOW + Duration
+      const timeA_end = new Date(now.getTime() + connectorDuration * 1000);
+      
+      // Step 2: Preset B starts immediately after A and stays active (simulated permanent by long duration)
+      const timeB_start = timeA_end;
+      const timeB_end = new Date(timeB_start.getTime() + 365 * 24 * 60 * 60 * 1000); // 1 year active
+
+      const format = (d: Date) => {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const hours = String(d.getHours()).padStart(2, '0');
+        const minutes = String(d.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+      };
+
+      // Prepare updates
+      let updatedPresets = [...lookbookPresets];
+
+      // Helper to update preset by ID
+      const updatePreset = (id: string, start: string, end: string) => {
+         updatedPresets = updatedPresets.map(p => p.id === id ? { ...p, startDate: start, endDate: end, isPermanent: false } : p);
+      };
+
+      // Process "Start With" (A)
+      updatePreset(connectorPresetA, format(now), format(timeA_end));
+
+      // Process "Transition To" (B)
+      updatePreset(connectorPresetB, format(timeB_start), format(timeB_end));
+
+      const tasks = [];
+      tasks.push(settingsService.saveLookbookPresets(updatedPresets));
+      
+      await Promise.all(tasks);
+      setLookbookPresets(updatedPresets);
+      
+      setShowConnector(false);
+      showToast(`Connector Launch: ${connectorDuration}s transition initiated!`, 'success');
+
+      // Refresh current view if we are editing one of the affected presets
+      if (editingPresetId) {
+         // Check if currently editing one of the involved presets
+         if (editingPresetId === connectorPresetA || editingPresetId === connectorPresetB) {
+            const p = updatedPresets.find(x => x.id === editingPresetId);
+            if (p) {
+               setLookbookStartDate(p.startDate);
+               setLookbookEndDate(p.endDate);
+               setLookbookIsPermanent(false);
+            }
+         }
+      }
+      
+    } catch (e: any) {
+      showToast(e.message, 'error');
+    } finally {
+      setIsLookbookSaving(false);
+    }
+  };
+
+  const handleClearLookbookSchedule = async () => {
+    if (!confirm('Are you sure you want to clear ALL schedules? This will stop upcoming transitions for every preset.')) return;
+
+    try {
+      setIsLookbookSaving(true);
+      
+      // 1. Clear All Presets Schedules
+      const updatedPresets = lookbookPresets.map(p => ({ 
+        ...p, 
+        startDate: '', 
+        endDate: '', 
+        isPermanent: false 
+      }));
+      
+      await settingsService.saveLookbookPresets(updatedPresets);
+      setLookbookPresets(updatedPresets);
+      
+      // 3. Update Local State (if viewing a preset, clear its date fields visually)
+      if (editingPresetId !== null) {
+         setLookbookStartDate('');
+         setLookbookEndDate('');
+         setLookbookIsPermanent(false);
+      }
+
+      
+      showToast('All schedules cleared successfully!', 'success');
+    } catch (e: any) {
+      showToast(e.message, 'error');
+    } finally {
+      setIsLookbookSaving(false);
+    }
+  };
+
   // Persistence effects
   useEffect(() => {
     localStorage.setItem('admin_active_tab', activeTab);
   }, [activeTab]);
+
+  // Sync edits to current preset
+  useEffect(() => {
+    if (editingPresetId) {
+      setLookbookPresets(prev => prev.map(p => p.id === editingPresetId ? {
+        ...p,
+        images: lookbookImages,
+        titleBg: lookbookTitleBg,
+        titleEn: lookbookTitleEn,
+        descBg: lookbookDescBg,
+        descEn: lookbookDescEn,
+        font: lookbookFont,
+        descFont: lookbookDescFont,
+        startDate: lookbookStartDate,
+        endDate: lookbookEndDate,
+        isPermanent: lookbookIsPermanent
+      } : p));
+    }
+  }, [lookbookImages, lookbookTitleBg, lookbookTitleEn, lookbookDescBg, lookbookDescEn, lookbookFont, lookbookDescFont, lookbookStartDate, lookbookEndDate, lookbookIsPermanent, editingPresetId]);
+
+
 
   useEffect(() => {
     localStorage.setItem('admin_search', searchTerm);
@@ -252,12 +737,57 @@ const AdminDashboard: React.FC = () => {
         if (key === 'hero_image_url') setHeroImageUrl(value);
         if (key === 'hero_video_url') setHeroVideoUrl(value);
         if (key === 'hero_grayscale') setHeroGrayscale(value === 'true');
+        if (key === 'hero_blur') setHeroBlur(parseInt(value || '0'));
+        if (key === 'hero_brightness') setHeroBrightness(parseInt(value || '100'));
+        if (key === 'hero_contrast') setHeroContrast(parseInt(value || '100'));
+        if (key === 'hero_saturation') setHeroSaturation(parseInt(value || '100'));
+        if (key === 'hero_title_bg') setHeroTitleBg(value);
+        if (key === 'hero_title_en') setHeroTitleEn(value);
+        if (key === 'hero_subtitle_bg') setHeroSubtitleBg(value);
+        if (key === 'hero_subtitle_en') setHeroSubtitleEn(value);
+
         if (key === 'active_promo') setActivePromo(value || 'none');
+        if (key === 'active_promo_expires_at') setPromoEndTime(value || '');
+        if (key === 'pricing_bg_standard') setPricingBgStandard(value);
+        if (key === 'pricing_bg_valentines') setPricingBgValentines(value);
+        if (key === 'pricing_bg_christmas') setPricingBgChristmas(value);
+        if (key === 'pricing_type_standard') setPricingTypeStandard(value as any);
+        if (key === 'pricing_type_valentines') setPricingTypeValentines(value as any);
+        if (key === 'pricing_type_christmas') setPricingTypeChristmas(value as any);
+        if (key === 'pricing_type_photoshoot') setPricingTypePhotoshoot(value as any);
+        if (key === 'bg_about_1') setBgAbout1(value);
+        if (key === 'bg_about_2') setBgAbout2(value);
+        if (key === 'bg_services_1') setBgServices1(value);
+        if (key === 'bg_services_2') setBgServices2(value);
+        if (key === 'bg_services_3') setBgServices3(value);
+        if (key === 'bg_contact') setBgContact(value);
         if (key === 'site_announcement') {
           try { setAnnouncement(JSON.parse(value)); } catch {}
         }
         if (key === 'pricing_config') {
           try { setPricingConfig(JSON.parse(value)); } catch {}
+        }
+        if (key === 'lookbook_presets') {
+          try { 
+            const presets = JSON.parse(value);
+            setLookbookPresets(presets);
+            // If currently editing a preset that was updated, refresh the form
+            if (editingPresetId) {
+              const current = presets.find((p: any) => p.id === editingPresetId);
+              if (current) {
+                setLookbookImages(current.images || []);
+                setLookbookTitleBg(current.titleBg || '');
+                setLookbookTitleEn(current.titleEn || '');
+                setLookbookDescBg(current.descBg || '');
+                setLookbookDescEn(current.descEn || '');
+                setLookbookFont(current.font || 'Playfair Display');
+                setLookbookDescFont(current.descFont || 'Inter');
+                setLookbookStartDate(current.startDate || '');
+                setLookbookEndDate(current.endDate || '');
+                setLookbookIsPermanent(!!current.isPermanent);
+              }
+            }
+          } catch {}
         }
       })
       .subscribe();
@@ -303,6 +833,31 @@ const AdminDashboard: React.FC = () => {
 
     return () => clearInterval(timer);
   }, [isMaintenance, maintenanceEndTime]);
+
+  // Automatic Promo Turn-off when timer expires
+  useEffect(() => {
+    if (activePromo === 'none' || !promoEndTime) return;
+
+    const timer = setInterval(async () => {
+      const endsAt = new Date(promoEndTime).getTime();
+      const now = new Date().getTime();
+
+      if (now > endsAt) {
+        clearInterval(timer);
+        try {
+          await settingsService.setActivePromo('none');
+          await settingsService.setPromoExpiration('');
+          setActivePromo('none');
+          setPromoEndTime('');
+          showToast('Promotion period expired. Setting updated to NONE.', 'success');
+        } catch (e) {
+          console.error('Error auto-disabling promo:', e);
+        }
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [activePromo, promoEndTime]);
 
   useEffect(() => {
     localStorage.setItem('admin_filter_cat', filterCategory);
@@ -406,7 +961,7 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
-  // Sync Spotlight Editor Fields — only when the selected model changes
+  // Sync Spotlight Editor Fields вЂ” only when the selected model changes
   const prevTopModelIdRef = React.useRef<string>('');
   useEffect(() => {
     if (!selectedTopModelId || !models.length) return;
@@ -470,67 +1025,40 @@ const AdminDashboard: React.FC = () => {
             <h1 className="text-sm font-bold uppercase tracking-[0.3em] text-white">Agency <span className="text-gold-accent">Admin</span></h1>
           </div>
           
-          <ExpandingMenu 
-            className="ml-8"
-            items={[
-              {
-                id: 'dashboard',
-                label: 'Dashboard',
-                icon: <LayoutDashboard size={18} />,
-                active: activeTab === 'dashboard',
-                onClick: () => setActiveTab('dashboard')
-              },
-              {
-                id: 'models',
-                label: 'Models',
-                icon: <Users size={18} />,
-                active: activeTab === 'models',
-                onClick: () => setActiveTab('models')
-              },
-              {
-                id: 'castings',
-                label: 'Castings',
-                icon: <Clapperboard size={18} />,
-                active: activeTab === 'castings',
-                onClick: () => setActiveTab('castings')
-              },
-              {
-                id: 'clients',
-                label: 'Clients',
-                icon: <Briefcase size={18} />,
-                active: activeTab === 'clients',
-                onClick: () => setActiveTab('clients')
-              },
-              {
-                id: 'content',
-                label: 'Content',
-                icon: <FileImage size={18} />,
-                active: activeTab === 'content',
-                onClick: () => setActiveTab('content')
-              },
-              {
-                id: 'communication',
-                label: 'Communication',
-                icon: <MessageSquare size={18} />,
-                active: activeTab === 'communication',
-                onClick: () => setActiveTab('communication')
-              },
-              {
-                id: 'finance',
-                label: 'Finance',
-                icon: <CreditCard size={18} />,
-                active: activeTab === 'finance',
-                onClick: () => setActiveTab('finance')
-              },
-              {
-                id: 'settings',
-                label: 'Settings',
-                icon: <Settings size={18} />,
-                active: activeTab === 'settings',
-                onClick: () => setActiveTab('settings')
-              }
-            ]} 
-          />
+          <nav className="flex items-center gap-1 ml-8 overflow-x-auto pb-1 no-scrollbar max-w-[calc(100vw-400px)]">
+            {[
+              { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+              { id: 'models', label: 'Profiles', icon: Users },
+              { id: 'spotlight', label: 'Spotlight', icon: Star },
+
+              { id: 'events', label: 'Events', icon: Calendar },
+              { id: 'lookbook', label: 'Lookbook', icon: ImageIcon },
+              { id: 'design', label: 'Design', icon: Sparkles },
+              { id: 'system', label: 'System', icon: Settings },
+
+            ].map((item) => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id;
+              
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setActiveTab(item.id as any)}
+                  className={`
+                    flex items-center gap-2 px-3 py-2 rounded-lg transition-all group shrink-0
+                    ${isActive 
+                      ? 'bg-white text-black' 
+                      : 'text-white/40 hover:text-white hover:bg-white/5'}
+                  `}
+                >
+                  <Icon className={`w-4 h-4 ${isActive ? 'text-black' : 'group-hover:text-white transition-colors'}`} />
+                  <span className={`text-[10px] font-bold uppercase tracking-widest ${isActive ? 'text-black' : ''}`}>
+                    {item.label}
+                  </span>
+                </button>
+              );
+            })}
+          </nav>
         </div>
 
         <div className="flex items-center gap-4">
@@ -589,10 +1117,10 @@ const AdminDashboard: React.FC = () => {
               {/* Quick Actions Toolbar */}
               <div className="flex items-center gap-3 py-3 overflow-x-auto custom-scrollbar">
                 {[
-                  { label: 'Create Casting', icon: <Plus size={14} />, action: () => setActiveTab('castings') },
+                  { label: 'Manage Events', icon: <Calendar size={14} />, action: () => setActiveTab('events') },
                   { label: 'Invite Models', icon: <UserPlus size={14} />, action: () => setActiveTab('models') },
                   { label: 'Generate Comp Card', icon: <FileImage size={14} />, action: () => setActiveTab('models') },
-                  { label: 'Bulk Email', icon: <MessageSquare size={14} />, action: () => setActiveTab('communication') }
+                  { label: 'Manage Visuals', icon: <Clapperboard size={14} />, action: () => setActiveTab('events') }
                 ].map((action, i) => (
                   <button 
                     key={i} 
@@ -622,23 +1150,23 @@ const AdminDashboard: React.FC = () => {
                     trend: 'Moderation Queue', 
                     icon: <FileImage className="w-5 h-5 text-orange-500" />,
                     color: 'text-orange-500',
-                    action: () => { setActiveTab('content'); }
+                    action: () => { setActiveTab('spotlight'); }
                   },
                   { 
-                    label: 'Castings Need Talent', 
-                    value: dashboardLoading ? '...' : agencyKPIs.castingsNeedTalent, 
-                    trend: 'Urgent', 
-                    icon: <Clapperboard className="w-5 h-5 text-red-400" />,
-                    color: 'text-white',
-                    action: () => { setActiveTab('castings'); }
+                    label: 'Active Promotion', 
+                    value: 'Configure', 
+                    trend: 'Event Mode', 
+                    icon: <Calendar className="w-5 h-5 text-purple-400" />,
+                    color: 'text-purple-400',
+                    action: () => { setActiveTab('events'); }
                   },
                   { 
-                    label: 'Client Requests', 
-                    value: dashboardLoading ? '...' : agencyKPIs.clientRequests, 
-                    trend: 'Inbox', 
-                    icon: <MessageSquare className="w-5 h-5 text-blue-400" />,
+                    label: 'Lookbook Items', 
+                    value: 'Manage', 
+                    trend: 'Showcase', 
+                    icon: <ImageIcon className="w-5 h-5 text-blue-400" />,
                     color: 'text-blue-400',
-                    action: () => { setActiveTab('communication'); }
+                    action: () => { setActiveTab('lookbook'); }
                   },
                 ].map((stat, i) => (
                   <div 
@@ -726,7 +1254,7 @@ const AdminDashboard: React.FC = () => {
                             </div>
                             <div className="flex-1 min-w-0">
                               <h4 className="text-xs font-bold text-white truncate group-hover:text-gold-accent transition-colors">{model.name}</h4>
-                              <p className="text-[9px] text-white/40 uppercase tracking-wider truncate">New Registration • {model.location}</p>
+                              <p className="text-[9px] text-white/40 uppercase tracking-wider truncate">New Registration вЂў {model.location}</p>
                             </div>
                             <ChevronRight className="w-4 h-4 text-white/20 group-hover:text-gold-accent transition-colors" />
                           </div>
@@ -888,23 +1416,7 @@ const AdminDashboard: React.FC = () => {
           </div>
         )}
 
-        {activeTab === 'castings' && (
-          <div className="flex-1 flex flex-col items-center justify-center bg-[#020202] text-white/20">
-            <Clapperboard className="w-16 h-16 mb-6 opacity-20" />
-            <h2 className="text-xl font-bold uppercase tracking-[0.4em] text-white/40">Castings</h2>
-            <p className="text-[10px] uppercase tracking-[0.2em] mt-2 opacity-50">Casting Management Module Coming Soon</p>
-          </div>
-        )}
-
-        {activeTab === 'clients' && (
-          <div className="flex-1 flex flex-col items-center justify-center bg-[#020202] text-white/20">
-            <Briefcase className="w-16 h-16 mb-6 opacity-20" />
-            <h2 className="text-xl font-bold uppercase tracking-[0.4em] text-white/40">Clients</h2>
-            <p className="text-[10px] uppercase tracking-[0.2em] mt-2 opacity-50">Client Portal & CRM Coming Soon</p>
-          </div>
-        )}
-
-        {activeTab === 'content' && (
+        {activeTab === 'spotlight' && (
           /* REFINED COMPACT SPOTLIGHT TAB */
           <div className="flex-1 overflow-auto p-4 bg-[#020202] custom-scrollbar">
             <div className="max-w-[1600px] mx-auto space-y-3">
@@ -987,7 +1499,7 @@ const AdminDashboard: React.FC = () => {
                     );
                   })()}
 
-                  {/* Draft Save — saves without is_top_model */}
+                  {/* Draft Save вЂ” saves without is_top_model */}
                   <button 
                     disabled={isUploading || !selectedTopModelId}
                     onClick={async () => {
@@ -1014,13 +1526,13 @@ const AdminDashboard: React.FC = () => {
                     Save Draft
                   </button>
 
-                  {/* Publish — sets is_top_model + all data */}
+                  {/* Publish вЂ” sets is_top_model + all data */}
                   <button 
                     disabled={isUploading || !selectedTopModelId}
                     onClick={async () => {
                       if (!selectedTopModelId) return;
                       
-                      // Soft validation — warn but don't block
+                      // Soft validation вЂ” warn but don't block
                       const activeBio = bioLang === 'en' ? spotlightBio : spotlightBioBg;
                       if (activeBio.length > 0 && activeBio.length < 100) {
                         const ok = window.confirm(`Био текстът (${bioLang.toUpperCase()}) е доста кратък (${activeBio.length} символа). Продължаване?`);
@@ -1283,7 +1795,7 @@ const AdminDashboard: React.FC = () => {
                                 const f = file as File;
                                 // We include timestamp for unique paths in storage, 
                                 // but we checked the original name above
-                                const path = `homepage/top_model_${Date.now()}_${f.name}`;
+                                const path = `homepage/top_model_${Date.now()}_${sanitizeFileName(f.name)}`;
                                 const url = await modelsService.uploadFile(f, path);
                                 setEditCardImages(prev => Array.from(new Set([...prev, url])));
                               }
@@ -1451,56 +1963,482 @@ const AdminDashboard: React.FC = () => {
               </div>
             </div>
           </div>
+
+
         )}
 
-        {activeTab === 'communication' && (
-          <div className="flex-1 flex flex-col items-center justify-center bg-[#020202] text-white/20">
-            <MessageSquare className="w-16 h-16 mb-6 opacity-20" />
-            <h2 className="text-xl font-bold uppercase tracking-[0.4em] text-white/40">Communication</h2>
-            <p className="text-[10px] uppercase tracking-[0.2em] mt-2 opacity-50">Chat & Messages Module Coming Soon</p>
-          </div>
-        )}
-
-        {activeTab === 'finance' && (
-          <div className="flex-1 flex flex-col items-center justify-center bg-[#020202] text-white/20">
-            <CreditCard className="w-16 h-16 mb-6 opacity-20" />
-            <h2 className="text-xl font-bold uppercase tracking-[0.4em] text-white/40">Finance</h2>
-            <p className="text-[10px] uppercase tracking-[0.2em] mt-2 opacity-50">Invoicing & Contracts Module Coming Soon</p>
-          </div>
-        )}
-
-        {activeTab === 'settings' && (
+        {activeTab === 'events' && (
           <div className="flex-1 overflow-auto bg-[#020202] custom-scrollbar">
-            {/* Sticky Settings Header */}
-            <div className="sticky top-0 z-20 bg-black/80 backdrop-blur-xl border-b border-white/5 px-6 py-3">
-              <div className="max-w-[1400px] mx-auto flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="p-2 bg-white/5 rounded-lg">
-                    <Settings className="w-4 h-4 text-gold-accent" />
-                  </div>
-                  <div>
-                    <h2 className="text-sm font-bold uppercase tracking-[0.3em] text-white">Global <span className="text-gold-accent">Settings</span></h2>
-                    <p className="text-[8px] uppercase tracking-[0.2em] text-white/30 mt-0.5">Site configuration & maintenance</p>
-                  </div>
+            <div className="max-w-[1400px] mx-auto px-6 py-5 space-y-6">
+                
+                {/* Header */}
+                <div className="flex items-center gap-4 mb-2">
+                    <div className="p-2 bg-purple-500/10 rounded-lg">
+                        <Calendar className="w-5 h-5 text-purple-400" />
+                    </div>
+                    <div>
+                        <h2 className="text-xl font-bold uppercase tracking-[0.2em] text-white">Event <span className="text-purple-400">Manager</span></h2>
+                        <p className="text-[10px] text-white/30 uppercase tracking-widest mt-1">
+                            Consolidated controls for Special Events & Holidays
+                        </p>
+                    </div>
                 </div>
 
-                <div className="flex items-center gap-3">
-                  {/* Live Status */}
-                  <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-[8px] font-bold uppercase tracking-widest ${
-                    isMaintenance 
-                      ? 'bg-red-500/10 border-red-500/30 text-red-400' 
-                      : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-                  }`}>
-                    <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${isMaintenance ? 'bg-red-500' : 'bg-emerald-500'}`} />
-                    {isMaintenance ? 'Maintenance Active' : 'Site Live'}
-                  </div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+                    {/* 1. HOMEPAGE HERO CONTROLS */}
+                    <div className="bg-[#0A0A0A] border border-white/10 rounded-xl overflow-hidden relative group p-6">
+                         <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-blue-500 to-indigo-500" />
+                         <h3 className="text-sm font-bold uppercase tracking-[0.2em] text-white flex items-center gap-3 mb-6">
+                            <Clapperboard className="w-4 h-4 text-blue-400" />
+                            Homepage Visuals
+                         </h3>
+
+                         <div className="space-y-4">
+                            {/* Type Toggle */}
+                            <div className="flex p-1 bg-white/5 rounded-lg border border-white/5">
+                                <button 
+                                    onClick={() => setHeroType('video')}
+                                    className={`flex-1 py-2 text-[9px] font-bold uppercase tracking-widest rounded transition-all ${heroType === 'video' ? 'bg-blue-500 text-white shadow-lg' : 'text-white/40 hover:text-white'}`}
+                                >
+                                    Video Background
+                                </button>
+                                <button 
+                                    onClick={() => setHeroType('image')}
+                                    className={`flex-1 py-2 text-[9px] font-bold uppercase tracking-widest rounded transition-all ${heroType === 'image' ? 'bg-blue-500 text-white shadow-lg' : 'text-white/40 hover:text-white'}`}
+                                >
+                                    Image Background
+                                </button>
+                            </div>
+
+                            {/* Media URL */}
+                            {/* Visual Filter */}
+                            <div className="flex p-1 bg-white/5 rounded-lg border border-white/5">
+                                <button 
+                                    onClick={() => setHeroGrayscale(true)}
+                                    className={`flex-1 py-1.5 text-[8px] font-bold uppercase tracking-widest rounded transition-all ${heroGrayscale ? 'bg-white text-black' : 'text-white/40 hover:text-white'}`}
+                                >
+                                    B&W
+                                </button>
+                                <button 
+                                    onClick={() => setHeroGrayscale(false)}
+                                    className={`flex-1 py-1.5 text-[8px] font-bold uppercase tracking-widest rounded transition-all ${!heroGrayscale ? 'bg-white text-black' : 'text-white/40 hover:text-white'}`}
+                                >
+                                    Color
+                                </button>
+                            </div>
+
+                            {/* Media URL */}
+                            <div className="space-y-1">
+                                <div className="flex justify-between items-center">
+                                    <label className="text-[9px] uppercase tracking-widest text-white/40">
+                                        {heroType === 'video' ? 'Video URL' : 'Image URL'}
+                                    </label>
+                                    
+                                    {heroType === 'image' && (
+                                        <label className="cursor-pointer bg-white/5 hover:bg-white/10 text-[8px] uppercase tracking-widest text-blue-400 px-2 py-0.5 rounded transition-colors flex items-center gap-1.5 border border-blue-500/20">
+                                            <Upload size={8} />
+                                            Upload
+                                            <input 
+                                                type="file" 
+                                                className="hidden" 
+                                                accept="image/*"
+                                                onChange={(e) => {
+                                                    const file = e.target.files?.[0];
+                                                    if (file) {
+                                                        const url = URL.createObjectURL(file);
+                                                        setHeroImageToCrop(url);
+                                                        e.target.value = '';
+                                                    }
+                                                }}
+                                            />
+                                        </label>
+                                    )}
+                                    {heroType === 'video' && (
+                                        <label className={`cursor-pointer bg-white/5 hover:bg-white/10 text-[8px] uppercase tracking-widest text-blue-400 px-2 py-0.5 rounded transition-colors flex items-center gap-1.5 border border-blue-500/20 ${isHeroVideoUploading ? 'opacity-50 pointer-events-none' : ''}`}>
+                                            <Upload size={8} />
+                                            {isHeroVideoUploading ? '...' : 'Upload'}
+                                            <input 
+                                                type="file" 
+                                                className="hidden" 
+                                                accept="video/*"
+                                                onChange={handleHeroVideoUpload}
+                                                disabled={isHeroVideoUploading}
+                                            />
+                                        </label>
+                                    )}
+                                </div>
+                                <input 
+                                    type="text" 
+                                    value={heroType === 'video' ? heroVideoUrl : heroImageUrl}
+                                    onChange={(e) => heroType === 'video' ? setHeroVideoUrl(e.target.value) : setHeroImageUrl(e.target.value)}
+                                    className="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-xs text-white focus:border-blue-500/50 outline-none"
+                                    placeholder="https://..."
+                                />
+                            </div>
+
+                            {/* Subtitle */}
+                            <div className="space-y-3 pt-2 border-t border-white/5">
+                                <div className="space-y-1">
+                                    <label className="text-[9px] uppercase tracking-widest text-white/40">Subtitle (BG)</label>
+                                    <input 
+                                        type="text" 
+                                        value={heroSubtitleBg}
+                                        onChange={(e) => setHeroSubtitleBg(e.target.value)}
+                                        className="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-xs text-white focus:border-blue-500/50 outline-none"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[9px] uppercase tracking-widest text-white/40">Subtitle (EN)</label>
+                                    <input 
+                                        type="text" 
+                                        value={heroSubtitleEn}
+                                        onChange={(e) => setHeroSubtitleEn(e.target.value)}
+                                        className="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-xs text-white focus:border-blue-500/50 outline-none"
+                                    />
+                                </div>
+                            </div>
+
+                            <button 
+                                onClick={async () => {
+                                    try {
+                                        setIsSavingHero(true);
+                                        await settingsService.setHeroSetting('hero_type', heroType);
+                                        if (heroType === 'video') await settingsService.setHeroSetting('hero_video_url', heroVideoUrl);
+                                        else await settingsService.setHeroSetting('hero_image_url', heroImageUrl);
+                                        
+                                        await settingsService.setHeroSetting('hero_subtitle_bg', heroSubtitleBg);
+                                        await settingsService.setHeroSetting('hero_subtitle_en', heroSubtitleEn);
+                                        
+                                        showToast('Visuals updated!', 'success');
+                                    } catch(e:any) { showToast(e.message, 'error'); }
+                                    finally { setIsSavingHero(false); }
+                                }}
+                                disabled={isSavingHero}
+                                className="w-full bg-blue-500 text-white py-3 rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-blue-400 transition-all"
+                            >
+                                {isSavingHero ? 'Saving...' : 'Save Visuals'}
+                            </button>
+                         </div>
+                    </div>
+
+                    {/* 2. PAGE BACKGROUNDS */}
+                    <div className="bg-[#0A0A0A] border border-white/10 rounded-xl overflow-hidden relative group p-6 mt-6">
+                         <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-indigo-500 to-violet-500" />
+                         <h3 className="text-sm font-bold uppercase tracking-[0.2em] text-white flex items-center gap-3 mb-6">
+                            <ImageIcon className="w-4 h-4 text-indigo-400" />
+                            Page Backgrounds
+                         </h3>
+
+                         <div className="space-y-6">
+                            {/* About Page */}
+                            <div className="space-y-3">
+                                <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 border-b border-white/5 pb-2">About Page</h4>
+                                <div className="grid grid-cols-2 gap-3">
+                                    {/* About 1 */}
+                                    <div className="space-y-1">
+                                        <div className="flex justify-between items-center">
+                                            <label className="text-[9px] uppercase tracking-widest text-white/40">Photo 1</label>
+                                            <label className="cursor-pointer bg-white/5 hover:bg-white/10 text-[8px] uppercase tracking-widest text-indigo-400 px-2 py-0.5 rounded transition-colors flex items-center gap-1.5 border border-indigo-500/20">
+                                                <Upload size={8} />
+                                                Upload
+                                                <input type="file" className="hidden" accept="image/*" onChange={(e) => handlePageBgUpload(e, 'bg_about_1')} disabled={isPageBgUploading} />
+                                            </label>
+                                        </div>
+                                        <input type="text" value={bgAbout1} onChange={(e) => setBgAbout1(e.target.value)} onBlur={() => settingsService.setHeroSetting('bg_about_1', bgAbout1)} className="w-full bg-black/30 border border-white/10 rounded-lg p-2.5 text-[10px] text-white focus:border-indigo-500/50 outline-none" placeholder="URL"/>
+                                    </div>
+                                    {/* About 2 */}
+                                    <div className="space-y-1">
+                                        <div className="flex justify-between items-center">
+                                            <label className="text-[9px] uppercase tracking-widest text-white/40">Photo 2</label>
+                                            <label className="cursor-pointer bg-white/5 hover:bg-white/10 text-[8px] uppercase tracking-widest text-indigo-400 px-2 py-0.5 rounded transition-colors flex items-center gap-1.5 border border-indigo-500/20">
+                                                <Upload size={8} />
+                                                Upload
+                                                <input type="file" className="hidden" accept="image/*" onChange={(e) => handlePageBgUpload(e, 'bg_about_2')} disabled={isPageBgUploading} />
+                                            </label>
+                                        </div>
+                                        <input type="text" value={bgAbout2} onChange={(e) => setBgAbout2(e.target.value)} onBlur={() => settingsService.setHeroSetting('bg_about_2', bgAbout2)} className="w-full bg-black/30 border border-white/10 rounded-lg p-2.5 text-[10px] text-white focus:border-indigo-500/50 outline-none" placeholder="URL"/>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Services Page */}
+                            <div className="space-y-3">
+                                <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 border-b border-white/5 pb-2">Services Page</h4>
+                                <div className="space-y-3">
+                                    {/* Service 1 */}
+                                    <div className="space-y-1">
+                                        <div className="flex justify-between items-center">
+                                            <label className="text-[9px] uppercase tracking-widest text-white/40">Casting</label>
+                                            <label className="cursor-pointer bg-white/5 hover:bg-white/10 text-[8px] uppercase tracking-widest text-indigo-400 px-2 py-0.5 rounded transition-colors flex items-center gap-1.5 border border-indigo-500/20">
+                                                <Upload size={8} />
+                                                Upload
+                                                <input type="file" className="hidden" accept="image/*" onChange={(e) => handlePageBgUpload(e, 'bg_services_1')} disabled={isPageBgUploading} />
+                                            </label>
+                                        </div>
+                                        <input type="text" value={bgServices1} onChange={(e) => setBgServices1(e.target.value)} onBlur={() => settingsService.setHeroSetting('bg_services_1', bgServices1)} className="w-full bg-black/30 border border-white/10 rounded-lg p-2.5 text-[10px] text-white focus:border-indigo-500/50 outline-none" placeholder="URL"/>
+                                    </div>
+                                    {/* Service 2 */}
+                                    <div className="space-y-1">
+                                        <div className="flex justify-between items-center">
+                                            <label className="text-[9px] uppercase tracking-widest text-white/40">Production</label>
+                                            <label className="cursor-pointer bg-white/5 hover:bg-white/10 text-[8px] uppercase tracking-widest text-indigo-400 px-2 py-0.5 rounded transition-colors flex items-center gap-1.5 border border-indigo-500/20">
+                                                <Upload size={8} />
+                                                Upload
+                                                <input type="file" className="hidden" accept="image/*" onChange={(e) => handlePageBgUpload(e, 'bg_services_2')} disabled={isPageBgUploading} />
+                                            </label>
+                                        </div>
+                                        <input type="text" value={bgServices2} onChange={(e) => setBgServices2(e.target.value)} onBlur={() => settingsService.setHeroSetting('bg_services_2', bgServices2)} className="w-full bg-black/30 border border-white/10 rounded-lg p-2.5 text-[10px] text-white focus:border-indigo-500/50 outline-none" placeholder="URL"/>
+                                    </div>
+                                    {/* Service 3 */}
+                                    <div className="space-y-1">
+                                        <div className="flex justify-between items-center">
+                                            <label className="text-[9px] uppercase tracking-widest text-white/40">Creative</label>
+                                            <label className="cursor-pointer bg-white/5 hover:bg-white/10 text-[8px] uppercase tracking-widest text-indigo-400 px-2 py-0.5 rounded transition-colors flex items-center gap-1.5 border border-indigo-500/20">
+                                                <Upload size={8} />
+                                                Upload
+                                                <input type="file" className="hidden" accept="image/*" onChange={(e) => handlePageBgUpload(e, 'bg_services_3')} disabled={isPageBgUploading} />
+                                            </label>
+                                        </div>
+                                        <input type="text" value={bgServices3} onChange={(e) => setBgServices3(e.target.value)} onBlur={() => settingsService.setHeroSetting('bg_services_3', bgServices3)} className="w-full bg-black/30 border border-white/10 rounded-lg p-2.5 text-[10px] text-white focus:border-indigo-500/50 outline-none" placeholder="URL"/>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Contact Page */}
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-1">
+                                    <div className="flex justify-between items-center">
+                                        <label className="text-[9px] uppercase tracking-widest text-white/40 font-bold">Contact Page</label>
+                                        <label className="cursor-pointer bg-white/5 hover:bg-white/10 text-[8px] uppercase tracking-widest text-indigo-400 px-2 py-0.5 rounded transition-colors flex items-center gap-1.5 border border-indigo-500/20">
+                                            <Upload size={8} />
+                                            Upload
+                                            <input type="file" className="hidden" accept="image/*" onChange={(e) => handlePageBgUpload(e, 'bg_contact')} disabled={isPageBgUploading} />
+                                        </label>
+                                    </div>
+                                    <input type="text" value={bgContact} onChange={(e) => setBgContact(e.target.value)} onBlur={() => settingsService.setHeroSetting('bg_contact', bgContact)} className="w-full bg-black/30 border border-white/10 rounded-lg p-2.5 text-[10px] text-white focus:border-indigo-500/50 outline-none" placeholder="URL"/>
+                                </div>
+
+                                <div className="space-y-1">
+                                    <div className="flex justify-between items-center">
+                                        <label className="text-[9px] uppercase tracking-widest text-white/40 font-bold">Blog Page</label>
+                                        <label className="cursor-pointer bg-white/5 hover:bg-white/10 text-[8px] uppercase tracking-widest text-indigo-400 px-2 py-0.5 rounded transition-colors flex items-center gap-1.5 border border-indigo-500/20">
+                                            <Upload size={8} />
+                                            Upload
+                                            <input type="file" className="hidden" accept="image/*" onChange={(e) => handlePageBgUpload(e, 'bg_blog')} disabled={isPageBgUploading} />
+                                        </label>
+                                    </div>
+                                    <input type="text" value={bgBlog} onChange={(e) => setBgBlog(e.target.value)} onBlur={() => settingsService.setHeroSetting('bg_blog', bgBlog)} className="w-full bg-black/30 border border-white/10 rounded-lg p-2.5 text-[10px] text-white focus:border-indigo-500/50 outline-none" placeholder="URL"/>
+                                </div>
+                            </div>
+                         </div>
+                    </div>
+
+                    {/* 2. PRICING & EVENT CONFIG */}
+                    <div className="space-y-6">
+
+
+                        {/* Event Announcements */}
+
+
+                        {/* Active Promotion Status */}
+                        <div className="bg-[#0A0A0A] border border-white/10 rounded-xl overflow-hidden relative group p-6 mb-6">
+                             <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-purple-500 to-pink-500" />
+                             <h3 className="text-sm font-bold uppercase tracking-[0.2em] text-white flex items-center gap-3 mb-6">
+                                <Sparkles className="w-4 h-4 text-purple-400" />
+                                Active Campaign Status
+                             </h3>
+                             
+                             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                                {[
+                                    { id: 'none', label: 'Standard', icon: Star, color: 'text-white' },
+                                    { id: 'valentines', label: 'Valentines', icon: Heart, color: 'text-pink-500' },
+                                    { id: 'christmas', label: 'Christmas', icon: Snowflake, color: 'text-cyan-400' },
+                                    { id: 'photoshoot', label: 'Photoshoot', icon: Camera, color: 'text-amber-400' }
+                                ].map(p => (
+                                    <button
+                                        key={p.id}
+                                        onClick={async () => {
+                                            try {
+                                                setIsSavingPromo(true);
+                                                setActivePromo(p.id);
+                                                await settingsService.setActivePromo(p.id);
+                                                showToast(`Campaign switched to ${p.label}`, 'success');
+                                            } catch(e:any) { showToast(e.message, 'error'); }
+                                            finally { setIsSavingPromo(false); }
+                                        }}
+                                        disabled={isSavingPromo}
+                                        className={`p-3 rounded-lg border transition-all flex flex-col items-center gap-2 group ${
+                                            activePromo === p.id 
+                                            ? 'bg-white/10 border-white/20' 
+                                            : 'bg-black/30 border-white/5 hover:bg-white/5'
+                                        }`}
+                                    >
+                                        <p.icon className={`w-5 h-5 ${p.color} ${activePromo === p.id ? 'opacity-100' : 'opacity-40 group-hover:opacity-80'}`} />
+                                        <span className={`text-[9px] uppercase tracking-widest font-bold ${activePromo === p.id ? 'text-white' : 'text-white/30'}`}>
+                                            {p.label}
+                                        </span>
+                                    </button>
+                                ))}
+                             </div>
+
+                             <div className="space-y-1 pt-4 border-t border-white/5">
+                                <div className="flex justify-between items-center mb-1">
+                                    <label className="text-[9px] uppercase tracking-widest text-white/40">Campaign Ends At</label>
+                                    <span className="text-[8px] uppercase tracking-widest text-white/20">Optional auto-shutdown</span>
+                                </div>
+                                <div className="flex gap-2">
+                                    <input 
+                                        type="datetime-local"
+                                        value={promoEndTime}
+                                        onChange={(e) => setPromoEndTime(e.target.value)}
+                                        className="flex-1 bg-black/30 border border-white/10 rounded-lg p-2.5 text-xs text-white focus:border-purple-500/50 invert-calendar-icon"
+                                    />
+                                    <button 
+                                        onClick={async () => {
+                                            try {
+                                                await settingsService.setPromoExpiration(promoEndTime);
+                                                showToast('Expiration timer set!', 'success');
+                                            } catch(e:any) { showToast(e.message, 'error'); }
+                                        }}
+                                        className="bg-white/5 hover:bg-white/10 text-white px-4 rounded-lg text-[9px] uppercase tracking-widest font-bold border border-white/5"
+                                    >
+                                        Set
+                                    </button>
+                                </div>
+                             </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6"> 
+                          {/* Announcement Column */}
+                          <div className="bg-[#0A0A0A] border border-white/10 rounded-xl overflow-hidden relative group p-6">
+                              <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-blue-500 to-cyan-500" />
+                              <h3 className="text-sm font-bold uppercase tracking-[0.2em] text-white flex items-center gap-3 mb-6">
+                                <MessageSquare className="w-4 h-4 text-blue-400" />
+                                Top Announcement
+                             </h3>
+                             
+                             <div className="space-y-4">
+                                <div className="flex gap-4">
+                                    <div className="flex-1 space-y-1">
+                                        <label className="text-[9px] uppercase tracking-widest text-white/40">Message (BG)</label>
+                                        <input 
+                                            value={announcement.text_bg}
+                                            onChange={(e) => setAnnouncement({...announcement, text_bg: e.target.value})}
+                                            className="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-xs text-white outline-none focus:border-amber-500/50"
+                                        />
+                                    </div>
+                                    <div className="w-[80px] space-y-1">
+                                        <label className="text-[9px] uppercase tracking-widest text-white/40">Status</label>
+                                        <button 
+                                            onClick={() => setAnnouncement({...announcement, active: !announcement.active})}
+                                            className={`w-full h-[42px] rounded-lg border flex items-center justify-center transition-all ${announcement.active ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-black/30 border-white/10 text-white/30'}`}
+                                        >
+                                            <Zap className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                </div>
+                                <button 
+                                    onClick={async () => {
+                                        try {
+                                            await settingsService.setAnnouncement(announcement);
+                                            showToast('Announcement updated!', 'success');
+                                        } catch(e:any) { showToast(e.message, 'error'); }
+                                    }}
+                                    className="w-full bg-white/5 hover:bg-white/10 text-white py-2 rounded-lg text-[9px] uppercase tracking-widest font-bold transition-all border border-white/5"
+                                >
+                                    Update Announcement
+                                </button>
+                             </div>
+                        </div>
+
+                        {/* Event Pricing Override */}
+                        <div className="bg-[#0A0A0A] border border-white/10 rounded-xl overflow-hidden relative group p-6">
+                             <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-emerald-500 to-teal-500" />
+                             <h3 className="text-sm font-bold uppercase tracking-[0.2em] text-white flex items-center gap-3 mb-6">
+                                <DollarSign className="w-4 h-4 text-emerald-400" />
+                                Event Pricing Strategy
+                             </h3>
+                             
+                             <div className="grid grid-cols-2 gap-4 mb-4">
+                                <div className="space-y-1">
+                                    <label className="text-[9px] uppercase tracking-widest text-white/40">Standard Base</label>
+                                    <input 
+                                        type="number"
+                                        value={pricingConfig.standard?.price || 0}
+                                        onChange={(e) => setPricingConfig({...pricingConfig, standard: {...pricingConfig.standard!, price: parseInt(e.target.value)}})}
+                                        className="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-xs text-white font-mono focus:border-emerald-500/50"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[9px] uppercase tracking-widest text-white/40">Premium Base</label>
+                                    <input 
+                                        type="number"
+                                        value={pricingConfig.premium?.price || 0}
+                                        onChange={(e) => setPricingConfig({...pricingConfig, premium: {...pricingConfig.premium!, price: parseInt(e.target.value)}})}
+                                        className="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-xs text-white font-mono focus:border-emerald-500/50"
+                                    />
+                                </div>
+                             </div>
+
+                             <div className="space-y-1 pt-2 border-t border-white/5">
+                                <label className="text-[9px] uppercase tracking-widest text-white/40">Pricing Page Background</label>
+                                <input 
+                                    type="text"
+                                    value={pricingBgStandard}
+                                    onChange={(e) => setPricingBgStandard(e.target.value)}
+                                    className="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-xs text-white focus:border-emerald-500/50"
+                                    placeholder="Background Image URL..."
+                                />
+                             </div>
+
+                             <button 
+                                onClick={async () => {
+                                    try {
+                                        setIsSavingPricing(true);
+                                        await settingsService.setPricingConfig(pricingConfig);
+                                        await settingsService.setPricingVisuals({ pricing_bg_standard: pricingBgStandard });
+                                        showToast('Pricing & Visuals updated!', 'success');
+                                    } catch(e:any) { showToast(e.message, 'error'); }
+                                    finally { setIsSavingPricing(false); }
+                                }}
+                                disabled={isSavingPricing}
+                                className="w-full mt-4 bg-emerald-500 text-black py-3 rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-emerald-400 transition-all"
+                            >
+                                Update Pricing Strategy
+                            </button>
+                        </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+          </div>
+        )}
+        {activeTab === 'system' && (
+          <div className="flex-1 overflow-auto bg-[#020202] custom-scrollbar">
+            <div className="max-w-[1400px] mx-auto px-6 py-5 space-y-6">
+              <div className="flex items-center gap-4 mb-2">
+                <div className="p-2 bg-white/5 rounded-lg">
+                  <Settings className="w-5 h-5 text-gold-accent" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold uppercase tracking-[0.2em] text-white">System <span className="text-gold-accent">Settings</span></h2>
+                  <p className="text-[10px] text-white/30 uppercase tracking-widest mt-1">Maintenance, reset and broadcast controls</p>
                 </div>
               </div>
-            </div>
-
-            <div className="max-w-[1400px] mx-auto px-6 py-5 space-y-5">
-
-              {/* ═══════ ROW 1: Quick Controls ═══════ */}
+              
+              {/* Status Indicator */}
+              <div className={`flex items-center gap-3 p-4 rounded-xl border mb-2 ${
+                isMaintenance 
+                  ? 'bg-red-500/5 border-red-500/20' 
+                  : 'bg-emerald-500/5 border-emerald-500/20'
+              }`}>
+                <div className={`w-3 h-3 rounded-full animate-pulse ${isMaintenance ? 'bg-red-500' : 'bg-emerald-500'}`} />
+                <span className={`text-xs font-bold uppercase tracking-widest ${isMaintenance ? 'text-red-400' : 'text-emerald-400'}`}>
+                  {isMaintenance ? 'System is currently in MAINTENANCE mode' : 'System is ONLINE and accessible to public'}
+                </span>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
                 {/* Maintenance Toggle Card */}
@@ -1577,7 +2515,7 @@ const AdminDashboard: React.FC = () => {
                 </div>
               </div>
 
-              {/* ═══════ ROW 2: Maintenance Orchestrator ═══════ */}
+              {/* в•ђв•ђв•ђв•ђв•ђв•ђв•ђ ROW 2: Maintenance Orchestrator в•ђв•ђв•ђв•ђв•ђв•ђв•ђ */}
               <div className="border border-white/5 bg-white/[0.01]">
                 {/* Orchestrator Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 bg-white/[0.02]">
@@ -1612,7 +2550,7 @@ const AdminDashboard: React.FC = () => {
                   </button>
                 </div>
 
-                {/* Orchestrator Body — 3 column grid */}
+                {/* Orchestrator Body вЂ” 3 column grid */}
                 <div className="grid grid-cols-1 xl:grid-cols-3 divide-y xl:divide-y-0 xl:divide-x divide-white/5">
                   
                   {/* Col 1: Message */}
@@ -1683,164 +2621,148 @@ const AdminDashboard: React.FC = () => {
                 </div>
               </div>
 
-              {/* ═══════ ROW 3: Hero Media Settings ═══════ */}
-              <div className="border border-white/5 bg-white/[0.01]">
-                {/* Hero Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 bg-white/[0.02]">
-                  <div className="flex items-center gap-3">
-                    <ImageIcon className="w-4 h-4 text-gold-accent" />
-                    <div>
-                      <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-white">Homepage Hero Media</h3>
-                      <p className="text-[8px] text-white/25 uppercase tracking-widest mt-0.5">Background visual for landing page</p>
-                    </div>
+              {/* в•ђв•ђв•ђв•ђв•ђв•ђв•ђ BROADCAST (ANNOUNCEMENTS) в•ђв•ђв•ђв•ђв•ђв•ђв•ђ */}
+              <div className="relative overflow-hidden bg-white/[0.02] border border-white/5 hover:border-blue-500/20 transition-all rounded-xl p-5 mb-2 mt-4">
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="p-2.5 rounded-lg bg-blue-500/10">
+                    <MessageSquare className="w-5 h-5 text-blue-400" />
                   </div>
-                  <button 
-                    onClick={async () => {
-                      try {
-                        setIsSavingHero(true);
-                        await Promise.all([
-                          settingsService.setHeroSetting('hero_type', heroType),
-                          settingsService.setHeroSetting('hero_image_url', heroImageUrl),
-                          settingsService.setHeroSetting('hero_video_url', heroVideoUrl),
-                          settingsService.setHeroSetting('hero_grayscale', String(heroGrayscale)),
-                        ]);
-                        showToast('Hero updated', 'success');
-                      } catch (err: any) {
-                        showToast(err.message, 'error');
-                      } finally {
-                        setIsSavingHero(false);
-                      }
-                    }}
-                    disabled={isSavingHero}
-                    className="flex items-center gap-2 bg-white text-black px-6 py-2 text-[9px] font-bold uppercase tracking-widest hover:bg-gold-accent transition-all disabled:opacity-20"
-                  >
-                    <Save className="w-3 h-3" />
-                    {isSavingHero ? 'Saving...' : 'Save Hero'}
-                  </button>
+                  <div>
+                    <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-white">Broadcast Messaging</h3>
+                    <p className="text-[9px] text-white/30 uppercase tracking-wider mt-0.5">Manage site-wide announcement banners</p>
+                  </div>
                 </div>
 
-                {/* Hero Body */}
-                <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-white/5">
-                  {/* Media Type */}
-                  <div className="p-5 space-y-3">
-                    <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Media Type</label>
-                    <div className="flex gap-2">
-                      <button 
-                        onClick={() => setHeroType('video')}
-                        className={`flex-1 py-2.5 border rounded-md transition-all text-[10px] uppercase tracking-widest font-bold ${
-                          heroType === 'video' 
-                            ? 'bg-white text-black border-white' 
-                            : 'border-white/10 text-white/30 hover:border-gold-accent/40 hover:text-white/60'
-                        }`}
-                      >
-                        Video
-                      </button>
-                      <button 
-                        onClick={() => setHeroType('image')}
-                        className={`flex-1 py-2.5 border rounded-md transition-all text-[10px] uppercase tracking-widest font-bold ${
-                          heroType === 'image' 
-                            ? 'bg-white text-black border-white' 
-                            : 'border-white/10 text-white/30 hover:border-gold-accent/40 hover:text-white/60'
-                        }`}
-                      >
-                        Image
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Visual Filter */}
-                  <div className="p-5 space-y-3">
-                    <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Visual Filter</label>
-                    <div className="flex gap-2">
-                      <button 
-                        onClick={() => setHeroGrayscale(true)}
-                        className={`flex-1 py-2.5 border rounded-md transition-all text-[10px] uppercase tracking-widest font-bold ${
-                          heroGrayscale 
-                            ? 'bg-white text-black border-white' 
-                            : 'border-white/10 text-white/30 hover:border-gold-accent/40 hover:text-white/60'
-                        }`}
-                      >
-                        Grayscale
-                      </button>
-                      <button 
-                        onClick={() => setHeroGrayscale(false)}
-                        className={`flex-1 py-2.5 border rounded-md transition-all text-[10px] uppercase tracking-widest font-bold ${
-                          !heroGrayscale 
-                            ? 'bg-white text-black border-white' 
-                            : 'border-white/10 text-white/30 hover:border-gold-accent/40 hover:text-white/60'
-                        }`}
-                      >
-                        Color
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* URL Input */}
-                  <div className="p-5 space-y-3">
-                    <div className="flex justify-between items-center">
-                        <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold">
-                        {heroType === 'image' ? 'Image Source' : 'Video URL'}
-                        </label>
-                        {heroType === 'image' && (
-                            <label className="cursor-pointer bg-white/5 hover:bg-white/10 text-[9px] uppercase tracking-widest text-gold-accent px-3 py-1 rounded transition-colors flex items-center gap-2">
-                                <Upload size={10} />
-                                Upload & Crop
-                                <input 
-                                    type="file" 
-                                    className="hidden" 
-                                    accept="image/*"
-                                    onChange={(e) => {
-                                        const file = e.target.files?.[0];
-                                        if (file) {
-                                            const url = URL.createObjectURL(file);
-                                            setHeroImageToCrop(url);
-                                            e.target.value = ''; // Reset so same file can be selected again
-                                        }
-                                    }}
-                                />
-                            </label>
-                        )}
-                    </div>
+                {/* Icon, Link & Colors Row */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                  <div className="md:col-span-1 space-y-2">
+                    <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Custom Icon</label>
                     <input 
                       type="text"
-                      value={heroType === 'image' ? heroImageUrl : heroVideoUrl}
-                      onChange={(e) => heroType === 'image' ? setHeroImageUrl(e.target.value) : setHeroVideoUrl(e.target.value)}
-                      placeholder={heroType === 'image' ? 'https://... .jpg / .png' : 'https://... .mp4'}
-                      className="w-full bg-black/30 border border-white/5 rounded-lg p-3 text-xs outline-none focus:border-gold-accent/50 text-white transition-all placeholder:text-white/10"
+                      value={announcement.customSvg || ''}
+                      onChange={(e) => setAnnouncement({ ...announcement, customSvg: e.target.value })}
+                      placeholder='SVG or URL'
+                      className="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-xs text-white outline-none focus:border-blue-500/50 transition-all font-mono"
                     />
-                    <p className="text-[8px] text-white/15 uppercase tracking-wider">
-                      {heroType === 'image' ? 'Recommended: 1920×1080 or higher' : 'Direct link to hosted .mp4 file'}
-                    </p>
+                  </div>
+                  <div className="md:col-span-1 space-y-2">
+                    <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Action Link</label>
+                    <input 
+                      type="text"
+                      value={announcement.buttonLink || ''}
+                      onChange={(e) => setAnnouncement({ ...announcement, buttonLink: e.target.value })}
+                      placeholder="/path or https://"
+                      className="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-xs text-white outline-none focus:border-blue-500/50 transition-all"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Icon Color</label>
+                    <div className="flex items-center gap-2">
+                      <input 
+                        type="color"
+                        value={announcement.iconColor || '#3b82f6'}
+                        onChange={(e) => setAnnouncement({ ...announcement, iconColor: e.target.value })}
+                        className="w-10 h-10 bg-transparent border-0 cursor-pointer p-0"
+                      />
+                      <code className="text-[10px] text-white/60 uppercase">{announcement.iconColor}</code>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Button Color</label>
+                    <div className="flex items-center gap-2">
+                      <input 
+                        type="color"
+                        value={announcement.buttonColor || '#3b82f6'}
+                        onChange={(e) => setAnnouncement({ ...announcement, buttonColor: e.target.value })}
+                        className="w-10 h-10 bg-transparent border-0 cursor-pointer p-0"
+                      />
+                      <code className="text-[10px] text-white/60 uppercase">{announcement.buttonColor}</code>
+                    </div>
                   </div>
                 </div>
-              </div>
-
-              {/* ═══════ ROW 3.5: Site Announcement ═══════ */}
-              <div className="relative overflow-hidden bg-white/[0.02] border border-white/5 hover:border-blue-500/20 transition-all">
-                <div className="absolute left-0 top-0 bottom-0 w-[3px]" style={{ background: announcement.active ? '#3b82f6' : '#3f3f46' }} />
                 
-                {/* Header */}
-                <div className="flex items-center justify-between p-5 border-b border-white/5">
-                  <div className="flex items-center gap-4">
-                    <div className={`p-2.5 rounded-lg transition-colors ${announcement.active ? 'bg-blue-500/10' : 'bg-white/5'}`}>
-                      <MessageSquare className={`w-5 h-5 ${announcement.active ? 'text-blue-400' : 'text-white/30'}`} />
+                {/* Additional Colors Row */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-4">
+                    <div className="space-y-2">
+                      <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Text Color</label>
+                      <div className="flex items-center gap-2">
+                        <input 
+                          type="color"
+                          value={announcement.textColor || '#ffffff'}
+                          onChange={(e) => setAnnouncement({ ...announcement, textColor: e.target.value })}
+                          className="w-10 h-10 bg-transparent border-0 cursor-pointer p-0"
+                        />
+                        <code className="text-[10px] text-white/60 uppercase">{announcement.textColor}</code>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-white">Broadcast Message</h3>
-                      <p className="text-[9px] text-white/30 uppercase tracking-wider mt-0.5">
-                        {announcement.active ? 'Message is visible to all visitors' : 'No active broadcast'}
-                      </p>
+                    <div className="space-y-2">
+                       <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Icon Size ({announcement.iconSize}px)</label>
+                      <div className="flex items-center gap-4">
+                        <input 
+                          type="range"
+                          min="10"
+                          max="32"
+                          value={announcement.iconSize || 14}
+                          onChange={(e) => setAnnouncement({ ...announcement, iconSize: parseInt(e.target.value) })}
+                          className="flex-1 accent-blue-500 h-1 bg-white/10 rounded-lg appearance-none cursor-pointer"
+                        />
+                      </div>
                     </div>
-                  </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Button Text Color</label>
+                      <div className="flex items-center gap-2">
+                        <input 
+                          type="color"
+                          value={announcement.buttonTextColor || '#000000'}
+                          onChange={(e) => setAnnouncement({ ...announcement, buttonTextColor: e.target.value })}
+                          className="w-10 h-10 bg-transparent border-0 cursor-pointer p-0"
+                        />
+                        <code className="text-[10px] text-white/60 uppercase">{announcement.buttonTextColor}</code>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Banner Color</label>
+                      <div className="flex items-center gap-2">
+                        <input 
+                          type="color"
+                          value={announcement.bannerColor || '#09090b'}
+                          onChange={(e) => setAnnouncement({ ...announcement, bannerColor: e.target.value })}
+                          className="w-10 h-10 bg-transparent border-0 cursor-pointer p-0"
+                        />
+                        <code className="text-[10px] text-white/60 uppercase">{announcement.bannerColor}</code>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Banner Color 2</label>
+                      <div className="flex items-center gap-2">
+                         <input 
+                          type="color"
+                          value={announcement.bannerColor2 || '#09090b'}
+                          onChange={(e) => setAnnouncement({ ...announcement, bannerColor2: e.target.value })}
+                          disabled={!announcement.bannerGradient}
+                          className={`w-10 h-10 bg-transparent border-0 cursor-pointer p-0 ${!announcement.bannerGradient ? 'opacity-20 cursor-not-allowed' : ''}`}
+                        />
+                        <code className={`text-[10px] text-white/60 uppercase ${!announcement.bannerGradient ? 'opacity-20' : ''}`}>{announcement.bannerColor2}</code>
+                      </div>
+                      <label className="flex items-center gap-2 text-[10px] text-white/40 cursor-pointer mt-1">
+                        <input 
+                          type="checkbox"
+                          checked={announcement.bannerGradient}
+                          onChange={(e) => setAnnouncement({ ...announcement, bannerGradient: e.target.checked })}
+                          className="accent-blue-500"
+                        />
+                        Enable Gradient
+                      </label>
+                    </div>
+                </div>
+
+                <div className="pt-4 flex justify-end">
                   <button 
                     onClick={async () => {
-                      const newState = !announcement.active;
                       try {
                         setIsSavingAnnouncement(true);
-                        const updated = { ...announcement, active: newState };
-                        await settingsService.setAnnouncement(updated);
-                        setAnnouncement(updated);
-                        showToast(newState ? 'Broadcast Activated! 📢' : 'Broadcast Disabled', 'success');
+                        await settingsService.setAnnouncement(announcement);
+                        showToast('Broadcast configuration saved!', 'success');
                       } catch (e: any) {
                         showToast(e.message, 'error');
                       } finally {
@@ -1848,397 +2770,565 @@ const AdminDashboard: React.FC = () => {
                       }
                     }}
                     disabled={isSavingAnnouncement}
-                    className={`relative w-14 h-7 rounded-full transition-all duration-300 ${announcement.active ? 'bg-blue-500' : 'bg-white/10'}`}
+                    className="flex items-center gap-2 bg-white text-black px-8 py-3 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all hover:bg-gold-accent disabled:opacity-30 shadow-xl"
                   >
-                    <div className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow-lg transition-all duration-300 ${announcement.active ? 'left-8' : 'left-1'}`} />
-                  </button>
-                </div>
-
-                {/* Body */}
-                <div className="p-5 space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Announcement Text</label>
-                    <div className="flex gap-3">
-                      <input 
-                        type="text"
-                        value={announcement.text}
-                        onChange={(e) => setAnnouncement({ ...announcement, text: e.target.value })}
-                        placeholder="Type your message here..."
-                        className="flex-1 bg-black/30 border border-white/10 rounded-lg p-3 text-xs text-white outline-none focus:border-blue-500/50 transition-all"
-                      />
-                      <button 
-                        onClick={async () => {
-                          try {
-                            setIsSavingAnnouncement(true);
-                            await settingsService.setAnnouncement(announcement);
-                            showToast('Message text saved!', 'success');
-                          } catch (e: any) {
-                            showToast(e.message, 'error');
-                          } finally {
-                            setIsSavingAnnouncement(false);
-                          }
-                        }}
-                        disabled={isSavingAnnouncement}
-                        className="bg-white/5 hover:bg-white/10 border border-white/10 px-4 py-1 rounded-lg text-[10px] uppercase font-bold text-white transition-all"
-                      >
-                        {isSavingAnnouncement ? '...' : 'Save Text'}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* ═══════ ROW 4: Promotions Management ═══════ */}
-              <div className="relative overflow-hidden bg-white/[0.02] border border-white/5 hover:border-emerald-500/20 transition-all">
-                <div className="absolute left-0 top-0 bottom-0 w-[3px]" style={{ background: activePromo !== 'none' ? '#10b981' : '#3f3f46' }} />
-                
-                {/* Header */}
-                <div className="flex items-center justify-between p-5 border-b border-white/5">
-                  <div className="flex items-center gap-4">
-                    <div className={`p-2.5 rounded-lg transition-colors ${activePromo !== 'none' ? 'bg-emerald-500/10' : 'bg-white/5'}`}>
-                      <Tag className={`w-5 h-5 ${activePromo !== 'none' ? 'text-emerald-400' : 'text-white/30'}`} />
-                    </div>
-                    <div>
-                      <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-white">Promotions</h3>
-                      <p className="text-[9px] text-white/30 uppercase tracking-wider mt-0.5">
-                        {activePromo === 'none' ? 'No active promotion' 
-                          : activePromo === 'valentines' ? "Valentine's Day promo active" 
-                          : activePromo === 'christmas' ? 'Christmas promo active'
-                          : 'Photoshoot promo active'}
-                      </p>
-                    </div>
-                  </div>
-                  {activePromo !== 'none' && (
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30">
-                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                      <span className="text-[8px] font-bold uppercase tracking-widest text-emerald-400">Live</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Promo Options */}
-                <div className="p-5 space-y-4">
-                  <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Banner Type</label>
-                  <div className="grid grid-cols-3 gap-3">
-                    {/* None */}
-                    <button
-                      onClick={async () => {
-                        try {
-                          setIsSavingPromo(true);
-                          await settingsService.setActivePromo('none');
-                          setActivePromo('none');
-                          showToast('Promotion disabled', 'success');
-                        } catch (e: any) {
-                          showToast(e.message, 'error');
-                        } finally {
-                          setIsSavingPromo(false);
-                        }
-                      }}
-                      disabled={isSavingPromo}
-                      className={`relative flex flex-col items-center gap-3 p-4 border rounded-lg transition-all ${
-                        activePromo === 'none'
-                          ? 'bg-white/10 border-white/30 ring-2 ring-white/20'
-                          : 'bg-white/[0.02] border-white/5 hover:border-white/15'
-                      }`}
-                    >
-                      <X className={`w-6 h-6 ${activePromo === 'none' ? 'text-white' : 'text-white/30'}`} />
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-white/60">None</span>
-                    </button>
-
-                    {/* Valentines */}
-                    <button
-                      onClick={async () => {
-                        try {
-                          setIsSavingPromo(true);
-                          await settingsService.setActivePromo('valentines');
-                          setActivePromo('valentines');
-                          showToast("Valentine's promo activated! 💕", 'success');
-                        } catch (e: any) {
-                          showToast(e.message, 'error');
-                        } finally {
-                          setIsSavingPromo(false);
-                        }
-                      }}
-                      disabled={isSavingPromo}
-                      className={`relative flex flex-col items-center gap-3 p-4 border rounded-lg transition-all ${
-                        activePromo === 'valentines'
-                          ? 'bg-pink-500/10 border-pink-500/40 ring-2 ring-pink-500/20'
-                          : 'bg-white/[0.02] border-white/5 hover:border-pink-500/20'
-                      }`}
-                    >
-                      <Heart className={`w-6 h-6 ${activePromo === 'valentines' ? 'text-pink-400 fill-pink-400' : 'text-pink-400/30'}`} />
-                      <span className={`text-[10px] font-bold uppercase tracking-widest ${activePromo === 'valentines' ? 'text-pink-300' : 'text-white/60'}`}>Valentine's</span>
-                    </button>
-
-                    {/* Christmas */}
-                    <button
-                      onClick={async () => {
-                        try {
-                          setIsSavingPromo(true);
-                          await settingsService.setActivePromo('christmas');
-                          setActivePromo('christmas');
-                          showToast('Christmas promo activated! 🎄', 'success');
-                        } catch (e: any) {
-                          showToast(e.message, 'error');
-                        } finally {
-                          setIsSavingPromo(false);
-                        }
-                      }}
-                      disabled={isSavingPromo}
-                      className={`relative flex flex-col items-center gap-3 p-4 border rounded-lg transition-all ${
-                        activePromo === 'christmas'
-                          ? 'bg-emerald-500/10 border-emerald-500/40 ring-2 ring-emerald-500/20'
-                          : 'bg-white/[0.02] border-white/5 hover:border-emerald-500/20'
-                      }`}
-                    >
-                      <TreePine className={`w-6 h-6 ${activePromo === 'christmas' ? 'text-emerald-400' : 'text-emerald-400/30'}`} />
-                      <span className={`text-[10px] font-bold uppercase tracking-widest ${activePromo === 'christmas' ? 'text-emerald-300' : 'text-white/60'}`}>Christmas</span>
-                    </button>
-
-                    {/* Photoshoot */}
-                    <button
-                      onClick={async () => {
-                        try {
-                          setIsSavingPromo(true);
-                          await settingsService.setActivePromo('photoshoot');
-                          setActivePromo('photoshoot');
-                          showToast('Photoshoot promo activated! 📸', 'success');
-                        } catch (e: any) {
-                          showToast(e.message, 'error');
-                        } finally {
-                          setIsSavingPromo(false);
-                        }
-                      }}
-                      disabled={isSavingPromo}
-                      className={`relative flex flex-col items-center gap-3 p-4 border rounded-lg transition-all ${
-                        activePromo === 'photoshoot'
-                          ? 'bg-gold-accent/10 border-gold-accent/40 ring-2 ring-gold-accent/20'
-                          : 'bg-white/[0.02] border-white/5 hover:border-gold-accent/20'
-                      }`}
-                    >
-                      <Camera className={`w-6 h-6 ${activePromo === 'photoshoot' ? 'text-gold-accent' : 'text-gold-accent/30'}`} />
-                      <span className={`text-[10px] font-bold uppercase tracking-widest ${activePromo === 'photoshoot' ? 'text-gold-accent' : 'text-white/60'}`}>Photoshoot</span>
-                    </button>
-                  </div>
-                </div>
-
-              </div>
-
-              {/* ═══════ ROW 5: Pricing Configuration ═══════ */}
-              <div className="relative overflow-hidden bg-white/[0.02] border border-white/5 hover:border-yellow-500/20 transition-all">
-                <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-yellow-500 to-amber-600" />
-                
-                {/* Header */}
-                <div className="flex items-center justify-between p-5 border-b border-white/5">
-                  <div className="flex items-center gap-4">
-                    <div className="p-2.5 rounded-lg bg-yellow-500/10">
-                      <DollarSign className="w-5 h-5 text-yellow-400" />
-                    </div>
-                    <div>
-                      <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-white">Ценоразпис & Отстъпки</h3>
-                      <p className="text-[9px] text-white/30 uppercase tracking-wider mt-0.5">
-                        Базови цени и % отстъпка за всяка промоция
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Base Prices */}
-                <div className="p-5 space-y-4">
-                  <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold flex items-center gap-2">
-                    <DollarSign className="w-3 h-3" /> Базови цени (€)
-                  </label>
-                  <div className="grid grid-cols-3 gap-3">
-                    {/* Starter */}
-                    <div className="space-y-1.5">
-                      <label className="text-[9px] uppercase tracking-widest text-white/30 font-bold">Стартов</label>
-                      <input
-                        type="number"
-                        min={0}
-                        value={pricingConfig.basePrices.starter}
-                        onChange={(e) => setPricingConfig({
-                          ...pricingConfig,
-                          basePrices: { ...pricingConfig.basePrices, starter: Number(e.target.value) }
-                        })}
-                        className="w-full bg-black/30 border border-white/10 rounded-lg p-2.5 text-sm font-bold text-white outline-none focus:border-yellow-500/50 transition-all text-center"
-                      />
-                      <p className="text-[8px] text-white/20 text-center">{pricingConfig.basePrices.starter}€</p>
-                    </div>
-                    {/* Pro */}
-                    <div className="space-y-1.5">
-                      <label className="text-[9px] uppercase tracking-widest text-white/30 font-bold">Про</label>
-                      <input
-                        type="number"
-                        min={0}
-                        value={pricingConfig.basePrices.pro}
-                        onChange={(e) => setPricingConfig({
-                          ...pricingConfig,
-                          basePrices: { ...pricingConfig.basePrices, pro: Number(e.target.value) }
-                        })}
-                        className="w-full bg-black/30 border border-white/10 rounded-lg p-2.5 text-sm font-bold text-white outline-none focus:border-yellow-500/50 transition-all text-center"
-                      />
-                      <p className="text-[8px] text-white/20 text-center">{pricingConfig.basePrices.pro}€</p>
-                    </div>
-                    {/* Director */}
-                    <div className="space-y-1.5">
-                      <label className="text-[9px] uppercase tracking-widest text-white/30 font-bold">Директорски</label>
-                      <input
-                        type="number"
-                        min={0}
-                        value={pricingConfig.basePrices.director}
-                        onChange={(e) => setPricingConfig({
-                          ...pricingConfig,
-                          basePrices: { ...pricingConfig.basePrices, director: Number(e.target.value) }
-                        })}
-                        className="w-full bg-black/30 border border-white/10 rounded-lg p-2.5 text-sm font-bold text-white outline-none focus:border-yellow-500/50 transition-all text-center"
-                      />
-                      <p className="text-[8px] text-white/20 text-center">{pricingConfig.basePrices.director}€</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Valentine's Discounts */}
-                <div className="p-5 border-t border-white/5 space-y-4">
-                  <label className="text-[10px] uppercase tracking-widest text-pink-400/70 font-bold flex items-center gap-2">
-                    <Heart className="w-3 h-3 fill-pink-400 text-pink-400" /> Valentine's Day отстъпки (%)
-                  </label>
-                  <div className="grid grid-cols-3 gap-3">
-                    {(['starter', 'pro', 'director'] as const).map((tier) => (
-                      <div key={`val-${tier}`} className="space-y-1.5">
-                        <label className="text-[9px] uppercase tracking-widest text-white/30 font-bold">
-                          {tier === 'starter' ? 'Стартов' : tier === 'pro' ? 'Про' : 'Директорски'}
-                        </label>
-                        <div className="relative">
-                          <input
-                            type="number"
-                            min={0}
-                            max={100}
-                            value={pricingConfig.promos.valentines[tier]}
-                            onChange={(e) => setPricingConfig({
-                              ...pricingConfig,
-                              promos: {
-                                ...pricingConfig.promos,
-                                valentines: { ...pricingConfig.promos.valentines, [tier]: Number(e.target.value) }
-                              }
-                            })}
-                            className="w-full bg-pink-500/5 border border-pink-500/20 rounded-lg p-2.5 text-sm font-bold text-pink-300 outline-none focus:border-pink-500/50 transition-all text-center"
-                          />
-                          <Percent className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-pink-400/40" />
-                        </div>
-                        <p className="text-[8px] text-pink-300/40 text-center">
-                          {pricingConfig.promos.valentines[tier] > 0
-                            ? `${pricingConfig.basePrices[tier]}€ → ${settingsService.calcDiscountedPrice(pricingConfig.basePrices[tier], pricingConfig.promos.valentines[tier])}€`
-                            : 'Без отстъпка'
-                          }
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Christmas Discounts */}
-                <div className="p-5 border-t border-white/5 space-y-4">
-                  <label className="text-[10px] uppercase tracking-widest text-emerald-400/70 font-bold flex items-center gap-2">
-                    <TreePine className="w-3 h-3 text-emerald-400" /> Christmas отстъпки (%)
-                  </label>
-                  <div className="grid grid-cols-3 gap-3">
-                    {(['starter', 'pro', 'director'] as const).map((tier) => (
-                      <div key={`xmas-${tier}`} className="space-y-1.5">
-                        <label className="text-[9px] uppercase tracking-widest text-white/30 font-bold">
-                          {tier === 'starter' ? 'Стартов' : tier === 'pro' ? 'Про' : 'Директорски'}
-                        </label>
-                        <div className="relative">
-                          <input
-                            type="number"
-                            min={0}
-                            max={100}
-                            value={pricingConfig.promos.christmas[tier]}
-                            onChange={(e) => setPricingConfig({
-                              ...pricingConfig,
-                              promos: {
-                                ...pricingConfig.promos,
-                                christmas: { ...pricingConfig.promos.christmas, [tier]: Number(e.target.value) }
-                              }
-                            })}
-                            className="w-full bg-emerald-500/5 border border-emerald-500/20 rounded-lg p-2.5 text-sm font-bold text-emerald-300 outline-none focus:border-emerald-500/50 transition-all text-center"
-                          />
-                          <Percent className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-emerald-400/40" />
-                        </div>
-                        <p className="text-[8px] text-emerald-300/40 text-center">
-                          {pricingConfig.promos.christmas[tier] > 0
-                            ? `${pricingConfig.basePrices[tier]}€ → ${settingsService.calcDiscountedPrice(pricingConfig.basePrices[tier], pricingConfig.promos.christmas[tier])}€`
-                            : 'Без отстъпка'
-                          }
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Photoshoot Discounts */}
-                <div className="p-5 border-t border-white/5 space-y-4">
-                  <label className="text-[10px] uppercase tracking-widest text-gold-accent font-bold flex items-center gap-2">
-                    <Camera className="w-3 h-3 text-gold-accent" /> Photoshoot отстъпки (%)
-                  </label>
-                  <div className="grid grid-cols-3 gap-3">
-                    {(['starter', 'pro', 'director'] as const).map((tier) => (
-                      <div key={`photo-${tier}`} className="space-y-1.5">
-                        <label className="text-[9px] uppercase tracking-widest text-white/30 font-bold">
-                          {tier === 'starter' ? 'Стартов' : tier === 'pro' ? 'Про' : 'Директорски'}
-                        </label>
-                        <div className="relative">
-                          <input
-                            type="number"
-                            min={0}
-                            max={100}
-                            value={pricingConfig.promos.photoshoot?.[tier] || 0}
-                            onChange={(e) => setPricingConfig({
-                              ...pricingConfig,
-                              promos: {
-                                ...pricingConfig.promos,
-                                photoshoot: { ...pricingConfig.promos.photoshoot, [tier]: Number(e.target.value) }
-                              }
-                            })}
-                            className="w-full bg-gold-accent/5 border border-gold-accent/20 rounded-lg p-2.5 text-sm font-bold text-gold-accent outline-none focus:border-gold-accent/50 transition-all text-center"
-                          />
-                          <Percent className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gold-accent/40" />
-                        </div>
-                        <p className="text-[8px] text-gold-accent/40 text-center">
-                          {pricingConfig.promos.photoshoot?.[tier] > 0
-                            ? `${pricingConfig.basePrices[tier]}€ → ${settingsService.calcDiscountedPrice(pricingConfig.basePrices[tier], pricingConfig.promos.photoshoot[tier])}€`
-                            : 'Без отстъпка'
-                          }
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Save Button */}
-                <div className="p-5 border-t border-white/5 flex justify-end">
-                  <button
-                    onClick={async () => {
-                      setIsSavingPricing(true);
-                      try {
-                        await settingsService.setPricingConfig(pricingConfig);
-                        showToast('Ценоразпис запазен! 💰', 'success');
-                      } catch (e: any) {
-                        showToast(e.message, 'error');
-                      } finally {
-                        setIsSavingPricing(false);
-                      }
-                    }}
-                    disabled={isSavingPricing}
-                    className="bg-yellow-500 text-black px-6 py-2.5 text-[9px] font-bold uppercase tracking-widest hover:bg-yellow-400 transition-all disabled:opacity-30 rounded-md"
-                  >
-                    {isSavingPricing ? 'Запазване...' : '💰 Запази ценоразпис'}
+                    {isSavingAnnouncement ? 'Saving...' : 'Save Broadcast Changes'}
                   </button>
                 </div>
               </div>
-
             </div>
           </div>
         )}
+
+        {activeTab === 'design' && (
+          <div className="flex-1 overflow-auto bg-[#020202] custom-scrollbar">
+            <div className="max-w-[1400px] mx-auto px-6 py-5">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="p-2 bg-purple-500/10 rounded-lg">
+                  <Palette className="w-5 h-5 text-purple-400" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold uppercase tracking-[0.2em] text-white">Site <span className="text-purple-400">Design</span></h2>
+                  <p className="text-[10px] text-white/30 uppercase tracking-widest mt-1">Page backgrounds and visual elements</p>
+                </div>
+              </div>
+              <div className="relative overflow-hidden bg-white/[0.02] border border-white/5 hover:border-purple-500/20 transition-all rounded-xl p-5 mb-8 space-y-6">
+                <div className="flex items-center gap-4 mb-2">
+                  <div className="p-2.5 rounded-lg bg-purple-500/10">
+                    <ImageIcon size={20} className="text-purple-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-white">Page Backgrounds</h3>
+                    <p className="text-[9px] text-white/30 uppercase tracking-wider mt-0.5">Manage photos for About, Services & Contact pages</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {/* About Section */}
+                  <div className="space-y-4">
+                    <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-purple-400 border-b border-purple-500/20 pb-2">About Page</h4>
+                    <div className="space-y-3">
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <label className="text-[9px] uppercase tracking-widest text-white/40 font-bold">Photo 1 (History)</label>
+                          <label className={`cursor-pointer bg-white/5 hover:bg-white/10 text-[8px] uppercase tracking-widest text-purple-400 px-2 py-0.5 rounded transition-colors flex items-center gap-1.5 ${isPageBgUploading ? 'opacity-50 pointer-events-none' : ''}`}>
+                            <Upload size={8} />
+                            {activePageBgKey === 'bg_about_1' && isPageBgUploading ? '...' : 'Upload & Crop'}
+                            <input type="file" className="hidden" accept="image/*" onChange={(e) => handlePageBgUpload(e, 'bg_about_1')} disabled={isPageBgUploading} />
+                          </label>
+                        </div>
+                        <input type="text" value={bgAbout1} onChange={(e) => setBgAbout1(e.target.value)} onBlur={() => settingsService.setHeroSetting('bg_about_1', bgAbout1)} className="w-full bg-black/30 border border-white/5 rounded p-2.5 text-[10px] text-white/80 outline-none focus:border-purple-500/50" placeholder="URL"/>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <label className="text-[9px] uppercase tracking-widest text-white/40 font-bold">Photo 2 (Values)</label>
+                          <label className={`cursor-pointer bg-white/5 hover:bg-white/10 text-[8px] uppercase tracking-widest text-purple-400 px-2 py-0.5 rounded transition-colors flex items-center gap-1.5 ${isPageBgUploading ? 'opacity-50 pointer-events-none' : ''}`}>
+                            <Upload size={8} />
+                            {activePageBgKey === 'bg_about_2' && isPageBgUploading ? '...' : 'Upload & Crop'}
+                            <input type="file" className="hidden" accept="image/*" onChange={(e) => handlePageBgUpload(e, 'bg_about_2')} disabled={isPageBgUploading} />
+                          </label>
+                        </div>
+                        <input type="text" value={bgAbout2} onChange={(e) => setBgAbout2(e.target.value)} onBlur={() => settingsService.setHeroSetting('bg_about_2', bgAbout2)} className="w-full bg-black/30 border border-white/5 rounded p-2.5 text-[10px] text-white/80 outline-none focus:border-purple-500/50" placeholder="URL"/>
+                      </div>
+                    </div>
+                  </div>
+
+                   {/* Services Section */}
+                   <div className="space-y-4">
+                    <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400 border-b border-blue-500/20 pb-2">Services Page</h4>
+                    <div className="space-y-3">
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <label className="text-[9px] uppercase tracking-widest text-white/40 font-bold">Service 1 (Casting)</label>
+                          <label className={`cursor-pointer bg-white/5 hover:bg-white/10 text-[8px] uppercase tracking-widest text-blue-400 px-2 py-0.5 rounded transition-colors flex items-center gap-1.5 ${isPageBgUploading ? 'opacity-50 pointer-events-none' : ''}`}>
+                            <Upload size={8} />
+                            {activePageBgKey === 'bg_services_1' && isPageBgUploading ? '...' : 'Upload & Crop'}
+                            <input type="file" className="hidden" accept="image/*" onChange={(e) => handlePageBgUpload(e, 'bg_services_1')} disabled={isPageBgUploading} />
+                          </label>
+                        </div>
+                        <input type="text" value={bgServices1} onChange={(e) => setBgServices1(e.target.value)} onBlur={() => settingsService.setHeroSetting('bg_services_1', bgServices1)} className="w-full bg-black/30 border border-white/5 rounded p-2.5 text-[10px] text-white/80 outline-none focus:border-blue-500/50" placeholder="URL"/>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <label className="text-[9px] uppercase tracking-widest text-white/40 font-bold">Service 2 (Production)</label>
+                          <label className={`cursor-pointer bg-white/5 hover:bg-white/10 text-[8px] uppercase tracking-widest text-blue-400 px-2 py-0.5 rounded transition-colors flex items-center gap-1.5 ${isPageBgUploading ? 'opacity-50 pointer-events-none' : ''}`}>
+                            <Upload size={8} />
+                            {activePageBgKey === 'bg_services_2' && isPageBgUploading ? '...' : 'Upload & Crop'}
+                            <input type="file" className="hidden" accept="image/*" onChange={(e) => handlePageBgUpload(e, 'bg_services_2')} disabled={isPageBgUploading} />
+                          </label>
+                        </div>
+                        <input type="text" value={bgServices2} onChange={(e) => setBgServices2(e.target.value)} onBlur={() => settingsService.setHeroSetting('bg_services_2', bgServices2)} className="w-full bg-black/30 border border-white/5 rounded p-2.5 text-[10px] text-white/80 outline-none focus:border-blue-500/50" placeholder="URL"/>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <label className="text-[9px] uppercase tracking-widest text-white/40 font-bold">Service 3 (Creative)</label>
+                          <label className={`cursor-pointer bg-white/5 hover:bg-white/10 text-[8px] uppercase tracking-widest text-blue-400 px-2 py-0.5 rounded transition-colors flex items-center gap-1.5 ${isPageBgUploading ? 'opacity-50 pointer-events-none' : ''}`}>
+                            <Upload size={8} />
+                            {activePageBgKey === 'bg_services_3' && isPageBgUploading ? '...' : 'Upload & Crop'}
+                            <input type="file" className="hidden" accept="image/*" onChange={(e) => handlePageBgUpload(e, 'bg_services_3')} disabled={isPageBgUploading} />
+                          </label>
+                        </div>
+                        <input type="text" value={bgServices3} onChange={(e) => setBgServices3(e.target.value)} onBlur={() => settingsService.setHeroSetting('bg_services_3', bgServices3)} className="w-full bg-black/30 border border-white/5 rounded p-2.5 text-[10px] text-white/80 outline-none focus:border-blue-500/50" placeholder="URL"/>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Contact Section */}
+                  <div className="space-y-4">
+                    <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-pink-400 border-b border-pink-500/20 pb-2">Contact Page</h4>
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <label className="text-[9px] uppercase tracking-widest text-white/40 font-bold">Main Banner Image</label>
+                          <label className={`cursor-pointer bg-white/5 hover:bg-white/10 text-[8px] uppercase tracking-widest text-pink-400 px-2 py-0.5 rounded transition-colors flex items-center gap-1.5 ${isPageBgUploading ? 'opacity-50 pointer-events-none' : ''}`}>
+                            <Upload size={8} />
+                            {activePageBgKey === 'bg_contact' && isPageBgUploading ? '...' : 'Upload & Crop'}
+                            <input type="file" className="hidden" accept="image/*" onChange={(e) => handlePageBgUpload(e, 'bg_contact')} disabled={isPageBgUploading} />
+                          </label>
+                      </div>
+                      <input type="text" value={bgContact} onChange={(e) => setBgContact(e.target.value)} onBlur={() => settingsService.setHeroSetting('bg_contact', bgContact)} className="w-full bg-black/30 border border-white/5 rounded p-2.5 text-[10px] text-white/80 outline-none focus:border-pink-500/50" placeholder="URL"/>
+                    </div>
+                  </div>
+
+                  {/* Blog Section */}
+                  <div className="space-y-4">
+                    <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-400 border-b border-orange-500/20 pb-2">Blog Page</h4>
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <label className="text-[9px] uppercase tracking-widest text-white/40 font-bold">Hero Background</label>
+                          <label className={`cursor-pointer bg-white/5 hover:bg-white/10 text-[8px] uppercase tracking-widest text-orange-400 px-2 py-0.5 rounded transition-colors flex items-center gap-1.5 ${isPageBgUploading ? 'opacity-50 pointer-events-none' : ''}`}>
+                            <Upload size={8} />
+                            {activePageBgKey === 'bg_blog' && isPageBgUploading ? '...' : 'Upload & Crop'}
+                            <input type="file" className="hidden" accept="image/*" onChange={(e) => handlePageBgUpload(e, 'bg_blog')} disabled={isPageBgUploading} />
+                          </label>
+                      </div>
+                      <input type="text" value={bgBlog} onChange={(e) => setBgBlog(e.target.value)} onBlur={() => settingsService.setHeroSetting('bg_blog', bgBlog)} className="w-full bg-black/30 border border-white/5 rounded p-2.5 text-[10px] text-white/80 outline-none focus:border-orange-500/50" placeholder="URL"/>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'lookbook' && (
+          <div className="flex-1 overflow-auto bg-[#020202] custom-scrollbar">
+            <div className="max-w-[1400px] mx-auto px-6 py-5">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="p-2 bg-gold-accent/10 rounded-lg">
+                  <Star className="w-5 h-5 text-gold-accent" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold uppercase tracking-[0.2em] text-white">Lookbook <span className="text-gold-accent">Manager</span></h2>
+                  <p className="text-[10px] text-white/30 uppercase tracking-widest mt-1">Manage seasonal galleries and showcase presets</p>
+                </div>
+              </div>
+
+              {/* в•ђв•ђв•ђв•ђв•ђв•ђв•ђ ROW 3.6: Lookbook Showcase в•ђв•ђв•ђв•ђв•ђв•ђв•ђ */}
+              <div className="relative overflow-hidden bg-white/[0.02] border border-white/5 hover:border-gold-accent/20 transition-all rounded-xl p-5 mb-8 space-y-6">
+                <div className="flex items-center justify-between gap-4 mb-2">
+                  <div className="flex items-center gap-4">
+                    <div className="p-2.5 rounded-lg bg-gold-accent/10">
+                      <ImageIcon size={20} className="text-gold-accent" />
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-white">Lookbook Showcase</h3>
+                      <p className="text-[9px] text-white/30 uppercase tracking-wider mt-0.5">Homepage transition gallery (ordered list)</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Presets Manager */}
+                <div className="bg-white/5 rounded-xl border border-white/5 p-4 space-y-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Lookbook Presets & Scheduling</label>
+                      <span className="px-2 py-0.5 rounded bg-white text-[8px] font-black text-black">BETA</span>
+                    </div>
+                    <button 
+                       onClick={handleCreatePreset}
+                       className="text-[9px] uppercase tracking-widest bg-gold-accent/20 text-gold-accent px-3 py-1.5 rounded hover:bg-gold-accent/30 transition-colors font-bold"
+                    >
+                        + New Preset
+                    </button>
+                    <button 
+                       onClick={() => setShowConnector(true)}
+                       className="text-[9px] uppercase tracking-widest bg-emerald-500/20 text-emerald-500 px-3 py-1.5 rounded hover:bg-emerald-500/30 transition-colors font-bold flex items-center gap-1.5"
+                    >
+                        <Zap size={10} />
+                        Connector
+                    </button>
+                    <button 
+                       onClick={handleClearLookbookSchedule}
+                       className="text-[9px] uppercase tracking-widest bg-red-500/20 text-red-500 px-3 py-1.5 rounded hover:bg-red-500/30 transition-colors font-bold flex items-center gap-1.5"
+                    >
+                        <X size={10} />
+                        Clear Schedule
+                    </button>
+                  </div>
+                  
+                  <div className="flex flex-wrap gap-2">
+                    {lookbookPresets.map(p => (
+                      <div key={p.id} className={`flex items-center rounded-lg border transition-all ${editingPresetId === p.id ? 'bg-gold-accent border-gold-accent' : 'bg-white/5 border-white/5 hover:border-white/10'}`}>
+                        <button 
+                           onClick={() => handleSwitchPreset(p.id)}
+                           className={`px-3 py-2 text-[10px] uppercase font-extrabold transition-all ${editingPresetId === p.id ? 'text-black' : 'text-white/50'}`}
+                        >
+                            {p.name}
+                        </button>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); handleDeletePreset(p.id); }} 
+                          className={`p-2 transition-colors border-l ${editingPresetId === p.id ? 'text-black/30 border-black/10 hover:text-red-700' : 'text-white/10 border-white/5 hover:text-red-500'}`}
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  {editingPresetId ? (
+                    <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                      <div className="pt-4 mt-2 border-t border-white/5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="md:col-span-1">
+                          <label className="text-[9px] uppercase tracking-widest text-white/30 font-bold mb-1.5 block">Preset Name</label>
+                          <input 
+                              type="text"
+                              value={lookbookPresets.find(x => x.id === editingPresetId)?.name || ''}
+                              onChange={(e) => handleUpdatePresetField(editingPresetId, 'name', e.target.value)}
+                              className={`w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-xs text-white focus:border-gold-accent/50 focus:outline-none transition-colors`}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-[9px] uppercase tracking-widest text-white/30 font-bold mb-1.5 block">Start Date</label>
+                          <input 
+                              type="datetime-local"
+                              value={lookbookStartDate}
+                              onChange={(e) => setLookbookStartDate(e.target.value)}
+                              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-xs text-white focus:border-gold-accent/50 focus:outline-none transition-colors [color-scheme:dark]"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[9px] uppercase tracking-widest text-white/30 font-bold mb-1.5 block">End Date</label>
+                          <input 
+                              type="datetime-local"
+                              value={lookbookEndDate}
+                              onChange={(e) => setLookbookEndDate(e.target.value)}
+                              className={`w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-xs text-white focus:border-gold-accent/50 focus:outline-none transition-colors [color-scheme:dark] ${lookbookIsPermanent ? 'opacity-30 cursor-not-allowed' : ''}`}
+                              disabled={lookbookIsPermanent}
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[9px] uppercase tracking-widest text-white/30 font-bold mb-1.5 block">Forced Active</label>
+                          <div 
+                             onClick={() => setLookbookIsPermanent(!lookbookIsPermanent)}
+                             className={`w-full flex items-center justify-between gap-3 bg-white/5 border border-white/10 rounded-lg px-3 py-2 select-none cursor-pointer transition-all hover:border-gold-accent/30 ${lookbookIsPermanent ? 'border-gold-accent/50 bg-gold-accent/5' : ''}`}
+                          >
+                            <span className={`text-[10px] font-bold uppercase tracking-wider ${lookbookIsPermanent ? 'text-gold-accent' : 'text-white/40'}`}>
+                              {lookbookIsPermanent ? 'Always On' : 'Use Schedule'}
+                            </span>
+                            <div className={`w-8 h-4 rounded-full p-1 transition-all ${lookbookIsPermanent ? 'bg-gold-accent' : 'bg-white/10'}`}>
+                               <div className={`w-2 h-2 rounded-full bg-white transition-all transform ${lookbookIsPermanent ? 'translate-x-4' : 'translate-x-0'}`} />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between gap-4 pt-4 mt-4 border-t border-white/5">
+                        <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-500/5 border border-red-500/10 hover:border-red-500/30 transition-all cursor-pointer select-none" onClick={() => setFastDelete(!fastDelete)}>
+                            <div className={`w-3 h-3 rounded-full border border-red-500/50 flex items-center justify-center transition-all ${fastDelete ? 'bg-red-500 border-red-500' : ''}`}>
+                              {fastDelete && <CheckCircle2 size={10} className="text-white" />}
+                            </div>
+                            <span className="text-[9px] uppercase font-bold tracking-widest text-red-500/80">Fast Delete</span>
+                          </div>
+
+                          <label className="cursor-pointer bg-gold-accent text-black px-4 py-2 rounded text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-white transition-colors">
+                            <Plus size={14} />
+                            Add Photo
+                            <input 
+                              type="file" 
+                              className="hidden" 
+                              accept="image/*"
+                              multiple
+                              onChange={async (e) => {
+                                const files = Array.from(e.target.files || []);
+                                if (files.length === 0) return;
+                                e.target.value = '';
+                                try {
+                                  setIsLookbookSaving(true);
+                                  const newUrls: string[] = [];
+                                  let skipped = 0;
+                                  for (const file of files) {
+                                    // Check for duplicate by filename
+                                    const sanitized = sanitizeFileName(file.name);
+                                    const isDuplicate = lookbookImages.some(existingUrl => existingUrl.includes(sanitized));
+                                    if (isDuplicate) {
+                                      skipped++;
+                                      continue;
+                                    }
+                                    const path = `site_assets/lookbook_${Date.now()}_${sanitized}`;
+                                    const publicUrl = await modelsService.uploadFile(file, path);
+                                    newUrls.push(publicUrl);
+                                  }
+                                  if (newUrls.length > 0) {
+                                    setLookbookImages(prev => [...prev, ...newUrls]);
+                                  }
+                                  if (skipped > 0 && newUrls.length > 0) {
+                                    showToast(`${newUrls.length} added, ${skipped} duplicate(s) skipped`, 'success');
+                                  } else if (skipped > 0 && newUrls.length === 0) {
+                                    showToast(`All ${skipped} image(s) already exist`, 'warning');
+                                  } else {
+                                    showToast(`${newUrls.length} image(s) added!`, 'success');
+                                  }
+                                } catch (err: any) {
+                                  showToast(err.message, 'error');
+                                } finally {
+                                  setIsLookbookSaving(false);
+                                }
+                              }}
+                            />
+                          </label>
+                        </div>
+                      </div>
+
+                      {lookbookImages.length > 0 ? (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 pt-4">
+                          {lookbookImages.map((url, idx) => (
+                            <div 
+                              key={`${url}-${idx}`} 
+                              draggable
+                              onDragStart={(e) => {
+                                setDraggedImageIndex(idx);
+                                e.dataTransfer.effectAllowed = "move";
+                              }}
+                              onDragOver={(e) => {
+                                e.preventDefault();
+                                e.dataTransfer.dropEffect = "move";
+                              }}
+                              onDrop={(e) => {
+                                e.preventDefault();
+                                if (draggedImageIndex === null || draggedImageIndex === idx) return;
+                                const newImages = [...lookbookImages];
+                                const [movedItem] = newImages.splice(draggedImageIndex, 1);
+                                newImages.splice(idx, 0, movedItem);
+                                setLookbookImages(newImages);
+                                setDraggedImageIndex(null);
+                              }}
+                              onDragEnd={() => setDraggedImageIndex(null)}
+                              className={`group relative aspect-[4/5] bg-black/40 rounded-lg overflow-hidden border transition-all ${draggedImageIndex === idx ? 'opacity-50 border-gold-accent border-dashed' : 'border-white/5'} ${draggedImageIndex !== null && draggedImageIndex !== idx ? 'hover:border-gold-accent hover:bg-white/5 cursor-move' : ''}`}
+                            >
+                              <img src={url} className="w-full h-full object-cover" alt="" />
+                              <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/80 to-transparent translate-y-full group-hover:translate-y-0 transition-transform flex justify-between items-center">
+                                <div className="flex gap-1">
+                                  <button 
+                                    onClick={() => {
+                                      if (idx === 0) return;
+                                      const newImages = [...lookbookImages];
+                                      [newImages[idx-1], newImages[idx]] = [newImages[idx], newImages[idx-1]];
+                                      setLookbookImages(newImages);
+                                    }}
+                                    className="p-1.5 bg-white/10 rounded hover:bg-white/20 text-white disabled:opacity-20"
+                                    disabled={idx === 0}
+                                  >
+                                    <ArrowLeft size={12} />
+                                  </button>
+                                  <button 
+                                    onClick={() => {
+                                      if (idx === lookbookImages.length - 1) return;
+                                      const newImages = [...lookbookImages];
+                                      [newImages[idx+1], newImages[idx]] = [newImages[idx], newImages[idx+1]];
+                                      setLookbookImages(newImages);
+                                    }}
+                                    className="p-1.5 bg-white/10 rounded hover:bg-white/20 text-white disabled:opacity-20"
+                                    disabled={idx === lookbookImages.length - 1}
+                                  >
+                                    <ArrowRight size={12} />
+                                  </button>
+                                  <button 
+                                    onClick={() => {
+                                      setLookbookToCrop(url);
+                                      setLookbookEditIndex(idx);
+                                    }}
+                                    className="p-1.5 bg-blue-500/20 rounded hover:bg-blue-500 scale-90 group-hover:scale-100 transition-all text-blue-500 hover:text-white"
+                                    title="Recrop Image"
+                                  >
+                                    <Crop size={12} />
+                                  </button>
+                                </div>
+                                <button 
+                                  onClick={async () => {
+                                    if (fastDelete || window.confirm('Delete this lookbook image?')) {
+                                      try {
+                                        const urlToDelete = url;
+                                        // 1. Update UI immediately
+                                        setLookbookImages(lookbookImages.filter((_, i) => i !== idx));
+                                        // 2. Physical delete from Storage
+                                        if (!urlToDelete.includes('Site_Pics/Homepage')) { // Don't delete original default assets
+                                          await modelsService.deleteFile(urlToDelete);
+                                        }
+                                      } catch (e: any) {
+                                        console.error('Failed to delete file from storage:', e);
+                                      }
+                                    }
+                                  }}
+                                  className="p-1.5 bg-red-500/20 rounded hover:bg-red-500 scale-90 group-hover:scale-100 transition-all text-red-500 hover:text-white"
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              </div>
+                              <div className="absolute top-2 left-2 bg-black/60 px-2 py-0.5 rounded text-[8px] font-mono text-gold-accent tracking-tighter">
+                                #{idx + 1}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="py-12 border-2 border-dashed border-white/5 rounded-xl flex flex-col items-center justify-center text-white/20 mt-4">
+                          <ImageIcon size={32} className="mb-3 opacity-20" />
+                          <p className="text-[10px] uppercase tracking-widest">No lookbook images yet</p>
+                        </div>
+                      )}
+
+                      {/* Title & Font Settings */}
+                      <div className="border-t border-white/5 pt-5 mt-5 space-y-4">
+                        <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Section Title</label>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="text-[9px] uppercase tracking-widest text-white/30 font-bold mb-1 block">🇧🇬 Български</label>
+                            <input
+                              type="text"
+                              value={lookbookTitleBg}
+                              onChange={(e) => setLookbookTitleBg(e.target.value)}
+                              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder-white/20 focus:border-gold-accent/50 focus:outline-none transition-colors"
+                              placeholder="Заглавие на български..."
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[9px] uppercase tracking-widest text-white/30 font-bold mb-1 block">🇬🇧 English</label>
+                            <input
+                              type="text"
+                              value={lookbookTitleEn}
+                              onChange={(e) => setLookbookTitleEn(e.target.value)}
+                              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder-white/20 focus:border-gold-accent/50 focus:outline-none transition-colors"
+                              placeholder="Title in English..."
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-[9px] uppercase tracking-widest text-white/30 font-bold mb-1 block">Font Family</label>
+                          <select
+                            value={lookbookFont}
+                            onChange={(e) => setLookbookFont(e.target.value)}
+                            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white focus:border-gold-accent/50 focus:outline-none transition-colors appearance-none cursor-pointer"
+                            style={{ fontFamily: lookbookFont }}
+                          >
+                            {[
+                              'Playfair Display', 'Inter', 'Cormorant Garamond', 'Montserrat', 'Raleway',
+                              'Oswald', 'Lora', 'Merriweather', 'Poppins', 'Roboto Slab',
+                              'Dancing Script', 'Great Vibes', 'Cinzel', 'Bebas Neue', 'Abril Fatface',
+                              'Josefin Sans', 'Libre Baskerville', 'Nunito', 'Crimson Text',
+                              'DM Serif Display', 'Italiana', 'Bodoni Moda'
+                            ].map(font => (
+                              <option key={font} value={font} style={{ fontFamily: font, background: '#111', color: '#fff' }}>
+                                {font}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-[9px] uppercase tracking-widest text-white/30 font-bold mb-1 block">Description Font</label>
+                          <select
+                            value={lookbookDescFont}
+                            onChange={(e) => setLookbookDescFont(e.target.value)}
+                            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white focus:border-gold-accent/50 focus:outline-none transition-colors appearance-none cursor-pointer"
+                            style={{ fontFamily: lookbookDescFont }}
+                          >
+                            {[
+                              'Playfair Display', 'Inter', 'Cormorant Garamond', 'Montserrat', 'Raleway',
+                              'Oswald', 'Lora', 'Merriweather', 'Poppins', 'Roboto Slab',
+                              'Dancing Script', 'Great Vibes', 'Cinzel', 'Bebas Neue', 'Abril Fatface',
+                              'Josefin Sans', 'Libre Baskerville', 'Nunito', 'Crimson Text',
+                              'DM Serif Display', 'Italiana', 'Bodoni Moda'
+                            ].map(font => (
+                              <option key={font} value={font} style={{ fontFamily: font, background: '#111', color: '#fff' }}>
+                                {font}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="text-[9px] uppercase tracking-widest text-white/30 font-bold mb-1 block">🇧🇬 Описание (Български)</label>
+                            <textarea
+                              value={lookbookDescBg}
+                              onChange={(e) => setLookbookDescBg(e.target.value)}
+                              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder-white/20 focus:border-gold-accent/50 focus:outline-none transition-colors resize-none h-20"
+                              placeholder="Кратко описание на български..."
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[9px] uppercase tracking-widest text-white/30 font-bold mb-1 block">🇬🇧 Description (English)</label>
+                            <textarea
+                              value={lookbookDescEn}
+                              onChange={(e) => setLookbookDescEn(e.target.value)}
+                              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder-white/20 focus:border-gold-accent/50 focus:outline-none transition-colors resize-none h-20"
+                              placeholder="Short description in English..."
+                            />
+                          </div>
+                        </div>
+                        {/* Live Preview */}
+                        <div className="bg-black/30 border border-white/5 rounded-lg p-6 text-center">
+                          <p className="text-[8px] uppercase tracking-widest text-white/20 mb-2">Preview</p>
+                          <h3 className="text-3xl text-white" style={{ fontFamily: lookbookFont }}>
+                            {lookbookTitleEn || 'Your Title Here'}
+                          </h3>
+                          <h3 className="text-xl text-white/50 mt-1" style={{ fontFamily: lookbookFont }}>
+                            {lookbookTitleBg || 'Заглавие тук'}
+                          </h3>
+                          <p className="text-[10px] text-white/30 mt-4 max-w-sm mx-auto" style={{ fontFamily: lookbookDescFont }}>
+                            {lookbookDescEn || lookbookDescBg || 'Описанието ще се появи тук...'}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="pt-4 border-t border-white/5 flex justify-end">
+                         <button 
+                          onClick={async () => {
+                            try {
+                              setIsLookbookSaving(true);
+                              await settingsService.saveLookbookPresets(lookbookPresets);
+                              showToast('Lookbook settings & presets saved!', 'success');
+                            } catch (e: any) {
+                              showToast(e.message, 'error');
+                            } finally {
+                              setIsLookbookSaving(false);
+                            }
+                          }}
+                          disabled={isLookbookSaving}
+                          className="flex items-center gap-2 bg-white text-black px-8 py-3 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all hover:bg-gold-accent disabled:opacity-30 shadow-xl"
+                        >
+                          {isLookbookSaving ? 'Saving...' : (
+                            <>
+                              <Save className="w-3.5 h-3.5" />
+                              Save Order & Gallery
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="py-12 border-t border-white/5 flex flex-col items-center justify-center text-white/20">
+                      <Plus size={32} className="mb-3 opacity-10" />
+                      <p className="text-[10px] uppercase tracking-widest">Select a preset or create a new one to start editing</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+
       </main>
 
       {/* REFACTORED EDITOR MODAL */}
@@ -2553,7 +3643,7 @@ const AdminDashboard: React.FC = () => {
                               try {
                                 const fileArray = Array.from(files) as File[];
                                 for (const file of fileArray) {
-                                  const path = `gallery/${editingModel?.slug || 'new'}_${Date.now()}_${file.name}`;
+                                  const path = `gallery/${editingModel?.slug || 'new'}_${Date.now()}_${sanitizeFileName(file.name)}`;
                                   const url = await modelsService.uploadFile(file, path);
                                   setEditCoverImages(prev => [...prev, url]);
                                 }
@@ -2635,7 +3725,7 @@ const AdminDashboard: React.FC = () => {
               const blob = await res.blob();
               const file = new File([blob], `adjusted_${Date.now()}.jpg`, { type: 'image/jpeg' });
               
-              const path = `homepage/top_model_adjusted_${Date.now()}_${file.name}`;
+              const path = `homepage/top_model_adjusted_${Date.now()}_${sanitizeFileName(file.name)}`;
               const publicUrl = await modelsService.uploadFile(file, path);
               
               setEditCardImages(prev => {
@@ -2643,6 +3733,11 @@ const AdminDashboard: React.FC = () => {
                 updated[imageToCrop.index] = publicUrl;
                 return updated;
               });
+
+              // Clean up old file if not system asset
+              if (imageToCrop.url && !imageToCrop.url.includes('Site_Pics/')) {
+                await modelsService.deleteFile(imageToCrop.url);
+              }
               
               showToast('Asset updated!', 'success');
             } catch (err: any) {
@@ -2670,10 +3765,20 @@ const AdminDashboard: React.FC = () => {
                const blob = await res.blob();
                const file = new File([blob], `hero_bg_${Date.now()}.jpg`, { type: 'image/jpeg' });
                
+               // 1. Get current URL to potentially delete
+               const currentUrl = heroImageUrl;
+
                const path = `site_assets/hero_bg_${Date.now()}`;
                const publicUrl = await modelsService.uploadFile(file, path);
                
                setHeroImageUrl(publicUrl);
+               await settingsService.setHeroSetting('hero_image_url', publicUrl);
+
+               // 2. Delete old file if it was a user upload
+               if (currentUrl && !currentUrl.includes('Site_Pics/')) {
+                 await modelsService.deleteFile(currentUrl);
+               }
+
                showToast('Hero background set!', 'success');
              } catch (err: any) {
                showToast(err.message, 'error');
@@ -2698,10 +3803,19 @@ const AdminDashboard: React.FC = () => {
                const blob = await res.blob();
                const file = new File([blob], `model_bg_${Date.now()}.jpg`, { type: 'image/jpeg' });
                
+               // 1. Get current URL to potentially delete
+               const currentUrl = editBackgroundImage;
+
                const path = `models/${editingModel?.slug || 'new'}/background_${Date.now()}`;
                const publicUrl = await modelsService.uploadFile(file, path);
                
                setEditBackgroundImage(publicUrl);
+               
+               // 2. Delete old file if it was a user upload
+               if (currentUrl && !currentUrl.includes('Site_Pics/')) {
+                 await modelsService.deleteFile(currentUrl);
+               }
+
                showToast('Background updated!', 'success');
              } catch (err: any) {
                showToast(err.message, 'error');
@@ -2712,6 +3826,190 @@ const AdminDashboard: React.FC = () => {
           }}
         />
       )}
+
+      {lookbookToCrop && (
+        <SpotlightCropModal 
+          isOpen={true}
+          imageUrl={lookbookToCrop}
+          onClose={() => {
+            setLookbookToCrop(null);
+            setLookbookEditIndex(-1);
+          }}
+          aspectRatio={16/9}
+          onCropComplete={async (croppedUrl) => {
+             try {
+               setIsLookbookSaving(true);
+               const res = await fetch(croppedUrl);
+               const blob = await res.blob();
+               const file = new File([blob], `lookbook_${Date.now()}.jpg`, { type: 'image/jpeg' });
+               
+               const path = `site_assets/lookbook_${Date.now()}_${sanitizeFileName(file.name)}`;
+               const publicUrl = await modelsService.uploadFile(file, path);
+               
+               if (lookbookEditIndex >= 0) {
+                 const oldUrl = lookbookImages[lookbookEditIndex];
+                 const updated = [...lookbookImages];
+                 updated[lookbookEditIndex] = publicUrl;
+                 setLookbookImages(updated);
+                 
+                 // Clean up old file if not system asset
+                 if (!oldUrl.includes('Site_Pics/Homepage')) {
+                   await modelsService.deleteFile(oldUrl);
+                 }
+                 showToast('Image recropped successfully!', 'success');
+               } else {
+                 setLookbookImages(prev => [...prev, publicUrl]);
+                 showToast('Image added to lookbook!', 'success');
+               }
+             } catch (err: any) {
+               showToast(err.message, 'error');
+             } finally {
+               setLookbookToCrop(null);
+               setLookbookEditIndex(-1);
+               setIsLookbookSaving(false);
+             }
+          }}
+        />
+      )}
+
+      {pageBgToCrop && activePageBgKey && (
+        <SpotlightCropModal 
+          isOpen={!!pageBgToCrop}
+          imageUrl={pageBgToCrop}
+          onClose={() => {
+            setPageBgToCrop(null);
+            setActivePageBgKey('');
+          }}
+          aspectRatio={activePageBgKey === 'bg_blog' ? 16/9 : 4/5} 
+          onCropComplete={async (croppedUrl) => {
+             try {
+               setIsPageBgUploading(true);
+               const res = await fetch(croppedUrl);
+               const blob = await res.blob();
+               const file = new File([blob], `${activePageBgKey}_${Date.now()}.jpg`, { type: 'image/jpeg' });
+               
+               // 1. Get current URL to potentially delete it later
+               let currentUrl = '';
+               if (activePageBgKey === 'bg_about_1') currentUrl = bgAbout1;
+               if (activePageBgKey === 'bg_about_2') currentUrl = bgAbout2;
+               if (activePageBgKey === 'bg_services_1') currentUrl = bgServices1;
+               if (activePageBgKey === 'bg_services_2') currentUrl = bgServices2;
+               if (activePageBgKey === 'bg_services_3') currentUrl = bgServices3;
+               if (activePageBgKey === 'bg_contact') currentUrl = bgContact;
+               if (activePageBgKey === 'bg_blog') currentUrl = bgBlog;
+
+               // 2. Upload new file
+               const path = `site_assets/${activePageBgKey}_${Date.now()}_${sanitizeFileName(file.name)}`;
+               const publicUrl = await modelsService.uploadFile(file, path);
+               
+               // 3. Update DB and UI
+               await settingsService.setHeroSetting(activePageBgKey, publicUrl);
+               
+               if (activePageBgKey === 'bg_about_1') setBgAbout1(publicUrl);
+               if (activePageBgKey === 'bg_about_2') setBgAbout2(publicUrl);
+               if (activePageBgKey === 'bg_services_1') setBgServices1(publicUrl);
+               if (activePageBgKey === 'bg_services_2') setBgServices2(publicUrl);
+               if (activePageBgKey === 'bg_services_3') setBgServices3(publicUrl);
+               if (activePageBgKey === 'bg_contact') setBgContact(publicUrl);
+               if (activePageBgKey === 'bg_blog') setBgBlog(publicUrl);
+               
+               // 4. Delete old file if it was a user upload (not a default Site_Pics asset)
+               if (currentUrl && !currentUrl.includes('Site_Pics/')) {
+                 await modelsService.deleteFile(currentUrl);
+               }
+
+               showToast('Page background updated!', 'success');
+             } catch (err: any) {
+               showToast(err.message, 'error');
+             } finally {
+               setPageBgToCrop(null);
+               setActivePageBgKey('');
+               setIsPageBgUploading(false);
+             }
+          }}
+        />
+      )}
+      
+      {/* CONNECTOR MODAL */}
+      <AnimatePresence>
+        {showConnector && (
+          <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4">
+             <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowConnector(false)}
+              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              className="relative w-full max-w-md bg-[#0a0a0a] border border-gold-accent/20 p-8 shadow-2xl rounded-lg"
+              onClick={(e) => e.stopPropagation()}
+            >
+               <h3 className="text-lg uppercase tracking-widest font-bold text-gold-accent mb-6 flex items-center gap-2">
+                 <Zap size={18} />
+                 Lookbook Connector
+               </h3>
+               
+               <div className="space-y-6">
+                  <div>
+                    <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold mb-2 block">Step 1: Start With</label>
+                    <select 
+                      value={connectorPresetA}
+                      onChange={(e) => setConnectorPresetA(e.target.value)}
+                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-xs text-white focus:border-gold-accent/50 focus:outline-none transition-colors"
+                    >
+                      <option className="bg-[#0a0a0a] text-white" value="">Select First Preset...</option>
+                      {lookbookPresets.map(p => <option className="bg-[#0a0a0a] text-white" key={p.id} value={p.id}>{p.name}</option>)}
+                    </select>
+                  </div>
+
+                  <div className="flex justify-center text-white/20">
+                    <ArrowDown size={16} />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold mb-2 block">Step 2: Transition To</label>
+                    <select 
+                      value={connectorPresetB}
+                      onChange={(e) => setConnectorPresetB(e.target.value)}
+                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-xs text-white focus:border-gold-accent/50 focus:outline-none transition-colors"
+                    >
+                      <option className="bg-[#0a0a0a] text-white" value="">Select Second Preset...</option>
+                      {lookbookPresets.filter(p => p.id !== connectorPresetA).map(p => <option className="bg-[#0a0a0a] text-white" key={p.id} value={p.id}>{p.name}</option>)}
+                    </select>
+                  </div>
+
+                  <div>
+                     <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold mb-2 block">Transition Time (Duration of Step 1)</label>
+                     <div className="flex items-center gap-4">
+                        <input 
+                          type="range"
+                          min="10" 
+                          max="120"
+                          step="5"
+                          value={connectorDuration}
+                          onChange={(e) => setConnectorDuration(Number(e.target.value))}
+                          className="flex-1 accent-gold-accent h-1 bg-white/10 rounded-lg appearance-none cursor-pointer"
+                        />
+                        <span className="text-xs font-mono text-gold-accent min-w-[3ch]">{connectorDuration}s</span>
+                     </div>
+                  </div>
+                  
+                  <button 
+                    onClick={handleConnectorApply}
+                    disabled={!connectorPresetA || !connectorPresetB || isLookbookSaving}
+                    className="w-full mt-4 bg-gold-accent text-black px-6 py-3 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all hover:bg-white disabled:opacity-30 flex justify-center items-center gap-2"
+                  >
+                    {isLookbookSaving ? 'Connecting...' : 'Connect & Go Live'}
+                  </button>
+               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
       
       {/* CUSTOM CONFIRMATION MODAL */}
       <AnimatePresence>

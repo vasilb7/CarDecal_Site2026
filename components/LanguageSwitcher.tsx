@@ -40,7 +40,10 @@ const LanguageSwitcher: React.FC = () => {
     const { i18n } = useTranslation();
     const navigate = useNavigate();
     const location = useLocation();
-    const currentLang = i18n.language.split('-')[0];
+    
+    // Safety check for current language to avoid broken links
+    const rawLang = i18n.language?.split("-")[0];
+    const currentLang = ["bg", "en"].includes(rawLang) ? rawLang : "bg";
 
     const toggleLanguage = (e: React.MouseEvent) => {
         e.stopPropagation();

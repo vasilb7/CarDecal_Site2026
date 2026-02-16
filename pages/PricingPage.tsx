@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from 'react';
 import { PricingCard } from "@/components/ui/dark-gradient-pricing"
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
@@ -5,19 +6,52 @@ import { Heart, Sparkles, Crown } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { usePricing } from '@/hooks/usePricing';
+import { supabase } from '@/lib/supabase';
+import { settingsService } from '@/lib/settingsService';
 
 const PricingPage = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { lang } = useParams<{ lang: string }>();
   const { activePlan } = useAuth();
-  const { computed, loading } = usePricing('valentines');
+  const { computed, loading: pricingLoading } = usePricing('valentines');
+  const [bgUrl, setBgUrl] = useState(() => localStorage.getItem('pricing_bg_valentines') || "/Site_Pics/Pricing/backroundpricing.png");
+  const [bgType, setBgType] = useState<'image' | 'video'>(() => (localStorage.getItem('pricing_type_valentines') as 'image' | 'video') || 'image');
+
+  useEffect(() => {
+    settingsService.getPricingSettings().then(s => {
+      setBgUrl(s.pricing_bg_valentines);
+      // @ts-ignore
+      setBgType(s.pricing_type_valentines || 'image');
+      localStorage.setItem('pricing_bg_valentines', s.pricing_bg_valentines);
+      // @ts-ignore
+      localStorage.setItem('pricing_type_valentines', s.pricing_type_valentines || 'image');
+    });
+
+    const channel = supabase
+      .channel('valentines_pricing_bg')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'site_settings' }, 
+      (payload: any) => {
+        const { key, value } = payload.new || {};
+        if (key === 'pricing_bg_valentines') {
+          setBgUrl(value);
+          localStorage.setItem('pricing_bg_valentines', value);
+        }
+        if (key === 'pricing_type_valentines') {
+          setBgType(value as any);
+          localStorage.setItem('pricing_type_valentines', value);
+        }
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, []);
 
   const handleCheckout = (planId: string) => {
     navigate(`/${lang || 'bg'}/checkout/${planId}`);
   };
 
-  if (loading || !computed) {
+  if (pricingLoading || !computed) {
     return (
       <section className="relative overflow-hidden min-h-screen flex items-center justify-center py-24 md:py-36"
         style={{ background: 'linear-gradient(180deg, #0B0B0C 0%, #1a0a10 100%)' }}
@@ -41,6 +75,28 @@ const PricingPage = () => {
     <section className="relative overflow-hidden min-h-screen flex items-center justify-center py-24 md:py-36"
       style={{ background: 'linear-gradient(180deg, #0B0B0C 0%, #1a0a10 30%, #200e18 50%, #1a0a10 70%, #0B0B0C 100%)' }}
     >
+      {/* Background Media */}
+      {bgType === 'video' ? (
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="absolute inset-0 z-0 w-full h-full object-cover opacity-30 pointer-events-none"
+        >
+          <source src={bgUrl} type="video/mp4" />
+        </video>
+      ) : (
+        <div 
+          className="absolute inset-0 z-0 opacity-30 pointer-events-none"
+          style={{ 
+            backgroundImage: `url("${bgUrl}")`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat'
+          }}
+        />
+      )}
       {/* Background hearts floating */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {[...Array(12)].map((_, i) => (

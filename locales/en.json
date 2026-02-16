@@ -1,4 +1,9 @@
 {
+  "common": {
+    "page_not_found": "Page Not Found",
+    "back_home": "Home",
+    "explore": "Explore"
+  },
   "photoshoot": {
     "promo_text": "WIN UP TO 1000$ FOR A PHOTOSHOOT — THE BEST ONE GOES TO THE BLOG AND WINS THE PRIZE",
     "view": "READ MORE"

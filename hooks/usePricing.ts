@@ -7,6 +7,7 @@ export interface PricingData {
   promos: {
     valentines: { starter: number; pro: number; director: number };
     christmas: { starter: number; pro: number; director: number };
+    photoshoot?: { starter: number; pro: number; director: number };
   };
 }
 
@@ -20,7 +21,7 @@ export interface ComputedPrices {
  * Hook: reads pricing config from DB and computes prices for a given promo type.
  * promoType: 'none' | 'valentines' | 'christmas'
  */
-export function usePricing(promoType: 'none' | 'valentines' | 'christmas' = 'none') {
+export function usePricing(promoType: 'none' | 'valentines' | 'christmas' | 'photoshoot' | string = 'none') {
   const [config, setConfig] = useState<PricingData | null>(() => {
     const cached = localStorage.getItem('pricing_config');
     return cached ? JSON.parse(cached) : null;

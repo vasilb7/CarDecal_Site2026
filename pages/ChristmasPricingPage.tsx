@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from "react";
 import { ChristmasPricingCard } from "@/components/ui/christmas-pricing"
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
@@ -5,19 +6,52 @@ import { TreePine, Sparkles, Crown, Snowflake, Star } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { usePricing } from '@/hooks/usePricing';
+import { supabase } from "@/lib/supabase";
+import { settingsService } from "@/lib/settingsService";
 
 const ChristmasPricingPage = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { lang } = useParams<{ lang: string }>();
   const { activePlan } = useAuth();
-  const { computed, loading } = usePricing('christmas');
+  const { computed, loading: pricingLoading } = usePricing('christmas');
+  const [bgUrl, setBgUrl] = useState(() => localStorage.getItem('pricing_bg_christmas') || "/Site_Pics/Pricing/backroundpricing.png");
+  const [bgType, setBgType] = useState<'image' | 'video'>(() => (localStorage.getItem('pricing_type_christmas') as 'image' | 'video') || 'image');
+
+  useEffect(() => {
+    settingsService.getPricingSettings().then(s => {
+      setBgUrl(s.pricing_bg_christmas);
+      // @ts-ignore
+      setBgType(s.pricing_type_christmas || 'image');
+      localStorage.setItem('pricing_bg_christmas', s.pricing_bg_christmas);
+      // @ts-ignore
+      localStorage.setItem('pricing_type_christmas', s.pricing_type_christmas || 'image');
+    });
+
+    const channel = supabase
+      .channel('christmas_pricing_bg')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'site_settings' }, 
+      (payload: any) => {
+        const { key, value } = payload.new || {};
+        if (key === 'pricing_bg_christmas') {
+          setBgUrl(value);
+          localStorage.setItem('pricing_bg_christmas', value);
+        }
+        if (key === 'pricing_type_christmas') {
+          setBgType(value as any);
+          localStorage.setItem('pricing_type_christmas', value);
+        }
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, []);
 
   const handleCheckout = (planId: string) => {
     navigate(`/${lang || 'bg'}/checkout/${planId}`);
   };
 
-  if (loading || !computed) {
+  if (pricingLoading || !computed) {
     return (
       <section className="relative overflow-hidden min-h-screen flex items-center justify-center py-24 md:py-36"
         style={{ background: 'linear-gradient(180deg, #0B0B0C 0%, #0a1a10 100%)' }}
@@ -41,6 +75,28 @@ const ChristmasPricingPage = () => {
     <section className="relative overflow-hidden min-h-screen flex items-center justify-center py-24 md:py-36"
       style={{ background: 'linear-gradient(180deg, #0B0B0C 0%, #0a1a10 30%, #0e2018 50%, #0a1a10 70%, #0B0B0C 100%)' }}
     >
+      {/* Background Media */}
+      {bgType === 'video' ? (
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="absolute inset-0 z-0 w-full h-full object-cover opacity-20 pointer-events-none"
+        >
+          <source src={bgUrl} type="video/mp4" />
+        </video>
+      ) : (
+        <div 
+          className="absolute inset-0 z-0 opacity-20 pointer-events-none"
+          style={{ 
+            backgroundImage: `url("${bgUrl}")`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat'
+          }}
+        />
+      )}
       {/* Background snowflakes floating */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {[...Array(15)].map((_, i) => (

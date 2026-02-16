@@ -1,10 +1,33 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
+import { settingsService } from '../lib/settingsService';
+import { supabase } from '../lib/supabase';
 
 const AboutPage: React.FC = () => {
     const { t } = useTranslation();
+    const [bg1, setBg1] = useState('');
+    const [bg2, setBg2] = useState('');
+
+    useEffect(() => {
+        const loadBgs = async () => {
+            const bgs = await settingsService.getPageBackgrounds();
+            setBg1(bgs.bg_about_1);
+            setBg2(bgs.bg_about_2);
+        };
+        loadBgs();
+
+        const channel = supabase
+            .channel('about_bg_changes')
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'site_settings' }, (payload: any) => {
+                if (payload.new.key === 'bg_about_1') setBg1(payload.new.value);
+                if (payload.new.key === 'bg_about_2') setBg2(payload.new.value);
+            })
+            .subscribe();
+
+        return () => { supabase.removeChannel(channel); };
+    }, []);
 
     return (
         <div className="bg-surface text-text-primary min-h-screen">
@@ -24,8 +47,7 @@ const AboutPage: React.FC = () => {
                         viewport={{ once: true }}
                         className="relative group"
                     >
-                        <img src="/Site_Pics/Model_pics_together/67.jpeg" alt="Behind the scenes" className="w-full h-auto aspect-[4/5] object-cover grayscale group-hover:grayscale-0 transition-all duration-700"/>
-                        <div className="absolute inset-0 border border-gold-accent/20 -m-4 -z-10 group-hover:m-0 transition-all" />
+                        <img src={bg1} alt="Behind the scenes" className="w-full h-auto aspect-[4/5] object-cover grayscale group-hover:grayscale-0 transition-all duration-700"/>
                     </motion.div>
                     <div className="space-y-8">
                         <h2 className="text-4xl md:text-5xl font-serif text-text-primary">{t('about.brand_title')}</h2>
@@ -62,7 +84,7 @@ const AboutPage: React.FC = () => {
                         viewport={{ once: true }}
                         className="order-1 md:order-2"
                     >
-                        <img src="/Site_Pics/Model_pics_together/122.jpeg" alt="Studio shot" className="w-full h-auto aspect-[4/5] object-cover"/>
+                        <img src={bg2} alt="Studio shot" className="w-full h-auto aspect-[4/5] object-cover"/>
                      </motion.div>
                 </div>
 

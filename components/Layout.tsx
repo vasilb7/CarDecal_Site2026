@@ -9,13 +9,36 @@ import SiteAnnouncement from './SiteAnnouncement';
 import { settingsService } from '../lib/settingsService';
 import { supabase } from '../lib/supabase';
 
+import { useTranslation } from 'react-i18next';
+
 interface LayoutProps {
   children: React.ReactNode;
 }
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
+  const { i18n } = useTranslation();
   const [activePromo, setActivePromo] = useState<string>('none');
-  const [announcement, setAnnouncement] = useState<{ text: string; active: boolean }>({ text: '', active: false });
+  const [announcement, setAnnouncement] = useState<{ 
+    text_bg?: string;
+    text_en?: string;
+    active: boolean;
+    buttonText_bg?: string;
+    buttonText_en?: string;
+    buttonLink?: string;
+    buttonType?: 'internal' | 'external';
+    customSvg?: string;
+    iconColor?: string;
+    buttonColor?: string;
+    textColor?: string;
+    iconSize?: number;
+    buttonTextColor?: string;
+    bannerColor?: string;
+    bannerColor2?: string;
+    bannerGradient?: boolean;
+    buttonFontSize?: number;
+  }>({ active: false });
+
+  const currentLang = i18n.language.startsWith('bg') ? 'bg' : 'en';
 
   useEffect(() => {
     settingsService.getActivePromo().then(setActivePromo);
@@ -38,13 +61,29 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     return () => { supabase.removeChannel(channel); };
   }, []);
 
+  const displayText = currentLang === 'bg' ? announcement.text_bg : announcement.text_en;
+  const displayButtonText = currentLang === 'bg' ? announcement.buttonText_bg : announcement.buttonText_en;
+
   return (
     <div className="min-h-screen bg-background font-sans flex flex-col">
       <AnimatePresence mode="wait">
-        {announcement.active && (
+        {announcement.active && displayText && (
           <SiteAnnouncement 
             key="announcement" 
-            text={announcement.text} 
+            text={displayText} 
+            buttonText={displayButtonText}
+            buttonLink={announcement.buttonLink}
+            buttonType={announcement.buttonType}
+            customSvg={announcement.customSvg}
+            iconColor={announcement.iconColor}
+            buttonColor={announcement.buttonColor}
+            textColor={announcement.textColor}
+            iconSize={announcement.iconSize}
+            buttonTextColor={announcement.buttonTextColor}
+            bannerColor={announcement.bannerColor}
+            bannerColor2={announcement.bannerColor2}
+            bannerGradient={announcement.bannerGradient}
+            buttonFontSize={announcement.buttonFontSize}
             onClose={() => setAnnouncement({ ...announcement, active: false })} 
           />
         )}

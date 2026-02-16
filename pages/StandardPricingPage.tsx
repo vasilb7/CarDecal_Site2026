@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from "react";
 import { PricingCard } from "@/components/ui/dark-gradient-pricing";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
@@ -5,6 +6,8 @@ import { Shield, Zap, Crown, Sparkles } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { usePricing } from "@/hooks/usePricing";
+import { supabase } from "@/lib/supabase";
+import { settingsService } from "@/lib/settingsService";
 
 /* Small animated sparkle dots for the background */
 const StarField = () => (
@@ -36,18 +39,90 @@ const StarField = () => (
 
 const ACCENT = "#2dd4bf"; // teal-400
 
-const StandardPricingPage = () => {
+interface StandardPricingPageProps {
+  promoType?: string;
+}
+
+const StandardPricingPage: React.FC<StandardPricingPageProps> = ({ promoType = 'none' }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { lang } = useParams<{ lang: string }>();
   const { activePlan } = useAuth();
-  const { computed, loading } = usePricing("none");
+  
+  // Use "none" if promoType is not recognized or is just regular standard fallback
+  const effectivePromo = (promoType === 'photoshoot') ? 'photoshoot' : 'none';
+  // But usePricing only accepts 'none' | 'valentines' | 'christmas' in typescript definition unless updated?
+  // We updated interface but not usePricing signature? 
+  // Wait, I didn't update usePricing signature in previous step, only interface. 
+  // usePricing signature was: export function usePricing(promoType: 'none' | 'valentines' | 'christmas' = 'none')
+  // I should cast it or update usePricing signature. Let's cast for now or assume it accepts string if I updated it? 
+  // I only updated interface PricingData. I did NOT update usePricing signature. 
+  // Let's use 'as any' for now to be safe or update usePricing signature next. 
+  // Actually, I should update usePricing signature too.
+  
+  const { computed, loading: pricingLoading } = usePricing(effectivePromo as any);
+
+  const getBgKey = () => effectivePromo === 'photoshoot' ? 'pricing_bg_photoshoot' : 'pricing_bg_standard';
+  const getTypeKey = () => effectivePromo === 'photoshoot' ? 'pricing_type_photoshoot' : 'pricing_type_standard';
+
+  const [bgUrl, setBgUrl] = useState(() => localStorage.getItem(getBgKey()) || "/Site_Pics/Pricing/backroundpricing.png");
+  const [bgType, setBgType] = useState<'image' | 'video'>(() => (localStorage.getItem(getTypeKey()) as 'image' | 'video') || 'image');
+
+  // Update state when promoType changes
+  useEffect(() => {
+    const bgKey = getBgKey();
+    const typeKey = getTypeKey();
+    
+    // Load initial
+    const cachedBg = localStorage.getItem(bgKey);
+    const cachedType = localStorage.getItem(typeKey);
+    
+    if (cachedBg) setBgUrl(cachedBg);
+    if (cachedType) setBgType(cachedType as 'image' | 'video');
+
+    settingsService.getPricingSettings().then(s => {
+      // @ts-ignore
+      const newBg = s[bgKey];
+      // @ts-ignore
+      const newType = s[typeKey] || 'image';
+      
+      if (newBg) {
+        setBgUrl(newBg);
+        localStorage.setItem(bgKey, newBg);
+      }
+      setBgType(newType);
+      localStorage.setItem(typeKey, newType);
+    });
+  }, [effectivePromo]);
+
+  useEffect(() => {
+    const bgKey = getBgKey();
+    const typeKey = getTypeKey();
+
+    const channel = supabase
+      .channel('standard_pricing_bg')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'site_settings' }, 
+      (payload: any) => {
+        const { key, value } = payload.new || {};
+        if (key === bgKey) {
+          setBgUrl(value);
+          localStorage.setItem(bgKey, value);
+        }
+        if (key === typeKey) {
+          setBgType(value as any);
+          localStorage.setItem(typeKey, value);
+        }
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [effectivePromo]);
 
   const handleCheckout = (planId: string) => {
     navigate(`/${lang || "bg"}/checkout/${planId}`);
   };
 
-  if (loading || !computed) {
+  if (pricingLoading || !computed) {
     return (
       <section className="relative overflow-hidden min-h-screen flex items-center justify-center py-24 md:py-36 bg-[#020202]">
         <StarField />
@@ -68,6 +143,29 @@ const StandardPricingPage = () => {
 
   return (
     <section className="relative overflow-hidden min-h-screen flex items-center justify-center py-24 md:py-36 bg-[#020202]">
+      {/* Background Media */}
+      {bgType === 'video' ? (
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="absolute inset-0 z-0 w-full h-full object-cover opacity-40 pointer-events-none"
+        >
+          <source src={bgUrl} type="video/mp4" />
+        </video>
+      ) : (
+        <div 
+          className="absolute inset-0 z-0 opacity-40 pointer-events-none"
+          style={{ 
+            backgroundImage: `url("${bgUrl}")`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat'
+          }}
+        />
+      )}
+
       {/* Starfield Background */}
       <StarField />
 

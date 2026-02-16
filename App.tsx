@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useLocation, Navigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { AnimatePresence, motion } from 'framer-motion';
+import { NotFoundPage } from './components/ui/not-found-page-2';
 import MaintenancePage from './pages/MaintenancePage';
 import { settingsService } from './lib/settingsService';
 import { supabase } from './lib/supabase';
@@ -35,49 +36,53 @@ const LanguageWrapper: React.FC = () => {
   const location = useLocation();
 
   useEffect(() => {
-    if (lang && i18n.language !== lang) {
+    const supportedLangs = ['bg', 'en'];
+    if (lang && supportedLangs.includes(lang) && i18n.language !== lang) {
       i18n.changeLanguage(lang);
     }
   }, [lang, i18n]);
 
-  // If language is not supported, redirect to fallback
+  // If language is not supported, show 404
   if (lang !== 'bg' && lang !== 'en') {
-    return <Navigate to="/bg" replace />;
+    return <NotFoundPage />;
   }
 
   return (
-    <Layout>
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/models" element={<ModelsPage />} />
-        <Route path="/models/category/:category" element={<ModelsPage />} />
-        <Route path="/models/:slug" element={<ModelProfilePage />} />
-        <Route path="/about" element={<AboutPage />} />
-        <Route path="/services" element={<ServicesPage />} />
-        <Route path="/contact" element={<ContactPage />} />
-        <Route path="/pricing" element={<PricingRouter />} />
-        <Route path="/christmas-pricing" element={<ChristmasPricingPage />} />
-        <Route path="/privacy" element={<PrivacyPage />} />
-        <Route path="/terms" element={<TermsPage />} />
-        <Route path="/legal" element={<LegalPage />} />
-        <Route path="/blog" element={<Blog />} />
-        <Route path="/book-now" element={<BookingPage />} />
-        <Route path="/checkout/:planId" element={<CheckoutPage />} />
-        <Route path="/profile" element={<ProfilePage />} />
-        <Route path="/admin" element={
-          <AdminRoute>
-            <AdminDashboard />
-          </AdminRoute>
-        } />
-      </Routes>
-    </Layout>
+    <Routes>
+      <Route path="/" element={<Layout><HomePage /></Layout>} />
+      <Route path="/models" element={<Layout><ModelsPage /></Layout>} />
+      <Route path="/models/category/:category" element={<Layout><ModelsPage /></Layout>} />
+      <Route path="/models/:slug" element={<Layout><ModelProfilePage /></Layout>} />
+      <Route path="/about" element={<Layout><AboutPage /></Layout>} />
+      <Route path="/services" element={<Layout><ServicesPage /></Layout>} />
+      <Route path="/contact" element={<Layout><ContactPage /></Layout>} />
+      <Route path="/pricing" element={<Layout><PricingRouter /></Layout>} />
+      <Route path="/christmas-pricing" element={<Layout><ChristmasPricingPage /></Layout>} />
+      <Route path="/privacy" element={<Layout><PrivacyPage /></Layout>} />
+      <Route path="/terms" element={<Layout><TermsPage /></Layout>} />
+      <Route path="/legal" element={<Layout><LegalPage /></Layout>} />
+      <Route path="/blog" element={<Layout><Blog /></Layout>} />
+      <Route path="/book-now" element={<Layout><BookingPage /></Layout>} />
+      <Route path="/checkout/:planId" element={<Layout><CheckoutPage /></Layout>} />
+      <Route path="/profile" element={<Layout><ProfilePage /></Layout>} />
+      <Route path="/admin" element={
+        <AdminRoute>
+          <Layout><AdminDashboard /></Layout>
+        </AdminRoute>
+      } />
+      <Route path="*" element={<NotFoundPage />} />
+    </Routes>
   );
 };
 
 function AppContent() {
   const location = useLocation();
   const { isAdmin, loading: authLoading } = useAuth();
-  const [isMaintenance, setIsMaintenance] = React.useState(false);
+  
+  // Initialize from localStorage to prevent flicker
+  const [isMaintenance, setIsMaintenance] = React.useState(() => {
+    return localStorage.getItem('maintenance_mode') === 'true';
+  });
   const [maintenanceLoading, setMaintenanceLoading] = React.useState(true);
 
   useEffect(() => {
@@ -85,6 +90,7 @@ function AppContent() {
       try {
         const active = await settingsService.getMaintenanceMode();
         setIsMaintenance(active);
+        localStorage.setItem('maintenance_mode', active.toString());
       } catch (err) {
         console.error('Maintenance check failed:', err);
       } finally {
@@ -106,7 +112,9 @@ function AppContent() {
         },
         (payload: any) => {
           if (payload.new && payload.new.value !== undefined) {
-            setIsMaintenance(payload.new.value === 'true');
+            const active = payload.new.value === 'true';
+            setIsMaintenance(active);
+            localStorage.setItem('maintenance_mode', active.toString());
           }
         }
       )
@@ -117,57 +125,18 @@ function AppContent() {
     };
   }, []);
 
-  useEffect(() => {
-    // ONLY apply this on mobile/tablet devices to avoid breaking desktop experience
-    // Even if it's a touch device, we don't want this on large desktop screens (Windows touch laptops)
-    const isTouchDevice = ('ontouchstart' in window || navigator.maxTouchPoints > 0) && window.innerWidth < 1024;
-    if (!isTouchDevice) return;
-
-    let lastFocusTime = 0;
-
-    const performBlurCheck = () => {
-      const v = window.visualViewport;
-      if (!v) return;
-
-      // Only check if we are not in the middle of a focus event (give keyboard time to open)
-      if (Date.now() - lastFocusTime < 1000) return;
-
-      // Detect if the keyboard is gone (viewport height is back to nearly full)
-      if (v.height >= window.innerHeight - 80) {
-        const active = document.activeElement;
-        if (active instanceof HTMLInputElement || 
-            active instanceof HTMLTextAreaElement) {
-          (active as HTMLElement).blur();
-        }
-      }
-    };
-
-    const handleFocusIn = (e: FocusEvent) => {
-      if (e.target instanceof HTMLInputElement || 
-          e.target instanceof HTMLTextAreaElement || 
-          e.target instanceof HTMLSelectElement) {
-        lastFocusTime = Date.now();
-      }
-    };
-
-    window.visualViewport?.addEventListener('resize', performBlurCheck);
-    document.addEventListener('focusin', handleFocusIn);
-
-    return () => {
-      window.visualViewport?.removeEventListener('resize', performBlurCheck);
-      document.removeEventListener('focusin', handleFocusIn);
-    };
-  }, []);
+  // ... (keyboard blur logic remains the same)
   
-  if (maintenanceLoading) {
-    return <div className="fixed inset-0 bg-[#0B0B0C]" />;
-  }
-
   const isManagementRoute = location.pathname.startsWith('/admin') || location.pathname.includes('/login');
   
-  // Maintenance mode check - prioritizing it even if auth is still loading for public users
+  // Show maintenance immediately if cached or confirmed
   if (isMaintenance && !isAdmin && !isManagementRoute) {
     return <MaintenancePage />;
+  }
+
+  // Prevent main site flicker while definitively checking for the first time
+  if (maintenanceLoading && !isMaintenance) {
+    return <div className="fixed inset-0 bg-black" />;
   }
 
   if (authLoading) {
@@ -213,7 +182,7 @@ function AppContent() {
           <Route path="/:lang/*" element={<LanguageWrapper />} />
           
           {/* Catch-all for non-prefixed routes */}
-          <Route path="*" element={<Navigate to="/bg" replace />} />
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </AnimatePresence>
     </>

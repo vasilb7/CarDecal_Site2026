@@ -84,7 +84,7 @@ const PricingRouter: React.FC = () => {
              if (promoType === 'valentines') return <PricingPage />;
              
              // fallback - Standard
-             return <StandardPricingPage />;
+             return <StandardPricingPage promoType={promoType} />;
           })()}
         </motion.div>
       </AnimatePresence>

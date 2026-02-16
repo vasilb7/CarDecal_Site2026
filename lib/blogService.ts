@@ -10,7 +10,7 @@ export interface BlogPost {
   location?: string;
   date: string;
   cover_image?: string;
-  images: string[];
+  images: (string | { url: string; span?: number })[];
   tags: string[];
   is_published: boolean;
   sort_order: number;

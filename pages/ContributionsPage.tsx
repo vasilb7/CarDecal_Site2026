@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../hooks/useToast';
 import { blogService, type BlogPost } from '../lib/blogService';
+import { settingsService } from '../lib/settingsService';
 import { supabase } from '../lib/supabase';
 import {
   MapPin, Calendar, Plus, Trash2, Pencil, Upload,
@@ -11,6 +12,42 @@ import {
   GripVertical, ImagePlus, Settings, Crop
 } from 'lucide-react';
 import { SpotlightCropModal } from '../components/SpotlightCropModal';
+
+const gridStyles = `
+.blog-photo-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 12px;
+}
+@media (min-width: 640px) {
+  .blog-photo-grid { gap: 16px; }
+}
+@media (min-width: 1024px) {
+  .blog-photo-grid { gap: 20px; }
+}
+
+.blog-photo-item {
+  position: relative;
+  overflow: hidden;
+  max-height: 75vh;
+}
+
+/* Desktop: Default 3 columns (span 2) */
+/* Desktop: 6-column base */
+@media (min-width: 1024px) {
+  .blog-photo-item { grid-column: span 2; aspect-ratio: 4/3; }
+  
+  .blog-photo-item.span-1 { grid-column: span 2; aspect-ratio: 4/3; } /* 1/3 */
+  .blog-photo-item.span-2 { grid-column: span 3; aspect-ratio: 3/2; } /* 1/2 */
+  .blog-photo-item.span-3 { grid-column: span 4; aspect-ratio: 16/9; } /* 2/3 */
+  .blog-photo-item.span-4 { grid-column: span 6; aspect-ratio: 21/9; } /* Full */
+}
+@media (max-width: 1023px) {
+  .blog-photo-item { grid-column: span 6; aspect-ratio: 16/9; } 
+  .blog-photo-item.span-1 { grid-column: span 6; }
+}
+`;
+
 
 /* ═══════════════════════════════════════════════════════════════════ */
 /*  Types                                                             */
@@ -102,7 +139,7 @@ const blogHeroService = {
 /*  Photo Lightbox                                                    */
 /* ═══════════════════════════════════════════════════════════════════ */
 const PhotoLightbox: React.FC<{
-  images: string[];
+  images: (string | { url: string; span?: number })[];
   startIndex: number;
   onClose: () => void;
 }> = ({ images, startIndex, onClose }) => {
@@ -145,7 +182,7 @@ const PhotoLightbox: React.FC<{
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.2 }}
-        src={images[idx]}
+        src={typeof images[idx] === 'string' ? (images[idx] as string) : (images[idx] as { url: string }).url}
         alt=""
         className="max-w-[95vw] max-h-[90vh] object-contain select-none shadow-2xl"
         onClick={e => e.stopPropagation()}
@@ -173,6 +210,9 @@ const HeroEditorModal: React.FC<{
   const [bgFile, setBgFile] = useState<File | null>(null);
   const [bgPreview, setBgPreview] = useState<string>(settings.background_image || '');
   const [saving, setSaving] = useState(false);
+  
+  const [cropModalOpen, setCropModalOpen] = useState(false);
+  const [imageToCrop, setImageToCrop] = useState<string | null>(null);
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';
@@ -180,8 +220,24 @@ const HeroEditorModal: React.FC<{
   }, []);
 
   const handleBg = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    if (f) { setBgFile(f); setBgPreview(URL.createObjectURL(f)); }
+    const file = e.target.files?.[0];
+    if (file) {
+      const url = URL.createObjectURL(file);
+      setImageToCrop(url);
+      setCropModalOpen(true);
+    }
+  };
+
+  const handleCropComplete = async (croppedUrl: string) => {
+    try {
+      setBgPreview(croppedUrl);
+      const response = await fetch(croppedUrl);
+      const blob = await response.blob();
+      const file = new File([blob], `blog_hero_bg_${Date.now()}.jpg`, { type: "image/jpeg" });
+      setBgFile(file);
+    } catch (err) {
+      console.error('Error handling crop:', err);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -280,6 +336,40 @@ const HeroEditorModal: React.FC<{
             </div>
           </div>
 
+          {/* Background Settings */}
+          <div className="space-y-3 p-4 bg-white/5 border border-white/5">
+            <p className="text-[10px] uppercase tracking-widest text-gold-accent font-bold">Hero Background Image</p>
+            <div className="flex gap-4 items-center">
+              {bgPreview && (
+                <div className="relative w-32 aspect-video group shrink-0">
+                  <img src={bgPreview} className="w-full h-full object-cover" alt="" />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                    <button type="button" onClick={() => { setBgFile(null); setBgPreview(''); }}
+                      className="p-1.5 bg-red-500/80 text-white rounded-full hover:bg-red-500">
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                    <button type="button" onClick={() => { setImageToCrop(bgPreview); setCropModalOpen(true); }}
+                      className="p-1.5 bg-gold-accent/80 text-black rounded-full hover:bg-gold-accent">
+                      <Crop className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              )}
+              <label className="flex items-center gap-2 cursor-pointer text-white/50 hover:text-gold-accent transition-colors text-xs border border-dashed border-white/20 hover:border-gold-accent/50 px-4 py-3">
+                <Upload className="w-4 h-4" /> {bgPreview ? 'Change' : 'Upload Background'}
+                <input type="file" accept="image/*" className="hidden" onChange={handleBg} />
+              </label>
+            </div>
+          </div>
+
+          <SpotlightCropModal
+            isOpen={cropModalOpen}
+            onClose={() => setCropModalOpen(false)}
+            imageUrl={imageToCrop || ''}
+            onCropComplete={handleCropComplete}
+            aspectRatio={16 / 9}
+          />
+
           <div className="flex justify-end pt-3 border-t border-white/5">
             <button type="submit" disabled={saving}
               className="px-8 py-3 bg-gold-accent text-black text-xs font-bold uppercase tracking-widest hover:bg-white transition-colors disabled:opacity-40 flex items-center gap-2">
@@ -296,7 +386,7 @@ const HeroEditorModal: React.FC<{
 /*  Draggable Image Item                                              */
 /* ═══════════════════════════════════════════════════════════════════ */
 const DraggableImage: React.FC<{
-  src: string;
+  src: string | { url: string; span?: number };
   index: number;
   onDragStart: (i: number) => void;
   onDragOver: (i: number) => void;
@@ -304,7 +394,9 @@ const DraggableImage: React.FC<{
   onRemove: (i: number) => void;
   isCover?: boolean;
   onSetCover?: (i: number) => void;
-}> = ({ src, index, onDragStart, onDragOver, onDragEnd, onRemove, isCover, onSetCover }) => (
+}> = ({ src, index, onDragStart, onDragOver, onDragEnd, onRemove, isCover, onSetCover }) => {
+  const url = typeof src === 'string' ? src : src.url;
+  return (
   <div
     draggable
     onDragStart={() => onDragStart(index)}
@@ -314,7 +406,7 @@ const DraggableImage: React.FC<{
       isCover ? 'border-gold-accent' : 'border-transparent hover:border-white/20'
     }`}
   >
-    <img src={src} className="w-full h-full object-cover" alt="" />
+    <img src={url} className="w-full h-full object-cover" alt="" />
     <div className="absolute top-1 left-1 p-0.5 bg-black/60 text-white/70 opacity-0 group-hover:opacity-100 transition-opacity">
       <GripVertical className="w-3 h-3" />
     </div>
@@ -336,6 +428,7 @@ const DraggableImage: React.FC<{
     </div>
   </div>
 );
+};
 
 /* ═══════════════════════════════════════════════════════════════════ */
 /*  Post Editor Modal                                                 */
@@ -364,7 +457,7 @@ const PostEditorModal: React.FC<{
   const [previews, setPreviews] = useState<string[]>([]);
   const [bgFile, setBgFile] = useState<File | null>(null);
   const [bgPreview, setBgPreview] = useState<string | null>(post?.cover_image || null);
-  const [existingImages, setExistingImages] = useState<string[]>(post?.images || []);
+  const [existingImages, setExistingImages] = useState<(string | { url: string; span?: number })[]>(post?.images || []);
   const [saving, setSaving] = useState(false);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   
@@ -380,8 +473,22 @@ const PostEditorModal: React.FC<{
     const selected = Array.from(e.target.files || []);
     if (selected.length === 0) return;
 
-    // Сравняваме имената на новите файлове с имената на вече добавените (в files стейта)
-    const existingNames = new Set(files.map(f => f.name));
+    // Helper to get filename from URL (format: blog/slug/timestamp_filename.jpg)
+    const getFileNameFromUrl = (url: string) => {
+      const parts = url.split('/');
+      const lastPart = parts[parts.length - 1];
+      const underscoreIndex = lastPart.indexOf('_');
+      if (underscoreIndex === -1) return lastPart;
+      return lastPart.substring(underscoreIndex + 1);
+    };
+
+    // Сравняваме имената на новите файлове с имената на:
+    // 1. Вече избраните нови файлове (files)
+    // 2. Вече съществуващите снимки в албума (existingImages)
+    const existingNames = new Set([
+      ...files.map(f => f.name),
+      ...existingImages.map(img => getFileNameFromUrl(typeof img === 'string' ? img : img.url))
+    ]);
     const duplicates: string[] = [];
     const uniqueFiles: File[] = [];
 
@@ -531,29 +638,38 @@ const PostEditorModal: React.FC<{
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="relative">
+            <div className="md:col-span-2 relative">
               <MapPin className="absolute left-3 top-3.5 w-4 h-4 text-white/30" />
               <input className={cls + " pl-10"} placeholder="Location" value={form.location}
                 onChange={e => setForm(f => ({ ...f, location: e.target.value }))} />
             </div>
-            <input type="date" className={cls} value={form.date}
-              onChange={e => setForm(f => ({ ...f, date: e.target.value }))} />
+            <input 
+              type="date" 
+              className={cls} 
+              value={form.date}
+              max={new Date().toISOString().split('T')[0]}
+              onChange={e => setForm(f => ({ ...f, date: e.target.value }))} 
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="md:col-span-2">
+              <input 
+                className={cls} 
+                placeholder="URL Slug (e.g. summer-shoot)" 
+                value={form.slug}
+                onChange={e => setForm(f => ({ ...f, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, '-') }))} 
+              />
+            </div>
             <div className="flex flex-col gap-1">
-              <p className="text-[9px] uppercase tracking-widest text-white/30 pl-1">{isBg ? 'Приоритет (по-голямо = първо)' : 'Priority (Higher = First)'}</p>
               <input 
                 type="number" 
                 className={cls} 
-                placeholder="0" 
+                placeholder={isBg ? "Приоритет (0)" : "Priority (0)"}
                 value={form.sort_order}
                 onChange={e => setForm(f => ({ ...f, sort_order: parseInt(e.target.value) || 0 }))} 
               />
             </div>
-            <input 
-              className={cls} 
-              placeholder="URL Slug (e.g. summer-shoot)" 
-              value={form.slug}
-              onChange={e => setForm(f => ({ ...f, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, '-') }))} 
-            />
           </div>
 
           <div className="space-y-1">
@@ -618,7 +734,7 @@ const PostEditorModal: React.FC<{
                 <p className="text-[9px] uppercase tracking-widest text-white/30 mb-2">Current ({existingImages.length}) — Drag to reorder</p>
                 <div className="grid grid-cols-5 md:grid-cols-6 gap-1.5">
                   {existingImages.map((src, i) => (
-                    <DraggableImage key={src + i} src={src} index={i} isCover={i === 0}
+                    <DraggableImage key={(typeof src === 'string' ? src : src.url) + i} src={src} index={i} isCover={i === 0}
                       onDragStart={handleExistingDragStart} onDragOver={handleExistingDragOver}
                       onDragEnd={handleExistingDragEnd} onRemove={removeExisting} onSetCover={setAsCover} />
                   ))}
@@ -663,27 +779,75 @@ const PostEditorModal: React.FC<{
 };
 
 /* ═══════════════════════════════════════════════════════════════════ */
-/*  Masonry CSS styles (injected once)                                */
+/*  Photo Item Component                                               */
 /* ═══════════════════════════════════════════════════════════════════ */
-const masonryStyles = `
-.blog-masonry {
-  column-count: 2;
-  column-gap: 3px;
-}
-@media (min-width: 768px) {
-  .blog-masonry { column-count: 3; column-gap: 4px; }
-}
-@media (min-width: 1280px) {
-  .blog-masonry { column-count: 4; column-gap: 4px; }
-}
-.blog-masonry-item {
-  break-inside: avoid;
-  margin-bottom: 3px;
-}
-@media (min-width: 768px) {
-  .blog-masonry-item { margin-bottom: 4px; }
-}
-`;
+const PhotoItem: React.FC<{
+  img: string | { url: string; span?: number };
+  imgIdx: number;
+  post: BlogPost;
+  isAdmin: boolean;
+  setLightbox: (val: { images: string[]; index: number }) => void;
+  gridDrag: { postId: string; idx: number } | null;
+  handleGridDragStart: (postId: string, idx: number) => void;
+  handleGridDragOver: (postId: string, idx: number) => void;
+  handleGridDragEnd: () => void;
+  onResize?: (postId: string, idx: number) => void;
+  onCrop?: (postId: string, idx: number, url: string, span: number) => void;
+}> = ({ img, imgIdx, post, isAdmin, setLightbox, gridDrag, handleGridDragStart, handleGridDragOver, handleGridDragEnd, onResize, onCrop }) => {
+  const url = typeof img === 'string' ? img : img.url;
+  const span = typeof img === 'string' ? 1 : (img.span || 1);
+  const imagesAsStrings = post.images.map(i => typeof i === 'string' ? i : i.url);
+
+  return (
+    <motion.div
+      layout
+      draggable={isAdmin}
+      onDragStart={() => handleGridDragStart(post.id, imgIdx)}
+      onDragOver={(e) => { e.preventDefault(); handleGridDragOver(post.id, imgIdx); }}
+      onDragEnd={handleGridDragEnd}
+      className={`blog-photo-item relative overflow-hidden group/img span-${span} ${
+        isAdmin ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'
+      } ${gridDrag?.postId === post.id && gridDrag?.idx === imgIdx ? 'opacity-40 scale-95' : 'opacity-100'}`}
+      onClick={() => !isAdmin && setLightbox({ images: imagesAsStrings, index: imgIdx })}
+    >
+      <img
+        src={url}
+        alt=""
+        className="w-full h-full object-cover transition-all duration-700 group-hover/img:scale-[1.05] group-hover/img:brightness-110"
+        loading="lazy"
+      />
+      {isAdmin && (
+        <div className="absolute top-2 left-2 flex gap-2 z-30 opacity-0 group-hover/img:opacity-100 transition-all duration-300">
+          <div className="p-2 bg-black/70 text-white/50 rounded-full backdrop-blur-md border border-white/10 flex items-center justify-center shadow-xl">
+            <GripVertical className="w-4 h-4" />
+          </div>
+          <button 
+            onClick={(e) => { e.stopPropagation(); onResize?.(post.id, imgIdx); }}
+            className="px-3 py-1.5 bg-gold-accent text-black rounded-full hover:bg-white transition-all duration-300 backdrop-blur-md shadow-[0_0_20px_rgba(212,175,55,0.3)] flex items-center gap-2 group/btn"
+          >
+            <Settings className="w-3.5 h-3.5 group-hover/btn:rotate-90 transition-transform duration-500" />
+            <span className="text-[10px] font-black uppercase tracking-widest">{span === 4 ? 'FULL' : span === 3 ? 'WIDE' : span === 2 ? 'HALF' : 'REG'}</span>
+          </button>
+          <button 
+            onClick={(e) => { e.stopPropagation(); onCrop?.(post.id, imgIdx, url, span); }}
+            className="p-1.5 bg-black/70 text-white rounded-full hover:bg-gold-accent hover:text-black transition-all duration-300 backdrop-blur-md shadow-xl border border-white/10"
+            title="Crop Photo"
+          >
+            <Crop className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+      <div className="absolute inset-0 bg-black/0 group-hover/img:bg-black/15 transition-all duration-500" />
+      {isAdmin && (
+        <div className="absolute inset-x-0 bottom-0 h-8 flex items-center justify-center bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity"
+          onClick={(e) => { e.stopPropagation(); setLightbox({ images: imagesAsStrings, index: imgIdx }); }}>
+          <Eye className="w-3 h-3 text-white/70 mr-1" />
+          <span className="text-[8px] text-white/70 uppercase tracking-tighter">View</span>
+        </div>
+      )}
+    </motion.div>
+  );
+};
 
 /* ═══════════════════════════════════════════════════════════════════ */
 /*  Main Blog Page                                                    */
@@ -706,10 +870,45 @@ const Blog: React.FC = () => {
   const [heroEditorOpen, setHeroEditorOpen] = useState(false);
 
   const [gridDrag, setGridDrag] = useState<{ postId: string; idx: number } | null>(null);
+  const [photoToCrop, setPhotoToCrop] = useState<{ postId: string; idx: number; url: string; span: number } | null>(null);
+  const postRefs = useRef<Record<string, HTMLElement | null>>({});
+  const gridRefs = useRef<Record<string, HTMLElement | null>>({});
+
+  const scrollToPost = (id: string, toGrid = false) => {
+    // Wait for the collapse animation to start settling
+    setTimeout(() => {
+      const element = toGrid ? gridRefs.current[id] : postRefs.current[id];
+      if (element) {
+        const offset = toGrid ? 140 : 100;
+        const targetPosition = element.getBoundingClientRect().top + window.pageYOffset - offset;
+        
+        window.scrollTo({
+          top: targetPosition,
+          behavior: 'smooth'
+        });
+      }
+    }, 100); 
+  };
 
   /* ── Load hero settings ── */
   useEffect(() => {
-    blogHeroService.get().then(setHero).catch(console.error);
+    const loadHero = async () => {
+      try {
+        const [heroData, pageBgs] = await Promise.all([
+          blogHeroService.get(),
+          settingsService.getPageBackgrounds()
+        ]);
+        
+        // Prioritize bg_blog from the standalone key if it exists
+        setHero(prev => ({
+          ...heroData,
+          background_image: pageBgs.bg_blog || heroData.background_image
+        }));
+      } catch (err) {
+        console.error('Error loading blog hero:', err);
+      }
+    };
+    loadHero();
   }, []);
 
   /* ── Load posts ── */
@@ -724,6 +923,20 @@ const Blog: React.FC = () => {
   }, [isAdmin]);
 
   useEffect(() => { loadPosts(true); }, [loadPosts]);
+
+  /* ── Background Real-time Listener ── */
+  useEffect(() => {
+    const channel = supabase
+      .channel('blog_bg_changes')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'site_settings' }, (payload: any) => {
+        if (payload.new.key === 'bg_blog') {
+          setHero(prev => ({ ...prev, background_image: payload.new.value }));
+        }
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, []);
 
   /* ── Real-time ── */
   useEffect(() => {
@@ -740,7 +953,13 @@ const Blog: React.FC = () => {
       let bg = s.background_image;
       if (file) bg = await blogHeroService.uploadBg(file);
       const updated = { ...s, background_image: bg };
-      await blogHeroService.set(updated);
+      
+      // Update both the JSON object and the standalone background key for consistency
+      await Promise.all([
+        blogHeroService.set(updated),
+        settingsService.setHeroSetting('bg_blog', bg)
+      ]);
+      
       setHero(updated);
       showToast('Hero updated!', 'success');
     } catch (err: any) {
@@ -761,6 +980,15 @@ const Blog: React.FC = () => {
           images = [...images, url];
         }
       }
+
+      // Final uniqueness check for images (based on URL)
+      const seen = new Set();
+      images = images.filter(img => {
+        const url = typeof img === 'string' ? img : img.url;
+        if (seen.has(url)) return false;
+        seen.add(url);
+        return true;
+      });
 
       let cover_image = data.cover_image;
       if (bgFile) {
@@ -795,7 +1023,10 @@ const Blog: React.FC = () => {
   const handleDeletePost = async (post: BlogPost) => {
     if (!window.confirm('Delete this photoshoot?')) return;
     try {
-      for (const img of post.images) await blogService.deleteImage(img);
+      for (const img of post.images) {
+        const url = typeof img === 'string' ? img : img.url;
+        await blogService.deleteImage(url);
+      }
       if (post.cover_image) await blogService.deleteImage(post.cover_image);
       await blogService.deletePost(post.id);
       showToast('Post deleted', 'success');
@@ -819,6 +1050,78 @@ const Blog: React.FC = () => {
       return { ...p, images: newImages };
     }));
     setGridDrag({ postId, idx: overIdx });
+  };
+
+  const handleResize = async (postId: string, idx: number) => {
+    const post = posts.find(p => p.id === postId);
+    if (!post) return;
+
+    const newImages = [...post.images];
+    const current = newImages[idx];
+    const url = typeof current === 'string' ? current : current.url;
+    const currentSpan = typeof current === 'string' ? 1 : (current.span || 1);
+    const nextSpan = currentSpan === 4 ? 1 : currentSpan + 1;
+
+    newImages[idx] = { url, span: nextSpan };
+
+    // Optimistic update
+    setPosts(prev => prev.map(p => p.id === postId ? { ...p, images: newImages } : p));
+
+    try {
+      await blogService.updatePost(postId, { images: newImages });
+      showToast('Size updated!', 'success');
+    } catch (err) {
+      console.error('Resize failed:', err);
+      loadPosts(false);
+    }
+  };
+
+  const handlePhotoCrop = (postId: string, idx: number, url: string, span: number) => {
+    setPhotoToCrop({ postId, idx, url, span });
+  };
+
+  const handlePhotoCropComplete = async (croppedUrl: string) => {
+    if (!photoToCrop) return;
+    const { postId, idx, span } = photoToCrop;
+    
+    try {
+      const post = posts.find(p => p.id === postId);
+      if (!post) return;
+
+      showToast(isBg ? 'Качване на изрязаната снимка...' : 'Uploading cropped photo...', 'info');
+
+      // Convert cropped URL to File
+      const response = await fetch(croppedUrl);
+      const blob = await response.blob();
+      const file = new File([blob], `photo_${Date.now()}.jpg`, { type: 'image/jpeg' });
+
+      // Build path: blog/post_slug/
+      const folder = `blog/${post.slug || 'untitled'}`;
+      const path = `${folder}/${Date.now()}_${file.name}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('models')
+        .upload(path, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage.from('models').getPublicUrl(path);
+
+      // Update post images
+      const newImages = [...post.images];
+      newImages[idx] = { url: publicUrl, span };
+
+      await blogService.updatePost(postId, { images: newImages });
+      
+      // Update local state
+      setPosts(prev => prev.map(p => p.id === postId ? { ...p, images: newImages } : p));
+      showToast(isBg ? 'Снимката е обновена' : 'Photo updated', 'success');
+    } catch (err) {
+      console.error('Crop save error:', err);
+      showToast('Error saving cropped photo', 'error');
+    } finally {
+      setPhotoToCrop(null);
+    }
   };
 
   const handleGridDragEnd = async () => {
@@ -847,8 +1150,8 @@ const Blog: React.FC = () => {
       {/* Google Fonts Injection */}
       <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,700;1,400&family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Montserrat:wght@300;400;600;700&family=Oswald:wght@300;400;600;700&family=Philosopher:ital,wght@0,400;0,700;1,400&family=Yeseva+One&family=Bad+Script&display=swap" />
 
-      {/* Inject masonry CSS */}
-      <style>{masonryStyles}</style>
+      {/* Inject grid CSS */}
+      <style>{gridStyles}</style>
 
       {/* ══════════ HERO ══════════ */}
       <section className="relative min-h-[500px] md:h-[65vh] flex items-center justify-center overflow-hidden border-b border-white/5 pt-32 pb-20 md:pt-0 md:pb-0">
@@ -942,7 +1245,12 @@ const Blog: React.FC = () => {
               const hasMore = post.images.length > MAX_PREVIEW && !isExpanded;
 
               return (
-                <motion.article key={post.id} {...fadeIn} className="group">
+                <motion.article 
+                  key={post.id} 
+                  ref={el => { postRefs.current[post.id] = el; }}
+                  {...fadeIn} 
+                  className="group"
+                >
                   {/* Post cover banner */}
                   {post.cover_image && (
                     <div className="relative w-full overflow-hidden mb-8 md:mb-10" style={{ aspectRatio: '3/1', maxHeight: '380px' }}>
@@ -1000,7 +1308,10 @@ const Blog: React.FC = () => {
 
                     {(post.description || post.description_bg) && (
                       <div className="mt-4">
-                        <p className="text-base md:text-lg text-text-muted font-light leading-relaxed max-w-3xl">
+                        <motion.p 
+                          layout
+                          className="text-base md:text-lg text-text-muted font-light leading-relaxed max-w-3xl"
+                        >
                           {(() => {
                             const desc = isBg && post.description_bg ? post.description_bg : post.description;
                             const isLong = desc.length > 300;
@@ -1009,10 +1320,15 @@ const Blog: React.FC = () => {
                             if (!isLong || isExpanded) return desc;
                             return desc.substring(0, 280) + '...';
                           })()}
-                        </p>
+                        </motion.p>
                         {((isBg && post.description_bg ? post.description_bg : post.description).length > 300) && (
                           <button 
-                            onClick={() => setExpandedDesc(prev => ({ ...prev, [post.id]: !prev[post.id] }))}
+                            onClick={() => {
+                                if (expandedDesc[post.id]) {
+                                    scrollToPost(post.id);
+                                }
+                                setExpandedDesc(prev => ({ ...prev, [post.id]: !prev[post.id] }));
+                            }}
                             className="mt-2 text-xs font-bold uppercase tracking-widest text-gold-accent hover:text-white transition-colors"
                           >
                             {expandedDesc[post.id] 
@@ -1033,50 +1349,54 @@ const Blog: React.FC = () => {
                     <div className="mt-5 w-20 h-px bg-gold-accent/30" />
                   </div>
 
-                  {/* ── Masonry Photo Grid ── */}
+                  {/* ── Photo Grid ── */}
                   {post.images.length > 0 && (
-                    <>
-                      <div className="blog-masonry">
-                        {displayImages.map((img, imgIdx) => (
-                          <div
-                            key={imgIdx}
-                            draggable={isAdmin}
-                            onDragStart={() => handleGridDragStart(post.id, imgIdx)}
-                            onDragOver={(e) => { e.preventDefault(); handleGridDragOver(post.id, imgIdx); }}
-                            onDragEnd={handleGridDragEnd}
-                            className={`blog-masonry-item relative overflow-hidden group/img transition-all duration-300 ${
-                              isAdmin ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'
-                            } ${gridDrag?.postId === post.id && gridDrag?.idx === imgIdx ? 'opacity-40 scale-95' : 'opacity-100'}`}
-                            onClick={() => !isAdmin && setLightbox({ images: post.images, index: imgIdx })}
-                          >
-                            <img
-                              src={img}
-                              alt=""
-                              className="w-full block transition-all duration-500 group-hover/img:scale-[1.03] group-hover/img:brightness-110"
-                              loading="lazy"
-                            />
-                            {isAdmin && (
-                              <div className="absolute top-2 left-2 p-1 bg-black/50 text-white/50 opacity-0 group-hover/img:opacity-100 transition-opacity rounded">
-                                <GripVertical className="w-3 h-3" />
-                              </div>
-                            )}
-                            <div className="absolute inset-0 bg-black/0 group-hover/img:bg-black/15 transition-all duration-500" />
-                            {/* Overlay for clicking in admin mode (since we might want to click to view even as admin) */}
-                            {isAdmin && (
-                              <div className="absolute inset-x-0 bottom-0 h-8 flex items-center justify-center bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity"
-                                onClick={(e) => { e.stopPropagation(); setLightbox({ images: post.images, index: imgIdx }); }}>
-                                <Eye className="w-3 h-3 text-white/70 mr-1" />
-                                <span className="text-[8px] text-white/70 uppercase tracking-tighter">View</span>
-                              </div>
-                            )}
-                          </div>
+                    <div ref={el => { gridRefs.current[post.id] = el; }} className="space-y-4 md:space-y-5">
+                      {/* Initial Grid (Always visible) */}
+                      <div className="blog-photo-grid">
+                        {post.images.slice(0, MAX_PREVIEW).map((img, imgIdx) => (
+                           <PhotoItem key={imgIdx} img={img} imgIdx={imgIdx} post={post} isAdmin={isAdmin} 
+                             setLightbox={setLightbox} gridDrag={gridDrag} 
+                             handleGridDragStart={handleGridDragStart} 
+                             handleGridDragOver={handleGridDragOver} 
+                             handleGridDragEnd={handleGridDragEnd}
+                             onResize={handleResize}
+                             onCrop={handlePhotoCrop} />
                         ))}
                       </div>
+
+                      {/* Expanded Section (Animated height) */}
+                      <AnimatePresence>
+                        {isExpanded && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.5, ease: [0.04, 0.62, 0.23, 0.98] }}
+                            className="overflow-hidden"
+                          >
+                            <div className="blog-photo-grid pt-4 md:pt-5 border-t border-white/5">
+                              {post.images.slice(MAX_PREVIEW).map((img, idx) => {
+                                const imgIdx = idx + MAX_PREVIEW;
+                                return (
+                                  <PhotoItem key={imgIdx} img={img} imgIdx={imgIdx} post={post} isAdmin={isAdmin} 
+                                    setLightbox={setLightbox} gridDrag={gridDrag} 
+                                    handleGridDragStart={handleGridDragStart} 
+                                    handleGridDragOver={handleGridDragOver} 
+                                    handleGridDragEnd={handleGridDragEnd}
+                                    onResize={handleResize}
+                                    onCrop={handlePhotoCrop} />
+                                );
+                              })}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
 
                       {hasMore && (
                         <button
                           onClick={() => setExpandedPost(post.id)}
-                          className="mt-4 w-full py-4 bg-white/5 border border-white/10 text-white/50 hover:text-white hover:bg-white/10 transition-all text-xs uppercase tracking-widest flex items-center justify-center gap-2"
+                          className="w-full py-4 bg-white/5 border border-white/10 text-white/50 hover:text-white hover:bg-white/10 transition-all text-xs uppercase tracking-widest flex items-center justify-center gap-2"
                         >
                           +{post.images.length - MAX_PREVIEW} {isBg ? 'още снимки' : 'more photos'}
                         </button>
@@ -1084,13 +1404,16 @@ const Blog: React.FC = () => {
 
                       {isExpanded && post.images.length > MAX_PREVIEW && (
                         <button
-                          onClick={() => setExpandedPost(null)}
-                          className="mt-3 text-xs uppercase tracking-widest text-white/40 hover:text-white transition-colors"
+                          onClick={() => {
+                            scrollToPost(post.id, true);
+                            setExpandedPost(null);
+                          }}
+                          className="w-full py-3 text-xs uppercase tracking-widest text-white/40 hover:text-white transition-colors bg-white/2 hover:bg-white/5 border border-white/5 flex items-center justify-center gap-2"
                         >
                           {isBg ? '← Покажи по-малко' : '← Show less'}
                         </button>
                       )}
-                    </>
+                    </div>
                   )}
                 </motion.article>
               );
@@ -1118,6 +1441,21 @@ const Blog: React.FC = () => {
             onClose={() => setLightbox(null)} />
         )}
       </AnimatePresence>
+
+      {photoToCrop && (
+        <SpotlightCropModal
+          isOpen={true}
+          onClose={() => setPhotoToCrop(null)}
+          imageUrl={photoToCrop.url}
+          onCropComplete={handlePhotoCropComplete}
+          aspectRatio={
+            photoToCrop.span === 4 ? 21 / 9 :
+            photoToCrop.span === 3 ? 16 / 9 :
+            photoToCrop.span === 2 ? 3 / 2 :
+            4 / 3
+          }
+        />
+      )}
     </div>
   );
 };

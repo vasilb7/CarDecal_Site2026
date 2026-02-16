@@ -8,12 +8,22 @@ import { useModels } from '../hooks/useModels';
 import ModelCard from '../components/ModelCard';
 import { settingsService } from '../lib/settingsService';
 import type { Model } from '../types';
+import { ChevronLeft } from 'lucide-react';
 
 interface HeroSettings {
     hero_type: string;
     hero_image_url: string;
     hero_video_url: string;
     hero_grayscale: boolean;
+    hero_blur: number;
+    hero_brightness: number;
+    hero_contrast: number;
+    hero_saturation: number;
+    hero_title_bg?: string;
+    hero_title_en?: string;
+    hero_subtitle_bg?: string;
+    hero_subtitle_en?: string;
+    id?: string;
 }
 
 const fadeInUp: Variants = {
@@ -32,6 +42,24 @@ const staggerContainer: Variants = {
         transition: {
             staggerChildren: 0.2
         }
+    }
+};
+
+const evaporate: Variants = {
+    initial: { opacity: 0, filter: 'blur(15px)', y: 30, scale: 0.98 },
+    animate: { 
+        opacity: 1, 
+        filter: 'blur(0px)', 
+        y: 0, 
+        scale: 1,
+        transition: { duration: 1.5, ease: [0.22, 1, 0.36, 1] } 
+    },
+    exit: { 
+        opacity: 0, 
+        filter: 'blur(25px)', 
+        y: -50, 
+        scale: 1.05,
+        transition: { duration: 1.2, ease: [0.22, 1, 0.36, 1] } 
     }
 };
 
@@ -57,19 +85,70 @@ const HomePage: React.FC = () => {
 	    isFirstRender.current = false;
     }, []);
 
+    const [lookbookImages, setLookbookImages] = useState<string[]>([]);
+    const [lookbookTitle, setLookbookTitle] = useState({ 
+        titleBg: 'Lookbook Витрина', 
+        titleEn: 'Lookbook Showcase', 
+        descBg: '', 
+        descEn: '', 
+        font: 'Playfair Display',
+        descFont: 'Inter'
+    });
+    const [lookbookId, setLookbookId] = useState<string>('initial');
+    const [currentLookbookIndex, setCurrentLookbookIndex] = useState(0);
+    const [isLookbookTransitioning, setIsLookbookTransitioning] = useState(true);
+    const [isLookbookLocking, setIsLookbookLocking] = useState(false);
+
+    const [currentTopIndex, setCurrentTopIndex] = useState(0);
+    const [isTopTransitioning, setIsTopTransitioning] = useState(true);
+    const [isTopLocking, setIsTopLocking] = useState(false);
+    const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+    const [mobileScrollProgress, setMobileScrollProgress] = useState(0);
+    const mobileScrollRef = React.useRef<HTMLDivElement>(null);
+
     useEffect(() => {
         const fetch = async () => {
-            const [featured, top, hSettings] = await Promise.all([
+            const [featured, top, hSettings, lookbookData] = await Promise.all([
                 getFeaturedModels(6),
                 getTopModel(),
-                settingsService.getHeroSettings() as Promise<HeroSettings>
+                settingsService.getActiveHeroContent() as Promise<HeroSettings>,
+                settingsService.getActiveLookbookContent()
             ]);
             setFeaturedModels(featured);
             setTopModel(top);
             setHeroSettings(hSettings);
+            
+            // 2. Check if content actually changed to avoid unnecessary re-triggers
+            if (lookbookData.id !== lookbookId) {
+                setLookbookImages(lookbookData.images);
+                setLookbookTitle(lookbookData.title);
+                setLookbookId(lookbookData.id);
+                setCurrentLookbookIndex(0);
+            }
+            
             localStorage.setItem('hero_settings', JSON.stringify(hSettings));
         };
         fetch();
+
+        // 10s Timer to check for scheduled expirations without DB change
+        const checkTimer = setInterval(async () => {
+            const [lookbookData, hSettings] = await Promise.all([
+                settingsService.getActiveLookbookContent(),
+                settingsService.getActiveHeroContent()
+            ]);
+
+            if (lookbookData.id !== lookbookId) {
+                setLookbookId(lookbookData.id);
+                setLookbookImages(lookbookData.images);
+                setLookbookTitle(lookbookData.title);
+                setCurrentLookbookIndex(0);
+            }
+
+            if (JSON.stringify(hSettings) !== JSON.stringify(heroSettings)) {
+                setHeroSettings(hSettings);
+                localStorage.setItem('hero_settings', JSON.stringify(hSettings));
+            }
+        }, 10000);
 
         // Real-time Models update
         const channel = supabase
@@ -89,9 +168,9 @@ const HomePage: React.FC = () => {
             )
             .subscribe();
 
-        // Real-time Hero Settings update
-        const heroChannel = supabase
-            .channel('public_hero_settings_home')
+        // Real-time Site Settings update (Hero & Lookbook)
+        const settingsChannel = supabase
+            .channel('public_site_settings_home')
             .on(
                 'postgres_changes',
                 {
@@ -101,14 +180,36 @@ const HomePage: React.FC = () => {
                 },
                 (payload: any) => {
                     const { key, value } = payload.new || payload.old || {};
-                    if (['hero_type', 'hero_image_url', 'hero_video_url', 'hero_grayscale'].includes(key)) {
+                    
+                    if (['hero_type', 'hero_image_url', 'hero_video_url', 'hero_grayscale', 'hero_blur', 'hero_brightness', 'hero_contrast', 'hero_saturation'].includes(key)) {
                         setHeroSettings(prev => {
-                            const val = key === 'hero_grayscale' ? value === 'true' : value;
+                            let val: any = value;
+                            if (key === 'hero_grayscale') val = value === 'true';
+                            if (['hero_blur', 'hero_brightness', 'hero_contrast', 'hero_saturation'].includes(key)) val = parseInt(value || (key === 'hero_blur' ? '0' : '100'));
+                            
                             const updated = prev ? { ...prev, [key]: val } : prev;
                             if (updated) {
                                 localStorage.setItem('hero_settings', JSON.stringify(updated));
                             }
                             return updated;
+                        });
+                    }
+
+                    if (key === 'lookbook_presets' || key === 'homepage_lookbook_images' || key === 'lookbook_title_config' || key === 'hero_presets') {
+                        settingsService.getActiveLookbookContent().then(data => {
+                            if (data.id !== lookbookId) {
+                                setLookbookImages(data.images);
+                                setLookbookTitle(data.title);
+                                setLookbookId(data.id);
+                                setCurrentLookbookIndex(0);
+                            }
+                        });
+
+                        settingsService.getActiveHeroContent().then(data => {
+                            if (data.id !== heroSettings?.id) {
+                                setHeroSettings(data);
+                                localStorage.setItem('hero_settings', JSON.stringify(data));
+                            }
                         });
                     }
                 }
@@ -117,38 +218,17 @@ const HomePage: React.FC = () => {
 
         return () => {
             supabase.removeChannel(channel);
-            supabase.removeChannel(heroChannel);
+            supabase.removeChannel(settingsChannel);
+            clearInterval(checkTimer);
         };
-    }, [getFeaturedModels, getTopModel]);
+    }, [getFeaturedModels, getTopModel, lookbookId]);
 
-    const [currentLookbookIndex, setCurrentLookbookIndex] = useState(0);
-    const [isLookbookTransitioning, setIsLookbookTransitioning] = useState(true);
-    const [isLookbookLocking, setIsLookbookLocking] = useState(false);
-
-    const [currentTopIndex, setCurrentTopIndex] = useState(0);
-    const [isTopTransitioning, setIsTopTransitioning] = useState(true);
-    const [isTopLocking, setIsTopLocking] = useState(false);
-
-    const lookbookImages = [
-        '/Site_Pics/Homepage/models_review/1.jpeg',
-        '/Site_Pics/Homepage/models_review/2.jpeg',
-        '/Site_Pics/Homepage/models_review/3.jpeg',
-        '/Site_Pics/Homepage/models_review/4.jpeg',
-        '/Site_Pics/Homepage/models_review/5.jpeg',
-        '/Site_Pics/Homepage/models_review/6.jpeg',
-        '/Site_Pics/Homepage/models_review/7.jpeg',
-        '/Site_Pics/Homepage/models_review/8.jpeg',
-        '/Site_Pics/Homepage/models_review/9.jpeg',
-        '/Site_Pics/Homepage/models_review/10.jpeg',
-        '/Site_Pics/Homepage/models_review/11.jpeg',
-        '/Site_Pics/Homepage/models_review/12.jpeg'
-    ];
 
     const topImages = (topModel?.cardImages && topModel.cardImages.length > 0) 
         ? topModel.cardImages 
         : (topModel?.cardImages === undefined ? (topModel?.posts?.map(p => p.src) || []) : []);
 
-    const extendedLookbookImages = [...lookbookImages, lookbookImages[0]];
+    const extendedLookbookImages = lookbookImages.length > 0 ? [...lookbookImages, lookbookImages[0]] : [];
     const extendedTopImages = topImages.length > 0 ? [...topImages, topImages[0]] : [];
 
     const handleLookbookForward = () => {
@@ -197,7 +277,7 @@ const HomePage: React.FC = () => {
 
     useEffect(() => {
         const interval = setInterval(() => {
-            if (!isLookbookLocking) {
+            if (!isLookbookLocking && !isDrawerOpen) {
                 setCurrentLookbookIndex((prev) => prev + 1);
             }
             if (!isTopLocking) {
@@ -205,7 +285,7 @@ const HomePage: React.FC = () => {
             }
         }, 5000);
         return () => clearInterval(interval);
-    }, [isLookbookLocking, isTopLocking]);
+    }, [isLookbookLocking, isTopLocking, isDrawerOpen]);
 
     useEffect(() => {
         if (currentLookbookIndex === extendedLookbookImages.length - 1) {
@@ -261,7 +341,16 @@ const HomePage: React.FC = () => {
                                 <img 
                                     src={heroSettings.hero_image_url} 
                                     alt="Hero" 
-                                    className={`w-full h-full object-cover ${heroSettings.hero_grayscale ? 'grayscale' : ''}`}
+                                    className="w-full h-full object-cover"
+                                    style={{ 
+                                        filter: `
+                                            blur(${heroSettings.hero_blur || 0}px) 
+                                            grayscale(${heroSettings.hero_grayscale ? 1 : 0}) 
+                                            brightness(${heroSettings.hero_brightness || 100}%) 
+                                            contrast(${heroSettings.hero_contrast || 100}%) 
+                                            saturate(${heroSettings.hero_saturation || 100}%)
+                                        ` 
+                                    }}
                                 />
                             ) : (
                                 <video
@@ -269,7 +358,16 @@ const HomePage: React.FC = () => {
                                     loop
                                     muted
                                     playsInline
-                                    className={`w-full h-full object-cover ${heroSettings.hero_grayscale ? 'grayscale' : ''}`}
+                                    className="w-full h-full object-cover"
+                                    style={{ 
+                                        filter: `
+                                            blur(${heroSettings.hero_blur || 0}px) 
+                                            grayscale(${heroSettings.hero_grayscale ? 1 : 0}) 
+                                            brightness(${heroSettings.hero_brightness || 100}%) 
+                                            contrast(${heroSettings.hero_contrast || 100}%) 
+                                            saturate(${heroSettings.hero_saturation || 100}%)
+                                        ` 
+                                    }}
                                 >
                                     <source src={heroSettings.hero_video_url} type="video/mp4" />
                                 </video>
@@ -294,14 +392,18 @@ const HomePage: React.FC = () => {
                             style={{ fontSize: 'var(--fs-hero)' }}
                             className="text-shimmer shadow-premium-gold font-serif font-bold leading-[1.1] uppercase tracking-[0.1em] md:tracking-[0.15em]"
                         >
-                            {t('home.hero_title')}
+                            {currentLang === 'bg' 
+                                ? (heroSettings?.hero_title_bg || t('home.hero_title')) 
+                                : (heroSettings?.hero_title_en || t('home.hero_title'))}
                         </motion.h1>
                         <motion.p 
                             variants={fadeInUp} 
                             style={{ fontSize: 'var(--fs-body)' }}
                             className="mt-[3vh] text-white/90 tracking-[0.2em] md:tracking-[0.25em] font-light uppercase drop-shadow-md max-w-[90%] mx-auto"
                         >
-                            {t('home.hero_subtitle')}
+                            {currentLang === 'bg' 
+                                ? (heroSettings?.hero_subtitle_bg || t('home.hero_subtitle')) 
+                                : (heroSettings?.hero_subtitle_en || t('home.hero_subtitle'))}
                         </motion.p>
                         <motion.div variants={fadeInUp} className="mt-[6vh] flex flex-col gap-y-4 md:flex-row md:gap-x-10 items-center justify-center">
                             <Link to={`/${currentLang}/models`} className="w-full md:w-auto text-center px-10 py-4 bg-gold-accent text-background text-[10px] md:text-xs font-bold uppercase tracking-[0.2em] hover:bg-white transition-all duration-500 shadow-gold">
@@ -583,78 +685,192 @@ const HomePage: React.FC = () => {
 
             <section className="py-20 md:py-32 bg-background overflow-hidden border-y border-border/5">
                 <div className="container mx-auto px-6">
-                    <motion.h2
-                        initial="hidden"
-                        whileInView="visible"
-                        viewport={{ once: true, margin: "-50px" }}
-                        variants={fadeInUp}
-                        className="text-center text-4xl md:text-5xl font-serif text-text-primary mb-12"
-                    >
-                        {t('home.lookbook_showcase')}
-                    </motion.h2>
-                    <motion.div
-                        initial="hidden"
-                        whileInView="visible"
-                        viewport={{ once: true, margin: "-100px" }}
-                        variants={fadeInUp}
-                        className="relative w-full max-w-7xl mx-auto aspect-[1408/768] bg-black overflow-hidden rounded-sm shadow-[0_0_50px_rgba(0,0,0,0.5)] border border-white/5 group"
-                    >
-                        <div
-                            className={`absolute inset-0 flex ${isLookbookTransitioning ? 'transition-transform duration-[800ms] ease-in-out' : ''}`}
-                            style={{ transform: `translateX(-${currentLookbookIndex * 100}%)` }}
+                    <AnimatePresence mode="wait">
+                        <motion.div
+                            key={lookbookId}
+                            variants={evaporate}
+                            initial="initial"
+                            animate="animate"
+                            exit="exit"
+                            className="w-full"
                         >
-                            {extendedLookbookImages.map((src, index) => (
-                                <div key={index} className="w-full h-full flex-shrink-0 relative overflow-hidden bg-black">
-                                    <img
-                                        className={`w-full h-full object-cover transition-transform duration-[5000ms] ease-out ${
-                                            (currentLookbookIndex % lookbookImages.length) === (index % lookbookImages.length) ? 'scale-110' : 'scale-100'
-                                        }`}
-                                        src={src}
-                                        alt={`Lookbook ${index + 1}`}
-                                    />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/20 pointer-events-none" />
-                                </div>
-                            ))}
-                        </div>
-                        <div
-                            className="absolute inset-y-0 left-0 w-1/3 z-40 cursor-w-resize"
-                            onClick={handleLookbookBackward}
-                        />
-                        <div
-                            className="absolute inset-y-0 right-0 w-1/3 z-40 cursor-e-resize"
-                            onClick={handleLookbookForward}
-                        />
-                        <div className="absolute bottom-0 left-0 right-0 flex h-1 bg-white/5 z-30 space-x-1 px-1">
-                            {lookbookImages.map((_, i) => {
-                                const activeIndex = ((currentLookbookIndex % lookbookImages.length) + lookbookImages.length) % lookbookImages.length;
-                                return (
-                                    <div key={i} className="flex-1 h-full bg-white/10 overflow-hidden rounded-full">
-                                        {i === activeIndex && (
-                                            <div className="h-full bg-gold-accent animate-[timeline_5s_linear_forwards]" />
-                                        )}
-                                        {i < activeIndex && (
-                                            <div className="h-full bg-gold-accent w-full" />
-                                        )}
+                            <motion.h2
+                                className="text-center text-4xl md:text-5xl text-text-primary mb-4"
+                                style={{ fontFamily: lookbookTitle.font }}
+                            >
+                                {i18n.language === 'bg' ? lookbookTitle.titleBg : lookbookTitle.titleEn}
+                            </motion.h2>
+
+                            {(i18n.language === 'bg' ? lookbookTitle.descBg : lookbookTitle.descEn) && (
+                                <motion.p
+                                    className="text-center text-text-muted text-sm md:text-base max-w-2xl mx-auto mb-12 uppercase tracking-[0.2em]"
+                                    style={{ fontFamily: lookbookTitle.descFont || 'Inter' }}
+                                >
+                                    {i18n.language === 'bg' ? lookbookTitle.descBg : lookbookTitle.descEn}
+                                </motion.p>
+                            )}
+
+                            <div className="relative w-full max-w-7xl mx-auto aspect-video bg-black overflow-hidden rounded-sm shadow-[0_0_50px_rgba(0,0,0,0.5)] border border-white/5 group">
+                                <div
+                                className={`absolute inset-0 flex ${isLookbookTransitioning ? 'transition-transform duration-[800ms] ease-in-out' : ''}`}
+                                style={{ transform: `translateX(-${currentLookbookIndex * 100}%)` }}
+                            >
+                                {extendedLookbookImages.map((src, index) => (
+                                    <div key={index} className="w-full h-full flex-shrink-0 relative overflow-hidden bg-black">
+                                        <img
+                                            className={`w-full h-full object-cover transition-transform duration-[5000ms] ease-out ${
+                                                (currentLookbookIndex % lookbookImages.length) === (index % lookbookImages.length) ? 'scale-105' : 'scale-100'
+                                            }`}
+                                            src={src}
+                                            alt={`Lookbook ${index + 1}`}
+                                        />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/20 pointer-events-none" />
                                     </div>
-                                );
-                            })}
-                        </div>
-                        <div className="absolute bottom-6 left-6 flex items-center space-x-3 z-40 bg-black/60 backdrop-blur-md px-4 py-2 rounded-sm border border-white/5">
-                            <div className="flex items-center space-x-2">
-                                <div className="w-2 h-2 rounded-full bg-red-600 animate-pulse shadow-[0_0_15px_rgba(220,38,38,0.8)]" />
-                                <span className="text-[10px] uppercase font-bold tracking-widest text-white/90">{t('home.model_view')}</span>
+                                ))}
                             </div>
-                            <div className="h-3 w-px bg-white/20" />
-                            <span className="text-[11px] font-mono text-gold-accent">
-                                {String((currentLookbookIndex % lookbookImages.length) + 1).padStart(2, '0')} / {String(lookbookImages.length).padStart(2, '0')}
-                            </span>
-                        </div>
-                    </motion.div>
+                            <div
+                                className="absolute inset-y-0 left-0 w-1/3 z-40 cursor-w-resize"
+                                onClick={handleLookbookBackward}
+                            />
+                            <div
+                                className="absolute inset-y-0 right-0 w-1/3 z-40 cursor-e-resize"
+                                onClick={handleLookbookForward}
+                            />
+
+                            {/* Responsive Thumbnail Toggle Drawer */}
+                            <div className="absolute top-0 bottom-0 right-0 z-[60] flex items-center h-full pointer-events-none">
+                                {/* Desktop Side Thumbnails (md+) */}
+                                <div className={`hidden md:block h-full bg-black/90 backdrop-blur-xl transition-[width] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] overflow-hidden pointer-events-auto ${isDrawerOpen ? 'w-40' : 'w-0'}`}>
+                                    <div className="h-full overflow-y-auto custom-scrollbar p-4 space-y-3">
+                                        <h3 className="text-[10px] uppercase tracking-widest text-white/40 mb-3 font-bold text-center sticky top-0 bg-black/90 py-2 z-10 backdrop-blur">Gallery</h3>
+                                         {lookbookImages.map((img, idx) => (
+                                            <button
+                                                key={idx}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setIsLookbookTransitioning(true); 
+                                                    setCurrentLookbookIndex(idx);
+                                                }}
+                                                className={`relative w-full aspect-square overflow-hidden rounded-sm border transition-all ${
+                                                    (currentLookbookIndex % lookbookImages.length) === idx 
+                                                        ? 'border-gold-accent opacity-100 shadow-[0_0_15px_rgba(212,175,55,0.3)] ring-1 ring-gold-accent' 
+                                                        : 'border-white/10 opacity-40 hover:opacity-100 hover:border-white/50'
+                                                }`}
+                                            >
+                                                <img src={img} className="w-full h-full object-cover" alt="" />
+                                            </button>
+                                        ))}
+                                        {/* Visual spacer at bottom */}
+                                        <div className="h-12" />
+                                    </div>
+                                </div>
+
+                                {/* Floating Trigger Button moved higher */}
+                                <div className="h-full flex items-start pt-1 pr-1">
+                                    <button 
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setIsDrawerOpen(!isDrawerOpen);
+                                        }}
+                                        className={`pointer-events-auto w-8 h-8 flex items-center justify-center rounded-full bg-black/40 hover:bg-black/80 border border-white/10 hover:border-gold-accent/50 text-white/50 hover:text-gold-accent transition-all duration-500 backdrop-blur-sm shadow-2xl active:scale-90 group/trigger`}
+                                    >
+                                        <ChevronLeft className={`w-4 h-4 transition-transform duration-500 ease-out ${isDrawerOpen ? 'rotate-180' : 'group-hover/trigger:-translate-x-0.5'}`} />
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="absolute bottom-0 left-0 right-0 flex h-1 bg-white/5 z-30 space-x-1 px-1">
+                                {lookbookImages.map((_, i) => {
+                                    const activeIndex = ((currentLookbookIndex % lookbookImages.length) + lookbookImages.length) % lookbookImages.length;
+                                    return (
+                                        <div key={i} className="flex-1 h-full bg-white/10 overflow-hidden rounded-full">
+                                            {i === activeIndex && (
+                                                <div className="h-full bg-gold-accent animate-[timeline_5s_linear_forwards]" />
+                                            )}
+                                            {i < activeIndex && (
+                                                <div className="h-full bg-gold-accent w-full" />
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                            <div className="absolute bottom-3 left-3 md:bottom-6 md:left-6 flex items-center space-x-2 md:space-x-3 z-40 bg-black/60 backdrop-blur-md px-2 md:px-4 py-1 md:py-2 rounded-sm border border-white/5">
+                                <div className="flex items-center space-x-1.5 md:space-x-2">
+                                    <div className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-red-600 animate-pulse shadow-[0_0_15px_rgba(220,38,38,0.8)]" />
+                                    <span className="text-[8px] md:text-[10px] uppercase font-bold tracking-widest text-white/90">{t('home.model_view')}</span>
+                                </div>
+                                <div className="h-2 md:h-3 w-px bg-white/20" />
+                                <span className="text-[9px] md:text-[11px] font-mono text-gold-accent">
+                                    {String((currentLookbookIndex % lookbookImages.length) + 1).padStart(2, '0')} / {String(lookbookImages.length).padStart(2, '0')}
+                                </span>
+                            </div>
+                         </div>
+
+                        {/* Mobile-only Thumbnail Strip - Only shows when toggled open */}
+                        <AnimatePresence>
+                            {isDrawerOpen && (
+                                <motion.div 
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: 'auto', opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
+                                    transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                                    className="md:hidden mt-4 overflow-hidden"
+                                >
+                                    <div className="relative group/mobile-strip">
+                                        <div 
+                                            ref={mobileScrollRef}
+                                            onScroll={(e) => {
+                                                const target = e.currentTarget;
+                                                const progress = (target.scrollLeft / (target.scrollWidth - target.clientWidth)) * 100;
+                                                setMobileScrollProgress(isNaN(progress) ? 0 : progress);
+                                            }}
+                                            className="overflow-x-auto flex space-x-2 pb-6 px-2 snap-x no-scrollbar scroll-smooth"
+                                        >
+                                            {lookbookImages.map((img, idx) => {
+                                                const isActive = (currentLookbookIndex % lookbookImages.length) === idx;
+                                                return (
+                                                    <button
+                                                        key={idx}
+                                                        onClick={() => {
+                                                            setIsLookbookTransitioning(true);
+                                                            setCurrentLookbookIndex(idx);
+                                                        }}
+                                                        className={`relative w-20 h-20 flex-shrink-0 rounded-sm overflow-hidden border transition-all snap-center ${
+                                                            isActive 
+                                                                ? 'border-gold-accent ring-1 ring-gold-accent shadow-[0_0_15px_rgba(212,175,55,0.4)]' 
+                                                                : 'border-white/10 opacity-40'
+                                                        }`}
+                                                    >
+                                                        <img src={img} className="w-full h-full object-cover" alt="" />
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                        
+                                        {/* Orientation / Scroll Progress Line */}
+                                        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-32 h-[1px] bg-white/5 rounded-full overflow-hidden">
+                                            <div 
+                                                className="h-full bg-gold-accent/60 transition-all duration-100 ease-out"
+                                                style={{ width: '20%', transform: `translateX(${mobileScrollProgress * (100 - 20) / 20}%)` }} 
+                                            />
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                        </motion.div>
+                    </AnimatePresence>
 
                     <style>{`
                         @keyframes timeline {
                             from { width: 0%; }
                             to { width: 100%; }
+                        }
+                        .no-scrollbar::-webkit-scrollbar {
+                            display: none;
+                        }
+                        .no-scrollbar {
+                            -ms-overflow-style: none;
+                            scrollbar-width: none;
                         }
                     `}</style>
                 </div>

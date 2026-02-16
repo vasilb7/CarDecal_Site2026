@@ -1,4 +1,9 @@
 {
+  "common": {
+    "page_not_found": "Страницата не е намерена",
+    "back_home": "Начало",
+    "explore": "Изследвай"
+  },
   "photoshoot": {
     "promo_text": "СПЕЧЕЛЕТЕ ДО 1000$ ЗА ФОТОСЕСИЯ — НАЙ-ДОБРАТА ОТИВА В БЛОГА И ПЕЧЕЛИ НАГРАДАТА",
     "view": "ПРОЧЕТИ ПОВЕЧЕ"
@@ -70,7 +75,7 @@
     "apply_book": "Кандидатствай / Резервирай",
     "featured_spotlight": "Най-доброто от агенцията",
     "top_model": "Топ Модел",
-    "model_view": "Модел Преглед",
+    "model_view": "Изглед на Модела",
     "lookbook_showcase": "Lookbook Showcase",
     "our_services": "Нашите Услуги",
     "ready_to_create": "Готови ли сте да творите?",

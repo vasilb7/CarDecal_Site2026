@@ -47,6 +47,30 @@ export const SpotlightCropModal: React.FC<SpotlightCropModalProps> = ({
   const dispW = naturalSize.w * coverScale * zoom;
   const dispH = naturalSize.h * coverScale * zoom;
 
+  // Output canvas bounds logic
+  const maxPanX = Math.max(0, (dispW - CROP_W) / 2);
+  const maxPanY = Math.max(0, (dispH - CROP_H) / 2);
+
+  // Helper to keep pan within bounds
+  const clampPan = useCallback((x: number, y: number) => {
+    // Re-calculate bounds inside to ensure latest values
+    const currentMaxX = Math.max(0, (naturalSize.w * coverScale * zoom - CROP_W) / 2);
+    const currentMaxY = Math.max(0, (naturalSize.h * coverScale * zoom - CROP_H) / 2);
+    return {
+      x: Math.min(Math.max(x, -currentMaxX), currentMaxX),
+      y: Math.min(Math.max(y, -currentMaxY), currentMaxY)
+    };
+  }, [naturalSize, coverScale, zoom, CROP_W, CROP_H]);
+
+  // Apply clamping when zoom or pan changes
+  useEffect(() => {
+    if (naturalSize.w > 0) {
+      const { x, y } = clampPan(panX, panY);
+      if (x !== panX) setPanX(x);
+      if (y !== panY) setPanY(y);
+    }
+  }, [zoom, naturalSize, clampPan, panX, panY]);
+
   const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const img = e.currentTarget;
     setNaturalSize({ w: img.naturalWidth, h: img.naturalHeight });
@@ -62,8 +86,20 @@ export const SpotlightCropModal: React.FC<SpotlightCropModalProps> = ({
   useEffect(() => {
     if (!dragging) return;
     const onMove = (e: MouseEvent) => {
-      setPanX(prev => prev + (e.clientX - lastMouse.x));
-      setPanY(prev => prev + (e.clientY - lastMouse.y));
+      const dx = e.clientX - lastMouse.x;
+      const dy = e.clientY - lastMouse.y;
+      
+      setPanX(prevX => {
+        const nextX = prevX + dx;
+        const currentMaxX = Math.max(0, (naturalSize.w * coverScale * zoom - CROP_W) / 2);
+        return Math.min(Math.max(nextX, -currentMaxX), currentMaxX);
+      });
+      setPanY(prevY => {
+        const nextY = prevY + dy;
+        const currentMaxY = Math.max(0, (naturalSize.h * coverScale * zoom - CROP_H) / 2);
+        return Math.min(Math.max(nextY, -currentMaxY), currentMaxY);
+      });
+      
       setLastMouse({ x: e.clientX, y: e.clientY });
     };
     const onUp = () => setDragging(false);
@@ -73,7 +109,7 @@ export const SpotlightCropModal: React.FC<SpotlightCropModalProps> = ({
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
     };
-  }, [dragging, lastMouse]);
+  }, [dragging, lastMouse, naturalSize, coverScale, zoom, CROP_W, CROP_H]);
 
   // --- Touch drag ---
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -86,8 +122,20 @@ export const SpotlightCropModal: React.FC<SpotlightCropModalProps> = ({
     if (!dragging) return;
     const onMove = (e: TouchEvent) => {
       const t = e.touches[0];
-      setPanX(prev => prev + (t.clientX - lastMouse.x));
-      setPanY(prev => prev + (t.clientY - lastMouse.y));
+      const dx = t.clientX - lastMouse.x;
+      const dy = t.clientY - lastMouse.y;
+
+      setPanX(prevX => {
+        const nextX = prevX + dx;
+        const currentMaxX = Math.max(0, (naturalSize.w * coverScale * zoom - CROP_W) / 2);
+        return Math.min(Math.max(nextX, -currentMaxX), currentMaxX);
+      });
+      setPanY(prevY => {
+        const nextY = prevY + dy;
+        const currentMaxY = Math.max(0, (naturalSize.h * coverScale * zoom - CROP_H) / 2);
+        return Math.min(Math.max(nextY, -currentMaxY), currentMaxY);
+      });
+
       setLastMouse({ x: t.clientX, y: t.clientY });
     };
     const onUp = () => setDragging(false);
@@ -97,12 +145,12 @@ export const SpotlightCropModal: React.FC<SpotlightCropModalProps> = ({
       window.removeEventListener('touchmove', onMove);
       window.removeEventListener('touchend', onUp);
     };
-  }, [dragging, lastMouse]);
+  }, [dragging, lastMouse, naturalSize, coverScale, zoom, CROP_W, CROP_H]);
 
   // --- Scroll zoom ---
   const handleWheel = (e: React.WheelEvent) => {
-    e.preventDefault();
-    setZoom(prev => Math.max(1, Math.min(5, prev - e.deltaY * 0.002)));
+    const delta = -e.deltaY * 0.001;
+    setZoom(prev => Math.max(1, Math.min(5, prev + delta)));
   };
 
   // --- SAVE: crop exactly what's visible ---
@@ -111,36 +159,39 @@ export const SpotlightCropModal: React.FC<SpotlightCropModalProps> = ({
     setIsProcessing(true);
 
     try {
-      // Image is displayed at: (dispW x dispH) centered in (CROP_W x CROP_H) + pan offset
-      // Center offset:
-      const centerOffX = (CROP_W - dispW) / 2;
-      const centerOffY = (CROP_H - dispH) / 2;
+      const totalScale = coverScale * zoom;
 
-      // Displayed image top-left relative to crop window:
-      const imgLeft = centerOffX + panX;
-      const imgTop = centerOffY + panY;
+      // Image top-left corner in crop-window coordinates
+      const imgLeft = (CROP_W - dispW) / 2 + panX;
+      const imgTop  = (CROP_H - dispH) / 2 + panY;
 
-      // Crop window is at (0,0) of crop area, so visible part of image:
-      // In display coords, the top-left of crop is at (-imgLeft, -imgTop) relative to image
-      // Scale from display to natural:
-      const displayToNatural = 1 / (coverScale * zoom);
+      // Convert crop window center coordinates back to natural image
+      const srcX = -imgLeft / totalScale;
+      const srcY = -imgTop / totalScale;
+      const srcW = CROP_W / totalScale;
+      const srcH = CROP_H / totalScale;
 
-      const sx = Math.max(0, -imgLeft * displayToNatural);
-      const sy = Math.max(0, -imgTop * displayToNatural);
-      const sw = Math.min(CROP_W * displayToNatural, naturalSize.w - sx);
-      const sh = Math.min(CROP_H * displayToNatural, naturalSize.h - sy);
+      // Tight clamping based on natural size
+      const clampedSx = Math.max(0, Math.min(srcX, naturalSize.w - srcW));
+      const clampedSy = Math.max(0, Math.min(srcY, naturalSize.h - srcH));
+      const clampedSw = Math.min(srcW, naturalSize.w - clampedSx);
+      const clampedSh = Math.min(srcH, naturalSize.h - clampedSy);
 
-      // Output canvas - maintain quality
-      const outputW = Math.min(Math.round(sw), 1920);
-      const outputH = Math.round(outputW * (sh / sw));
-
+      // Output canvas
       const canvas = document.createElement('canvas');
-      canvas.width = outputW;
-      canvas.height = outputH;
-      const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext('2d', { alpha: false });
       if (!ctx) { setIsProcessing(false); return; }
 
-      // Load image (no crossOrigin for blob URLs)
+      const outputW = 1600;
+      const outputH = Math.round(outputW / aspectRatio);
+      canvas.width = outputW;
+      canvas.height = outputH;
+
+      // Fill with black first (for any area outside the image)
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, outputW, outputH);
+
+      // Load image
       const img = new Image();
       if (imageUrl.startsWith('http')) img.crossOrigin = 'anonymous';
       img.src = imageUrl;
@@ -149,9 +200,18 @@ export const SpotlightCropModal: React.FC<SpotlightCropModalProps> = ({
         img.onerror = () => reject(new Error('Image load failed'));
       });
 
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+
+      // Calculate destination offset if crop extends beyond image edge
+      const destX = (clampedSx - srcX) / srcW * outputW;
+      const destY = (clampedSy - srcY) / srcH * outputH;
+      const destW = (clampedSw / srcW) * outputW;
+      const destH = (clampedSh / srcH) * outputH;
+
       ctx.drawImage(img,
-        Math.round(sx), Math.round(sy), Math.round(sw), Math.round(sh),
-        0, 0, outputW, outputH
+        clampedSx, clampedSy, clampedSw, clampedSh,
+        destX, destY, destW, destH
       );
 
       canvas.toBlob((blob) => {

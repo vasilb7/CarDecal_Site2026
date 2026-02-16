@@ -89,7 +89,10 @@ const Header: React.FC = () => {
         `relative text-xl md:text-sm uppercase tracking-[0.3em] font-light transition-all duration-500 hover:text-gold-accent ${isActive ? 'text-gold-accent' : 'text-white'}`;
 
     const closeMenu = () => setIsMenuOpen(false);
-    const currentLang = i18n.language.split('-')[0];
+    
+    // Safety check for current language to avoid broken links
+    const rawLang = i18n.language?.split("-")[0];
+    const currentLang = ["bg", "en"].includes(rawLang) ? rawLang : "bg";
     
     const menuLinks = [
         { path: `/${currentLang}/models`, label: t('nav.models') },

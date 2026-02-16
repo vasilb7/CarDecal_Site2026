@@ -1,28 +1,54 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
+import { settingsService } from '../lib/settingsService';
+import { supabase } from '../lib/supabase';
 
 const ServicesPage: React.FC = () => {
     const { t } = useTranslation();
+    const [bg1, setBg1] = useState("");
+    const [bg2, setBg2] = useState("");
+    const [bg3, setBg3] = useState("");
+
+    useEffect(() => {
+        const loadBgs = async () => {
+            const bgs = await settingsService.getPageBackgrounds();
+            setBg1(bgs.bg_services_1);
+            setBg2(bgs.bg_services_2);
+            setBg3(bgs.bg_services_3);
+        };
+        loadBgs();
+
+        const channel = supabase
+            .channel('services_bg_changes')
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'site_settings' }, (payload: any) => {
+                if (payload.new.key === 'bg_services_1') setBg1(payload.new.value);
+                if (payload.new.key === 'bg_services_2') setBg2(payload.new.value);
+                if (payload.new.key === 'bg_services_3') setBg3(payload.new.value);
+            })
+            .subscribe();
+
+        return () => { supabase.removeChannel(channel); };
+    }, []);
 
     const services = [
         {
             name: t('services.list.casting.name'),
             focus: t('services.list.casting.focus'),
             description: t('services.list.casting.description'),
-            image: "/Site_Pics/Model_pics_together/10.jpeg"
+            image: bg1
         },
         {
             name: t('services.list.production.name'),
             focus: t('services.list.production.focus'),
             description: t('services.list.production.description'),
-            image: "/Site_Pics/Model_pics_together/12.jpeg"
+            image: bg2
         },
         {
             name: t('services.list.creative.name'),
             focus: t('services.list.creative.focus'),
             description: t('services.list.creative.description'),
-            image: "/Site_Pics/Model_pics_together/5.jpeg"
+            image: bg3
         }
     ];
 
