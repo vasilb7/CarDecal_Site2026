@@ -54,7 +54,9 @@ import {
   Snowflake,
   Tag,
   Percent,
-  Zap
+  Zap,
+  Power,
+  RefreshCw
 } from 'lucide-react';
 import { adminService } from '../lib/adminService';
 import { modelsService } from '../lib/modelsService';
@@ -64,6 +66,7 @@ import { useToast } from '../hooks/useToast';
 import { supabase } from '../lib/supabase';
 import { settingsService } from '../lib/settingsService';
 import { dashboardService } from '../lib/dashboardService';
+import { cn } from '../lib/utils';
 
 
 
@@ -134,6 +137,18 @@ const AdminDashboard: React.FC = () => {
   const [heroTitleEn, setHeroTitleEn] = useState('VB VISION');
   const [heroSubtitleBg, setHeroSubtitleBg] = useState('Твоето лице. Твоят бранд. Твоята кариера.');
   const [heroSubtitleEn, setHeroSubtitleEn] = useState('Your Face. Your Brand. Your Career.');
+  const [heroTitleFont, setHeroTitleFont] = useState('Playfair Display');
+  const [heroSubtitleFont, setHeroSubtitleFont] = useState('Inter');
+
+  const SYSTEM_FONTS = [
+    'Playfair Display', 'Inter', 'Cormorant Garamond', 'Montserrat', 'Raleway',
+    'Oswald', 'Lora', 'Merriweather', 'Poppins', 'Roboto Slab',
+    'Dancing Script', 'Great Vibes', 'Cinzel', 'Bebas Neue', 'Abril Fatface',
+    'Josefin Sans', 'Libre Baskerville', 'Nunito', 'Crimson Text',
+    'DM Serif Display', 'Italiana', 'Bodoni Moda', 'Philosopher', 'Yeseva One', 'Bad Script',
+    'Sugo Display', 'Kingred Modern', 'Sugar Pie', 'TAN HEADLINE', 'Hobo', 'Satyr',
+    'Gang of Three', 'Subway NewYork OT W03 Regular', 'Ethnocentric Rg', 'Blackburr'
+  ];
 
 
   // Promo State
@@ -210,9 +225,9 @@ const AdminDashboard: React.FC = () => {
   });
   const [isSavingAnnouncement, setIsSavingAnnouncement] = useState(false);
 
-  // Pricing Config State
   const [pricingConfig, setPricingConfig] = useState<any>(settingsService.getDefaultPricingConfig());
   const [isSavingPricing, setIsSavingPricing] = useState(false);
+  const [pricingCampaignTab, setPricingCampaignTab] = useState<'valentines' | 'christmas' | 'photoshoot'>('valentines');
 
 
 
@@ -422,6 +437,8 @@ const AdminDashboard: React.FC = () => {
       setHeroTitleEn(hSettings.hero_title_en || 'VB VISION');
       setHeroSubtitleBg(hSettings.hero_subtitle_bg || 'Твоето лице. Твоят бранд. Твоята кариера.');
       setHeroSubtitleEn(hSettings.hero_subtitle_en || 'Your Face. Your Brand. Your Career.');
+      setHeroTitleFont(hSettings.hero_title_font || 'Playfair Display');
+      setHeroSubtitleFont(hSettings.hero_subtitle_font || 'Inter');
       
       setActivePromo(promo);
       setPromoEndTime(promoExpires || '');
@@ -745,6 +762,8 @@ const AdminDashboard: React.FC = () => {
         if (key === 'hero_title_en') setHeroTitleEn(value);
         if (key === 'hero_subtitle_bg') setHeroSubtitleBg(value);
         if (key === 'hero_subtitle_en') setHeroSubtitleEn(value);
+        if (key === 'hero_title_font') setHeroTitleFont(value);
+        if (key === 'hero_subtitle_font') setHeroSubtitleFont(value);
 
         if (key === 'active_promo') setActivePromo(value || 'none');
         if (key === 'active_promo_expires_at') setPromoEndTime(value || '');
@@ -2077,25 +2096,81 @@ const AdminDashboard: React.FC = () => {
                                 />
                             </div>
 
-                            {/* Subtitle */}
+                            {/* Title & Subtitle */}
                             <div className="space-y-3 pt-2 border-t border-white/5">
-                                <div className="space-y-1">
-                                    <label className="text-[9px] uppercase tracking-widest text-white/40">Subtitle (BG)</label>
-                                    <input 
-                                        type="text" 
-                                        value={heroSubtitleBg}
-                                        onChange={(e) => setHeroSubtitleBg(e.target.value)}
-                                        className="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-xs text-white focus:border-blue-500/50 outline-none"
-                                    />
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-1">
+                                        <label className="text-[9px] uppercase tracking-widest text-white/40">Title (BG)</label>
+                                        <input 
+                                            type="text" 
+                                            value={heroTitleBg}
+                                            onChange={(e) => setHeroTitleBg(e.target.value)}
+                                            className="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-xs text-white focus:border-blue-500/50 outline-none"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[9px] uppercase tracking-widest text-white/40">Title (EN)</label>
+                                        <input 
+                                            type="text" 
+                                            value={heroTitleEn}
+                                            onChange={(e) => setHeroTitleEn(e.target.value)}
+                                            className="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-xs text-white focus:border-blue-500/50 outline-none"
+                                        />
+                                    </div>
                                 </div>
-                                <div className="space-y-1">
-                                    <label className="text-[9px] uppercase tracking-widest text-white/40">Subtitle (EN)</label>
-                                    <input 
-                                        type="text" 
-                                        value={heroSubtitleEn}
-                                        onChange={(e) => setHeroSubtitleEn(e.target.value)}
-                                        className="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-xs text-white focus:border-blue-500/50 outline-none"
-                                    />
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-1">
+                                        <label className="text-[9px] uppercase tracking-widest text-white/40">Subtitle (BG)</label>
+                                        <input 
+                                            type="text" 
+                                            value={heroSubtitleBg}
+                                            onChange={(e) => setHeroSubtitleBg(e.target.value)}
+                                            className="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-xs text-white focus:border-blue-500/50 outline-none"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[9px] uppercase tracking-widest text-white/40">Subtitle (EN)</label>
+                                        <input 
+                                            type="text" 
+                                            value={heroSubtitleEn}
+                                            onChange={(e) => setHeroSubtitleEn(e.target.value)}
+                                            className="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-xs text-white focus:border-blue-500/50 outline-none"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-1">
+                                        <label className="text-[9px] uppercase tracking-widest text-white/40">Title Font</label>
+                                        <select 
+                                            value={heroTitleFont}
+                                            onChange={(e) => setHeroTitleFont(e.target.value)}
+                                            className="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-xs text-white focus:border-blue-500/50 outline-none"
+                                            style={{ fontFamily: heroTitleFont }}
+                                        >
+                                            {SYSTEM_FONTS.map(font => (
+                                              <option key={font} value={font} style={{ fontFamily: font, background: '#111', color: '#fff' }}>
+                                                {font}
+                                              </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[9px] uppercase tracking-widest text-white/40">Subtitle Font</label>
+                                        <select 
+                                            value={heroSubtitleFont}
+                                            onChange={(e) => setHeroSubtitleFont(e.target.value)}
+                                            className="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-xs text-white focus:border-blue-500/50 outline-none"
+                                            style={{ fontFamily: heroSubtitleFont }}
+                                        >
+                                            {SYSTEM_FONTS.map(font => (
+                                              <option key={font} value={font} style={{ fontFamily: font, background: '#111', color: '#fff' }}>
+                                                {font}
+                                              </option>
+                                            ))}
+                                        </select>
+                                    </div>
                                 </div>
                             </div>
 
@@ -2109,6 +2184,10 @@ const AdminDashboard: React.FC = () => {
                                         
                                         await settingsService.setHeroSetting('hero_subtitle_bg', heroSubtitleBg);
                                         await settingsService.setHeroSetting('hero_subtitle_en', heroSubtitleEn);
+                                        await settingsService.setHeroSetting('hero_title_bg', heroTitleBg);
+                                        await settingsService.setHeroSetting('hero_title_en', heroTitleEn);
+                                        await settingsService.setHeroSetting('hero_title_font', heroTitleFont);
+                                        await settingsService.setHeroSetting('hero_subtitle_font', heroSubtitleFont);
                                         
                                         showToast('Visuals updated!', 'success');
                                     } catch(e:any) { showToast(e.message, 'error'); }
@@ -2241,73 +2320,7 @@ const AdminDashboard: React.FC = () => {
                         {/* Event Announcements */}
 
 
-                        {/* Active Promotion Status */}
-                        <div className="bg-[#0A0A0A] border border-white/10 rounded-xl overflow-hidden relative group p-6 mb-6">
-                             <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-purple-500 to-pink-500" />
-                             <h3 className="text-sm font-bold uppercase tracking-[0.2em] text-white flex items-center gap-3 mb-6">
-                                <Sparkles className="w-4 h-4 text-purple-400" />
-                                Active Campaign Status
-                             </h3>
-                             
-                             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-                                {[
-                                    { id: 'none', label: 'Standard', icon: Star, color: 'text-white' },
-                                    { id: 'valentines', label: 'Valentines', icon: Heart, color: 'text-pink-500' },
-                                    { id: 'christmas', label: 'Christmas', icon: Snowflake, color: 'text-cyan-400' },
-                                    { id: 'photoshoot', label: 'Photoshoot', icon: Camera, color: 'text-amber-400' }
-                                ].map(p => (
-                                    <button
-                                        key={p.id}
-                                        onClick={async () => {
-                                            try {
-                                                setIsSavingPromo(true);
-                                                setActivePromo(p.id);
-                                                await settingsService.setActivePromo(p.id);
-                                                showToast(`Campaign switched to ${p.label}`, 'success');
-                                            } catch(e:any) { showToast(e.message, 'error'); }
-                                            finally { setIsSavingPromo(false); }
-                                        }}
-                                        disabled={isSavingPromo}
-                                        className={`p-3 rounded-lg border transition-all flex flex-col items-center gap-2 group ${
-                                            activePromo === p.id 
-                                            ? 'bg-white/10 border-white/20' 
-                                            : 'bg-black/30 border-white/5 hover:bg-white/5'
-                                        }`}
-                                    >
-                                        <p.icon className={`w-5 h-5 ${p.color} ${activePromo === p.id ? 'opacity-100' : 'opacity-40 group-hover:opacity-80'}`} />
-                                        <span className={`text-[9px] uppercase tracking-widest font-bold ${activePromo === p.id ? 'text-white' : 'text-white/30'}`}>
-                                            {p.label}
-                                        </span>
-                                    </button>
-                                ))}
-                             </div>
 
-                             <div className="space-y-1 pt-4 border-t border-white/5">
-                                <div className="flex justify-between items-center mb-1">
-                                    <label className="text-[9px] uppercase tracking-widest text-white/40">Campaign Ends At</label>
-                                    <span className="text-[8px] uppercase tracking-widest text-white/20">Optional auto-shutdown</span>
-                                </div>
-                                <div className="flex gap-2">
-                                    <input 
-                                        type="datetime-local"
-                                        value={promoEndTime}
-                                        onChange={(e) => setPromoEndTime(e.target.value)}
-                                        className="flex-1 bg-black/30 border border-white/10 rounded-lg p-2.5 text-xs text-white focus:border-purple-500/50 invert-calendar-icon"
-                                    />
-                                    <button 
-                                        onClick={async () => {
-                                            try {
-                                                await settingsService.setPromoExpiration(promoEndTime);
-                                                showToast('Expiration timer set!', 'success');
-                                            } catch(e:any) { showToast(e.message, 'error'); }
-                                        }}
-                                        className="bg-white/5 hover:bg-white/10 text-white px-4 rounded-lg text-[9px] uppercase tracking-widest font-bold border border-white/5"
-                                    >
-                                        Set
-                                    </button>
-                                </div>
-                             </div>
-                        </div>
 
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6"> 
                           {/* Announcement Column */}
@@ -2352,60 +2365,307 @@ const AdminDashboard: React.FC = () => {
                              </div>
                         </div>
 
-                        {/* Event Pricing Override */}
-                        <div className="bg-[#0A0A0A] border border-white/10 rounded-xl overflow-hidden relative group p-6">
-                             <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-emerald-500 to-teal-500" />
-                             <h3 className="text-sm font-bold uppercase tracking-[0.2em] text-white flex items-center gap-3 mb-6">
-                                <DollarSign className="w-4 h-4 text-emerald-400" />
-                                Event Pricing Strategy
-                             </h3>
+                        {/* Service Pricing & Campaigns Hub */}
+                        <div className="bg-[#0A0A0A] border border-white/10 rounded-xl overflow-hidden relative group p-6 shadow-2xl">
+                             <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-emerald-500 via-teal-500 to-cyan-500" />
                              
-                             <div className="grid grid-cols-2 gap-4 mb-4">
-                                <div className="space-y-1">
-                                    <label className="text-[9px] uppercase tracking-widest text-white/40">Standard Base</label>
-                                    <input 
-                                        type="number"
-                                        value={pricingConfig.standard?.price || 0}
-                                        onChange={(e) => setPricingConfig({...pricingConfig, standard: {...pricingConfig.standard!, price: parseInt(e.target.value)}})}
-                                        className="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-xs text-white font-mono focus:border-emerald-500/50"
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-[9px] uppercase tracking-widest text-white/40">Premium Base</label>
-                                    <input 
-                                        type="number"
-                                        value={pricingConfig.premium?.price || 0}
-                                        onChange={(e) => setPricingConfig({...pricingConfig, premium: {...pricingConfig.premium!, price: parseInt(e.target.value)}})}
-                                        className="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-xs text-white font-mono focus:border-emerald-500/50"
-                                    />
+                             <div className="flex items-center justify-between mb-8">
+                                <h3 className="text-sm font-bold uppercase tracking-[0.2em] text-white flex items-center gap-3">
+                                    <DollarSign className="w-4 h-4 text-emerald-400" />
+                                    Service Pricing & Campaigns
+                                </h3>
+                                <div className="flex items-center gap-2">
+                                    {activePromo !== 'none' && (
+                                        <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                                            <span className="relative flex w-2 h-2">
+                                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                            </span>
+                                            <span className="text-[9px] font-black uppercase tracking-widest text-emerald-400">
+                                                Active: {activePromo}
+                                            </span>
+                                        </div>
+                                    )}
                                 </div>
                              </div>
 
-                             <div className="space-y-1 pt-2 border-t border-white/5">
-                                <label className="text-[9px] uppercase tracking-widest text-white/40">Pricing Page Background</label>
-                                <input 
-                                    type="text"
-                                    value={pricingBgStandard}
-                                    onChange={(e) => setPricingBgStandard(e.target.value)}
-                                    className="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-xs text-white focus:border-emerald-500/50"
-                                    placeholder="Background Image URL..."
-                                />
+                             {/* SECTION 1: Base Service Configuration */}
+                             <div className="mb-10">
+                                <div className="flex items-center justify-between mb-6">
+                                     <div className="flex items-center gap-3">
+                                         <div className="p-2 bg-white/5 rounded-lg border border-white/5">
+                                             <Users className="w-4 h-4 text-white/60" />
+                                         </div>
+                                         <div>
+                                            <h4 className="text-xs font-bold uppercase tracking-[0.15em] text-white">Base Service Plans</h4>
+                                            <p className="text-[9px] text-white/30 uppercase tracking-widest mt-0.5">Foundational rates before discounts</p>
+                                         </div>
+                                     </div>
+                                     
+                                     {/* Quick Global Action for Base BG */}
+                                     <div className="flex items-center gap-3 bg-white/[0.02] p-1.5 pr-4 pl-3 rounded-lg border border-white/5">
+                                         <div className="p-1.5 bg-emerald-500/10 rounded text-emerald-400">
+                                             <FileImage size={12} />
+                                         </div>
+                                         <div className="flex-1">
+                                             <label className="text-[8px] uppercase tracking-widest text-white/40 block">Standard BG</label>
+                                             <input 
+                                                type="text" 
+                                                value={pricingBgStandard} 
+                                                onChange={(e) => setPricingBgStandard(e.target.value)} 
+                                                className="bg-transparent border-none p-0 text-[10px] text-white w-[150px] focus:ring-0 placeholder:text-white/10"
+                                                placeholder="URL..."
+                                             />
+                                         </div>
+                                         <label className="cursor-pointer hover:text-emerald-400 transition-colors">
+                                            <Upload size={12} className="text-white/20" />
+                                            <input type="file" className="hidden" accept="image/*,video/*" onChange={(e) => handlePricingBgUpload(e, 'standard')} />
+                                         </label>
+                                     </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                    {(['starter', 'pro', 'business', 'director'] as const).map((tier, idx) => (
+                                        <div key={tier} className={cn(
+                                            "relative overflow-hidden rounded-xl border p-4 transition-all duration-300 group hover:-translate-y-1 hover:shadow-xl",
+                                            "bg-gradient-to-b from-white/[0.03] to-transparent border-white/5 hover:border-white/10"
+                                        )}>
+                                            <div className="flex items-center justify-between mb-4">
+                                                <span className={cn(
+                                                    "text-[10px] font-black uppercase tracking-[0.2em]",
+                                                    idx === 0 ? "text-white/60" : idx === 1 ? "text-blue-400" : idx === 2 ? "text-purple-400" : "text-gold-accent"
+                                                )}>{tier}</span>
+                                                {idx === 3 && <Star className="w-3 h-3 text-gold-accent fill-gold-accent/20" />}
+                                            </div>
+
+                                            <div className="space-y-4">
+                                                <div>
+                                                    <label className="text-[8px] uppercase tracking-widest text-white/30 block mb-1.5 ml-1">Price (€)</label>
+                                                    <div className="relative">
+                                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/20 text-xs">€</span>
+                                                        <input 
+                                                            type="number" 
+                                                            value={pricingConfig.basePrices?.[tier] || 0}
+                                                            onChange={(e) => setPricingConfig({
+                                                                ...pricingConfig, 
+                                                                basePrices: { ...pricingConfig.basePrices, [tier]: parseInt(e.target.value) }
+                                                            })}
+                                                            className="w-full bg-black/40 border border-white/5 rounded-lg pl-7 pr-3 py-2.5 text-sm font-bold text-white focus:border-emerald-500/50 transition-all outline-none font-mono group-hover:bg-black/60"
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                <div className="pt-3 border-t border-white/5">
+                                                    <div className="flex justify-between items-center mb-1.5 ml-1">
+                                                        <label className="text-[8px] uppercase tracking-widest text-gold-accent/40">Annual Save</label>
+                                                        <Percent className="w-2.5 h-2.5 text-gold-accent/40" />
+                                                    </div>
+                                                    <input 
+                                                        type="number"
+                                                        min="0" max="100"
+                                                        value={typeof pricingConfig.annualDiscount === 'object' ? (pricingConfig.annualDiscount[tier] || 0) : pricingConfig.annualDiscount}
+                                                        onChange={(e) => {
+                                                            const current = typeof pricingConfig.annualDiscount === 'object' 
+                                                                ? pricingConfig.annualDiscount 
+                                                                : { starter: pricingConfig.annualDiscount, pro: pricingConfig.annualDiscount, business: pricingConfig.annualDiscount, director: pricingConfig.annualDiscount };
+                                                            setPricingConfig({
+                                                                ...pricingConfig, 
+                                                                annualDiscount: { ...current, [tier]: parseInt(e.target.value) }
+                                                            });
+                                                        }}
+                                                        className="w-full bg-gold-accent/[0.02] border border-gold-accent/10 rounded-lg px-3 py-2 text-xs font-bold text-gold-accent focus:border-gold-accent/50 transition-all outline-none font-mono text-center"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                              </div>
 
+                             {/* SECTION 2: Campaign Management */}
+                             <div className="bg-black/20 border border-white/5 rounded-xl overflow-hidden">
+                                 {/* Campaign Tabs */}
+                                 <div className="flex border-b border-white/5">
+                                     <div className="px-6 py-4 border-r border-white/5 bg-white/[0.01]">
+                                         <h4 className="text-xs font-bold uppercase tracking-[0.15em] text-white flex items-center gap-2">
+                                             <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+                                             Campaigns
+                                         </h4>
+                                     </div>
+                                     <div className="flex-1 flex overflow-x-auto custom-scrollbar">
+                                         {(['valentines', 'christmas', 'photoshoot'] as const).map(campaign => (
+                                             <button
+                                                 key={campaign}
+                                                 onClick={() => setPricingCampaignTab(campaign)}
+                                                 className={cn(
+                                                     "px-6 py-4 text-[9px] font-bold uppercase tracking-widest transition-all relative whitespace-nowrap flex items-center gap-2",
+                                                     pricingCampaignTab === campaign 
+                                                         ? "text-white bg-white/[0.03]" 
+                                                         : "text-white/30 hover:text-white/60 hover:bg-white/[0.01]"
+                                                 )}
+                                             >
+                                                 {campaign === 'valentines' && <Heart className={cn("w-3 h-3", pricingCampaignTab === campaign ? "text-pink-500 fill-pink-500" : "text-white/20")} />}
+                                                 {campaign === 'christmas' && <Star className={cn("w-3 h-3", pricingCampaignTab === campaign ? "text-amber-400 fill-amber-400" : "text-white/20")} />}
+                                                 {campaign === 'photoshoot' && <Camera className={cn("w-3 h-3", pricingCampaignTab === campaign ? "text-blue-400" : "text-white/20")} />}
+                                                 {campaign}
+                                                 {activePromo === campaign && (
+                                                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse ml-1" />
+                                                 )}
+                                                 
+                                                 {/* Active Tab Indicator */}
+                                                 {pricingCampaignTab === campaign && (
+                                                     <motion.div layoutId="campaignTab" className="absolute bottom-0 left-0 right-0 h-[2px] bg-purple-500" />
+                                                 )}
+                                             </button>
+                                         ))}
+                                     </div>
+                                 </div>
+
+                                 {/* Campaign Editor Body */}
+                                 <div className="p-6">
+                                     <AnimatePresence mode="wait">
+                                         <motion.div 
+                                             key={pricingCampaignTab}
+                                             initial={{ opacity: 0, x: 20 }}
+                                             animate={{ opacity: 1, x: 0 }}
+                                             exit={{ opacity: 0, x: -20 }}
+                                             transition={{ duration: 0.2 }}
+                                         >
+                                             <div className="flex items-center justify-between mb-8">
+                                                 <div>
+                                                     <h3 className="text-lg font-black uppercase tracking-wider text-white mb-1">{pricingCampaignTab}</h3>
+                                                     <p className="text-[10px] text-white/40 uppercase tracking-widest">Configure discounts & assets</p>
+                                                 </div>
+
+                                                 <button
+                                                     onClick={async () => {
+                                                         try {
+                                                             setIsSavingPromo(true);
+                                                             const newStatus = activePromo === pricingCampaignTab ? 'none' : pricingCampaignTab;
+                                                             await settingsService.setActivePromo(newStatus);
+                                                             setActivePromo(newStatus);
+                                                             showToast(newStatus === 'none' ? 'Campaign deactivated' : `${pricingCampaignTab} is now LIVE!`, 'success');
+                                                         } catch(e:any) { showToast(e.message, 'error'); }
+                                                         finally { setIsSavingPromo(false); }
+                                                     }}
+                                                     className={cn(
+                                                         "group relative px-6 py-2 rounded-lg border transition-all overflow-hidden",
+                                                         activePromo === pricingCampaignTab 
+                                                             ? "bg-emerald-500/10 border-emerald-500/50 text-emerald-400" 
+                                                             : "bg-white/5 border-white/10 text-white/40 hover:text-white hover:border-white/30"
+                                                     )}
+                                                 >
+                                                     <span className="relative z-10 flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.2em]">
+                                                         <Power className="w-3 h-3" />
+                                                         {activePromo === pricingCampaignTab ? 'Campaign Live' : 'Activate Live'}
+                                                     </span>
+                                                     {activePromo === pricingCampaignTab && (
+                                                         <div className="absolute inset-0 bg-emerald-500/10 animate-pulse" />
+                                                     )}
+                                                 </button>
+                                             </div>
+
+                                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                                 {/* Column 1: Discount Matrix */}
+                                                 <div className="space-y-4">
+                                                     <label className="text-[9px] font-bold uppercase tracking-widest text-white/40 mb-2 block border-b border-white/5 pb-2">Discount Percentages</label>
+                                                     <div className="grid grid-cols-2 gap-3">
+                                                         {(['starter', 'pro', 'business', 'director'] as const).map(tier => (
+                                                             <div key={tier} className="bg-white/[0.02] border border-white/5 rounded-lg p-2.5 flex items-center justify-between group/d">
+                                                                 <span className="text-[9px] uppercase tracking-widest text-white/50">{tier}</span>
+                                                                 <div className="flex items-center gap-1.5">
+                                                                     <input 
+                                                                         type="number"
+                                                                         min="0" max="100"
+                                                                         value={pricingConfig.promos?.[pricingCampaignTab]?.[tier] || 0}
+                                                                         onChange={(e) => {
+                                                                             const newPromos = { ...pricingConfig.promos };
+                                                                             if (!newPromos[pricingCampaignTab]) newPromos[pricingCampaignTab] = { starter: 0, pro: 0, business: 0, director: 0 };
+                                                                             newPromos[pricingCampaignTab] = { ...newPromos[pricingCampaignTab], [tier]: parseInt(e.target.value) };
+                                                                             setPricingConfig({ ...pricingConfig, promos: newPromos });
+                                                                         }}
+                                                                         className="w-12 bg-black/40 border border-white/10 rounded px-1.5 py-1 text-xs text-right text-white font-bold outline-none focus:border-purple-500/50"
+                                                                     />
+                                                                     <span className="text-[9px] text-white/20">%</span>
+                                                                 </div>
+                                                             </div>
+                                                         ))}
+                                                     </div>
+                                                 </div>
+
+                                                 {/* Column 2: Assets */}
+                                                 <div className="space-y-4">
+                                                     <label className="text-[9px] font-bold uppercase tracking-widest text-white/40 mb-2 block border-b border-white/5 pb-2">Campaign Assets</label>
+                                                     
+                                                     <div className="space-y-3">
+                                                         <div className="bg-black/40 border border-white/5 rounded-xl p-4 relative group/bg overflow-hidden">
+                                                             <div className="flex justify-between items-center mb-3">
+                                                                 <label className="text-[9px] uppercase tracking-widest text-white/50 flex items-center gap-2">
+                                                                    <FileImage className="w-3 h-3" />
+                                                                    Background
+                                                                 </label>
+                                                                 <label className="cursor-pointer text-[8px] uppercase tracking-widest text-purple-400 hover:text-white transition-colors">
+                                                                     Upload Media <input type="file" className="hidden" accept="image/*,video/*" onChange={(e) => handlePricingBgUpload(e, pricingCampaignTab)} />
+                                                                 </label>
+                                                             </div>
+                                                             <input 
+                                                                 type="text" 
+                                                                 value={
+                                                                     pricingCampaignTab === 'valentines' ? pricingBgValentines :
+                                                                     pricingCampaignTab === 'christmas' ? pricingBgChristmas :
+                                                                     pricingBgPhotoshoot
+                                                                 } 
+                                                                 onChange={(e) => {
+                                                                     const val = e.target.value;
+                                                                     if (pricingCampaignTab === 'valentines') setPricingBgValentines(val);
+                                                                     else if (pricingCampaignTab === 'christmas') setPricingBgChristmas(val);
+                                                                     else setPricingBgPhotoshoot(val);
+                                                                 }} 
+                                                                 className="w-full bg-transparent border-b border-white/10 pb-2 text-[10px] text-white/80 focus:border-purple-500/50 outline-none transition-all placeholder:text-white/10 font-mono"
+                                                                 placeholder="https://..."
+                                                             />
+                                                             <div className="absolute top-0 right-0 p-2 opacity-0 group-hover/bg:opacity-100 transition-opacity">
+                                                                 <ExternalLink className="w-3 h-3 text-white/30 hover:text-white cursor-pointer" />
+                                                             </div>
+                                                         </div>
+                                                     </div>
+                                                 </div>
+                                             </div>
+                                         </motion.div>
+                                     </AnimatePresence>
+                                 </div>
+                             </div>
+
+                             {/* Master Save Action */}
                              <button 
                                 onClick={async () => {
                                     try {
                                         setIsSavingPricing(true);
                                         await settingsService.setPricingConfig(pricingConfig);
-                                        await settingsService.setPricingVisuals({ pricing_bg_standard: pricingBgStandard });
-                                        showToast('Pricing & Visuals updated!', 'success');
+                                        await settingsService.setPricingVisuals({ 
+                                            pricing_bg_standard: pricingBgStandard,
+                                            pricing_bg_valentines: pricingBgValentines,
+                                            pricing_bg_christmas: pricingBgChristmas,
+                                            pricing_bg_photoshoot: pricingBgPhotoshoot 
+                                        });
+                                        showToast('Services & Campaign Data Synced', 'success');
                                     } catch(e:any) { showToast(e.message, 'error'); }
                                     finally { setIsSavingPricing(false); }
                                 }}
                                 disabled={isSavingPricing}
-                                className="w-full mt-4 bg-emerald-500 text-black py-3 rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-emerald-400 transition-all"
+                                className="w-full mt-6 bg-white text-black py-4 rounded-xl text-[10px] font-black uppercase tracking-[0.3em] hover:bg-emerald-400 transition-all shadow-lg hover:shadow-emerald-500/20 active:scale-[0.99] flex items-center justify-center gap-3"
                             >
-                                Update Pricing Strategy
+                                {isSavingPricing ? (
+                                    <>
+                                        <RefreshCw className="w-3 h-3 animate-spin" />
+                                        Syncing Database...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Save className="w-3 h-3" />
+                                        Publish Configuration
+                                    </>
+                                )}
                             </button>
                         </div>
                         </div>
@@ -3194,7 +3454,7 @@ const AdminDashboard: React.FC = () => {
                         <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Section Title</label>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
-                            <label className="text-[9px] uppercase tracking-widest text-white/30 font-bold mb-1 block">🇧🇬 Български</label>
+                            <label className="text-[9px] uppercase tracking-widest text-white/30 font-bold mb-1 block">???? Български</label>
                             <input
                               type="text"
                               value={lookbookTitleBg}
@@ -3204,7 +3464,7 @@ const AdminDashboard: React.FC = () => {
                             />
                           </div>
                           <div>
-                            <label className="text-[9px] uppercase tracking-widest text-white/30 font-bold mb-1 block">🇬🇧 English</label>
+                            <label className="text-[9px] uppercase tracking-widest text-white/30 font-bold mb-1 block">???? English</label>
                             <input
                               type="text"
                               value={lookbookTitleEn}
@@ -3222,13 +3482,7 @@ const AdminDashboard: React.FC = () => {
                             className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white focus:border-gold-accent/50 focus:outline-none transition-colors appearance-none cursor-pointer"
                             style={{ fontFamily: lookbookFont }}
                           >
-                            {[
-                              'Playfair Display', 'Inter', 'Cormorant Garamond', 'Montserrat', 'Raleway',
-                              'Oswald', 'Lora', 'Merriweather', 'Poppins', 'Roboto Slab',
-                              'Dancing Script', 'Great Vibes', 'Cinzel', 'Bebas Neue', 'Abril Fatface',
-                              'Josefin Sans', 'Libre Baskerville', 'Nunito', 'Crimson Text',
-                              'DM Serif Display', 'Italiana', 'Bodoni Moda'
-                            ].map(font => (
+                            {SYSTEM_FONTS.map(font => (
                               <option key={font} value={font} style={{ fontFamily: font, background: '#111', color: '#fff' }}>
                                 {font}
                               </option>
@@ -3243,13 +3497,7 @@ const AdminDashboard: React.FC = () => {
                             className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white focus:border-gold-accent/50 focus:outline-none transition-colors appearance-none cursor-pointer"
                             style={{ fontFamily: lookbookDescFont }}
                           >
-                            {[
-                              'Playfair Display', 'Inter', 'Cormorant Garamond', 'Montserrat', 'Raleway',
-                              'Oswald', 'Lora', 'Merriweather', 'Poppins', 'Roboto Slab',
-                              'Dancing Script', 'Great Vibes', 'Cinzel', 'Bebas Neue', 'Abril Fatface',
-                              'Josefin Sans', 'Libre Baskerville', 'Nunito', 'Crimson Text',
-                              'DM Serif Display', 'Italiana', 'Bodoni Moda'
-                            ].map(font => (
+                            {SYSTEM_FONTS.map(font => (
                               <option key={font} value={font} style={{ fontFamily: font, background: '#111', color: '#fff' }}>
                                 {font}
                               </option>
@@ -3258,7 +3506,7 @@ const AdminDashboard: React.FC = () => {
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
-                            <label className="text-[9px] uppercase tracking-widest text-white/30 font-bold mb-1 block">🇧🇬 Описание (Български)</label>
+                            <label className="text-[9px] uppercase tracking-widest text-white/30 font-bold mb-1 block">???? Описание (Български)</label>
                             <textarea
                               value={lookbookDescBg}
                               onChange={(e) => setLookbookDescBg(e.target.value)}
@@ -3267,7 +3515,7 @@ const AdminDashboard: React.FC = () => {
                             />
                           </div>
                           <div>
-                            <label className="text-[9px] uppercase tracking-widest text-white/30 font-bold mb-1 block">🇬🇧 Description (English)</label>
+                            <label className="text-[9px] uppercase tracking-widest text-white/30 font-bold mb-1 block">???? Description (English)</label>
                             <textarea
                               value={lookbookDescEn}
                               onChange={(e) => setLookbookDescEn(e.target.value)}
