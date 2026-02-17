@@ -23,6 +23,8 @@ interface HeroSettings {
     hero_title_en?: string;
     hero_subtitle_bg?: string;
     hero_subtitle_en?: string;
+    hero_title_font?: string;
+    hero_subtitle_font?: string;
     id?: string;
 }
 
@@ -181,7 +183,7 @@ const HomePage: React.FC = () => {
                 (payload: any) => {
                     const { key, value } = payload.new || payload.old || {};
                     
-                    if (['hero_type', 'hero_image_url', 'hero_video_url', 'hero_grayscale', 'hero_blur', 'hero_brightness', 'hero_contrast', 'hero_saturation'].includes(key)) {
+                    if (['hero_type', 'hero_image_url', 'hero_video_url', 'hero_grayscale', 'hero_blur', 'hero_brightness', 'hero_contrast', 'hero_saturation', 'hero_title_bg', 'hero_title_en', 'hero_subtitle_bg', 'hero_subtitle_en', 'hero_title_font', 'hero_subtitle_font'].includes(key)) {
                         setHeroSettings(prev => {
                             let val: any = value;
                             if (key === 'hero_grayscale') val = value === 'true';
@@ -389,8 +391,11 @@ const HomePage: React.FC = () => {
                     >
                         <motion.h1 
                             variants={fadeInUp} 
-                            style={{ fontSize: 'var(--fs-hero)' }}
-                            className="text-shimmer shadow-premium-gold font-serif font-bold leading-[1.1] uppercase tracking-[0.1em] md:tracking-[0.15em]"
+                            style={{ 
+                                fontSize: 'var(--fs-hero)',
+                                fontFamily: heroSettings?.hero_title_font || 'inherit'
+                            }}
+                            className="text-shimmer shadow-premium-gold font-bold leading-[1.1] uppercase tracking-[0.1em] md:tracking-[0.15em]"
                         >
                             {currentLang === 'bg' 
                                 ? (heroSettings?.hero_title_bg || t('home.hero_title')) 
@@ -398,7 +403,10 @@ const HomePage: React.FC = () => {
                         </motion.h1>
                         <motion.p 
                             variants={fadeInUp} 
-                            style={{ fontSize: 'var(--fs-body)' }}
+                            style={{ 
+                                fontSize: 'var(--fs-body)',
+                                fontFamily: heroSettings?.hero_subtitle_font || 'inherit'
+                            }}
                             className="mt-[3vh] text-white/90 tracking-[0.2em] md:tracking-[0.25em] font-light uppercase drop-shadow-md max-w-[90%] mx-auto"
                         >
                             {currentLang === 'bg' 

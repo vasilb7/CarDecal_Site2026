@@ -361,9 +361,6 @@ function StoryViewerModal({
   }, [currentIndex, isAnimating]);
 
   React.useEffect(() => {
-    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
-    document.body.style.overflow = "hidden";
-    document.body.style.paddingRight = `${scrollbarWidth}px`;
     document.body.classList.add("story-viewer-open");
     
     if (!hasPushedState.current) {
@@ -378,8 +375,6 @@ function StoryViewerModal({
     window.addEventListener("popstate", handlePopState);
 
     return () => {
-      document.body.style.overflow = "";
-      document.body.style.paddingRight = "";
       document.body.classList.remove("story-viewer-open");
       window.removeEventListener("popstate", handlePopState);
     };

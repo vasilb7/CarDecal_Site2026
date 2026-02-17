@@ -121,7 +121,8 @@ export const settingsService = {
       .select('key, value')
       .in('key', [
         'hero_type', 'hero_image_url', 'hero_video_url', 'hero_grayscale', 'hero_blur', 'hero_brightness', 'hero_contrast', 'hero_saturation',
-        'hero_title_bg', 'hero_title_en', 'hero_subtitle_bg', 'hero_subtitle_en'
+        'hero_title_bg', 'hero_title_en', 'hero_subtitle_bg', 'hero_subtitle_en',
+        'hero_title_font', 'hero_subtitle_font'
       ]);
     
     const defaults = { 
@@ -136,7 +137,9 @@ export const settingsService = {
         hero_title_bg: 'VB VISION',
         hero_title_en: 'VB VISION',
         hero_subtitle_bg: 'Твоето лице. Твоят бранд. Твоята кариера.',
-        hero_subtitle_en: 'Your Face. Your Brand. Your Career.'
+        hero_subtitle_en: 'Your Face. Your Brand. Your Career.',
+        hero_title_font: 'Playfair Display',
+        hero_subtitle_font: 'Inter'
     };
 
     if (error) return defaults;
@@ -154,7 +157,9 @@ export const settingsService = {
         hero_title_bg: settings['hero_title_bg'] || defaults.hero_title_bg,
         hero_title_en: settings['hero_title_en'] || defaults.hero_title_en,
         hero_subtitle_bg: settings['hero_subtitle_bg'] || defaults.hero_subtitle_bg,
-        hero_subtitle_en: settings['hero_subtitle_en'] || defaults.hero_subtitle_en
+        hero_subtitle_en: settings['hero_subtitle_en'] || defaults.hero_subtitle_en,
+        hero_title_font: settings['hero_title_font'] || defaults.hero_title_font,
+        hero_subtitle_font: settings['hero_subtitle_font'] || defaults.hero_subtitle_font
     };
   },
 
@@ -377,24 +382,34 @@ export const settingsService = {
       basePrices: {
         starter: 99,
         pro: 299,
+        business: 480,
         director: 1799
       },
       promos: {
         valentines: {
           starter: 50,  // 50% off → 49€
           pro: 50,       // 50% off → 149€
+          business: 50,  // 50% off → 240€
           director: 0    // no discount → Contact
         },
         christmas: {
           starter: 40,  // 40% off → 59€
           pro: 40,       // 40% off → 179€
+          business: 40,  // 40% off → 288€
           director: 0    // no discount → Contact
         },
         photoshoot: {
           starter: 0,
           pro: 0,
+          business: 0,
           director: 0
         }
+      },
+      annualDiscount: {
+        starter: 20,
+        pro: 20,
+        business: 20,
+        director: 0
       }
     };
   },

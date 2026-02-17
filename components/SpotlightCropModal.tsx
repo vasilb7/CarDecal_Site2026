@@ -30,6 +30,17 @@ export const SpotlightCropModal: React.FC<SpotlightCropModalProps> = ({
   const CROP_W = 560;
   const CROP_H = Math.round(CROP_W / aspectRatio);
 
+  useEffect(() => {
+    if (isOpen) {
+      document.body.classList.add('modal-open');
+    } else {
+      document.body.classList.remove('modal-open');
+    }
+    return () => {
+      document.body.classList.remove('modal-open');
+    };
+  }, [isOpen]);
+
   // Reset when image changes
   useEffect(() => {
     setZoom(1);

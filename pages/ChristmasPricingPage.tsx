@@ -1,31 +1,40 @@
 import React, { useState, useEffect } from "react";
-import { ChristmasPricingCard } from "@/components/ui/christmas-pricing"
-import { useTranslation } from 'react-i18next';
-import { motion } from 'framer-motion';
-import { TreePine, Sparkles, Crown, Snowflake, Star } from 'lucide-react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { useAuth } from '@/context/AuthContext';
-import { usePricing } from '@/hooks/usePricing';
+import { PricingCard } from "@/components/ui/dark-gradient-pricing";
+import { useTranslation } from "react-i18next";
+import { motion, AnimatePresence } from "framer-motion";
+import { useNavigate, useParams } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
+import { usePricing } from "@/hooks/usePricing";
 import { supabase } from "@/lib/supabase";
 import { settingsService } from "@/lib/settingsService";
+import { cn } from "@/lib/utils";
+import { Snowflake, Star, TreePine } from "lucide-react";
 
-const ChristmasPricingPage = () => {
+const ACCENT = "#10b981"; // emerald-500
+
+const ChristmasPricingPage: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { lang } = useParams<{ lang: string }>();
   const { activePlan } = useAuth();
-  const { computed, loading: pricingLoading } = usePricing('christmas');
+  
+  const [isAnnual, setIsAnnual] = useState(false);
+  const [isBusiness, setIsBusiness] = useState(false);
+  const { computed, loading: pricingLoading } = usePricing('christmas', isAnnual);
+
   const [bgUrl, setBgUrl] = useState(() => localStorage.getItem('pricing_bg_christmas') || "/Site_Pics/Pricing/backroundpricing.png");
   const [bgType, setBgType] = useState<'image' | 'video'>(() => (localStorage.getItem('pricing_type_christmas') as 'image' | 'video') || 'image');
 
   useEffect(() => {
     settingsService.getPricingSettings().then(s => {
-      setBgUrl(s.pricing_bg_christmas);
+      if (s.pricing_bg_christmas) {
+        setBgUrl(s.pricing_bg_christmas);
+        localStorage.setItem('pricing_bg_christmas', s.pricing_bg_christmas);
+      }
       // @ts-ignore
-      setBgType(s.pricing_type_christmas || 'image');
-      localStorage.setItem('pricing_bg_christmas', s.pricing_bg_christmas);
-      // @ts-ignore
-      localStorage.setItem('pricing_type_christmas', s.pricing_type_christmas || 'image');
+      const type = s.pricing_type_christmas || 'image';
+      setBgType(type);
+      localStorage.setItem('pricing_type_christmas', type);
     });
 
     const channel = supabase
@@ -48,22 +57,20 @@ const ChristmasPricingPage = () => {
   }, []);
 
   const handleCheckout = (planId: string) => {
-    navigate(`/${lang || 'bg'}/checkout/${planId}`);
+    navigate(`/${lang || "bg"}/checkout/${planId}`);
   };
 
   if (pricingLoading || !computed) {
     return (
-      <section className="relative overflow-hidden min-h-screen flex items-center justify-center py-24 md:py-36"
-        style={{ background: 'linear-gradient(180deg, #0B0B0C 0%, #0a1a10 100%)' }}
-      >
+      <section className="relative overflow-hidden min-h-screen flex items-center justify-center py-24 md:py-36 bg-[#020202]">
         <div className="relative z-10 mx-auto max-w-7xl px-6 md:px-12 w-full text-center space-y-20">
           <div className="space-y-4">
-             <div className="h-10 w-48 bg-emerald-500/10 rounded-full mx-auto animate-pulse" />
-             <div className="h-12 w-72 bg-white/5 rounded-lg mx-auto animate-pulse" />
+            <div className="h-12 w-64 bg-emerald-500/5 rounded-lg mx-auto animate-pulse" />
+            <div className="h-4 w-48 bg-emerald-500/5 rounded-full mx-auto animate-pulse" />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[1, 2, 3].map(i => (
-              <div key={i} className="h-[500px] bg-emerald-500/[0.02] border border-emerald-500/10 rounded-2xl animate-pulse" />
+              <div key={i} className="h-[500px] bg-emerald-500/[0.02] border border-emerald-500/5 rounded-2xl animate-pulse" />
             ))}
           </div>
         </div>
@@ -72,9 +79,7 @@ const ChristmasPricingPage = () => {
   }
 
   return (
-    <section className="relative overflow-hidden min-h-screen flex items-center justify-center py-24 md:py-36"
-      style={{ background: 'linear-gradient(180deg, #0B0B0C 0%, #0a1a10 30%, #0e2018 50%, #0a1a10 70%, #0B0B0C 100%)' }}
-    >
+    <section className="relative overflow-hidden min-h-screen w-full flex flex-col items-center justify-center py-20 px-4 sm:px-6 lg:px-8 bg-[#020202]">
       {/* Background Media */}
       {bgType === 'video' ? (
         <video
@@ -82,13 +87,13 @@ const ChristmasPricingPage = () => {
           loop
           muted
           playsInline
-          className="absolute inset-0 z-0 w-full h-full object-cover opacity-20 pointer-events-none"
+          className="absolute inset-0 z-0 w-full h-full object-cover opacity-30 pointer-events-none"
         >
           <source src={bgUrl} type="video/mp4" />
         </video>
       ) : (
         <div 
-          className="absolute inset-0 z-0 opacity-20 pointer-events-none"
+          className="absolute inset-0 z-0 opacity-30 pointer-events-none"
           style={{ 
             backgroundImage: `url("${bgUrl}")`,
             backgroundSize: 'cover',
@@ -97,49 +102,46 @@ const ChristmasPricingPage = () => {
           }}
         />
       )}
-      {/* Background snowflakes floating */}
+
+      {/* Floating Snowflakes for Christmas UI */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {[...Array(15)].map((_, i) => (
+        {[...Array(20)].map((_, i) => (
           <motion.div
             key={i}
             className="absolute"
             style={{
-              left: `${5 + (i * 6.5)}%`,
-              top: `${5 + (i % 4) * 25}%`,
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              opacity: 0.1
             }}
             animate={{
-              y: [0, 30, 0],
-              opacity: [0.03, 0.1, 0.03],
+              y: [0, 50, 0],
+              x: [0, 10, 0],
+              opacity: [0.05, 0.15, 0.05],
               rotate: [0, 180, 360],
             }}
             transition={{
-              duration: 6 + (i % 4),
+              duration: 8 + Math.random() * 10,
               repeat: Infinity,
-              delay: i * 0.3,
-              ease: "easeInOut",
+              delay: Math.random() * 10,
             }}
           >
-            <Snowflake 
-              className="text-white" 
-              style={{ width: `${14 + (i % 5) * 6}px`, height: `${14 + (i % 5) * 6}px` }}
-            />
+            <Snowflake className="text-white w-4 h-4" />
           </motion.div>
         ))}
       </div>
 
-      {/* Radial glow - green/gold */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full pointer-events-none"
-        style={{ background: 'radial-gradient(circle, rgba(16, 185, 129, 0.06) 0%, transparent 70%)' }}
-      />
-      <div className="absolute bottom-1/4 left-1/3 w-[600px] h-[600px] rounded-full pointer-events-none"
-        style={{ background: 'radial-gradient(circle, rgba(234, 179, 8, 0.04) 0%, transparent 70%)' }}
-      />
+      {/* Ambient Christmas glow */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-[-15%] left-[20%] w-[35%] h-[35%] rounded-full bg-emerald-500/[0.04] blur-[150px]" />
+        <div className="absolute bottom-[-10%] right-[10%] w-[30%] h-[30%] rounded-full bg-yellow-500/[0.02] blur-[120px]" />
+      </div>
 
-      <div className="relative z-10 mx-auto max-w-7xl px-6 md:px-12 w-full">
+      <div className="relative z-10 w-full max-w-[1100px] mx-auto flex flex-col items-center">
         {/* Header */}
-        <motion.div 
-          className="mb-16 md:mb-20 space-y-6 text-center"
-          initial={{ opacity: 0, y: 30 }}
+        <motion.div
+          className="mb-12 md:mb-16 space-y-4 text-center max-w-2xl"
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
         >
@@ -148,107 +150,193 @@ const ChristmasPricingPage = () => {
             <span className="text-emerald-400 text-sm font-bold uppercase tracking-[0.3em]">
               {t('christmas.special_label')}
             </span>
-            <Star className="w-5 h-5 text-yellow-400 fill-yellow-400 animate-pulse" />
+            <Star className="w-5 h-5 text-yellow-500 fill-yellow-500 animate-pulse" />
           </div>
-          <h2 className="text-4xl md:text-6xl font-serif leading-tight text-white">
-            {t('pricing.title')}
+          <h2 className="text-3xl md:text-5xl font-serif leading-tight text-white uppercase tracking-[0.2em] font-light">
+            {t("pricing.title")}
           </h2>
-          <p className="text-base md:text-xl text-white/50 font-light max-w-2xl mx-auto">
-            {t('pricing.subtitle')}
+          <p className="text-white/40 font-light uppercase tracking-[0.4em] text-[8px] md:text-[9px]">
+            {t("pricing.subtitle")}
           </p>
-          <div className="flex items-center justify-center gap-2 mt-4">
-            <span className="inline-flex items-center gap-2 bg-gradient-to-r from-emerald-500/20 to-yellow-500/20 border border-emerald-500/20 rounded-full px-5 py-2 text-emerald-300 text-xs font-bold uppercase tracking-widest">
-              🎄 {computed.starter.discountPercent > 0 
-                ? `-${computed.starter.discountPercent}% ${t('christmas.promo_deadline')}` 
+
+          {/* Promo Badge */}
+          <div className="flex items-center justify-center pt-4">
+            <span className="inline-flex items-center gap-2 bg-gradient-to-r from-emerald-500/20 to-yellow-500/20 border border-emerald-500/20 rounded-full px-5 py-2 text-emerald-300 text-[10px] font-bold uppercase tracking-widest shadow-[0_0_20px_rgba(16,185,129,0.1)]">
+              🎄 {computed.pro.discountPercent > 0 
+                ? `-${computed.pro.discountPercent}% ${t('christmas.promo_deadline')}`
                 : t('christmas.promo_deadline')
               }
             </span>
           </div>
+
+          {/* Business/Personal Toggle */}
+          <div className="flex items-center justify-center pt-8">
+            <div className="bg-white/5 border border-white/10 rounded-full p-1 flex items-center gap-1">
+              <button
+                onClick={() => setIsBusiness(false)}
+                className={cn(
+                  "px-6 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all duration-300",
+                  !isBusiness ? "bg-emerald-500/20 text-white shadow-lg" : "text-white/40 hover:text-white/60"
+                )}
+              >
+                {t("pricing.personal")}
+              </button>
+              <button
+                onClick={() => setIsBusiness(true)}
+                className={cn(
+                  "px-6 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all duration-300",
+                  isBusiness ? "bg-emerald-500/20 text-white shadow-lg" : "text-white/40 hover:text-white/60"
+                )}
+              >
+                {t("pricing.business")}
+              </button>
+            </div>
+            
+            {/* Annual Toggle */}
+            <div className="flex items-center gap-4 ml-8 bg-white/[0.03] border border-white/10 rounded-full px-4 py-2">
+              <span className={cn(
+                "text-[9px] uppercase tracking-widest transition-colors",
+                !isAnnual ? "text-white font-bold" : "text-white/30"
+              )}>
+                {t("pricing.monthly")}
+              </span>
+              
+              <button
+                onClick={() => setIsAnnual(!isAnnual)}
+                className="relative w-9 h-5 rounded-full bg-white/5 border border-white/20 p-1 transition-colors hover:border-white/40"
+              >
+                <motion.div
+                  animate={{ x: isAnnual ? 16 : 0 }}
+                  transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                  className="w-3 h-3 rounded-full bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.6)]"
+                />
+              </button>
+
+              <div className="flex items-center gap-2">
+                <span className={cn(
+                  "text-[9px] uppercase tracking-widest transition-colors",
+                  isAnnual ? "text-white font-bold" : "text-white/30"
+                )}>
+                  {t("pricing.annual")}
+                </span>
+                <span className="text-[8px] font-black text-emerald-400 bg-emerald-400/10 px-1.5 py-0.5 rounded border border-emerald-400/20">
+                  -{computed?.starter?.savingsPercent || 20}%
+                </span>
+              </div>
+            </div>
+          </div>
         </motion.div>
 
-        {/* Cards */}
-        <div className="grid grid-cols-1 gap-8 md:grid-cols-3 items-start">
-          <ChristmasPricingCard
-            tier={t('pricing.scouting')}
-            price={computed.starter.display}
-            originalPrice={computed.starter.originalDisplay}
-            bestFor={t('pricing.for_indie')}
-            CTA={(activePlan === 'scouting' || activePlan === 'starter') ? t('pricing.current_plan') : t('pricing.cta_browse')}
-            isCurrent={activePlan === 'scouting' || activePlan === 'starter'}
-            gradient="linear-gradient(135deg, #064e3b 0%, #022c22 40%, #011a14 100%)"
-            accentColor="#10b981"
-            ribbonColor="linear-gradient(135deg, #10b981, #059669)"
-            icon={<TreePine className="w-5 h-5 text-emerald-300" />}
-            discountLabel={computed.starter.discountPercent > 0 ? `-${computed.starter.discountPercent}% Christmas` : undefined}
-            onClick={() => handleCheckout('scouting')}
-            benefits={[
-              { text: t('pricing.benefits.new_faces'), checked: true },
-              { text: t('pricing.benefits.online_booking'), checked: true },
-              { text: t('pricing.benefits.response_24h'), checked: true },
-              { text: t('pricing.benefits.casting_reels'), checked: false },
-              { text: t('pricing.benefits.dedicated_agent'), checked: false },
-              { text: t('pricing.benefits.usage_rights'), checked: false },
-            ]}
-          />
-          <ChristmasPricingCard
-            tier={t('pricing.casting')}
-            price={computed.pro.display}
-            originalPrice={computed.pro.originalDisplay}
-            bestFor={t('pricing.for_commercial')}
-            CTA={(activePlan === 'casting' || activePlan === 'pro') ? t('pricing.current_plan') : t('pricing.cta_start')}
-            isCurrent={activePlan === 'casting' || activePlan === 'pro'}
-            gradient="linear-gradient(135deg, #047857 0%, #064e3b 40%, #022c22 100%)"
-            accentColor="#34d399"
-            ribbonColor="linear-gradient(135deg, #34d399, #10b981)"
-            icon={<Crown className="w-5 h-5 text-yellow-300" />}
-            featured={true}
-            discountLabel={computed.pro.discountPercent > 0 ? `-${computed.pro.discountPercent}% Christmas` : undefined}
-            onClick={() => handleCheckout('casting')}
-            benefits={[
-              { text: t('pricing.benefits.mainboard'), checked: true },
-              { text: t('pricing.benefits.priority_booking'), checked: true },
-              { text: t('pricing.benefits.response_4h'), checked: true },
-              { text: t('pricing.benefits.casting_reels'), checked: true },
-              { text: t('pricing.benefits.dedicated_agent'), checked: true },
-              { text: t('pricing.benefits.production_logistics'), checked: false },
-            ]}
-          />
-          <ChristmasPricingCard
-            tier={t('pricing.campaign')}
-            price={computed.director.isContact ? t('pricing.custom') : computed.director.display}
-            originalPrice={computed.director.originalDisplay}
-            bestFor={t('pricing.for_global')}
-            CTA={activePlan === 'campaign' ? t('pricing.current_plan') : (computed.director.isContact ? t('pricing.cta_contact') : t('pricing.cta_start'))}
-            isCurrent={activePlan === 'campaign'}
-            gradient="linear-gradient(135deg, #065f46 0%, #064e3b 40%, #022c22 100%)"
-            accentColor="#6ee7b7"
-            ribbonColor="linear-gradient(135deg, #6ee7b7, #34d399)"
-            icon={<Sparkles className="w-5 h-5 text-yellow-200" />}
-            discountLabel={computed.director.discountPercent > 0 ? `-${computed.director.discountPercent}% Christmas` : undefined}
-            onClick={() => handleCheckout('campaign')}
-            benefits={[
-              { text: t('pricing.benefits.full_database'), checked: true },
-              { text: t('pricing.benefits.priority_247'), checked: true },
-              { text: t('pricing.benefits.wholistic_rights'), checked: true },
-              { text: t('pricing.benefits.producer'), checked: true },
-              { text: t('pricing.benefits.travel'), checked: true },
-              { text: t('pricing.benefits.creative_consult'), checked: true },
-            ]}
-          />
-        </div>
-
-        {/* Bottom note */}
-        <motion.p 
-          className="text-center text-white/30 text-xs mt-12 max-w-lg mx-auto"
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          transition={{ delay: 0.8 }}
+        <motion.div 
+          layout
+          className={cn(
+            "grid gap-6 lg:gap-8 items-stretch w-full",
+            isBusiness 
+              ? "grid-cols-1 md:grid-cols-2 max-w-4xl mx-auto" 
+              : "grid-cols-1 md:grid-cols-3"
+          )}
         >
-          🎄 {t('christmas.promo_footer')}
-        </motion.p>
+          {/* Plan 1 */}
+          <PricingCard
+            key="card-left"
+            tier={isBusiness ? t("pricing.casting") : t("pricing.scouting")}
+            price={isBusiness ? computed.pro.display : computed.starter.display}
+            bestFor={isBusiness ? t("pricing.for_commercial") : t("pricing.for_indie")}
+            CTA={activePlan === (isBusiness ? "pro" : "starter") ? t("pricing.current_plan") : t("pricing.cta_browse")}
+            isCurrent={activePlan === (isBusiness ? "pro" : "starter")}
+            gradient="linear-gradient(160deg, #0a0a0a 0%, #040404 100%)"
+            accentColor={ACCENT}
+            ribbonColor={isBusiness ? ACCENT : "#333"}
+            featured={isBusiness}
+            onClick={() => handleCheckout(isBusiness ? "pro" : "starter")}
+            originalPrice={isBusiness ? computed.pro.originalDisplay : computed.starter.originalDisplay}
+            unitLabel={isBusiness ? `EUR / ${t("pricing.month_unit")}` : t("pricing.month_unit")}
+            billingLabel={isBusiness ? t("pricing.includes_vat", { amount: (computed.pro.discounted * 0.2).toFixed(2) }) : (isAnnual ? t("pricing.billed_annually") : undefined)}
+            discountLabel={isAnnual ? (isBusiness ? t("pricing.best_price") : t("pricing.save_amount", { percent: computed.starter.savingsPercent })) : undefined}
+            benefits={isBusiness ? [
+              { text: t("pricing.benefits.mainboard"), checked: true },
+              { text: t("pricing.benefits.priority_booking"), checked: true },
+              { text: t("pricing.benefits.response_4h"), checked: true },
+              { text: t("pricing.benefits.casting_reels"), checked: true },
+              { text: t("pricing.benefits.dedicated_agent"), checked: true },
+              { text: t("pricing.benefits.usage_rights"), checked: false },
+            ] : [
+              { text: t("pricing.benefits.new_faces"), checked: true },
+              { text: t("pricing.benefits.online_booking"), checked: true },
+              { text: t("pricing.benefits.response_24h"), checked: true },
+              { text: t("pricing.benefits.casting_reels"), checked: false },
+              { text: t("pricing.benefits.dedicated_agent"), checked: false },
+              { text: t("pricing.benefits.usage_rights"), checked: false },
+            ]}
+          />
+
+          {/* Plan 2 */}
+          <PricingCard
+            tier={isBusiness ? t("pricing.business") : t("pricing.casting")}
+            price={isBusiness ? computed.business.display : computed.pro.display}
+            bestFor={isBusiness ? t("pricing.for_global") : t("pricing.for_commercial")}
+            CTA={activePlan === (isBusiness ? "business" : "pro") ? t("pricing.current_plan") : t("pricing.cta_start")}
+            isCurrent={activePlan === (isBusiness ? "business" : "pro")}
+            gradient="linear-gradient(160deg, #111111 0%, #050505 100%)"
+            accentColor={ACCENT}
+            ribbonColor={ACCENT}
+            featured={!isBusiness}
+            key="card-middle"
+            onClick={() => handleCheckout(isBusiness ? "business" : "pro")}
+            originalPrice={isBusiness ? computed.business.originalDisplay : computed.pro.originalDisplay}
+            unitLabel={isBusiness ? `EUR / ${t("pricing.month_unit")}` : t("pricing.month_unit")}
+            billingLabel={isBusiness ? t("pricing.includes_vat", { amount: (computed.business.discounted * 0.2).toFixed(2) }) : (isAnnual ? t("pricing.billed_annually") : undefined)}
+            discountLabel={isAnnual ? (isBusiness ? t("pricing.save_amount", { percent: computed.business.savingsPercent }) : t("pricing.best_price")) : undefined}
+            benefits={isBusiness ? [
+              { text: t("pricing.benefits.full_database"), checked: true },
+              { text: t("pricing.benefits.priority_247"), checked: true },
+              { text: t("pricing.benefits.wholistic_rights"), checked: true },
+              { text: t("pricing.benefits.producer"), checked: true },
+              { text: t("pricing.benefits.travel"), checked: true },
+              { text: t("pricing.benefits.creative_consult"), checked: true },
+            ] : [
+              { text: t("pricing.benefits.mainboard"), checked: true },
+              { text: t("pricing.benefits.priority_booking"), checked: true },
+              { text: t("pricing.benefits.response_4h"), checked: true },
+              { text: t("pricing.benefits.casting_reels"), checked: true },
+              { text: t("pricing.benefits.dedicated_agent"), checked: true },
+              { text: t("pricing.benefits.production_logistics"), checked: false },
+            ]}
+          />
+
+          {/* Plan 3 */}
+          <AnimatePresence>
+          {!isBusiness && (
+            <PricingCard
+              key="card-right"
+              tier={t("pricing.campaign")}
+              price={computed.director.isContact ? t("pricing.custom") : computed.director.display}
+              bestFor={t("pricing.for_global")}
+              CTA={activePlan === 'campaign' ? t('pricing.current_plan') : (computed.director.isContact ? t('pricing.cta_contact') : t('pricing.cta_start'))}
+              isCurrent={activePlan === "campaign"}
+              gradient="linear-gradient(160deg, #0a0a0a 0%, #040404 100%)"
+              accentColor={ACCENT}
+              ribbonColor="#333"
+              onClick={() => handleCheckout("campaign")}
+              originalPrice={computed.director.originalDisplay}
+              unitLabel={computed.director.isContact ? undefined : t("pricing.month_unit")}
+              billingLabel={isAnnual && !computed.director.isContact ? t("pricing.billed_annually") : undefined}
+              discountLabel={isAnnual && !computed.director.isContact ? t("pricing.save_amount", { percent: computed.director.savingsPercent }) : undefined}
+              benefits={[
+                { text: t("pricing.benefits.full_database"), checked: true },
+                { text: t("pricing.benefits.priority_247"), checked: true },
+                { text: t("pricing.benefits.wholistic_rights"), checked: true },
+                { text: t("pricing.benefits.producer"), checked: true },
+                { text: t("pricing.benefits.travel"), checked: true },
+                { text: t("pricing.benefits.creative_consult"), checked: true },
+              ]}
+            />
+          )}
+          </AnimatePresence>
+        </motion.div>
       </div>
     </section>
-  )
-}
+  );
+};
 
 export default ChristmasPricingPage;

@@ -48,14 +48,14 @@ const Header: React.FC = () => {
     // LOCK BODY SCROLL
     useEffect(() => {
         if (isMenuOpen) {
-            document.body.style.overflow = 'hidden';
+            document.body.classList.add('modal-open');
             document.body.style.touchAction = 'none';
         } else {
-            document.body.style.overflow = 'unset';
+            document.body.classList.remove('modal-open');
             document.body.style.touchAction = 'auto';
         }
         return () => {
-            document.body.style.overflow = 'unset';
+            document.body.classList.remove('modal-open');
             document.body.style.touchAction = 'auto';
         };
     }, [isMenuOpen]);

@@ -1,4 +1,14 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,700;1,400&family=Montserrat:wght@300;400;600;700&family=Raleway:wght@300;400;600;700&family=Oswald:wght@300;400;600;700&family=Lora:ital,wght@0,400;0,700;1,400&family=Merriweather:ital,wght@0,400;0,700;1,400&family=Poppins:wght@300;400;600;700&family=Roboto+Slab:wght@300;400;600;700&family=Dancing+Script:wght@400;700&family=Great+Vibes&family=Cinzel:wght@400;700&family=Bebas+Neue&family=Abril+Fatface&family=Josefin+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Nunito:ital,wght@0,300;0,400;0,700;1,400&family=Crimson+Text:ital,wght@0,400;0,700;1,400&family=DM+Serif+Display&family=Italiana&family=Bodoni+Moda:ital,wght@0,400;0,700;1,400&family=Philosopher:ital,wght@0,400;0,700;1,400&family=Yeseva+One&family=Bad+Script&display=swap");
+@import url("https://fonts.cdnfonts.com/css/sugo-display");
+@import url("https://fonts.cdnfonts.com/css/kingred-modern");
+@import url("https://fonts.cdnfonts.com/css/sugar-pie-2");
+@import url("https://fonts.cdnfonts.com/css/tan-headline");
+@import url("https://fonts.cdnfonts.com/css/hobo");
+@import url("https://fonts.cdnfonts.com/css/satyr");
+@import url("https://fonts.cdnfonts.com/css/gang-of-three");
+@import url("https://fonts.cdnfonts.com/css/ethnocentric");
+@import url("https://fonts.cdnfonts.com/css/blackburr");
+@import url("https://db.onlinewebfonts.com/c/1536e4c1d2209a656593ef813080bd30?family=Subway+NewYork+OT+W03+Regular");
 
 @tailwind base;
 @tailwind components;
@@ -386,9 +396,10 @@ body.story-viewer-open header {
   transition: opacity 0.3s ease;
 }
 
-body.story-viewer-open {
+body.story-viewer-open,
+body.modal-open {
   overflow: hidden !important;
-  /* Use scrollbar-gutter to prevent layout shifts across bütün site */
+  /* Use scrollbar-gutter to prevent layout shifts */
   scrollbar-gutter: stable;
 }
 

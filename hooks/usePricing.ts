@@ -3,25 +3,27 @@ import { supabase } from '../lib/supabase';
 import { settingsService } from '../lib/settingsService';
 
 export interface PricingData {
-  basePrices: { starter: number; pro: number; director: number };
+  basePrices: { starter: number; pro: number; business: number; director: number };
   promos: {
-    valentines: { starter: number; pro: number; director: number };
-    christmas: { starter: number; pro: number; director: number };
-    photoshoot?: { starter: number; pro: number; director: number };
+    valentines: { starter: number; pro: number; business: number; director: number };
+    christmas: { starter: number; pro: number; business: number; director: number };
+    photoshoot?: { starter: number; pro: number; business: number; director: number };
   };
+  annualDiscount: number | { starter: number; pro: number; business: number; director: number };
 }
 
 export interface ComputedPrices {
-  starter: { base: number; discounted: number; discountPercent: number; display: string; originalDisplay: string };
-  pro: { base: number; discounted: number; discountPercent: number; display: string; originalDisplay: string };
-  director: { base: number; discounted: number; discountPercent: number; display: string; originalDisplay: string; isContact: boolean };
+  starter: { base: number; discounted: number; discountPercent: number; display: string; originalDisplay: string; monthlyPrice: number; yearlyPrice: number; savingsPercent: number };
+  pro: { base: number; discounted: number; discountPercent: number; display: string; originalDisplay: string; monthlyPrice: number; yearlyPrice: number; savingsPercent: number };
+  business: { base: number; discounted: number; discountPercent: number; display: string; originalDisplay: string; monthlyPrice: number; yearlyPrice: number; savingsPercent: number };
+  director: { base: number; discounted: number; discountPercent: number; display: string; originalDisplay: string; isContact: boolean; monthlyPrice: number; yearlyPrice: number; savingsPercent: number };
 }
 
 /**
  * Hook: reads pricing config from DB and computes prices for a given promo type.
  * promoType: 'none' | 'valentines' | 'christmas'
  */
-export function usePricing(promoType: 'none' | 'valentines' | 'christmas' | 'photoshoot' | string = 'none') {
+export function usePricing(promoType: 'none' | 'valentines' | 'christmas' | 'photoshoot' | string = 'none', isAnnual: boolean = false) {
   const [config, setConfig] = useState<PricingData | null>(() => {
     const cached = localStorage.getItem('pricing_config');
     return cached ? JSON.parse(cached) : null;
@@ -67,34 +69,53 @@ export function usePricing(promoType: 'none' | 'valentines' | 'christmas' | 'pho
     };
   }, []);
 
-  const computed: ComputedPrices | null = config ? computePrices(config, promoType) : null;
+  const computed: ComputedPrices | null = config ? computePrices(config, promoType, isAnnual) : null;
 
   return { config, computed, loading };
 }
 
-function computePrices(config: PricingData, promoType: string): ComputedPrices {
+function computePrices(config: any, promoType: string, isAnnual: boolean): ComputedPrices {
   const bp = config.basePrices;
+  const annualDiscount = config.annualDiscount || 0;
+  
   const discounts = promoType !== 'none' && config.promos[promoType as keyof typeof config.promos]
     ? config.promos[promoType as keyof typeof config.promos]
-    : { starter: 0, pro: 0, director: 0 };
+    : { starter: 0, pro: 0, business: 0, director: 0 };
 
-  const calc = (base: number, discPct: number) => ({
-    base,
-    discounted: settingsService.calcDiscountedPrice(base, discPct),
-    discountPercent: discPct,
-    display: discPct > 0
-      ? `${settingsService.calcDiscountedPrice(base, discPct)}€`
-      : `${base}€`,
-    originalDisplay: discPct > 0 ? `${base}€` : '',
-  });
+   const calc = (base: number, discPct: number, tierKey: string) => {
+    const tierAnnualDisc = typeof annualDiscount === 'object' 
+      ? (annualDiscount[tierKey as keyof typeof annualDiscount] || 0) 
+      : annualDiscount;
 
-  const starter = calc(bp.starter, discounts.starter);
-  const pro = calc(bp.pro, discounts.pro);
-  const directorCalc = calc(bp.director, discounts.director);
+    const monthlyPrice = settingsService.calcDiscountedPrice(base, discPct);
+    const yearlyMonthlyEquivalent = settingsService.calcDiscountedPrice(monthlyPrice, tierAnnualDisc);
+    const yearlyPrice = yearlyMonthlyEquivalent * 12;
+    
+    // Final price to display
+    const finalPrice = isAnnual ? yearlyMonthlyEquivalent : monthlyPrice;
+    const finalOriginal = isAnnual ? monthlyPrice : (discPct > 0 ? base : 0);
+    
+    return {
+      base,
+      discounted: finalPrice,
+      discountPercent: discPct,
+      display: `${finalPrice}€`,
+      originalDisplay: finalOriginal > 0 ? `${finalOriginal}€` : '',
+      monthlyPrice,
+      yearlyPrice,
+      savingsPercent: isAnnual ? tierAnnualDisc : 0
+    };
+  };
+
+  const starter = calc(bp.starter, discounts.starter, 'starter');
+  const pro = calc(bp.pro, discounts.pro, 'pro');
+  const business = calc(bp.business || 480, discounts.business || 0, 'business');
+  const directorCalc = calc(bp.director, discounts.director, 'director');
 
   return {
     starter,
     pro,
+    business,
     director: { 
       ...directorCalc, 
       isContact: bp.director === 0 

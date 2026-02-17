@@ -154,8 +154,8 @@
     "choice_subtitle": "Select a category to begin"
   },
   "pricing": {
-    "title": "Client Services",
-    "subtitle": "Choose the level of casting and production support that fits your brand's campaign needs.",
+    "title": "Plans",
+    "subtitle": "Upgrade your plan",
     "scouting": "STARTER",
     "casting": "PRO",
     "campaign": "DIRECTOR’S CHOICE",
@@ -189,7 +189,17 @@
       "producer": "On-Location Producer",
       "travel": "Travel & Logistics",
       "creative_consult": "Creative Consultation"
-    }
+    },
+    "monthly": "Monthly",
+    "annual": "Annual",
+    "billed_annually": "Billed annually",
+    "month_unit": "month",
+    "save_amount": "Save {{percent}}%",
+    "best_price": "Best Price",
+    "personal": "Personal",
+    "business": "Business",
+    "recommended": "Recommended",
+    "includes_vat": "includes {{amount}} € VAT"
   },
   "checkout": {
     "title": "Secure Booking",

@@ -69,10 +69,46 @@ const Footer: React.FC = () => {
               FOLLOW
             </h4>
             <ul className="space-y-4 text-silver-text/60">
-              <li><a href="#" className="hover:text-red-accent transition-all hover:pl-2 duration-300 font-medium">INSTAGRAM</a></li>
-              <li><a href="#" className="hover:text-red-accent transition-all hover:pl-2 duration-300 font-medium">TIKTOK</a></li>
-              <li><a href="#" className="hover:text-red-accent transition-all hover:pl-2 duration-300 font-medium">LINKEDIN</a></li>
-              <li><a href="#" className="hover:text-red-accent transition-all hover:pl-2 duration-300 font-medium">FACEBOOK</a></li>
+              <li>
+                <a 
+                  href="https://www.instagram.com/vbvision.agency/" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="hover:text-red-accent transition-all hover:pl-2 duration-300 font-medium"
+                >
+                  INSTAGRAM
+                </a>
+              </li>
+              <li>
+                <a 
+                  href="https://www.tiktok.com/@vbvision.agency" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="hover:text-red-accent transition-all hover:pl-2 duration-300 font-medium"
+                >
+                  TIKTOK
+                </a>
+              </li>
+              <li>
+                <a 
+                  href="https://www.linkedin.com/company/vb-vision" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="hover:text-red-accent transition-all hover:pl-2 duration-300 font-medium"
+                >
+                  LINKEDIN
+                </a>
+              </li>
+              <li>
+                <a 
+                  href="https://www.facebook.com/vbvision.official" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="hover:text-red-accent transition-all hover:pl-2 duration-300 font-medium"
+                >
+                  FACEBOOK
+                </a>
+              </li>
             </ul>
           </div>
 

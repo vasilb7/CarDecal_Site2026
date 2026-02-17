@@ -1,5 +1,5 @@
-import { motion } from "framer-motion"
-import { Check, X, Sparkles, Zap, Crown, ShoppingCart } from "lucide-react"
+import { motion, AnimatePresence } from "framer-motion"
+import { Check, X, Crown, ShoppingCart } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface BenefitProps {
@@ -10,28 +10,23 @@ interface BenefitProps {
 
 const Benefit = ({ text, checked, accentColor }: BenefitProps) => {
   return (
-    <div className="flex items-center justify-between gap-3">
-      <div className="flex items-center gap-3 flex-1 min-w-0">
-        {checked ? (
-          <span 
-            className="grid size-5 place-content-center rounded-full text-black shrink-0"
-            style={{ background: accentColor }}
-          >
-            <Check className="size-3" strokeWidth={3} />
-          </span>
-        ) : (
-          <span className="grid size-5 place-content-center rounded-full bg-white/10 text-white/30 shrink-0">
-            <X className="size-3" />
-          </span>
-        )}
-        <span className={cn(
-          "text-sm font-medium",
-          checked ? "text-white" : "text-white/40"
-        )}>{text}</span>
-      </div>
-      {checked && (
-        <Zap className="size-3 shrink-0" style={{ color: accentColor }} />
+    <div className="flex items-center gap-3">
+      {checked ? (
+        <span 
+          className="grid size-4 place-content-center rounded-full text-black shrink-0"
+          style={{ background: accentColor }}
+        >
+          <Check className="size-2.5" strokeWidth={4} />
+        </span>
+      ) : (
+        <span className="grid size-4 place-content-center rounded-full bg-white/5 text-white/20 shrink-0">
+          <X className="size-2.5" />
+        </span>
       )}
+      <span className={cn(
+        "text-[11px] font-medium tracking-wide uppercase transition-colors duration-300",
+        checked ? "text-white/90" : "text-white/20"
+      )}>{text}</span>
     </div>
   )
 }
@@ -47,10 +42,11 @@ interface PricingCardProps {
   gradient: string
   accentColor: string
   ribbonColor: string
-  icon: React.ReactNode
   featured?: boolean;
   isCurrent?: boolean;
   discountLabel?: string;
+  unitLabel?: string;
+  billingLabel?: string;
   onClick?: () => void;
 }
 
@@ -65,158 +61,187 @@ export const PricingCard = ({
   gradient,
   accentColor,
   ribbonColor,
-  icon,
   featured = false,
   isCurrent = false,
   discountLabel,
+  unitLabel,
+  billingLabel,
   onClick,
 }: PricingCardProps) => {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 40 }}
+      layout
+      initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, ease: "easeOut" }}
+      transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
       viewport={{ once: true }}
-      className={cn("relative", featured && "md:-mt-4 md:mb-[-16px]")}
+      className={cn("relative h-full", featured && "md:-mt-2 md:mb-[-8px]")}
     >
       {/* Ribbon / Badge */}
       <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-20">
         <div 
           className={cn(
-            "px-5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] shadow-lg flex items-center gap-1.5",
+            "px-4 py-1.5 rounded-full text-[9px] font-bold uppercase tracking-[0.25em] shadow-2xl",
+            "border border-white/10",
             !featured && !discountLabel && "hidden"
           )}
           style={{ 
-            background: ribbonColor,
-            color: featured && !discountLabel ? '#000' : '#fff'
+            background: ribbonColor === '#333' ? 'rgba(255,255,255,0.05)' : ribbonColor,
+            color: ribbonColor === '#333' ? '#fff' : '#000',
+            backdropFilter: 'blur(8px)'
           }}
         >
-          {featured && !discountLabel ? (
-            <>
-              <Crown className="size-3" />
-              BEST VALUE
-            </>
-          ) : discountLabel ? (
-            <>
-              <Sparkles className="size-3" />
-              {discountLabel}
-            </>
-          ) : null}
+          {featured && !discountLabel ? "Best Value" : discountLabel}
         </div>
       </div>
 
       {/* Main card */}
       <div
         className={cn(
-          "relative h-full w-full overflow-hidden rounded-2xl flex flex-col",
-          "border border-white/[0.08]",
-          "shadow-2xl",
-          isCurrent && "grayscale opacity-80",
+          "relative h-full w-full overflow-hidden rounded-3xl flex flex-col",
+          "border border-white/[0.05]",
+          "transition-all duration-500",
+          isCurrent && "opacity-60",
           className,
         )}
         style={{ 
-          background: isCurrent ? '#1e1e20' : gradient,
+          background: isCurrent ? '#0a0a0b' : gradient,
           ...(featured && !isCurrent ? { 
-            borderColor: accentColor + '33',
-            boxShadow: `0 0 40px ${accentColor}15, 0 25px 50px rgba(0,0,0,0.5)` 
+            borderColor: accentColor + '44',
+            boxShadow: `0 0 50px ${accentColor}08, 0 20px 40px rgba(0,0,0,0.4)` 
           } : {})
         }}
       >
-        {/* Decorative sparkles */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-4 right-4 opacity-20">
-            <Sparkles className="w-14 h-14" style={{ color: accentColor }} />
-          </div>
-          <div className="absolute bottom-24 left-3 opacity-[0.06]">
-            <Sparkles className="w-8 h-8 text-white" />
-          </div>
-          <div className="absolute top-1/3 right-8 opacity-[0.04]">
-            <Zap className="w-6 h-6 text-white" />
-          </div>
-        </div>
+        {/* Decorative elements removed */}
 
         {/* Content */}
         <div className="relative z-10 p-7 pt-8">
-          {/* Tier header */}
-          <div className="flex items-center gap-2 mb-5">
-            <span 
-              className="p-2 rounded-xl bg-white/10 backdrop-blur-sm"
-            >
-              {icon}
-            </span>
-            <span className="text-white font-bold text-lg tracking-wide">
-              {tier}
-            </span>
+          <div className="mb-6 h-8">
+            <AnimatePresence mode="wait">
+              <motion.span 
+                key={tier}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 10 }}
+                transition={{ duration: 0.3 }}
+                className="text-white font-bold text-xl tracking-[0.1em] uppercase block"
+              >
+                {tier}
+              </motion.span>
+            </AnimatePresence>
           </div>
 
           {/* Price block */}
-          <div className="mb-4">
-            <div className="flex items-baseline gap-3">
-              <span className="text-5xl font-black text-white drop-shadow-lg">
-                {price}
-              </span>
-              {originalPrice && originalPrice.length > 0 && (
-                <span className="text-xl text-white/40 line-through font-light">
-                  {originalPrice}
+          <div className="mb-4 min-h-[90px] flex flex-col justify-end">
+            <div className="flex items-baseline gap-2">
+              <AnimatePresence mode="wait">
+                <motion.span
+                  key={price}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -12 }}
+                  transition={{ duration: 0.35, ease: [0.23, 1, 0.32, 1] }}
+                  className="text-5xl font-black text-white"
+                >
+                  {price}
+                </motion.span>
+              </AnimatePresence>
+
+              <AnimatePresence mode="wait">
+                {originalPrice && originalPrice.length > 0 && (
+                  <motion.span
+                    key={originalPrice}
+                    initial={{ opacity: 0, x: 10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -10 }}
+                    transition={{ duration: 0.35, ease: "easeOut" }}
+                    className="text-xl text-white/50 line-through font-light"
+                  >
+                    {originalPrice}
+                  </motion.span>
+                )}
+              </AnimatePresence>
+
+              {unitLabel && (
+                <span className="text-[10px] text-white/50 uppercase tracking-[0.2em] ml-1 self-end mb-1 max-w-[120px] leading-tight">
+                  {unitLabel}
                 </span>
               )}
             </div>
-            {originalPrice && originalPrice.length > 0 && discountLabel && (
-              <div className="mt-2">
-                <span 
-                  className="inline-block px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider text-black"
-                  style={{ background: accentColor }}
-                >
-                  {discountLabel}
-                </span>
-              </div>
-            )}
+
+            <div className="h-4 mt-2 overflow-hidden">
+              <AnimatePresence mode="wait">
+                {billingLabel ? (
+                  <motion.div
+                    key={billingLabel}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.3, ease: "easeOut" }}
+                    className="text-[9px] text-teal-400 font-medium uppercase tracking-[0.2em] opacity-80"
+                  >
+                    {billingLabel}
+                  </motion.div>
+                ) : null}
+              </AnimatePresence>
+            </div>
           </div>
 
-          {/* Best for */}
-          <p className="text-white/50 text-sm font-medium mb-6 min-h-[2.5rem]">
-            {bestFor}
-          </p>
+          <div className="min-h-[3rem]">
+            <AnimatePresence mode="wait">
+              <motion.p 
+                key={bestFor}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                className="text-white/60 text-[10px] uppercase tracking-[0.2em] font-bold mb-8 leading-relaxed"
+              >
+                {bestFor}
+              </motion.p>
+            </AnimatePresence>
+          </div>
         </div>
 
         {/* Divider */}
-        <div className="relative px-7">
-          <div className="border-t border-white/[0.06]" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white/[0.06] backdrop-blur-sm rounded-full p-1">
-            <Sparkles className="w-3 h-3 text-white/40" />
-          </div>
+        <div className="px-7">
+          <div className="border-t border-white/[0.05]" />
         </div>
 
         {/* Benefits */}
-        <div className="relative z-10 px-7 py-6 space-y-3.5 flex-1">
-          {benefits.map((benefit, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, x: -10 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.1 * index, duration: 0.3 }}
-              viewport={{ once: true }}
-            >
-              <Benefit {...benefit} accentColor={accentColor} />
-            </motion.div>
-          ))}
+        <div className="relative z-10 px-7 py-6 space-y-3.5 flex-1 overflow-hidden">
+          <AnimatePresence mode="wait" initial={false}>
+            {benefits.map((benefit) => (
+              <motion.div
+                key={benefit.text}
+                layout
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                transition={{ duration: 0.3, ease: "easeOut" }}
+              >
+                <Benefit {...benefit} accentColor={accentColor} />
+              </motion.div>
+            ))}
+          </AnimatePresence>
         </div>
 
         {/* CTA Button */}
         <div className="relative z-10 p-7 pt-0">
           <motion.button
+            key={isCurrent ? "active" : CTA}
             onClick={isCurrent ? undefined : onClick}
-            whileHover={isCurrent ? {} : { scale: 1.03 }}
-            whileTap={isCurrent ? {} : { scale: 0.97 }}
+            whileHover={isCurrent ? {} : { scale: 1.02 }}
+            whileTap={isCurrent ? {} : { scale: 0.98 }}
             disabled={isCurrent}
             className={cn(
-              "w-full py-3.5 rounded-xl font-bold text-sm uppercase tracking-[0.15em] transition-all duration-300",
+              "w-full py-4 rounded-2xl font-bold text-[10px] uppercase tracking-[0.25em] transition-all duration-500",
               "flex items-center justify-center gap-2",
               isCurrent 
-                ? "bg-zinc-800 text-zinc-500 cursor-not-allowed border border-zinc-700"
+                ? "bg-white/5 text-white/20 cursor-not-allowed border border-white/5"
                 : featured
-                  ? "shadow-lg"
-                  : "bg-transparent text-white hover:bg-white/10 border border-white/20 hover:border-white/40"
+                  ? "shadow-2xl"
+                  : "bg-white/[0.03] text-white/90 hover:bg-white/10 border border-white/10 hover:border-white/20"
             )}
             style={
               !isCurrent && featured 
@@ -224,8 +249,7 @@ export const PricingCard = ({
                 : undefined
             }
           >
-            {isCurrent ? <Check className="w-4 h-4" /> : <ShoppingCart className="w-4 h-4" />}
-            {CTA}
+            {isCurrent ? "Active Plan" : CTA}
           </motion.button>
         </div>
       </div>

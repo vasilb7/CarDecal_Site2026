@@ -135,7 +135,7 @@ const ImageLightbox: React.FC<LightboxProps> = ({ post, index, total, model, onC
     };
 
     useEffect(() => {
-        document.body.style.overflow = 'hidden';
+        document.body.classList.add('modal-open');
         if (!searchParams.get('img')) {
              setSearchParams(prev => {
                 const next = new URLSearchParams(prev);
@@ -144,7 +144,7 @@ const ImageLightbox: React.FC<LightboxProps> = ({ post, index, total, model, onC
              }, { replace: true });
         }
         return () => {
-             document.body.style.overflow = 'unset';
+             document.body.classList.remove('modal-open');
         };
     }, [post.id]);
 
