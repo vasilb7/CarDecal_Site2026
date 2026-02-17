@@ -1114,8 +1114,8 @@ const AdminDashboard: React.FC = () => {
 
       <main className="flex-1 overflow-hidden flex flex-col">
         {activeTab === 'dashboard' && (
-          <div className="flex-1 overflow-auto p-5 bg-[#020202] custom-scrollbar">
-            <div className="max-w-[1600px] mx-auto space-y-5">
+          <div className="flex-1 overflow-auto p-5 bg-[#020202] custom-scrollbar admin-tab-surface">
+            <div className="max-w-[1600px] mx-auto space-y-5 admin-tab-content">
               {/* Header */}
               <div className="flex items-center justify-between">
                 <div>
@@ -1316,9 +1316,9 @@ const AdminDashboard: React.FC = () => {
         )}
 
         {activeTab === 'models' && (
-          <div className="flex flex-col h-full overflow-hidden">
+          <div className="flex flex-col h-full overflow-hidden admin-tab-surface">
             {/* FILTERS BAR */}
-            <div className="shrink-0 bg-surface/30 border-b border-white/5 px-8 py-4 flex items-center gap-6">
+            <div className="shrink-0 bg-surface/30 border-b border-white/5 px-8 py-4 flex items-center gap-6 admin-toolbar">
               <div className="relative flex-1 max-w-sm group">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/20 group-focus-within:text-gold-accent transition-colors" />
                 <input 
@@ -1360,7 +1360,7 @@ const AdminDashboard: React.FC = () => {
             </div>
 
             {/* GRID AREA */}
-            <div className="flex-1 overflow-auto p-5 custom-scrollbar">
+            <div className="flex-1 overflow-auto p-5 custom-scrollbar admin-tab-content">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {filteredModels.map(model => (
                   <motion.div 
@@ -1437,10 +1437,10 @@ const AdminDashboard: React.FC = () => {
 
         {activeTab === 'spotlight' && (
           /* REFINED COMPACT SPOTLIGHT TAB */
-          <div className="flex-1 overflow-auto p-4 bg-[#020202] custom-scrollbar">
-            <div className="max-w-[1600px] mx-auto space-y-3">
+          <div className="flex-1 overflow-auto p-4 bg-[#020202] custom-scrollbar admin-tab-surface">
+            <div className="max-w-[1600px] mx-auto space-y-3 admin-tab-content">
               {/* COMPACT TOP BAR */}
-              <div className="sticky top-0 z-20 flex items-center justify-between bg-black/60 backdrop-blur-xl border border-white/10 p-4 shadow-2xl">
+              <div className="sticky top-0 z-20 flex items-center justify-between bg-black/60 backdrop-blur-xl border border-white/10 p-4 shadow-2xl admin-toolbar">
                 <div className="flex items-center gap-6">
                   <div className="flex flex-col">
                     <h2 className="text-xs font-bold uppercase tracking-[0.4em] text-white">Spotlight <span className="text-gold-accent">Editor</span></h2>
@@ -1987,8 +1987,8 @@ const AdminDashboard: React.FC = () => {
         )}
 
         {activeTab === 'events' && (
-          <div className="flex-1 overflow-auto bg-[#020202] custom-scrollbar">
-            <div className="max-w-[1400px] mx-auto px-6 py-5 space-y-6">
+          <div className="flex-1 overflow-auto bg-[#020202] custom-scrollbar admin-tab-surface">
+            <div className="max-w-[1400px] mx-auto px-6 py-5 space-y-6 admin-tab-content">
                 
                 {/* Header */}
                 <div className="flex items-center gap-4 mb-2">
@@ -2003,7 +2003,22 @@ const AdminDashboard: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="rounded-xl border border-white/10 bg-gradient-to-r from-blue-500/10 via-white/[0.02] to-purple-500/10 px-4 py-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-[9px] uppercase tracking-widest text-white/40">Live Status</span>
+                        <span className={`px-2 py-1 rounded-full border text-[8px] font-bold uppercase tracking-widest ${announcement.active ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-300' : 'border-white/15 bg-white/5 text-white/40'}`}>
+                            Banner {announcement.active ? 'On' : 'Off'}
+                        </span>
+                        <span className="px-2 py-1 rounded-full border border-blue-500/30 bg-blue-500/10 text-[8px] font-bold uppercase tracking-widest text-blue-300">
+                            Hero {heroType}
+                        </span>
+                        <span className={`px-2 py-1 rounded-full border text-[8px] font-bold uppercase tracking-widest ${activePromo !== 'none' ? 'border-purple-500/40 bg-purple-500/15 text-purple-300' : 'border-white/15 bg-white/5 text-white/40'}`}>
+                            Promo {activePromo}
+                        </span>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
 
                     {/* 1. HOMEPAGE HERO CONTROLS */}
                     <div className="bg-[#0A0A0A] border border-white/10 rounded-xl overflow-hidden relative group p-6">
@@ -2202,7 +2217,7 @@ const AdminDashboard: React.FC = () => {
                     </div>
 
                     {/* 2. PAGE BACKGROUNDS */}
-                    <div className="bg-[#0A0A0A] border border-white/10 rounded-xl overflow-hidden relative group p-6 mt-6">
+                    <div className="bg-[#0A0A0A] border border-white/10 rounded-xl overflow-hidden relative group p-6">
                          <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-indigo-500 to-violet-500" />
                          <h3 className="text-sm font-bold uppercase tracking-[0.2em] text-white flex items-center gap-3 mb-6">
                             <ImageIcon className="w-4 h-4 text-indigo-400" />
@@ -2314,7 +2329,7 @@ const AdminDashboard: React.FC = () => {
                     </div>
 
                     {/* 2. PRICING & EVENT CONFIG */}
-                    <div className="space-y-6">
+                    <div className="space-y-6 xl:col-span-2">
 
 
                         {/* Event Announcements */}
@@ -2322,7 +2337,7 @@ const AdminDashboard: React.FC = () => {
 
 
 
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6"> 
+                        <div className="grid grid-cols-1 gap-6"> 
                           {/* Announcement Column */}
                           <div className="bg-[#0A0A0A] border border-white/10 rounded-xl overflow-hidden relative group p-6">
                               <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-blue-500 to-cyan-500" />
@@ -2332,8 +2347,8 @@ const AdminDashboard: React.FC = () => {
                              </h3>
                              
                              <div className="space-y-4">
-                                <div className="flex gap-4">
-                                    <div className="flex-1 space-y-1">
+                                <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_96px] gap-3">
+                                    <div className="space-y-1">
                                         <label className="text-[9px] uppercase tracking-widest text-white/40">Message (BG)</label>
                                         <input 
                                             value={announcement.text_bg}
@@ -2341,11 +2356,20 @@ const AdminDashboard: React.FC = () => {
                                             className="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-xs text-white outline-none focus:border-amber-500/50"
                                         />
                                     </div>
-                                    <div className="w-[80px] space-y-1">
+                                    <div className="space-y-1">
+                                        <label className="text-[9px] uppercase tracking-widest text-white/40">Message (EN)</label>
+                                        <input 
+                                            value={announcement.text_en}
+                                            onChange={(e) => setAnnouncement({...announcement, text_en: e.target.value})}
+                                            className="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-xs text-white outline-none focus:border-amber-500/50"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
                                         <label className="text-[9px] uppercase tracking-widest text-white/40">Status</label>
                                         <button 
                                             onClick={() => setAnnouncement({...announcement, active: !announcement.active})}
                                             className={`w-full h-[42px] rounded-lg border flex items-center justify-center transition-all ${announcement.active ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-black/30 border-white/10 text-white/30'}`}
+                                            title={announcement.active ? 'Announcement Active' : 'Announcement Inactive'}
                                         >
                                             <Zap className="w-4 h-4" />
                                         </button>
@@ -2404,8 +2428,16 @@ const AdminDashboard: React.FC = () => {
                                      
                                      {/* Quick Global Action for Base BG */}
                                      <div className="flex items-center gap-3 bg-white/[0.02] p-1.5 pr-4 pl-3 rounded-lg border border-white/5">
-                                         <div className="p-1.5 bg-emerald-500/10 rounded text-emerald-400">
-                                             <FileImage size={12} />
+                                         <div className={cn("p-1.5 rounded transition-colors duration-300", 
+                                             activePromo === 'valentines' ? "bg-rose-500/10 text-rose-400" :
+                                             activePromo === 'christmas' ? "bg-red-500/10 text-red-400" :
+                                             activePromo === 'photoshoot' ? "bg-purple-500/10 text-purple-400" :
+                                             "bg-emerald-500/10 text-emerald-400"
+                                         )}>
+                                             {activePromo === 'valentines' ? <Heart size={12} /> :
+                                              activePromo === 'christmas' ? <Snowflake size={12} /> :
+                                              activePromo === 'photoshoot' ? <Camera size={12} /> :
+                                              <FileImage size={12} />}
                                          </div>
                                          <div className="flex-1">
                                              <label className="text-[8px] uppercase tracking-widest text-white/40 block">Standard BG</label>
@@ -2676,8 +2708,8 @@ const AdminDashboard: React.FC = () => {
           </div>
         )}
         {activeTab === 'system' && (
-          <div className="flex-1 overflow-auto bg-[#020202] custom-scrollbar">
-            <div className="max-w-[1400px] mx-auto px-6 py-5 space-y-6">
+          <div className="flex-1 overflow-auto bg-[#020202] custom-scrollbar admin-tab-surface">
+            <div className="max-w-[1400px] mx-auto px-6 py-5 space-y-6 admin-tab-content">
               <div className="flex items-center gap-4 mb-2">
                 <div className="p-2 bg-white/5 rounded-lg">
                   <Settings className="w-5 h-5 text-gold-accent" />
@@ -2882,7 +2914,7 @@ const AdminDashboard: React.FC = () => {
               </div>
 
               {/* в•ђв•ђв•ђв•ђв•ђв•ђв•ђ BROADCAST (ANNOUNCEMENTS) в•ђв•ђв•ђв•ђв•ђв•ђв•ђ */}
-              <div className="relative overflow-hidden bg-white/[0.02] border border-white/5 hover:border-blue-500/20 transition-all rounded-xl p-5 mb-2 mt-4">
+              <div className="relative overflow-hidden bg-white/[0.02] border border-white/5 hover:border-blue-500/20 transition-all rounded-xl p-5 mb-2 mt-4 admin-shell-panel">
                 <div className="flex items-center gap-4 mb-6">
                   <div className="p-2.5 rounded-lg bg-blue-500/10">
                     <MessageSquare className="w-5 h-5 text-blue-400" />
@@ -3041,8 +3073,8 @@ const AdminDashboard: React.FC = () => {
         )}
 
         {activeTab === 'design' && (
-          <div className="flex-1 overflow-auto bg-[#020202] custom-scrollbar">
-            <div className="max-w-[1400px] mx-auto px-6 py-5">
+          <div className="flex-1 overflow-auto bg-[#020202] custom-scrollbar admin-tab-surface">
+            <div className="max-w-[1400px] mx-auto px-6 py-5 admin-tab-content">
               <div className="flex items-center gap-4 mb-6">
                 <div className="p-2 bg-purple-500/10 rounded-lg">
                   <Palette className="w-5 h-5 text-purple-400" />
@@ -3052,7 +3084,7 @@ const AdminDashboard: React.FC = () => {
                   <p className="text-[10px] text-white/30 uppercase tracking-widest mt-1">Page backgrounds and visual elements</p>
                 </div>
               </div>
-              <div className="relative overflow-hidden bg-white/[0.02] border border-white/5 hover:border-purple-500/20 transition-all rounded-xl p-5 mb-8 space-y-6">
+              <div className="relative overflow-hidden bg-white/[0.02] border border-white/5 hover:border-purple-500/20 transition-all rounded-xl p-5 mb-8 space-y-6 admin-shell-panel">
                 <div className="flex items-center gap-4 mb-2">
                   <div className="p-2.5 rounded-lg bg-purple-500/10">
                     <ImageIcon size={20} className="text-purple-400" />
@@ -3171,8 +3203,8 @@ const AdminDashboard: React.FC = () => {
         )}
 
         {activeTab === 'lookbook' && (
-          <div className="flex-1 overflow-auto bg-[#020202] custom-scrollbar">
-            <div className="max-w-[1400px] mx-auto px-6 py-5">
+          <div className="flex-1 overflow-auto bg-[#020202] custom-scrollbar admin-tab-surface">
+            <div className="max-w-[1400px] mx-auto px-6 py-5 admin-tab-content">
               <div className="flex items-center gap-4 mb-6">
                 <div className="p-2 bg-gold-accent/10 rounded-lg">
                   <Star className="w-5 h-5 text-gold-accent" />
@@ -3184,7 +3216,7 @@ const AdminDashboard: React.FC = () => {
               </div>
 
               {/* в•ђв•ђв•ђв•ђв•ђв•ђв•ђ ROW 3.6: Lookbook Showcase в•ђв•ђв•ђв•ђв•ђв•ђв•ђ */}
-              <div className="relative overflow-hidden bg-white/[0.02] border border-white/5 hover:border-gold-accent/20 transition-all rounded-xl p-5 mb-8 space-y-6">
+              <div className="relative overflow-hidden bg-white/[0.02] border border-white/5 hover:border-gold-accent/20 transition-all rounded-xl p-5 mb-8 space-y-6 admin-shell-panel">
                 <div className="flex items-center justify-between gap-4 mb-2">
                   <div className="flex items-center gap-4">
                     <div className="p-2.5 rounded-lg bg-gold-accent/10">
