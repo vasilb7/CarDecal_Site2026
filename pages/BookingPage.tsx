@@ -1,421 +1,689 @@
-import React, { useState, useMemo, useEffect } from 'react';
-// Booking Page Component
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
-import { modelsData } from '../data/models';
-import { Model } from '../types';
 import { useToast } from '../hooks/useToast';
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { AlertCircle, Plus, X, Mail, Phone, User as UserIcon, Lock, Loader2 } from 'lucide-react';
+import { uploadToCloudinary } from '../lib/cloudinary-utils';
+
+const DB_NAME = 'CarDecalBookingDB';
+const STORE_NAME = 'booking_photos';
+const DB_VERSION = 1;
+
+const initDB = (): Promise<IDBDatabase> => {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+    request.onupgradeneeded = (e) => {
+      const db = (e.target as IDBOpenDBRequest).result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME);
+      }
+    };
+  });
+};
+
+const savePhotosToDB = async (photos: File[]) => {
+  try {
+    const db = await initDB();
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    store.clear();
+    if (photos.length > 0) {
+      store.put(photos, 'photos_array');
+    }
+    return new Promise((resolve, reject) => {
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+    });
+  } catch (err) {
+    console.error('Failed to save photos to DB', err);
+  }
+};
+
+const loadPhotosFromDB = async (): Promise<File[]> => {
+  try {
+    const db = await initDB();
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const store = tx.objectStore(STORE_NAME);
+    const request = store.get('photos_array');
+    return new Promise((resolve, reject) => {
+      request.onsuccess = () => resolve(request.result || []);
+      request.onerror = () => reject(request.error);
+    });
+  } catch (err) {
+    console.error('Failed to load photos from DB', err);
+    return [];
+  }
+};
+
+const clearPhotosFromDB = async () => {
+  try {
+    const db = await initDB();
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    store.clear();
+  } catch (err) {
+    console.error('Failed to clear photos from DB', err);
+  }
+};
 
 const BookingPage: React.FC = () => {
-    const { t, i18n } = useTranslation();
+    const { t } = useTranslation();
     const { showToast } = useToast();
-    const currentLang = (i18n.language || 'bg').split('-')[0] as 'bg' | 'en';
+    const { user, profile, loading: authLoading } = useAuth();
+    const navigate = useNavigate();
+
+    // Redirect to login if not authenticated
+    useEffect(() => {
+        if (!authLoading && !user) {
+            showToast("Моля, влезте в профила си, за да направите запитване за индивидуален проект.", "info");
+            navigate('/login', { state: { from: '/book-now' } });
+        }
+    }, [user, authLoading, navigate]);
     
-    const [searchQuery, setSearchQuery] = useState('');
-    const [selectedModels, setSelectedModels] = useState<Model[]>([]);
     const [formData, setFormData] = useState(() => {
-        const saved = localStorage.getItem('booking_form_data');
+        const saved = localStorage.getItem('custom_order_form_new');
         return saved ? JSON.parse(saved) : {
-            companyName: '',
-            vatNumber: '',
-            contactPerson: '',
-            email: '',
+            fullName: '',
             phone: '',
-            website: '',
-            projectType: '',
-            shootDate: '',
-            location: '',
-            message: ''
+            email: '',
+            width: '',
+            height: '',
+            quantity: '',
+            description: ''
         };
     });
 
+    const [photos, setPhotos] = useState<File[]>([]);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isLoadingPhotos, setIsLoadingPhotos] = useState(true);
+    const [showClearConfirm, setShowClearConfirm] = useState(false);
+    const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
     useEffect(() => {
-        localStorage.setItem('booking_form_data', JSON.stringify(formData));
+        // Load photos from IndexedDB on mount
+        loadPhotosFromDB().then((savedPhotos) => {
+            if (savedPhotos && savedPhotos.length > 0) {
+                setPhotos(savedPhotos);
+            }
+            setIsLoadingPhotos(false);
+        });
+    }, []);
+
+    useEffect(() => {
+        localStorage.setItem('custom_order_form_new', JSON.stringify(formData));
     }, [formData]);
 
     useEffect(() => {
-        const savedModels = localStorage.getItem('booking_selected_models');
-        if (savedModels) {
-            setSelectedModels(JSON.parse(savedModels));
+        if (!isLoadingPhotos) {
+            savePhotosToDB(photos);
+        }
+    }, [photos, isLoadingPhotos]);
+
+    // Auto-fill form data with user profile if logged in
+    useEffect(() => {
+        if (profile && user) {
+            setFormData(prev => {
+                const metaName = user.user_metadata?.full_name || 
+                               (user.user_metadata?.first_name ? `${user.user_metadata.first_name} ${user.user_metadata.last_name || ''}`.trim() : '');
+                const finalFullName = profile.full_name || metaName || '';
+                
+                const updates: any = {};
+                if (!prev.fullName && finalFullName) updates.fullName = finalFullName;
+                if (!prev.phone && (profile.phone || user.user_metadata?.phone)) updates.phone = profile.phone || user.user_metadata?.phone;
+                if (!prev.email && (user.email || profile.email)) updates.email = user.email || profile.email;
+                
+                if (Object.keys(updates).length > 0) {
+                    return { ...prev, ...updates };
+                }
+                return prev;
+            });
+        }
+    }, [profile, user]);
+
+    const handleClearForm = async () => {
+        setFormData({
+            fullName: '',
+            phone: '',
+            email: '',
+            width: '',
+            height: '',
+            quantity: '',
+            description: ''
+        });
+        setPhotos([]);
+        await clearPhotosFromDB();
+        setShowClearConfirm(false);
+    };
+
+    // Detect mobile keyboard close effect properly
+    useEffect(() => {
+        if (typeof window !== 'undefined' && window.visualViewport) {
+          let isKeyboardOpen = false;
+    
+          const handleViewportResize = () => {
+            const currentHeight = window.visualViewport?.height || window.innerHeight;
+            const screenHeight = window.innerHeight;
+            
+            if (currentHeight < screenHeight * 0.8) {
+              isKeyboardOpen = true;
+            } else if (currentHeight > screenHeight * 0.9 && isKeyboardOpen) {
+              isKeyboardOpen = false;
+              if (
+                document.activeElement instanceof HTMLInputElement ||
+                document.activeElement instanceof HTMLTextAreaElement ||
+                document.activeElement instanceof HTMLButtonElement
+              ) {
+                document.activeElement.blur();
+              }
+            }
+          };
+    
+          window.visualViewport.addEventListener('resize', handleViewportResize);
+          return () => {
+            window.visualViewport?.removeEventListener('resize', handleViewportResize);
+          };
         }
     }, []);
 
-    useEffect(() => {
-        localStorage.setItem('booking_selected_models', JSON.stringify(selectedModels));
-    }, [selectedModels]);
-
-    const [randomModels, setRandomModels] = useState<Model[]>([]);
-
-    const shuffleModels = () => {
-        const shuffled = [...modelsData].sort(() => 0.5 - Math.random());
-        setRandomModels(shuffled.slice(0, 2));
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        if (e.key === 'Enter') {
+            e.currentTarget.blur();
+        }
     };
 
-    useEffect(() => {
-        shuffleModels();
-    }, []);
-
-    const filteredModels = useMemo(() => {
-        const query = searchQuery.toLowerCase().trim();
-        if (!query) return randomModels;
-
-        return modelsData.filter(model => {
-            const nameEn = model.name.toLowerCase();
-            const nameBg = (model.nameBg || '').toLowerCase();
-            return nameEn.includes(query) || nameBg.includes(query);
-        }).slice(0, 4);
-    }, [searchQuery, randomModels]);
-
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
+        if (name === 'description' && value.length > 500) {
+            return;
+        }
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleFocus = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-        setTimeout(() => {
-            e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 300);
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files) {
+            const incomingFiles = Array.from(e.target.files) as File[];
+            const validFiles = incomingFiles.filter(f => f.size <= 5 * 1024 * 1024);
+            
+            if (validFiles.length < incomingFiles.length) {
+                showToast("Някои снимки бяха пропуснати (Надхвърлят 5MB)", "error");
+            }
+            
+            setPhotos(prev => {
+                const combined = [...prev, ...validFiles];
+                return combined.slice(0, 5); // Max 5 total
+            });
+            if (fileInputRef.current) {
+                fileInputRef.current.value = "";
+            }
+        }
+    };
+
+    const removePhoto = (index: number) => {
+        setPhotos(prev => prev.filter((_, i) => i !== index));
     };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        console.log('Booking submitted:', { models: selectedModels.map(m => m.name), ...formData });
-        showToast(t('toast.booking_success'), "success");
-        
-        // Clear persistence on success
-        localStorage.removeItem('booking_form_data');
-        localStorage.removeItem('booking_selected_models');
-        
-        // Reset local state if needed
-        setSelectedModels([]);
-        setFormData({
-            companyName: '',
-            vatNumber: '',
-            contactPerson: '',
-            email: '',
-            phone: '',
-            website: '',
-            projectType: '',
-            shootDate: '',
-            location: '',
-            message: ''
-        });
-        shuffleModels();
+        setShowSubmitConfirm(true);
     };
 
+    const handleActualSubmit = async () => {
+        setShowSubmitConfirm(false);
+        setIsSubmitting(true);
+        
+        try {
+            const uploadedImages: string[] = [];
+            
+            for (const file of photos) {
+                try {
+                    const url = await uploadToCloudinary(file, 'custom_orders');
+                    uploadedImages.push(url);
+                } catch (uploadError) {
+                    console.error("Cloudinary upload error:", uploadError);
+                    throw uploadError;
+                }
+            }
+
+            const fullNameParts = formData.fullName.trim().split(' ');
+            const firstName = fullNameParts[0] || '';
+            const lastName = fullNameParts.slice(1).join(' ') || '';
+            
+            const { error: insertError } = await supabase.from('custom_orders').insert({
+                 first_name: firstName,
+                 last_name: lastName,
+                 phone: formData.phone,
+                 email: formData.email,
+                 user_id: user?.id || null,
+                 width: formData.width,
+                 height: formData.height,
+                 quantity: formData.quantity,
+                 description: formData.description,
+                 images: uploadedImages
+            });
+            
+            if (insertError) throw insertError;
+            
+            // Trigger email notification
+            if (formData.email) {
+                supabase.functions.invoke('send-booking-email', {
+                    body: {
+                        email: formData.email,
+                        firstName: firstName,
+                        lastName: lastName,
+                        phone: formData.phone,
+                        width: formData.width,
+                        height: formData.height,
+                        quantity: formData.quantity,
+                        description: formData.description
+                    }
+                }).catch(err => console.error("Email notification error:", err));
+            }
+            
+            showToast(t('booking.success'), 'success');
+            
+            setFormData({
+                fullName: '',
+                phone: '',
+                email: '',
+                width: '',
+                height: '',
+                quantity: '',
+                description: ''
+            });
+            setPhotos([]);
+            await clearPhotosFromDB();
+            localStorage.removeItem('custom_order_form_new');
+        } catch (error) {
+            console.error('Submission error:', error);
+            showToast(t('booking.error'), 'error');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    if (authLoading || (!user && !authLoading)) {
+        return (
+            <div className="min-h-screen bg-black flex items-center justify-center">
+                <Loader2 className="w-10 h-10 text-red-600 animate-spin" />
+            </div>
+        );
+    }
+
     return (
-        <div className="min-h-screen bg-background pb-24">
-            {/* Premium Hero Header */}
-            <div className="relative h-[50vh] min-h-[400px] flex items-center justify-center overflow-hidden">
-                <div 
-                    className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-60 scale-105 transform hover:scale-100 transition-transform duration-[10s]"
-                    style={{ backgroundImage: `url("/Site_Pics/Model_pics_together/100.jpeg")` }}
-                ></div>
-                <div className="absolute inset-0 bg-gradient-to-b from-background/90 via-background/40 to-background"></div>
-                
-                <div className="relative z-10 text-center px-6">
-                    <motion.div
-                        initial={{ opacity: 0, y: 30 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 1 }}
-                    >
-                        <h1 className="text-5xl md:text-8xl font-serif text-white mb-4 tracking-tight drop-shadow-2xl">
-                            {t('booking_page.title')}
-                        </h1>
-                        <p className="max-w-2xl mx-auto text-gold-accent text-[10px] md:text-xs font-bold uppercase tracking-[0.6em] leading-relaxed opacity-80">
-                            {t('booking_page.subtitle')}
-                        </p>
-                    </motion.div>
-                </div>
-            </div>
-
-            <div className="container mx-auto px-4 md:px-6 max-w-4xl -mt-10 md:-mt-20 relative z-20">
-                <div className="space-y-8 md:space-y-12">
-                    {/* Module 1: Model Selection (Centered) */}
-                    <motion.div 
-                        initial={{ opacity: 0, y: 20 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true }}
-                        className="bg-surface/60 backdrop-blur-2xl border border-white/5 p-5 md:p-12 rounded-2xl md:rounded-3xl shadow-[0_30px_60px_rgba(0,0,0,0.5)]"
-                    >
-                        <div className="flex flex-col items-center text-center mb-10">
-                            <span className="text-gold-accent font-serif italic text-lg mb-2">{t('booking_page.step')} 01</span>
-                            <h2 className="text-2xl font-serif text-white uppercase tracking-widest">
-                                {t('booking_page.select_model')}
-                            </h2>
-                            <p className="text-text-muted text-[10px] uppercase tracking-widest mt-2 opacity-60">
-                                {t('booking_page.selection_limit')}
-                            </p>
-                            <div className="w-12 h-[1px] bg-gold-accent/40 mt-4" />
-                        </div>
-
-                        {/* Search Box */}
-                        <div className="max-w-lg mx-auto mb-10">
-                            <div className="relative">
-                                <input
-                                    type="text"
-                                    placeholder={t('booking_page.search_placeholder')}
-                                    className="w-full bg-background/80 border border-white/10 rounded-2xl px-6 py-5 text-white placeholder-text-muted focus:outline-none focus:border-gold-accent/50 transition-all shadow-inner"
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    onFocus={handleFocus}
-                                />
-                                <div className="absolute right-6 top-1/2 -translate-y-1/2 opacity-40">
-                                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                    </svg>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Results / Selected */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <AnimatePresence mode="popLayout">
-                                {filteredModels.map((model, index) => (
-                                    <motion.div
-                                        key={model.slug}
-                                        initial={{ opacity: 0, scale: 0.95 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        exit={{ opacity: 0, scale: 0.95 }}
-                                        className={`items-center gap-4 md:gap-5 p-3 md:p-4 rounded-2xl cursor-pointer transition-all border group relative ${
-                                            index === 1 && !searchQuery ? 'hidden md:flex' : 'flex'
-                                        } ${
-                                            selectedModels.some(m => m.slug === model.slug) 
-                                            ? 'bg-gold-accent/10 border-gold-accent/40 shadow-[0_0_30px_rgba(201,162,39,0.15)]' 
-                                            : 'bg-white/5 border-transparent hover:bg-white/10 hover:border-white/10'
-                                        }`}
-                                    >
-                                        {/* Selection Overlay (to handle selection without triggering link if clicked on other parts) */}
-                                        <div 
-                                            className="absolute inset-0 z-0" 
-                                            onClick={() => {
-                                                const isSelected = selectedModels.some(m => m.slug === model.slug);
-                                                if (isSelected) {
-                                                    setSelectedModels(prev => prev.filter(m => m.slug !== model.slug));
-                                                } else if (selectedModels.length < 3) {
-                                                    setSelectedModels(prev => [...prev, model]);
-                                                    setSearchQuery('');
-                                                }
-                                            }}
-                                        />
-
-                                        <Link to={`/${currentLang}/models/${model.slug}`} className="relative z-10 w-16 h-16 rounded-xl overflow-hidden shrink-0 border border-white/10 hover:border-gold-accent transition-colors">
-                                            <img src={model.avatar} alt={model.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                                        </Link>
-                                        
-                                        <div className="relative z-10 flex-grow pointer-events-none">
-                                            <Link to={`/${currentLang}/models/${model.slug}`} className="pointer-events-auto hover:text-gold-accent transition-colors">
-                                                <h3 className="text-white text-sm font-medium tracking-wide">{currentLang === 'bg' ? (model.nameBg || model.name) : model.name}</h3>
-                                            </Link>
-                                            <p className="text-text-muted text-[10px] uppercase tracking-[0.2em] mt-1">{model.location}</p>
-                                        </div>
-
-                                        {selectedModels.some(m => m.slug === model.slug) && (
-                                            <div className="relative z-10 w-2 h-2 rounded-full bg-gold-accent shadow-[0_0_10px_rgba(201,162,39,1)]" />
-                                        )}
-                                    </motion.div>
-                                ))}
-                            </AnimatePresence>
-                        </div>
-
-                        {selectedModels.length > 0 && !searchQuery && (
-                            <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                                {selectedModels.map(model => (
-                                    <motion.div 
-                                        key={model.slug}
-                                        initial={{ opacity: 0, scale: 0.9 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        className="p-4 bg-gold-accent/5 border border-gold-accent/20 rounded-2xl flex items-center justify-between gap-4"
-                                    >
-                                        <div className="flex items-center gap-4 min-w-0">
-                                            <Link to={`/${currentLang}/models/${model.slug}`} className="w-12 h-12 rounded-lg overflow-hidden border border-gold-accent/30 shrink-0 hover:border-gold-accent transition-all">
-                                                <img src={model.avatar} alt={model.name} className="w-full h-full object-cover" />
-                                            </Link>
-                                            <div className="overflow-hidden">
-                                                <Link to={`/${currentLang}/models/${model.slug}`} className="block hover:text-gold-accent transition-colors">
-                                                    <h3 className="text-sm font-serif text-white truncate">{currentLang === 'bg' ? (model.nameBg || model.name) : model.name}</h3>
-                                                </Link>
-                                                <p className="text-gold-accent text-[8px] uppercase tracking-[0.2em] font-bold">{model.categories?.[0]}</p>
-                                            </div>
-                                        </div>
-                                        <button 
-                                            onClick={() => setSelectedModels(prev => prev.filter(m => m.slug !== model.slug))}
-                                            className="p-2 bg-white/5 hover:bg-white/10 rounded-full transition-colors text-text-muted hover:text-white shrink-0"
-                                        >
-                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                                            </svg>
-                                        </button>
-                                    </motion.div>
-                                ))}
-                            </div>
-                        )}
-                    </motion.div>
-
-                    {/* Module 2: Company Details (Centered & Symmetrical) */}
-                    <motion.div 
-                        initial={{ opacity: 0, y: 20 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true }}
-                        className="bg-surface/60 backdrop-blur-2xl border border-white/5 p-5 md:p-12 rounded-2xl md:rounded-3xl shadow-[0_30px_60px_rgba(0,0,0,0.5)] overflow-hidden"
-                    >
-                        <div className="flex flex-col items-center text-center mb-10">
-                            <span className="text-gold-accent font-serif italic text-lg mb-2">{t('booking_page.step')} 02</span>
-                            <h2 className="text-2xl font-serif text-white uppercase tracking-widest">
-                                {t('booking_page.company_details')}
-                            </h2>
-                            <div className="w-12 h-[1px] bg-gold-accent/40 mt-4" />
-                        </div>
-
-                        <form onSubmit={handleSubmit} className="space-y-8">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-                                <FormGroup label={t('booking_page.form.company_name')}>
-                                    <input 
-                                        type="text" name="companyName" required
-                                        className="form-input-luxury"
-                                        placeholder="Company Name"
-                                        value={formData.companyName} onChange={handleInputChange}
-                                        onFocus={handleFocus}
-                                    />
-                                </FormGroup>
-                                <FormGroup label={t('booking_page.form.vat_number')}>
-                                    <input 
-                                        type="text" name="vatNumber"
-                                        className="form-input-luxury"
-                                        placeholder="Tax ID"
-                                        value={formData.vatNumber} onChange={handleInputChange}
-                                        onFocus={handleFocus}
-                                    />
-                                </FormGroup>
-                                <FormGroup label={t('booking_page.form.contact_person')}>
-                                    <input 
-                                        type="text" name="contactPerson" required
-                                        className="form-input-luxury"
-                                        placeholder="Full Name"
-                                        value={formData.contactPerson} onChange={handleInputChange}
-                                        onFocus={handleFocus}
-                                    />
-                                </FormGroup>
-                                <FormGroup label={t('booking_page.form.email')}>
-                                    <input 
-                                        type="email" name="email" required
-                                        className="form-input-luxury"
-                                        placeholder="email@example.com"
-                                        value={formData.email} onChange={handleInputChange}
-                                        onFocus={handleFocus}
-                                    />
-                                </FormGroup>
-                                <FormGroup label={t('booking_page.form.phone')}>
-                                    <input 
-                                        type="tel" name="phone" required
-                                        className="form-input-luxury"
-                                        placeholder="+359 ..."
-                                        value={formData.phone} onChange={handleInputChange}
-                                        onFocus={handleFocus}
-                                    />
-                                </FormGroup>
-                                <FormGroup label={t('booking_page.form.website')}>
-                                    <input 
-                                        type="url" name="website"
-                                        className="form-input-luxury"
-                                        placeholder="https://..."
-                                        value={formData.website} onChange={handleInputChange}
-                                        onFocus={handleFocus}
-                                    />
-                                </FormGroup>
-                                <FormGroup label={t('booking_page.form.project_type')}>
-                                    <select 
-                                        name="projectType" required
-                                        className="form-input-luxury appearance-none"
-                                        value={formData.projectType} onChange={handleInputChange}
-                                        onFocus={handleFocus}
-                                    >
-                                        <option value="" disabled>{currentLang === 'bg' ? 'Тип проект' : 'Project Type'}</option>
-                                        <option value="editorial">Editorial</option>
-                                        <option value="commercial">Commercial</option>
-                                        <option value="runway">Runway</option>
-                                        <option value="lookbook">Lookbook</option>
-                                        <option value="other">Other</option>
-                                    </select>
-                                </FormGroup>
-                                <FormGroup label={t('booking_page.form.shoot_date')}>
-                                    <input 
-                                        type="date" name="shootDate" required
-                                        className="form-input-luxury"
-                                        value={formData.shootDate} onChange={handleInputChange}
-                                        onFocus={handleFocus}
-                                    />
-                                </FormGroup>
-                            </div>
-
-                            <FormGroup label={t('booking_page.form.location')}>
-                                <input 
-                                    type="text" name="location" required
-                                    className="form-input-luxury"
-                                    placeholder="Sofia, London, Paris..."
-                                    value={formData.location} onChange={handleInputChange}
-                                    onFocus={handleFocus}
-                                />
-                            </FormGroup>
-
-                            <FormGroup label={t('booking_page.form.message')}>
-                                <textarea 
-                                    name="message" rows={5}
-                                    className="form-input-luxury resize-none"
-                                    placeholder={t('booking_page.form.message_placeholder')}
-                                    value={formData.message} onChange={handleInputChange}
-                                    onFocus={handleFocus}
-                                />
-                            </FormGroup>
-
-                            <div className="pt-4">
-                                <motion.button
-                                    whileHover={{ scale: 1.02, backgroundColor: 'var(--gold-accent)' }}
-                                    whileTap={{ scale: 0.98 }}
-                                    type="submit"
-                                    className="w-full py-5 bg-gold-accent text-background font-bold uppercase tracking-[0.3em] text-xs rounded-2xl transition-all shadow-[0_20px_40px_rgba(201,162,39,0.3)] hover:shadow-[0_25px_50px_rgba(201,162,39,0.5)]"
-                                >
-                                    {t('booking_page.form.submit')}
-                                </motion.button>
-                            </div>
-                        </form>
-                    </motion.div>
-                </div>
-            </div>
-
+        <div className="min-h-screen bg-[#080808] pb-24 relative overflow-hidden font-sans">
             <style dangerouslySetInnerHTML={{ __html: `
-                .form-input-luxury {
-                    width: 100%;
-                    background: rgba(0, 0, 0, 0.4);
-                    border: 1px solid rgba(255, 255, 255, 0.08);
-                    border-radius: 1.25rem;
-                    padding: 1rem 1.25rem;
-                    color: white;
-                    font-size: 0.9rem;
-                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                    scroll-margin-top: 6rem;
+                .custom-number-input::-webkit-inner-spin-button, 
+                .custom-number-input::-webkit-outer-spin-button { 
+                    -webkit-appearance: none; 
+                    margin: 0; 
                 }
-                .form-input-luxury:focus {
-                    outline: none;
-                    border-color: rgba(201, 162, 39, 0.6);
-                    background: rgba(0, 0, 0, 0.5);
-                    box-shadow: 0 0 25px rgba(201, 162, 39, 0.1);
+                .custom-number-input {
+                    -moz-appearance: textfield;
                 }
-                .form-input-luxury::placeholder {
-                    color: rgba(255, 255, 255, 0.15);
+                /* Satin background texture */
+                .satin-bg {
+                    background: radial-gradient(ellipse at 50% 0%, #1a1a1a 0%, #050505 80%);
                 }
             `}} />
+
+            <div className="absolute inset-0 pointer-events-none satin-bg opacity-80" />
+            
+            <div className="relative z-10 pt-16 pb-10 text-center">
+                <h1 className="text-3xl md:text-5xl lg:text-5xl font-serif text-[#e0e0e0] tracking-[0.1em] uppercase mb-4 shadow-black drop-shadow-[0_5px_10px_rgba(0,0,0,1)]">
+                    Индивидуални Проекти
+                </h1>
+                <p className="text-[#981b1b] text-xs md:text-sm uppercase tracking-[0.2em] font-medium drop-shadow-md">
+                    Изработени специално за теб
+                </p>
+            </div>
+
+            <div className="container mx-auto px-4 max-w-4xl relative z-20">
+                {/* Outer Bezel */}
+                <div className="bg-gradient-to-b from-[#404040] via-[#222] to-[#111] p-[3px] rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.9)]">
+                    {/* Inner Bezel */}
+                    <div className="bg-[#111] p-[4px] rounded-[10px]">
+                        {/* Main Container */}
+                        <div className="bg-gradient-to-br from-[#1d1d1d] to-[#121212] rounded-lg p-5 md:p-8 xl:p-10 border border-black shadow-[inset_0_0_20px_rgba(0,0,0,0.8)] relative overflow-hidden">
+                            
+                            {/* Texture Overlay */}
+                            <div className="absolute inset-0 opacity-[0.03] mix-blend-overlay pointer-events-none" style={{ backgroundImage: 'repeating-linear-gradient(45deg, #000 0, #000 2px, transparent 2px, transparent 4px)' }}></div>
+                            
+                            <div className="relative z-10">
+                                {/* Special Offer Banner */}
+                                <div className="relative bg-gradient-to-b from-[#3a0a0a] to-[#150202] rounded-md border border-[#551313] p-4 mb-8 flex items-center gap-4 shadow-[inset_0_1px_0_rgba(255,100,100,0.1),0_2px_10px_rgba(0,0,0,0.5)] overflow-hidden">
+                                    <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white/5 to-transparent pointer-events-none"></div>
+                                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-full border border border-[#7a1818] bg-gradient-to-b from-[#2a0505] to-[#110000] flex items-center justify-center shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)] shrink-0 relative">
+                                        <div className="absolute inset-1 rounded-full border border-red-500/20 border-dashed animate-[spin_10s_linear_infinite]"></div>
+                                        <AlertCircle className="text-[#cc2222] w-5 h-5 md:w-6 md:h-6 relative z-10 drop-shadow-[0_0_5px_rgba(200,0,0,0.5)]" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-[#cebc89] font-semibold uppercase tracking-widest text-xs md:text-sm">Специална Оферта</h3>
+                                        <p className="text-gray-300 text-[10px] md:text-xs mt-1">Поръчай <span className="text-white font-bold tracking-wider">50+ БРОЯ</span> за <span className="text-red-500 font-bold uppercase tracking-widest px-1 py-0.5 border border-red-500/30 rounded-sm ml-1 bg-red-500/10">Безплатен</span> проект!</p>
+                                    </div>
+                                </div>
+
+                                <form onSubmit={handleSubmit} className="space-y-6">
+                                    {/* Full Name Field */}
+                                    <GlossyInput 
+                                        name="fullName" 
+                                        label="ИМЕ И ФАМИЛИЯ" 
+                                        placeholder="Име и Фамилия" 
+                                        value={formData.fullName} 
+                                        onChange={handleInputChange} 
+                                        onKeyDown={handleKeyDown} 
+                                        icon={<UserIcon size={18} className="text-[#cebc89]" />} 
+                                    />
+                                    
+                                    {/* Full Width: Phone & Email */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <GlossyInput
+                                            label="ТЕЛЕФОН"
+                                            name="phone"
+                                            type="tel"
+                                            placeholder="08X XXX XXXX"
+                                            icon={<Phone size={18} className="text-[#cebc89]" />}
+                                            value={formData.phone}
+                                            onChange={handleInputChange}
+                                            onKeyDown={handleKeyDown}
+                                        />
+                                        <GlossyInput
+                                            label="Имейл"
+                                            name="email"
+                                            type="email"
+                                            placeholder="Въведете вашия имейл"
+                                            icon={<Mail size={18} className="text-[#cebc89]" />}
+                                            value={formData.email}
+                                            onChange={handleInputChange}
+                                            onKeyDown={handleKeyDown}
+                                        />
+                                    </div>
+
+                                    {/* Three Columns: Dimensions & Quantity */}
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                        <MeasurementInput name="width" label="ШИР." unit="СМ" icon="📏" value={formData.width} onChange={handleInputChange} onKeyDown={handleKeyDown} />
+                                        <MeasurementInput name="height" label="ВИС." unit="СМ" icon="📏" value={formData.height} onChange={handleInputChange} onKeyDown={handleKeyDown} />
+                                        <MeasurementInput name="quantity" label="БРОЙ" unit="бр." icon="📦" value={formData.quantity} onChange={handleInputChange} min="1" onKeyDown={handleKeyDown} />
+                                    </div>
+
+                                    {/* Textarea Description */}
+                                    <div className="space-y-1.5 mt-2">
+                                        <div className="flex justify-between items-center px-1">
+                                            <label className="text-[#a09060] text-[9px] md:text-[10px] font-bold tracking-[0.15em] uppercase">Описание</label>
+                                            <span className="text-[#777] text-[9px] font-bold bg-[#111] px-2 py-0.5 rounded border border-[#222] shadow-inner">{formData.description.length}/500</span>
+                                        </div>
+                                        <div className="relative rounded-md p-[1px] bg-gradient-to-b from-[#3a3a3a] to-[#151515]">
+                                             <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none rounded-md mix-blend-overlay z-10"></div>
+                                             <textarea
+                                                 name="description" required rows={4} maxLength={500}
+                                                 placeholder="ОПИШИ ИДЕЯТА (МАКС 500 ЗНАКА)..."
+                                                 value={formData.description} onChange={handleInputChange}
+                                                 autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck="false"
+                                                 className="w-full bg-[#181818] text-gray-200 placeholder-[#444] text-[13px] md:text-sm p-4 rounded-md border-none focus:ring-1 focus:ring-[#555] resize-none shadow-[inset_0_3px_15px_rgba(0,0,0,0.9)] relative z-20 font-medium"
+                                             />
+                                             <div className="absolute top-[1px] left-[1px] right-[1px] h-[30%] bg-gradient-to-b from-white/5 to-transparent rounded-t-md pointer-events-none z-30"></div>
+                                        </div>
+                                    </div>
+
+                                    {/* Photos Section */}
+                                    <div className="space-y-1.5 pt-2">
+                                        <div className="relative bg-[#1a1a1a] rounded-t-md border-b border-[#333] p-2 flex justify-between items-center shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_5px_10px_rgba(0,0,0,0.3)] z-20">
+                                            <label className="text-[#a09060] text-[9px] md:text-[10px] font-bold tracking-[0.15em] uppercase pl-2">Снимки</label>
+                                            <div className="flex items-center">
+                                                <span className="text-[#888] text-[9px] font-bold tracking-widest mr-3">ДОБАВИ</span>
+                                                <div className="flex gap-1 mr-3">
+                                                    {[...Array(5)].map((_, i) => (
+                                                        <div key={i} className={`w-2 h-2 rounded-full shadow-inner border border-black/50 ${i < photos.length ? 'bg-[#cebc89] shadow-[0_0_5px_#cebc89]' : 'bg-[#111] shadow-[inset_0_1px_3px_rgba(0,0,0,1)]'}`} />
+                                                    ))}
+                                                </div>
+                                                <span className="text-gray-400 text-[10px] font-bold">{photos.length}/5</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="relative rounded-b-md p-[2px] bg-gradient-to-b from-[#2a2a2a] to-[#111] -mt-1 pt-1">
+                                            <div className="bg-[#141414] rounded-b-md p-6 shadow-[inset_0_10px_20px_rgba(0,0,0,0.9)] flex flex-col items-center justify-center relative overflow-hidden min-h-[160px]">
+                                                <input 
+                                                     type="file" multiple accept="image/*" className="hidden" 
+                                                     ref={fileInputRef} onChange={handleFileChange} disabled={photos.length >= 5}
+                                                 />
+                                                 
+                                                 {photos.length === 0 ? (
+                                                     <div className="flex flex-col items-center justify-center py-4">
+                                                         <button type="button" onClick={() => fileInputRef.current?.click()} disabled={photos.length >= 5}
+                                                             className="relative group w-20 h-14 md:w-24 md:h-16 flex items-center justify-center transition-transform hover:scale-105 active:scale-95 cursor-pointer"
+                                                         >
+                                                             {/* Outer button rim */}
+                                                             <div className="absolute inset-0 bg-gradient-to-b from-[#404040] to-[#111] rounded-[1.5rem] shadow-[0_5px_15px_rgba(0,0,0,1)] border border-[#111]"></div>
+                                                             {/* Inner depressed area */}
+                                                             <div className="absolute inset-1.5 bg-gradient-to-t from-[#151515] to-[#252525] rounded-[1.2rem] shadow-[inset_0_3px_6px_rgba(0,0,0,0.8)] border border-[#000]"></div>
+                                                             {/* Glass/metal center */}
+                                                             <div className="absolute inset-2.5 bg-gradient-to-br from-[#1a1a1a] to-[#0a0a0a] rounded-full shadow-[0_2px_5px_rgba(0,0,0,0.5)] flex items-center justify-center border border-[#333]">
+                                                                 <div className="text-[#a09060] text-2xl font-light drop-shadow-[0_0_5px_rgba(200,180,120,0.4)]">+</div>
+                                                             </div>
+                                                         </button>
+                                                         <p className="mt-5 text-[#555] text-[9px] font-semibold tracking-[0.2em] uppercase cursor-pointer transition-colors hover:text-[#888]" onClick={() => fileInputRef.current?.click()}>
+                                                             Прикачи примерни снимки или скици
+                                                         </p>
+                                                     </div>
+                                                 ) : (
+                                                      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 w-full h-full relative z-10 p-2">
+                                                         <AnimatePresence>
+                                                             {photos.map((file, idx) => (
+                                                                 <motion.div 
+                                                                     initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}
+                                                                     key={file.name + idx} 
+                                                                     className="relative aspect-square rounded-md overflow-hidden bg-black border border-[#333] group shadow-[0_5px_15px_rgba(0,0,0,0.8)]"
+                                                                 >
+                                                                     <img 
+                                                                         src={URL.createObjectURL(file)} alt="Upload"
+                                                                         className="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-opacity"
+                                                                     />
+                                                                     <button
+                                                                         type="button" onClick={() => removePhoto(idx)}
+                                                                         className="absolute top-1 right-1 w-6 h-6 bg-[#981b1b] border border-[#ff4444] flex items-center justify-center rounded-sm opacity-0 group-hover:opacity-100 transition-all shadow-md active:scale-95"
+                                                                     >
+                                                                         <span className="text-white text-[10px] font-bold">✕</span>
+                                                                     </button>
+                                                                 </motion.div>
+                                                             ))}
+                                                             {photos.length < 5 && (
+                                                                 <motion.button type="button" onClick={() => fileInputRef.current?.click()} className="aspect-square rounded-md border border-[#333] border-dashed bg-[#111] flex flex-col items-center justify-center transition-colors hover:bg-[#1a1a1a] hover:border-[#555] shadow-[inset_0_2px_10px_rgba(0,0,0,0.8)]">
+                                                                     <Plus className="text-[#555] w-5 h-5 mb-1" />
+                                                                 </motion.button>
+                                                             )}
+                                                         </AnimatePresence>
+                                                     </div>
+                                                 )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    {/* Submit Button & Clear Form */}
+                                    <div className="pt-6">
+                                        <div className="flex justify-end pr-1 mb-2">
+                                            <button 
+                                                type="button"
+                                                onClick={() => setShowClearConfirm(true)}
+                                                className="text-[#888] hover:text-[#cebc89] text-[10px] md:text-xs font-bold uppercase tracking-widest transition-colors flex items-center gap-1 active:scale-95"
+                                            >
+                                                <X size={14} />
+                                                Изчисти формата
+                                            </button>
+                                        </div>
+                                        <div className="relative rounded-md p-[2px] bg-gradient-to-b from-[#888] to-[#222] shadow-[0_10px_30px_rgba(0,0,0,0.8)]">
+                                            <button
+                                                type="submit" disabled={isSubmitting}
+                                                className="w-full relative overflow-hidden bg-gradient-to-b from-[#b11f1f] to-[#590a0a] rounded-[4px] py-4 md:py-5 flex items-center justify-center gap-2 transition-all hover:brightness-110 active:scale-[0.99] disabled:opacity-70 disabled:filter-none shadow-[inset_0_0_15px_rgba(0,0,0,0.5)] border border-[#330000]"
+                                            >
+                                                {/* Button glass highlight */}
+                                                <div className="absolute top-0 left-0 w-full h-[45%] bg-gradient-to-b from-white/20 to-transparent pointer-events-none mix-blend-overlay"></div>
+                                                <span className="text-[#f0f0f0] font-semibold text-sm md:text-base tracking-[0.15em] relative z-10 uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                                                    {isSubmitting ? "ИЗПРАЩАНЕ..." : "ИЗПРАТИ ЗАПИТВАНЕ"}
+                                                </span>
+                                                {!isSubmitting && <span className="text-[#f0f0f0] text-lg font-bold relative z-10 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] mb-0.5">→</span>}
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <AnimatePresence>
+                {showClearConfirm && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, y: 20 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.9, y: 20 }}
+                            className="bg-gradient-to-b from-[#222] to-[#111] p-[2px] rounded-xl w-full max-w-sm shadow-[0_20px_50px_rgba(0,0,0,0.9)]"
+                        >
+                            <div className="bg-[#111] rounded-[10px] overflow-hidden">
+                                <div className="p-6 md:p-8">
+                                    <h3 className="text-[#cebc89] font-semibold uppercase tracking-widest text-base md:text-lg mb-2 text-center">
+                                        Внимание
+                                    </h3>
+                                    <p className="text-gray-300 text-sm md:text-base text-center mb-8">
+                                        Сигурни ли сте, че искате да изчистите цялата форма и прикачените снимки?
+                                    </p>
+                                    <div className="flex gap-4">
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowClearConfirm(false)}
+                                            className="flex-1 bg-[#222] hover:bg-[#333] text-white py-3 rounded-md font-semibold text-xs md:text-sm uppercase tracking-widest transition-colors"
+                                        >
+                                            Отказ
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={handleClearForm}
+                                            className="flex-1 bg-gradient-to-b from-[#8b1818] to-[#590a0a] hover:from-[#a01c1c] hover:to-[#6b0c0c] text-white py-3 rounded-md font-semibold text-xs md:text-sm uppercase tracking-widest transition-all shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_2px_10px_rgba(0,0,0,0.5)] border border-[#300]"
+                                        >
+                                            Изчисти
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+
+                {showSubmitConfirm && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, y: 20 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.9, y: 20 }}
+                            className="bg-gradient-to-b from-[#222] to-[#111] p-[2px] rounded-xl w-full max-w-sm shadow-[0_20px_50px_rgba(0,0,0,0.9)]"
+                        >
+                            <div className="bg-[#111] rounded-[10px] overflow-hidden">
+                                <div className="p-6 md:p-8">
+                                    <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-red-500/20">
+                                        <Mail className="text-red-500" size={30} />
+                                    </div>
+                                    <h3 className="text-[#cebc89] font-semibold uppercase tracking-widest text-base md:text-lg mb-2 text-center">
+                                        Потвърждение
+                                    </h3>
+                                    <p className="text-gray-300 text-sm md:text-base text-center mb-8">
+                                        Готови ли сте да изпратите вашето запитване за индивидуален дизайн?
+                                    </p>
+                                    <div className="flex gap-4">
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowSubmitConfirm(false)}
+                                            className="flex-1 bg-[#222] hover:bg-[#333] text-white py-3 rounded-md font-semibold text-xs md:text-sm uppercase tracking-widest transition-colors"
+                                        >
+                                            Отказ
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={handleActualSubmit}
+                                            className="flex-1 bg-gradient-to-b from-[#b11f1f] to-[#590a0a] hover:from-[#a01c1c] hover:to-[#6b0c0c] text-white py-3 rounded-md font-semibold text-xs md:text-sm uppercase tracking-widest transition-all shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_2px_10px_rgba(0,0,0,0.5)] border border-[#300]"
+                                        >
+                                            Изпрати
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };
 
-const FormGroup: React.FC<{ label: string, children: React.ReactNode }> = ({ label, children }) => (
-    <div className="space-y-2">
-        <label className="block text-[10px] uppercase tracking-widest text-text-muted font-bold ml-1">
+const GlossyInput = ({ name, label, placeholder, type = "text", value, onChange, onKeyDown }: any) => (
+    <div className="space-y-1.5 flex flex-col">
+        <label className="text-[#a09060] text-[9px] md:text-[10px] font-bold tracking-[0.15em] uppercase px-1">
             {label}
         </label>
-        {children}
+        <div className="relative rounded-md p-[1px] bg-gradient-to-b from-[#3a3a3a] to-[#151515]">
+            <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none rounded-md z-10 mix-blend-overlay"></div>
+            <input 
+                type={type} name={name} required placeholder={placeholder} value={value} onChange={onChange}
+                onKeyDown={onKeyDown}
+                autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck="false"
+                className="w-full bg-[#181818] text-gray-200 placeholder-[#444] text-[13px] md:text-sm px-4 py-3 min-h-[44px] rounded-md border-none focus:ring-1 focus:ring-[#555] shadow-[inset_0_3px_10px_rgba(0,0,0,0.9)] relative z-20 font-medium"
+            />
+            <div className="absolute top-[1px] left-[1px] right-[1px] h-[40%] bg-gradient-to-b from-white/5 to-transparent rounded-t-md pointer-events-none z-30"></div>
+        </div>
+    </div>
+);
+
+const MeasurementInput = ({ name, label, unit, value, icon, onChange, min, onKeyDown }: any) => (
+    <div className="space-y-1.5 flex flex-col">
+        <label className="text-[#a09060] text-[9px] md:text-[10px] font-bold tracking-[0.15em] uppercase px-1">
+            {label}
+        </label>
+        <div className="relative rounded-md p-[1px] bg-gradient-to-b from-[#3a3a3a] to-[#151515] h-[46px] flex items-center">
+            {/* Background */}
+            <div className="absolute inset-[1px] rounded-md bg-[#181818] shadow-[inset_0_3px_10px_rgba(0,0,0,0.9)] z-0"></div>
+            
+            <div className="relative z-10 flex items-center justify-between w-full h-full px-3">
+                {/* Left Icon Area */}
+                <div className="opacity-40 grayscale sepia contrast-150 brightness-50 text-[18px]">
+                    {icon}
+                </div>
+
+                {/* Counter Input area */}
+                <div className="w-[4.5rem] h-7 bg-[#0a0a0a] border border-black rounded-sm flex items-center justify-center shadow-[inset_0_2px_6px_rgba(0,0,0,1)] relative shadow-[0_1px_0_rgba(255,255,255,0.05)]">
+                    <input 
+                        type="number" name={name} required min={min} placeholder="0" value={value} onChange={onChange}
+                        onKeyDown={onKeyDown}
+                        autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck="false"
+                        className="w-full h-full bg-transparent text-center text-[#d0d0d0] text-sm md:text-base font-bold border-none focus:ring-0 appearance-none p-0 custom-number-input relative z-10"
+                    />
+                    {/* Shadow overlay to look like mechanical counter wheel */}
+                    <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-black/80 via-transparent to-black/80 rounded-sm z-20"></div>
+                </div>
+
+                {/* Right Unit Area */}
+                <div className="text-[#a09060] text-[10px] md:text-xs font-bold shrink-0 lowercase">
+                    {unit}
+                </div>
+            </div>
+            
+            {/* Top Gloss */}
+            <div className="absolute top-[1px] left-[1px] right-[1px] h-1/2 bg-gradient-to-b from-white/5 to-transparent pointer-events-none z-20 rounded-t-md mix-blend-overlay"></div>
+        </div>
     </div>
 );
 

@@ -1,0 +1,194 @@
+/**
+ * Download 10cm product images from Google Sites
+ * Skip 2 logos, handle duplicate 10cm-298, number sequentially
+ */
+const { chromium } = require('playwright-core');
+const https = require('https');
+const fs = require('fs');
+const path = require('path');
+
+const OUTPUT_DIR = path.join(__dirname, 'public', 'Site_Pics', 'Decals', '10cm');
+const URL_PAGE = 'https://sites.google.com/view/cardecor/10cm?authuser=0';
+
+if (fs.existsSync(OUTPUT_DIR)) fs.rmSync(OUTPUT_DIR, { recursive: true });
+fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+
+function downloadFile(url, filepath) {
+    return new Promise((resolve, reject) => {
+        const file = fs.createWriteStream(filepath);
+        https.get(url, (response) => {
+            if (response.statusCode === 301 || response.statusCode === 302) {
+                file.close();
+                try { fs.unlinkSync(filepath); } catch(e) {}
+                downloadFile(response.headers.location, filepath).then(resolve).catch(reject);
+                return;
+            }
+            response.pipe(file);
+            file.on('finish', () => { file.close(resolve); });
+        }).on('error', (err) => {
+            fs.unlink(filepath, () => {});
+            reject(err);
+        });
+    });
+}
+
+// Product names as listed on Google Sites (in order)
+// Note: 10cm-107 has no price listed, 247-249 and 278 are skipped, 298 is duplicated
+const products = [
+  {n:'10cm-01',e:0.40},{n:'10cm-02',e:0.64},{n:'10cm-03',e:0.38},{n:'10cm-04',e:0.42},
+  {n:'10cm-05',e:0.38},{n:'10cm-06',e:0.26},{n:'10cm-07',e:0.49},{n:'10cm-08',e:0.49},
+  {n:'10cm-09',e:0.49},{n:'10cm-10',e:0.49},{n:'10cm-11',e:0.40},{n:'10cm-12',e:0.47},
+  {n:'10cm-13',e:0.47},{n:'10cm-14',e:0.40},{n:'10cm-15',e:0.57},{n:'10cm-16',e:0.54},
+  {n:'10cm-17',e:0.54},{n:'10cm-18',e:0.56},{n:'10cm-19',e:0.56},{n:'10cm-20',e:0.54},
+  {n:'10cm-21',e:0.54},{n:'10cm-22',e:0.54},{n:'10cm-23',e:0.56},{n:'10cm-24',e:0.56},
+  {n:'10cm-25',e:0.56},{n:'10cm-26',e:0.56},{n:'10cm-27',e:0.54},{n:'10cm-28',e:0.56},
+  {n:'10cm-29',e:0.51},{n:'10cm-30',e:0.51},{n:'10cm-31',e:0.56},{n:'10cm-32',e:0.51},
+  {n:'10cm-33',e:0.51},{n:'10cm-34',e:0.56},{n:'10cm-35',e:0.51},{n:'10cm-36',e:0.64},
+  {n:'10cm-37',e:0.64},{n:'10cm-38',e:0.50},{n:'10cm-39',e:0.64},{n:'10cm-40',e:0.64},
+  {n:'10cm-41',e:0.84},{n:'10cm-42',e:0.84},{n:'10cm-43',e:0.49},{n:'10cm-44',e:0.61},
+  {n:'10cm-45',e:0.40},{n:'10cm-46',e:0.64},{n:'10cm-47',e:0.64},{n:'10cm-48',e:0.42},
+  {n:'10cm-49',e:0.40},{n:'10cm-50',e:0.49},{n:'10cm-51',e:0.59},{n:'10cm-52',e:0.59},
+  {n:'10cm-53',e:0.59},{n:'10cm-54',e:0.40},{n:'10cm-55',e:0.56},{n:'10cm-56',e:0.40},
+  {n:'10cm-57',e:0.40},{n:'10cm-58',e:0.50},{n:'10cm-59',e:0.44},{n:'10cm-60',e:0.44},
+  {n:'10cm-61',e:0.38},{n:'10cm-62',e:0.38},{n:'10cm-63',e:0.42},{n:'10cm-64',e:0.27},
+  {n:'10cm-65',e:0.61},{n:'10cm-66',e:0.49},{n:'10cm-67',e:0.40},{n:'10cm-68',e:0.50},
+  {n:'10cm-69',e:0.50},{n:'10cm-70',e:0.42},{n:'10cm-71',e:0.43},{n:'10cm-72',e:0.51},
+  {n:'10cm-73',e:0.49},{n:'10cm-74',e:0.59},{n:'10cm-75',e:0.59},{n:'10cm-76',e:0.59},
+  {n:'10cm-77',e:0.74},{n:'10cm-78',e:0.49},{n:'10cm-79',e:0.60},{n:'10cm-80',e:0.59},
+  {n:'10cm-81',e:0.64},{n:'10cm-82',e:0.40},{n:'10cm-83',e:0.38},{n:'10cm-84',e:0.40},
+  {n:'10cm-85',e:0.40},{n:'10cm-86',e:0.40},{n:'10cm-87',e:0.40},{n:'10cm-88',e:0.40},
+  {n:'10cm-89',e:0.49},{n:'10cm-90',e:0.45},{n:'10cm-91',e:0.49},{n:'10cm-92',e:0.40},
+  {n:'10cm-93',e:0.59},{n:'10cm-94',e:0.59},{n:'10cm-95',e:0.54},{n:'10cm-96',e:0.50},
+  {n:'10cm-97',e:0.56},{n:'10cm-98',e:0.42},{n:'10cm-99',e:0.40},{n:'10cm-100',e:0.40},
+  {n:'10cm-101',e:0.40},{n:'10cm-102',e:0.57},{n:'10cm-103',e:0.57},{n:'10cm-104',e:0.59},
+  {n:'10cm-105',e:0.59},{n:'10cm-106',e:0.59},{n:'10cm-107',e:0.49},{n:'10cm-108',e:0.49},
+  {n:'10cm-109',e:0.40},{n:'10cm-110',e:0.56},{n:'10cm-111',e:0.42},{n:'10cm-112',e:0.43},
+  {n:'10cm-113',e:0.43},{n:'10cm-114',e:0.43},{n:'10cm-115',e:0.43},{n:'10cm-116',e:0.51},
+  {n:'10cm-117',e:0.59},{n:'10cm-118',e:0.54},{n:'10cm-119',e:0.40},{n:'10cm-120',e:0.49},
+  {n:'10cm-121',e:0.40},{n:'10cm-122',e:0.40},{n:'10cm-123',e:0.40},{n:'10cm-124',e:0.40},
+  {n:'10cm-125',e:0.40},{n:'10cm-126',e:0.40},{n:'10cm-127',e:0.38},{n:'10cm-128',e:0.40},
+  {n:'10cm-129',e:0.42},{n:'10cm-130',e:0.40},{n:'10cm-131',e:0.40},{n:'10cm-132',e:0.59},
+  {n:'10cm-133',e:0.59},{n:'10cm-134',e:0.59},{n:'10cm-135',e:0.51},{n:'10cm-136',e:0.51},
+  {n:'10cm-137',e:0.51},{n:'10cm-138',e:0.51},{n:'10cm-139',e:0.43},{n:'10cm-140',e:0.59},
+  {n:'10cm-141',e:0.57},{n:'10cm-142',e:0.66},{n:'10cm-143',e:0.40},{n:'10cm-144',e:0.40},
+  {n:'10cm-145',e:0.52},{n:'10cm-146',e:0.54},{n:'10cm-147',e:0.40},{n:'10cm-148',e:0.44},
+  {n:'10cm-149',e:0.74},{n:'10cm-150',e:0.69},{n:'10cm-151',e:0.69},{n:'10cm-152',e:0.77},
+  {n:'10cm-153',e:0.59},{n:'10cm-154',e:0.59},{n:'10cm-155',e:0.54},{n:'10cm-156',e:0.59},
+  {n:'10cm-157',e:0.49},{n:'10cm-158',e:0.49},{n:'10cm-159',e:0.40},{n:'10cm-160',e:0.40},
+  {n:'10cm-161',e:0.64},{n:'10cm-162',e:0.40},{n:'10cm-163',e:0.51},{n:'10cm-164',e:0.29},
+  {n:'10cm-165',e:0.42},{n:'10cm-166',e:0.54},{n:'10cm-167',e:0.42},{n:'10cm-168',e:0.42},
+  {n:'10cm-169',e:0.42},{n:'10cm-170',e:0.42},{n:'10cm-171',e:0.58},{n:'10cm-172',e:0.42},
+  {n:'10cm-173',e:0.42},{n:'10cm-174',e:0.42},{n:'10cm-175',e:0.42},{n:'10cm-176',e:0.28},
+  {n:'10cm-177',e:0.50},{n:'10cm-178',e:0.54},{n:'10cm-179',e:0.38},{n:'10cm-180',e:0.38},
+  {n:'10cm-181',e:0.59},{n:'10cm-182',e:0.51},{n:'10cm-183',e:0.56},{n:'10cm-184',e:0.49},
+  {n:'10cm-185',e:0.51},{n:'10cm-186',e:0.59},{n:'10cm-187',e:0.59},{n:'10cm-188',e:0.59},
+  {n:'10cm-189',e:0.59},{n:'10cm-190',e:0.59},{n:'10cm-191',e:0.59},{n:'10cm-192',e:0.59},
+  {n:'10cm-193',e:0.59},{n:'10cm-194',e:0.57},{n:'10cm-195',e:0.57},{n:'10cm-196',e:0.64},
+  {n:'10cm-197',e:0.57},{n:'10cm-198',e:0.57},{n:'10cm-199',e:0.64},{n:'10cm-200',e:0.64},
+  {n:'10cm-201',e:0.49},{n:'10cm-202',e:0.49},{n:'10cm-203',e:0.49},{n:'10cm-204',e:0.49},
+  {n:'10cm-205',e:0.64},{n:'10cm-206',e:0.57},{n:'10cm-207',e:0.57},{n:'10cm-208',e:0.66},
+  {n:'10cm-209',e:0.84},{n:'10cm-210',e:0.54},{n:'10cm-211',e:0.59},{n:'10cm-212',e:0.56},
+  {n:'10cm-213',e:0.64},{n:'10cm-214',e:0.40},{n:'10cm-215',e:0.42},{n:'10cm-216',e:0.60},
+  {n:'10cm-217',e:0.64},{n:'10cm-218',e:0.56},{n:'10cm-219',e:0.42},{n:'10cm-220',e:0.42},
+  {n:'10cm-221',e:0.42},{n:'10cm-222',e:0.40},{n:'10cm-223',e:0.40},{n:'10cm-224',e:0.51},
+  {n:'10cm-225',e:0.59},{n:'10cm-226',e:0.40},{n:'10cm-227',e:0.51},{n:'10cm-228',e:0.56},
+  {n:'10cm-229',e:0.56},{n:'10cm-230',e:0.57},{n:'10cm-231',e:0.57},{n:'10cm-232',e:0.60},
+  {n:'10cm-233',e:0.60},{n:'10cm-234',e:0.60},{n:'10cm-235',e:0.42},{n:'10cm-236',e:0.59},
+  {n:'10cm-237',e:0.50},{n:'10cm-238',e:0.54},{n:'10cm-239',e:0.54},{n:'10cm-240',e:0.43},
+  {n:'10cm-241',e:0.43},{n:'10cm-242',e:0.43},{n:'10cm-243',e:0.59},{n:'10cm-244',e:0.59},
+  {n:'10cm-245',e:0.66},{n:'10cm-246',e:0.74},{n:'10cm-250',e:0.61},{n:'10cm-251',e:0.64},
+  {n:'10cm-252',e:0.59},{n:'10cm-253',e:0.59},{n:'10cm-254',e:0.51},{n:'10cm-255',e:0.43},
+  {n:'10cm-256',e:0.66},{n:'10cm-257',e:0.74},{n:'10cm-258',e:0.49},{n:'10cm-259',e:0.49},
+  {n:'10cm-260',e:0.45},{n:'10cm-261',e:0.45},{n:'10cm-262',e:0.40},{n:'10cm-263',e:0.43},
+  {n:'10cm-264',e:0.43},{n:'10cm-265',e:0.64},{n:'10cm-266',e:0.49},{n:'10cm-267',e:0.87},
+  {n:'10cm-268',e:0.87},{n:'10cm-269',e:0.40},{n:'10cm-270',e:0.87},{n:'10cm-271',e:0.87},
+  {n:'10cm-272',e:1.30},{n:'10cm-273',e:0.49},{n:'10cm-274',e:0.64},{n:'10cm-275',e:0.74},
+  {n:'10cm-276',e:0.43},{n:'10cm-277',e:0.87},{n:'10cm-279',e:0.40},{n:'10cm-280',e:0.40},
+  {n:'10cm-281',e:0.79},{n:'10cm-282',e:0.40},{n:'10cm-283',e:0.40},{n:'10cm-284',e:0.43},
+  {n:'10cm-285',e:0.43},{n:'10cm-286',e:0.49},{n:'10cm-287',e:0.49},{n:'10cm-288',e:0.49},
+  {n:'10cm-289',e:0.54},{n:'10cm-290',e:0.80},{n:'10cm-291',e:0.54},{n:'10cm-292',e:0.49},
+  {n:'10cm-293',e:0.49},{n:'10cm-294',e:0.49},{n:'10cm-295',e:0.49},{n:'10cm-296',e:0.49},
+  {n:'10cm-297',e:0.59},{n:'10cm-298',e:0.59},{n:'10cm-299',e:0.40},
+];
+
+console.log(`Total products defined: ${products.length}`);
+
+// Save product data for later use
+fs.writeFileSync(path.join(__dirname, '10cm_data.json'), JSON.stringify(products, null, 2));
+
+async function main() {
+    console.log('Launching browser...');
+    const browser = await chromium.launch({ headless: true });
+    const page = await browser.newPage();
+    
+    console.log('Navigating to Google Sites 10cm page...');
+    await page.goto(URL_PAGE, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await page.waitForTimeout(3000);
+    
+    console.log('Scrolling to load all images...');
+    for (let i = 0; i < 80; i++) {
+        await page.evaluate(() => window.scrollBy(0, 600));
+        await page.waitForTimeout(200);
+    }
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.waitForTimeout(500);
+    for (let i = 0; i < 80; i++) {
+        await page.evaluate(() => window.scrollBy(0, 600));
+        await page.waitForTimeout(150);
+    }
+    
+    console.log('Extracting image URLs...');
+    const allUrls = await page.evaluate(() => {
+        return Array.from(document.querySelectorAll('img'))
+            .map(img => img.src)
+            .filter(src => src && src.includes('googleusercontent.com/sitesv/'));
+    });
+    
+    console.log(`Total images on page: ${allUrls.length}`);
+    await browser.close();
+    
+    // Skip first 2 (logos)
+    let productUrls = allUrls.slice(2);
+    console.log(`Product images after logos: ${productUrls.length}`);
+    
+    // Handle duplicate 10cm-298 - it's near the end
+    // 10cm-298 is at index products.length-2 in the list, so duplicate image is at same position+1
+    // We need to find and remove the duplicate
+    // 298 is the second-to-last item. The duplicate image would be right after it.
+    // In the URL list, 298 appears at position (products.length - 2) and duplicate at (products.length - 1)
+    // But we also have 299 after it. So the duplicate 298 is at position products.length - 2 + 1 = products.length - 1
+    // Hmm, let's just match count: if we have more URLs than products, trim the duplicate
+    
+    if (productUrls.length > products.length) {
+        // The duplicate 298 is near position 290 in the array (index of second 298)
+        // 298 is at index 287 (0-based from products array), duplicate would be at 288
+        const dupIdx = products.length - 2; // position of second 298 occurrence
+        console.log(`Removing duplicate at index ${dupIdx}`);
+        productUrls = [...productUrls.slice(0, dupIdx), ...productUrls.slice(dupIdx + 1)];
+    }
+    
+    console.log(`Final product URLs: ${productUrls.length}`);
+    
+    const count = Math.min(productUrls.length, products.length);
+    let success = 0;
+    
+    for (let i = 0; i < count; i++) {
+        const filename = `${products[i].n}.jpg`;
+        const filepath = path.join(OUTPUT_DIR, filename);
+        
+        try {
+            process.stdout.write(`[${i+1}/${count}] ${filename}... `);
+            await downloadFile(productUrls[i], filepath);
+            const stats = fs.statSync(filepath);
+            console.log(`OK (${(stats.size/1024).toFixed(1)}KB)`);
+            success++;
+            await new Promise(r => setTimeout(r, 30));
+        } catch (err) {
+            console.log(`FAILED: ${err.message}`);
+        }
+    }
+    
+    console.log(`\nDone! Downloaded ${success}/${count}`);
+}
+
+main().catch(console.error);

@@ -70,11 +70,6 @@ export const CloseIcon = ({ className }: { className?: string }) => (
     </svg>
 );
 
-export const HeartIcon = ({ className, filled }: { className?: string, filled?: boolean }) => (
-    <svg className={className} xmlns="http://www.w3.org/2000/svg" fill={filled ? "#ff3040" : "none"} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={filled ? 0 : 2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M16.792 3.904A4.989 4.989 0 0121.5 9.122c0 3.072-2.652 4.956-5.19 7.222-2.512 2.243-3.865 3.469-4.31 3.753-.445-.284-1.798-1.51-4.31-3.753C5.151 14.078 2.5 12.194 2.5 9.122a4.989 4.989 0 014.708-5.218 4.21 4.21 0 013.675 1.941c.84 1.175.98 1.763 1.12 1.763s.278-.588 1.11-1.766a4.17 4.17 0 013.679-1.938z" />
-    </svg>
-);
 
 export const ChatBubbleIcon = ({ className }: { className?: string }) => (
     <svg className={className} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -108,7 +103,7 @@ export const EmojiIcon = ({ className }: { className?: string }) => (
 
 export const VerifiedIcon = ({ className }: { className?: string }) => (
     <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="12" cy="12" r="10" fill="#0095F6"/>
-        <path d="M9 12L11 14L15 10" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M11.69 2.02a1.2 1.2 0 01.62 0l1.04.28a1.2 1.2 0 00.9.1l1.05-.22a1.2 1.2 0 011.08.33l.79.74a1.2 1.2 0 00.8.35l1.08.06a1.2 1.2 0 01.99.73l.4.98a1.2 1.2 0 00.58.64l.95.5a1.2 1.2 0 01.6 1.05v1.08a1.2 1.2 0 00.28.85l.69.84a1.2 1.2 0 010 1.54l-.69.84a1.2 1.2 0 00-.28.85v1.08a1.2 1.2 0 01-.6 1.05l-.95.5a1.2 1.2 0 00-.58.64l-.4.98a1.2 1.2 0 01.99-.73l1.08-.06a1.2 1.2 0 00.8-.35l.79-.74a1.2 1.2 0 011.08-.33l1.05.22a1.2 1.2 0 00.9-.1l1.04-.28z" fill="#E60000"/>
+        <path d="M10.2 14.8a.63.63 0 01-.45-.19l-2.61-2.61a.63.63 0 11.9-.9l2.16 2.16 4.79-4.79a.63.63 0 01.9.9l-5.24 5.24a.63.63 0 01-.45.19z" fill="white"/>
     </svg>
 );

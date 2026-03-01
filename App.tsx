@@ -1,202 +1,167 @@
-import React, { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, useLocation, Navigate, useParams } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { NotFoundPage } from './components/ui/not-found-page-2';
-import MaintenancePage from './pages/MaintenancePage';
-import { settingsService } from './lib/settingsService';
-import { supabase } from './lib/supabase';
-import { useAuth } from './context/AuthContext';
 import ScrollToTop from './components/ScrollToTop';
 import Layout from './components/Layout';
 import HomePage from './pages/HomePage';
-import ModelsPage from './pages/ModelsPage';
-import ModelProfilePage from './pages/ModelProfilePage';
-import AboutPage from './pages/AboutPage';
-import ServicesPage from './pages/ServicesPage';
+import CatalogPage from './pages/CatalogPage';
+import ProductDetailsPage from './pages/ProductDetailsPage';
 import ContactPage from './pages/ContactPage';
-import PricingRouter from './pages/PricingRouter';
-import ChristmasPricingPage from './pages/ChristmasPricingPage';
+import PricingPage from './pages/PricingPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import PrivacyPage from './pages/PrivacyPage';
 import TermsPage from './pages/TermsPage';
 import LegalPage from './pages/LegalPage';
-import Blog from './pages/ContributionsPage';
 import BookingPage from './pages/BookingPage';
 import ProfilePage from './pages/ProfilePage';
+import RecoveryPage from './pages/RecoveryPage';
+import AdminPage from './pages/AdminPage';
+import CartPage from './pages/CartPage';
 import CheckoutPage from './pages/CheckoutPage';
-import AdminDashboard from './pages/AdminDashboard';
+import { ToastProvider } from './components/Toast/ToastProvider';
+import { useAuth } from './context/AuthContext';
+import { useSiteSettings, SiteSettingsProvider } from './context/SiteSettingsContext';
+import { UIProvider } from './context/UIContext';
+import { CartProvider } from './context/CartContext';
+import MaintenancePage from './pages/MaintenancePage';
+import { useLocation } from 'react-router-dom';
+import { Loader2 } from 'lucide-react';
+import { CompleteRegistrationModal } from './components/ui/complete-registration';
 
-import AdminRoute from './components/AdminRoute';
-
-const LanguageWrapper: React.FC = () => {
-  const { lang } = useParams<{ lang: string }>();
-  const { i18n } = useTranslation();
-  const location = useLocation();
-
-  useEffect(() => {
-    const supportedLangs = ['bg', 'en'];
-    if (lang && supportedLangs.includes(lang) && i18n.language !== lang) {
-      i18n.changeLanguage(lang);
-    }
-  }, [lang, i18n]);
-
-  // If language is not supported, show 404
-  if (lang !== 'bg' && lang !== 'en') {
-    return <NotFoundPage />;
-  }
-
+function PageWrapper({ children }: { children: React.ReactNode }) {
   return (
-    <Routes>
-      <Route path="/" element={<Layout><HomePage /></Layout>} />
-      <Route path="/models" element={<Layout><ModelsPage /></Layout>} />
-      <Route path="/models/category/:category" element={<Layout><ModelsPage /></Layout>} />
-      <Route path="/models/:slug" element={<Layout><ModelProfilePage /></Layout>} />
-      <Route path="/about" element={<Layout><AboutPage /></Layout>} />
-      <Route path="/services" element={<Layout><ServicesPage /></Layout>} />
-      <Route path="/contact" element={<Layout><ContactPage /></Layout>} />
-      <Route path="/pricing" element={<Layout><PricingRouter /></Layout>} />
-      <Route path="/christmas-pricing" element={<Layout><ChristmasPricingPage /></Layout>} />
-      <Route path="/privacy" element={<Layout><PrivacyPage /></Layout>} />
-      <Route path="/terms" element={<Layout><TermsPage /></Layout>} />
-      <Route path="/legal" element={<Layout><LegalPage /></Layout>} />
-      <Route path="/blog" element={<Layout><Blog /></Layout>} />
-      <Route path="/book-now" element={<Layout><BookingPage /></Layout>} />
-      <Route path="/checkout/:planId" element={<Layout><CheckoutPage /></Layout>} />
-      <Route path="/profile" element={<Layout><ProfilePage /></Layout>} />
-      <Route path="/admin" element={
-        <AdminRoute>
-          <Layout><AdminDashboard /></Layout>
-        </AdminRoute>
-      } />
-      <Route path="*" element={<NotFoundPage />} />
-    </Routes>
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.5 }}
+      className="w-full"
+    >
+      {children}
+    </motion.div>
   );
-};
+}
 
 function AppContent() {
+  const { loading, isAdmin, isEditor } = useAuth();
+  const { settings, loading: settingsLoading } = useSiteSettings();
   const location = useLocation();
-  const { isAdmin, loading: authLoading } = useAuth();
   
-  // Initialize from localStorage to prevent flicker
-  const [isMaintenance, setIsMaintenance] = React.useState(() => {
-    return localStorage.getItem('maintenance_mode') === 'true';
+  const isMaintenancePageAllowed = 
+    location.pathname.startsWith('/admin') || 
+    location.pathname === '/login';
+
+  const showMaintenance = 
+    settings.maintenance_mode && 
+    !isAdmin && 
+    !isEditor && 
+    !isMaintenancePageAllowed;
+
+  if (loading || settingsLoading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <Loader2 className="w-10 h-10 text-red-600 animate-spin" />
+      </div>
+    );
+  }
+
+  // Reactive Maintenance Trigger
+  const [isTimeUp, setIsTimeUp] = useState(() => {
+    if (!settings.maintenance_auto_start_at) return false;
+    return new Date().getTime() >= new Date(settings.maintenance_auto_start_at).getTime();
   });
-  const [maintenanceLoading, setMaintenanceLoading] = React.useState(true);
 
   useEffect(() => {
-    const checkMaintenance = async () => {
-      try {
-        const active = await settingsService.getMaintenanceMode();
-        setIsMaintenance(active);
-        localStorage.setItem('maintenance_mode', active.toString());
-      } catch (err) {
-        console.error('Maintenance check failed:', err);
-      } finally {
-        setMaintenanceLoading(false);
+    const autoStart = settings.maintenance_auto_start_at;
+    if (!autoStart || settings.maintenance_mode) {
+      setIsTimeUp(false);
+      return;
+    }
+
+    const checkTime = () => {
+      const now = new Date().getTime();
+      const target = new Date(autoStart).getTime();
+      if (now >= target) {
+        setIsTimeUp(true);
+        return true;
       }
+      return false;
     };
-    checkMaintenance();
 
-    // Listen for real-time changes
-    const channel = supabase
-      .channel('site_settings_maintenance')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'site_settings',
-          filter: 'key=eq.maintenance_mode'
-        },
-        (payload: any) => {
-          if (payload.new && payload.new.value !== undefined) {
-            const active = payload.new.value === 'true';
-            setIsMaintenance(active);
-            localStorage.setItem('maintenance_mode', active.toString());
-          }
-        }
-      )
-      .subscribe();
+    if (checkTime()) return;
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
+    const interval = setInterval(() => {
+      if (checkTime()) {
+        clearInterval(interval);
+      }
+    }, 1000);
 
-  // ... (keyboard blur logic remains the same)
-  
-  const isManagementRoute = location.pathname.startsWith('/admin') || location.pathname.includes('/login');
-  
-  // Show maintenance immediately if cached or confirmed
-  if (isMaintenance && !isAdmin && !isManagementRoute) {
+    return () => clearInterval(interval);
+  }, [settings.maintenance_auto_start_at, settings.maintenance_mode]);
+
+  // Double check: if maintenance is ON or scheduled and reached
+  if ((settings.maintenance_mode || isTimeUp) && !isAdmin && !isEditor && !isMaintenancePageAllowed) {
     return <MaintenancePage />;
   }
 
-  // Prevent main site flicker while definitively checking for the first time
-  if (maintenanceLoading && !isMaintenance) {
-    return <div className="fixed inset-0 bg-black" />;
-  }
-
-  if (authLoading) {
-    return <div className="fixed inset-0 bg-[#0B0B0C]" />;
-  }
+  const isGlobalMaintenanceActive = settings.maintenance_mode || isTimeUp;
 
   return (
     <>
       <ScrollToTop />
-      <AnimatePresence mode="wait">
-        <Routes location={location}>
-          <Route path="/" element={<Navigate to="/bg" replace />} />
-          
-          <Route path="/admin" element={
-            <AdminRoute>
-              <AdminDashboard />
-            </AdminRoute>
-          } />
+      <Routes location={location}>
+        {/* Admin - No Layout */}
+        <Route path="/admin/*" element={<AdminPage />} />
 
-          <Route path="/:lang/login" element={
-            <motion.div 
-              key="login"
-              initial={{ opacity: 0 }} 
-              animate={{ opacity: 1 }} 
-              exit={{ opacity: 0 }} 
-              transition={{ duration: 0.5 }}
-            >
-              <LoginPage />
-            </motion.div>
-          } />
-          <Route path="/:lang/register" element={
-            <motion.div 
-              key="register"
-              initial={{ opacity: 0 }} 
-              animate={{ opacity: 1 }} 
-              exit={{ opacity: 0 }} 
-              transition={{ duration: 0.5 }}
-            >
-              <RegisterPage />
-            </motion.div>
-          } />
-          
-          <Route path="/:lang/*" element={<LanguageWrapper />} />
-          
-          {/* Catch-all for non-prefixed routes */}
-          <Route path="*" element={<NotFoundPage />} />
-        </Routes>
-      </AnimatePresence>
+        {/* Auth Pages - No Header/Footer */}
+        <Route path="/login" element={<PageWrapper><LoginPage /></PageWrapper>} />
+        <Route path="/register" element={<PageWrapper><RegisterPage /></PageWrapper>} />
+        <Route path="/recovery" element={<PageWrapper><RecoveryPage /></PageWrapper>} />
+        <Route path="/checkout" element={<PageWrapper><CheckoutPage /></PageWrapper>} />
+
+        {/* Pages with Layout - Content Animates Inside */}
+        <Route path="*" element={
+          <Layout>
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div key={location.pathname} className="w-full">
+                <Routes location={location}>
+                  <Route path="/" element={<PageWrapper><HomePage /></PageWrapper>} />
+                  <Route path="/catalog" element={<PageWrapper><CatalogPage /></PageWrapper>} />
+                  <Route path="/catalog/category/:category" element={<PageWrapper><CatalogPage /></PageWrapper>} />
+                  <Route path="/catalog/:slug" element={<PageWrapper><ProductDetailsPage /></PageWrapper>} />
+                  <Route path="/contact" element={<PageWrapper><ContactPage /></PageWrapper>} />
+                  <Route path="/pricing" element={<PageWrapper><PricingPage /></PageWrapper>} />
+                  <Route path="/privacy" element={<PageWrapper><PrivacyPage /></PageWrapper>} />
+                  <Route path="/terms" element={<PageWrapper><TermsPage /></PageWrapper>} />
+                  <Route path="/legal" element={<PageWrapper><LegalPage /></PageWrapper>} />
+                  <Route path="/book-now" element={<PageWrapper><BookingPage /></PageWrapper>} />
+                  <Route path="/cart" element={<PageWrapper><CartPage /></PageWrapper>} />
+                  <Route path="/profile" element={<PageWrapper><ProfilePage /></PageWrapper>} />
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              </motion.div>
+            </AnimatePresence>
+            <CompleteRegistrationModal />
+          </Layout>
+        } />
+      </Routes>
     </>
   );
 }
 
-import { ToastProvider } from './components/Toast/ToastProvider';
-
 function App() {
   return (
     <BrowserRouter>
-      <ToastProvider>
-        <AppContent />
-      </ToastProvider>
+      <SiteSettingsProvider>
+        <UIProvider>
+          <CartProvider>
+            <ToastProvider>
+              <AppContent />
+            </ToastProvider>
+          </CartProvider>
+        </UIProvider>
+      </SiteSettingsProvider>
     </BrowserRouter>
   );
 }

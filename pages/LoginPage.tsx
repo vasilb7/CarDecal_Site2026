@@ -1,17 +1,40 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { SignInPage, Testimonial } from '../components/ui/sign-in';
+import { SignInPage } from '../components/ui/sign-in';
 import { supabase } from '../lib/supabase';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useToast } from '../hooks/useToast';
 
-const sampleTestimonials: Testimonial[] = [];
+
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const from = (location.state as any)?.from || '/';
+  
   const [loading, setLoading] = useState(false);
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
   const { t, i18n } = useTranslation();
   const { showToast } = useToast();
+
+  React.useEffect(() => {
+    // Check if we are in recovery mode from the URL hash or Supabase event
+    const hash = window.location.hash;
+    if (hash && (hash.includes('type=recovery') || hash.includes('access_token='))) {
+      setIsUpdatingPassword(true);
+      // Clean the hash for a cleaner URL but keep the session (Supabase handles it)
+      // Actually we should keep it for Supabase to pick up if it hasn't yet, 
+      // but usually by the time this mounts, the session is already in memory if redirect was quick
+    }
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsUpdatingPassword(true);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const handleSignIn = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -40,8 +63,7 @@ const LoginPage: React.FC = () => {
         console.log("Sign in success:", data);
         const name = data.user?.user_metadata?.full_name || data.user?.email?.split('@')[0] || '';
         showToast(t('toast.login_success', { name }), "success");
-        const currentLang = i18n.language.split('-')[0];
-        navigate(`/${currentLang}/`); 
+        navigate(from, { replace: true });
       }
     } catch (err) {
       showToast(t('toast.login_error_generic'), "error");
@@ -52,28 +74,47 @@ const LoginPage: React.FC = () => {
   };
 
   const handleGoogleSignIn = async () => {
-    showToast(t('toast.google_not_configured'), "info");
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin
+        }
+      });
+      if (error) throw error;
+    } catch (err: any) {
+      showToast(err.message || t('toast.login_error_generic'), "error");
+    }
   };
 
   const handleResetPassword = () => {
-    const email = prompt(t('auth.forgot_password_prompt'));
-     if (email) {
-        supabase.auth.resetPasswordForEmail(email)
-          .then(({ error }) => {
-             if (error) showToast(error.message, "error");
-             else showToast(t('toast.password_reset_sent'), "success");
-          });
-     }
+    navigate('/recovery');
+  };
+
+  const handleUpdatePassword = async (password: string) => {
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) throw error;
+      
+      showToast(t('toast.password_update_success', 'Паролата е обновена успешно!'), "success");
+      setIsUpdatingPassword(false);
+      navigate('/');
+    } catch (err: any) {
+      showToast(err.message || t('toast.error_generic'), "error");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <SignInPage
-      heroImageSrc="/Site_Pics/LogReg/Login.jpg"
-      mobileHeroImagePosition="center 10%"
-      testimonials={sampleTestimonials}
       onSignIn={handleSignIn}
       onGoogleSignIn={handleGoogleSignIn}
       onResetPassword={handleResetPassword}
+      isUpdatingPassword={isUpdatingPassword}
+      onUpdatePassword={handleUpdatePassword}
+      loading={loading}
     />
   );
 };

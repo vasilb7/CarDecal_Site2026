@@ -1,32 +1,36 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,700;1,400&family=Montserrat:wght@300;400;600;700&family=Raleway:wght@300;400;600;700&family=Oswald:wght@300;400;600;700&family=Lora:ital,wght@0,400;0,700;1,400&family=Merriweather:ital,wght@0,400;0,700;1,400&family=Poppins:wght@300;400;600;700&family=Roboto+Slab:wght@300;400;600;700&family=Dancing+Script:wght@400;700&family=Great+Vibes&family=Cinzel:wght@400;700&family=Bebas+Neue&family=Abril+Fatface&family=Josefin+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Nunito:ital,wght@0,300;0,400;0,700;1,400&family=Crimson+Text:ital,wght@0,400;0,700;1,400&family=DM+Serif+Display&family=Italiana&family=Bodoni+Moda:ital,wght@0,400;0,700;1,400&family=Philosopher:ital,wght@0,400;0,700;1,400&family=Yeseva+One&family=Bad+Script&display=swap");
-@import url("https://fonts.cdnfonts.com/css/sugo-display");
-@import url("https://fonts.cdnfonts.com/css/kingred-modern");
-@import url("https://fonts.cdnfonts.com/css/sugar-pie-2");
-@import url("https://fonts.cdnfonts.com/css/tan-headline");
-@import url("https://fonts.cdnfonts.com/css/hobo");
-@import url("https://fonts.cdnfonts.com/css/satyr");
-@import url("https://fonts.cdnfonts.com/css/gang-of-three");
-@import url("https://fonts.cdnfonts.com/css/ethnocentric");
-@import url("https://fonts.cdnfonts.com/css/blackburr");
-@import url("https://db.onlinewebfonts.com/c/1536e4c1d2209a656593ef813080bd30?family=Subway+NewYork+OT+W03+Regular");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap");
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-.grayscale {
-  filter: grayscale(100%);
+@layer utilities {
+  .text-red-accent {
+    color: var(--red-accent) !important;
+  }
+  .bg-red-accent {
+    background-color: var(--red-accent) !important;
+  }
+  .border-red-accent {
+    border-color: var(--red-accent) !important;
+  }
+  .text-outline-red {
+    -webkit-text-stroke: 1px var(--red-accent) !important;
+    color: transparent;
+  }
+  .mix-blend-difference {
+    mix-blend-mode: difference;
+  }
 }
 
 :root {
-  --gold-accent: #c9a227;
-  --red-accent: #e31b23;
-  --silver-text: #e5e5e7;
-  --background: #0b0b0c;
-  --surface: #121214;
-  --border: #1c1c20;
-  --text-primary: #f2f2f2;
-  --text-muted: #a0a0a8;
+  --red-accent: #ff0000; /* Bright red from palette */
+  --red-primary: #950101; /* Crimson red from palette */
+  --background: #000000; /* Black */
+  --surface: #3d0000; /* Dark red surface from palette */
+  --border: #950101; /* Crimson border */
+  --text-primary: #ffffff; /* White text for contrast */
+  --text-muted: #e0e0e0; /* Muted text */
 
   /* FLUID SCALING SYSTEM */
   /* This ensures the site shrinks proportionally */
@@ -56,9 +60,6 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
-.font-serif {
-  font-family: "Playfair Display", serif;
-}
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
@@ -70,12 +71,12 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--gold-accent);
+  background: var(--border);
   border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #e5b92e;
+  background: var(--red-accent);
 }
 
 /* Animations for Auth Pages */
@@ -107,48 +108,6 @@ body {
   to {
     opacity: 1;
     transform: scale(1);
-  }
-}
-
-@layer base {
-  :root {
-    --gold-accent: #d4af37;
-  }
-
-  body {
-    @apply bg-black text-white antialiased;
-  }
-
-  /* Custom Premium Scrollbar */
-  .custom-scrollbar::-webkit-scrollbar {
-    width: 6px;
-  }
-  .custom-scrollbar::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
-  }
-  .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: #d4af37;
-    border-radius: 10px;
-    border: 1px solid rgba(0, 0, 0, 0.2);
-  }
-  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: #f1c40f;
-  }
-
-  /* Premium Horizontal Scrollbar for Filters */
-  .scrollbar-premium::-webkit-scrollbar {
-    height: 4px;
-    display: block !important;
-  }
-  .scrollbar-premium::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 10px;
-    margin-right: 20px;
-  }
-  .scrollbar-premium::-webkit-scrollbar-thumb {
-    background: linear-gradient(90deg, #d4af37, #f1c40f);
-    border-radius: 10px;
   }
 }
 
@@ -259,7 +218,7 @@ body {
 }
 
 /* Изпълнява анимацията веднъж при докосване/натискане */
-.active-pulse:active .gold-line {
+.active-pulse:active .red-line {
   animation: tap-flash 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
 }
 
@@ -271,7 +230,7 @@ body {
 
 /* Стандартните hover ефекти работят само с мишка */
 @media (hover: hover) {
-  .group:hover .gold-line {
+  .group:hover .red-line {
     transform: translateX(-50%) scaleX(1);
   }
 }
@@ -324,37 +283,37 @@ a:active,
   animation: marquee 50s linear infinite reverse;
 }
 
-/* Gold Shimmer Effect */
+/* Red/Silver Shimmer Effect */
 @keyframes shimmer {
   0% {
-    background-position: -200% center;
+    background-position: 200% center;
   }
   100% {
-    background-position: 200% center;
+    background-position: -200% center;
   }
 }
 
 .text-shimmer {
   background: linear-gradient(
-    90deg,
-    #c9a227 0%,
-    #ffffff 25%,
-    #c9a227 50%,
-    #ffffff 75%,
-    #c9a227 100%
+    120deg,
+    #e60000 0%,
+    #e60000 40%,
+    #ffffff 50%,
+    #e60000 60%,
+    #e60000 100%
   );
   background-size: 200% auto;
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  animation: shimmer 5s linear infinite;
+  animation: shimmer 3s linear infinite;
 }
 
-/* Premium Glow Shadow */
-.shadow-premium-gold {
+/* Premium Red Glow Shadow */
+.shadow-premium-red {
   filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.8))
-    drop-shadow(0 0 15px rgba(201, 162, 39, 0.4))
-    drop-shadow(0 0 40px rgba(201, 162, 39, 0.2));
+    drop-shadow(0 0 15px rgba(230, 0, 0, 0.4))
+    drop-shadow(0 0 40px rgba(230, 0, 0, 0.2));
 }
 /* Fluid Containers */
 .container {
@@ -389,25 +348,6 @@ section {
   padding-bottom: var(--section-py);
 }
 
-/* Hide main site header when story viewer is open with a nice fade */
-body.story-viewer-open header {
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.3s ease;
-}
-
-body.story-viewer-open,
-body.modal-open {
-  overflow: hidden !important;
-  /* Use scrollbar-gutter to prevent layout shifts */
-  scrollbar-gutter: stable;
-}
-
-/* Premium Story Viewer specific adjustments */
-.story-viewer-modal {
-  will-change: transform, opacity;
-}
-
 /* Hide scrollbar for Chrome, Safari and Opera */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
@@ -418,160 +358,61 @@ body.modal-open {
   -ms-overflow-style: none; /* IE and Edge */
   scrollbar-width: none; /* Firefox */
 }
-
-.pattern-spaghetti {
-  background:
-    radial-gradient(
-      at bottom right,
-      #7b125b 0,
-      #7b125b 6.25px,
-      rgba(123, 18, 91, 0.2) 6.25px,
-      rgba(123, 18, 91, 0.2) 12.5px,
-      rgba(123, 18, 91, 0.75) 12.5px,
-      rgba(123, 18, 91, 0.75) 18.75px,
-      rgba(123, 18, 91, 0.25) 18.75px,
-      rgba(123, 18, 91, 0.25) 25px,
-      rgba(123, 18, 91, 0.3) 25px,
-      rgba(123, 18, 91, 0.3) 31.25px,
-      rgba(123, 18, 91, 0.75) 31.25px,
-      rgba(123, 18, 91, 0.75) 37.5px,
-      rgba(123, 18, 91, 0.2) 37.5px,
-      rgba(123, 18, 91, 0.2) 43.75px,
-      transparent 43.75px,
-      transparent 50px
-    ),
-    radial-gradient(
-      at top left,
-      transparent 0,
-      transparent 6.25px,
-      rgba(123, 18, 91, 0.2) 6.25px,
-      rgba(123, 18, 91, 0.2) 12.5px,
-      rgba(123, 18, 91, 0.75) 12.5px,
-      rgba(123, 18, 91, 0.75) 18.75px,
-      rgba(123, 18, 91, 0.3) 18.75px,
-      rgba(123, 18, 91, 0.3) 25px,
-      rgba(123, 18, 91, 0.25) 25px,
-      rgba(123, 18, 91, 0.25) 31.25px,
-      rgba(123, 18, 91, 0.75) 31.25px,
-      rgba(123, 18, 91, 0.75) 37.5px,
-      rgba(123, 18, 91, 0.2) 37.5px,
-      rgba(123, 18, 91, 0.2) 43.75px,
-      #7b125b 43.75px,
-      #7b125b 50px,
-      transparent 50px,
-      transparent 125px
-    );
-  background-blend-mode: multiply;
-  background-size:
-    50px 50px,
-    50px 50px;
-  background-color: #db2626;
-  width: 100%;
-}
-
-.pattern-hearts {
-  background: linear-gradient(135deg, #be123c 0%, #9f1239 100%);
+/* Lando Norris Style Rolling Link Animation */
+.rolling-link {
   position: relative;
+  display: inline-block;
   overflow: hidden;
+  line-height: 1; /* Ensure tight line-height */
+  text-decoration: none;
+  padding: 0;
+  margin: 0;
+  vertical-align: bottom; /* Prevents tiny descender gaps */
 }
 
-.pattern-hearts::before {
-  content: "";
+.rolling-link .letter-container {
+  display: inline-block;
+  position: relative;
+}
+
+.rolling-link .letter {
+  display: inline-block;
+  transition: transform 0.5s cubic-bezier(0.645, 0.045, 0.355, 1);
+  transition-delay: calc(var(--index) * 0.025s);
+}
+
+.rolling-link .letter-bottom {
   position: absolute;
-  inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='%23ffffff'%3E%3Cpath d='M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z'/%3E%3C/svg%3E");
-  background-size: 60px 60px;
-  opacity: 0.05;
-  pointer-events: none;
+  top: 100%;
+  left: 0;
+  -webkit-text-fill-color: #ff0000; /* Red outline */
 }
 
-.pattern-hearts::after {
-  content: "";
-  position: absolute;
-  inset: -100%;
-  background: linear-gradient(
-    45deg,
-    transparent 45%,
-    rgba(255, 255, 255, 0.1) 48%,
-    rgba(255, 255, 255, 0.4) 50%,
-    rgba(255, 255, 255, 0.1) 52%,
-    transparent 55%
-  );
-  animation: shine 1.5s ease-in-out infinite;
-  pointer-events: none;
-}
-
-@keyframes shine {
-  0% {
-    transform: translateX(-50%) translateY(-50%) rotate(0deg);
+/* Hover effects (Desktop) */
+@media (hover: hover) {
+  .rolling-link:hover .letter-top {
+    transform: translateY(-100%);
   }
-  100% {
-    transform: translateX(50%) translateY(50%) rotate(0deg);
+
+  .rolling-link:hover .letter-bottom {
+    transform: translateY(-100%);
   }
 }
 
-/* ===== CHRISTMAS PATTERN ===== */
-.pattern-snowflakes {
-  background: linear-gradient(135deg, #065f46 0%, #047857 50%, #064e3b 100%);
-  position: relative;
-  overflow: hidden;
+/* Active/Touch effects (Mobile) */
+.rolling-link:active .letter-top {
+  transform: translateY(-100%);
+  transition: transform 0.1s ease-out; /* Faster on tap */
+  transition-delay: 0s; /* No delay on tap */
 }
 
-.pattern-snowflakes::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='2' y1='12' x2='22' y2='12'/%3E%3Cline x1='12' y1='2' x2='12' y2='22'/%3E%3Cline x1='4.93' y1='4.93' x2='19.07' y2='19.07'/%3E%3Cline x1='19.07' y1='4.93' x2='4.93' y2='19.07'/%3E%3C/svg%3E");
-  background-size: 50px 50px;
-  opacity: 0.04;
-  pointer-events: none;
+.rolling-link:active .letter-bottom {
+  transform: translateY(-100%);
+  transition: transform 0.1s ease-out;
+  transition-delay: 0s;
 }
 
-.pattern-snowflakes::after {
-  content: "";
-  position: absolute;
-  inset: -100%;
-  background: linear-gradient(
-    45deg,
-    transparent 45%,
-    rgba(255, 255, 255, 0.08) 48%,
-    rgba(255, 255, 255, 0.3) 50%,
-    rgba(255, 255, 255, 0.08) 52%,
-    transparent 55%
-  );
-  animation: shine 2s ease-in-out infinite;
-  pointer-events: none;
-}
-
-/* ===== PHOTOSHOOT PATTERN ===== */
-.pattern-photoshoot {
-  background: linear-gradient(135deg, #1a1a1a 0%, #000000 100%);
-  position: relative;
-  overflow: hidden;
-}
-
-.pattern-photoshoot::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23d4af37' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z'/%3E%3Ccircle cx='12' cy='13' r='3'/%3E%3C/svg%3E");
-  background-size: 50px 50px;
-  opacity: 0.1;
-  pointer-events: none;
-}
-
-.pattern-photoshoot::after {
-  content: "";
-  position: absolute;
-  inset: -100%;
-  background: linear-gradient(
-    45deg,
-    transparent 45%,
-    rgba(212, 175, 55, 0.1) 48%,
-    rgba(212, 175, 55, 0.4) 50%,
-    rgba(212, 175, 55, 0.1) 52%,
-    transparent 55%
-  );
-  animation: shine 3s ease-in-out infinite;
-  pointer-events: none;
+/* Ensure spaces are preserved */
+.rolling-link .letter:empty::before {
+  content: "\00a0";
 }

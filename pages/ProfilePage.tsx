@@ -1,584 +1,1227 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { 
-    User, 
-    Camera, 
-    Settings, 
-    LogOut, 
-    Grid, 
-    Bookmark, 
-    ChevronRight, 
-    Mail, 
-    MapPin, 
-    Calendar, 
-    Instagram, 
-    Send, 
-    Ruler, 
-    Lock, 
-    Trash2, 
-    Eye, 
-    ShieldCheck, 
-    Save, 
-    Loader2, 
-    ChevronLeft, 
-    X,
-    CheckCircle2,
-    Check,
-    Edit3,
-    Plus,
-    Upload
+import { useNavigate } from 'react-router-dom';
+import { useToast } from '../components/Toast/ToastProvider';
+import { AvatarCropModal } from '../components/AvatarCropModal';
+import {
+    User, Camera, LogOut, Settings, ShoppingBag,
+    ChevronRight, Save, Loader2, Lock,
+    Mail, Calendar, Shield, Edit3,
+    MapPin, Phone, Info, Hash, MoreHorizontal, 
+    ArrowRight, Clock, Receipt, RefreshCw, 
+    Tag, ChevronDown, Check, CreditCard, 
+    ExternalLink, Trash2, ArrowLeft, Eye, 
+    EyeOff, X, AlertTriangle, AlertCircle, KeyRound, 
+    PackageOpen, CheckCircle2, Truck
 } from 'lucide-react';
 
-import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
-import { useToast } from '../hooks/useToast';
-import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
-import { GridIcon, PinIcon, CloseIcon, HeartIcon, ChatBubbleIcon, BookmarkIcon, PaperAirplaneIcon, MoreHorizontalIcon, EmojiIcon, VerifiedIcon } from '../components/IconComponents';
-import StoryViewer from '../components/StoryViewer';
-import StoriesRing from '../components/StoriesRing';
-import { AvatarCropModal } from '../components/AvatarCropModal';
-import { hasProfanity } from '../lib/profanity';
-import type { Post, Highlight, Model, Comment, Story } from '../types';
+// ─── Типове ─────────────────────────────────────────────────────────────────
+type ProfileTab = 'orders' | 'settings';
 
-// New Settings Components
-import SettingsShell from '../components/Settings/SettingsShell';
-import SettingsMenu from '../components/Settings/SettingsMenu';
-import ProfileSettings from '../components/Settings/sections/ProfileSettings';
-import { SETTINGS_CONFIG, SettingsSectionId } from '../components/Settings/config';
-
-// Helper to get consistent current time
-const getSecureNow = () => new Date();
-
-interface LightboxProps {
-    post: Post;
-    index: number;
-    total: number;
-    model: any;
-    onClose: () => void;
-    onLike: (postId: string) => Promise<void>;
-    onComment: (postId: string, content: string) => Promise<void>;
+// ─── Custom Confirm Dialog ──────────────────────────────────────────────────
+interface ConfirmDialogProps {
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmLabel?: string;
+    cancelLabel?: string;
+    onConfirm: () => void;
+    onCancel: () => void;
+    isDanger?: boolean;
 }
 
-const ImageLightbox: React.FC<LightboxProps> = ({ post, index, total, model, onClose, onLike, onComment }) => {
-    const { t } = useTranslation();
-    const { showToast } = useToast();
-    const { user } = useAuth();
-    const [searchParams, setSearchParams] = useSearchParams();
-    const imgParam = searchParams.get('img');
-    const currentImageIndex = imgParam ? parseInt(imgParam, 10) : 0;
-    
-    const isLiked = user ? (post.liked_by_users || []).includes(user.id) : false;
-    const [isZoomed, setIsZoomed] = useState(false);
-    const [showHeart, setShowHeart] = useState(false);
-    const [commentText, setCommentText] = useState('');
-    const [isSubmittingComment, setIsSubmittingComment] = useState(false);
-    const lastTap = useRef<number>(0);
-
-    const handleDoubleTap = (e: React.MouseEvent | React.TouchEvent) => {
-        const now = Date.now();
-        if (now - lastTap.current < 300) {
-            handleLike();
-        }
-        lastTap.current = now;
-    };
-
-    const handleLike = async () => {
-        if (!user) {
-            showToast(t('auth.login_required'), "error");
-            return;
-        }
-        setShowHeart(true);
-        setTimeout(() => setShowHeart(false), 1000);
-        await onLike(post.id);
-    };
-
-    const handleCommentSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!user) {
-            showToast(t('auth.login_required'), "error");
-            return;
-        }
-        if (!commentText.trim()) return;
-
-        try {
-            setIsSubmittingComment(true);
-            await onComment(post.id, commentText.trim());
-            setCommentText('');
-        } catch (error) {
-            console.error(error);
-        } finally {
-            setIsSubmittingComment(false);
-        }
-    };
-
-    const handleShare = () => {
-        const url = window.location.href;
-        navigator.clipboard.writeText(url).then(() => {
-            showToast(t('toast.link_copied'), "success");
-        });
-    };
-
-    const nextPost = (e?: React.MouseEvent) => {
-        e?.stopPropagation();
-        const currentIndex = model.posts.findIndex((p: any) => p.id === post.id);
-        const nextIdx = (currentIndex + 1) % model.posts.length;
-        setSearchParams({ post: model.posts[nextIdx].id, img: '0' }, { replace: true });
-    };
-
-    const prevPost = (e?: React.MouseEvent) => {
-        e?.stopPropagation();
-        const currentIndex = model.posts.findIndex((p: any) => p.id === post.id);
-        const prevIdx = (currentIndex - 1 + model.posts.length) % model.posts.length;
-        setSearchParams({ post: model.posts[prevIdx].id, img: '0' }, { replace: true });
-    };
-
+const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
+    isOpen, title, message, confirmLabel = 'Потвърди', cancelLabel = 'Отказ', onConfirm, onCancel, isDanger = false
+}) => {
+    // Prevent background scrolling when modal is open
     useEffect(() => {
-        document.body.classList.add('modal-open');
-        if (!searchParams.get('img')) {
-             setSearchParams(prev => {
-                const next = new URLSearchParams(prev);
-                next.set('img', '0');
-                return next;
-             }, { replace: true });
+        if (isOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
         }
         return () => {
-             document.body.classList.remove('modal-open');
+            document.body.style.overflow = '';
         };
-    }, [post.id]);
-
-    const hasMultipleImages = post.images && post.images.length > 1;
-    const currentSrc = hasMultipleImages && post.images ? post.images[currentImageIndex] : post.src;
-
-    const transformRef = useRef<any>(null);
-    const scaleRef = useRef(1);
+    }, [isOpen]);
 
     return (
-        <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center md:p-8 backdrop-blur-[2px]" 
-            onClick={onClose}
-        >
-            <button onClick={onClose} className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors hidden md:block z-50 p-2">
-                <CloseIcon className="w-6 h-6" />
-            </button>
-
-            <motion.div 
-                initial={{ scale: 0.95, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.95, opacity: 0 }}
-                transition={{ type: 'spring', damping: 25, stiffness: 300, duration: 0.2 }}
-                className="relative w-full h-full md:max-w-6xl md:h-[95vh] md:max-h-[900px] flex flex-col md:flex-row bg-surface overflow-y-auto overflow-x-hidden md:overflow-hidden md:rounded-[4px] shadow-2xl" 
-                onClick={(e) => e.stopPropagation()}
-            >
-                {/* Media Section */}
-                <div className="flex-grow relative bg-black flex items-center justify-center overflow-hidden h-auto min-h-[50vh] md:h-full group w-full">
-                    <div className="absolute inset-0 bg-cover bg-center blur-3xl opacity-50 scale-110 pointer-events-none" style={{ backgroundImage: `url("${currentSrc}")` }} />
-                    <div className="relative z-10 w-full h-full flex items-center justify-center">
-                        <TransformWrapper
-                            key={currentSrc}
-                            ref={transformRef}
-                            onTransformed={(e) => { scaleRef.current = e.state.scale; }}
-                        >
-                            <TransformComponent wrapperStyle={{ width: "100%", height: "100%" }} contentStyle={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                <div onClick={handleDoubleTap} className="relative w-full h-full flex items-center justify-center cursor-zoom-in">
-                                    <motion.img src={currentSrc} className="max-w-full max-h-full w-auto h-auto object-contain select-none shadow-2xl" />
-                                    <AnimatePresence>
-                                        {showHeart && (
-                                            <motion.div initial={{ scale: 0, opacity: 0 }} animate={{ scale: [0, 1.5, 1], opacity: [0, 1, 0] }} transition={{ duration: 0.8 }} className="absolute z-30 text-white pointer-events-none">
-                                                <HeartIcon className="w-24 h-24 fill-current text-white shadow-xl" filled={true} />
-                                            </motion.div>
-                                        )}
-                                    </AnimatePresence>
-                                </div>
-                            </TransformComponent>
-                        </TransformWrapper>
-                    </div>
-
-                    {/* Navigation */}
-                    <button onClick={prevPost} className="absolute left-4 z-40 p-2 rounded-full bg-black/20 text-white hover:bg-black/40 transition-all hidden lg:flex items-center justify-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-8 h-8"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" /></svg>
-                    </button>
-                    <button onClick={nextPost} className="absolute right-4 z-40 p-2 rounded-full bg-black/20 text-white hover:bg-black/40 transition-all hidden lg:flex items-center justify-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-8 h-8"><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
-                    </button>
-                </div>
-
-                {/* Info Section */}
-                <div className="flex flex-col bg-surface w-full md:w-[335px] lg:w-[400px] shrink-0 h-full">
-                    <div className="hidden md:flex items-center justify-between p-3.5 shrink-0">
-                        <div className="flex items-center space-x-3">
-                            <img src={model.avatar} alt={model.name} className="w-8 h-8 rounded-full object-cover ring-1 ring-border" />
-                            <div className="flex items-center">
-                                <span className="font-semibold text-sm text-text-primary mr-1">{model.name}</span>
-                                {model.is_verified && <VerifiedIcon className="w-4 h-4" />}
+        <AnimatePresence>
+            {isOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                        className="bg-[#111] border border-white/10 w-full max-w-sm overflow-hidden shadow-2xl"
+                    >
+                        <div className={`h-1 w-full ${isDanger ? 'bg-red-600' : 'bg-white/20'}`} />
+                        <div className="p-6">
+                            <div className="flex items-center gap-3 mb-4">
+                                {isDanger ? <AlertTriangle className="w-5 h-5 text-red-500" /> : <AlertCircle className="w-5 h-5 text-white/40" />}
+                                <h3 className="text-sm uppercase tracking-widest text-white font-bold">{title}</h3>
                             </div>
-                        </div>
-                        <button className="text-text-primary hover:opacity-60">
-                            <MoreHorizontalIcon className="w-5 h-5" />
-                        </button>
-                    </div>
-
-                    <div className="p-4 md:flex-1 md:overflow-y-auto custom-scrollbar space-y-5">
-                        <div className="flex items-start space-x-3">
-                            <img src={model.avatar} className="w-8 h-8 rounded-full object-cover shrink-0 hidden md:block" />
-                            <div className="flex-1 text-sm">
-                                <p className="text-text-primary leading-tight"><span className="font-semibold mr-1">{model.name}</span>{post.caption}</p>
-                                <span className="text-[10px] text-text-muted mt-1 uppercase tracking-wider">{new Date(post.date).toLocaleDateString()}</span>
-                            </div>
-                        </div>
-
-                        {/* Comments */}
-                        <div className="space-y-4 pt-4">
-                            {post.comments?.map((comment: any) => (
-                                <div key={comment.id} className="flex items-start space-x-3">
-                                    <img src={comment.user_avatar || '/default-avatar.png'} className="w-8 h-8 rounded-full object-cover shrink-0" />
-                                    <div className="flex-1 text-sm">
-                                        <p className="text-text-primary leading-tight"><span className="font-semibold mr-2">{comment.username}</span>{comment.content}</p>
-                                        <span className="text-[10px] text-text-muted mt-1">{new Date(comment.created_at).toLocaleDateString()}</span>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div className="p-4 bg-surface mt-auto">
-                        <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center space-x-4">
-                                <button onClick={handleLike} className={`${isLiked ? 'text-red-500' : 'text-text-primary'} transition-colors transform active:scale-125`}><HeartIcon className="w-6 h-6" filled={isLiked} /></button>
-                                <button className="text-text-primary" onClick={() => document.getElementById('comment-input')?.focus()}><ChatBubbleIcon className="w-6 h-6" /></button>
-                                <button onClick={handleShare} className="text-text-primary"><PaperAirplaneIcon className="w-6 h-6" /></button>
-                            </div>
-                            <button className="text-text-primary"><BookmarkIcon className="w-6 h-6" /></button>
-                        </div>
-                        <p className="text-sm font-semibold text-text-primary mb-2">{(post.liked_by_users?.length || 0).toLocaleString()} {t('profile.likes')}</p>
-                        
-                        <form onSubmit={handleCommentSubmit} className="flex items-center space-x-2 border-t border-border/50 pt-3 mt-3">
-                            <EmojiIcon className="w-5 h-5 text-text-muted" />
-                            <input id="comment-input" type="text" placeholder={t('profile.add_comment')} className="flex-1 bg-transparent text-sm text-text-primary outline-none" value={commentText} onChange={(e) => setCommentText(e.target.value)} />
-                            <button type="submit" disabled={!commentText.trim() || isSubmittingComment} className="text-sm font-semibold text-gold-accent disabled:opacity-30">{isSubmittingComment ? <Loader2 className="w-4 h-4 animate-spin" /> : t('profile.post_comment')}</button>
-                        </form>
-                    </div>
-                </div>
-            </motion.div>
-        </motion.div>
-    );
-};
-
-// --- SETTINGS CONTROLLER ---
-const PICK_KEYS = [
-    'full_name','username','bio','location',
-    'instagram_handle','telegram_handle',
-    'height','measurements_bust','measurements_waist','measurements_hips',
-    'shoe_size','hair_color','eye_color'
-] as const;
-
-const norm = (v: any) => (v === null || v === undefined ? '' : String(v).trim());
-
-const SettingsPageController: React.FC<{ profile: any, onUpdate: (data: any) => Promise<void>, isLoading: boolean }> = ({ profile, onUpdate, isLoading }) => {
-    const [activeSection, setActiveSection] = useState<SettingsSectionId | null>(null);
-    const [currentData, setCurrentData] = useState<any>(null);
-    const [isDirty, setIsDirty] = useState(false);
-
-    useEffect(() => {
-        if (profile && (!currentData || !isDirty)) {
-            setCurrentData(profile);
-        }
-    }, [profile, isDirty]);
-
-    useEffect(() => {
-        if (!profile || !currentData) return;
-        const changed = PICK_KEYS.some(k => norm(profile[k]) !== norm(currentData[k]));
-        setIsDirty(changed);
-    }, [currentData, profile]);
-
-    const handleSave = async () => {
-        await onUpdate(currentData);
-        setIsDirty(false);
-    };
-
-    if (!activeSection) return <SettingsMenu onSelect={setActiveSection} />;
-
-    return (
-        <SettingsShell title={activeSection.toUpperCase()} onBack={() => setActiveSection(null)} onSave={handleSave} isDirty={isDirty} isSaving={isLoading}>
-            {activeSection === 'profile' && (
-                <ProfileSettings data={currentData} onChange={(f, v) => setCurrentData((p: any) => ({ ...p, [f]: v }))} />
-            )}
-            {activeSection !== 'profile' && (
-                <div className="flex flex-col items-center justify-center py-20 opacity-30">
-                    <Settings className="w-12 h-12 animate-pulse mb-4" />
-                    <p className="text-xs uppercase tracking-widest font-black">Coming Soon / Подготовка</p>
-                </div>
-            )}
-        </SettingsShell>
-    );
-};
-
-// --- MAIN PROFILE PAGE ---
-const ProfilePage: React.FC = () => {
-    const { user, profile, loading: authLoading, refreshProfile, isAdmin, isVerified } = useAuth();
-    const navigate = useNavigate();
-    const { t, i18n } = useTranslation();
-    const currentLang = i18n.language.split("-")[0] || "bg";
-    const { showToast } = useToast();
-    const [searchParams, setSearchParams] = useSearchParams();
-    
-    const [isEditing, setIsEditing] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
-    const [showStoryViewer, setShowStoryViewer] = useState(false);
-    const [activeStories, setActiveStories] = useState<Story[]>([]);
-    const [activeTab, setActiveTab] = useState('feed');
-
-    const [posts, setPosts] = useState<Post[]>([]);
-    useEffect(() => { if (profile) setPosts(profile.posts || []); }, [profile]);
-
-    const modelLike = useMemo(() => {
-        if (!profile) return null;
-        return {
-            ...profile,
-            id: profile.id,
-            slug: profile.username || profile.id,
-            name: profile.full_name || 'User',
-            avatar: profile.avatar_url || '',
-            stories: profile.stories || [],
-            posts: posts || [],
-            is_verified: isVerified,
-            nickname: profile.username,
-            bio: profile.bio,
-            background_image: profile.background_image,
-            categories: profile.categories || [],
-            location: profile.location,
-            height: profile.height,
-            measurements: profile.measurements || [
-                profile.measurements_bust,
-                profile.measurements_waist,
-                profile.measurements_hips
-            ].filter(Boolean).join('-'),
-            hair_color: profile.hair_color,
-            eye_color: profile.eye_color,
-            highlights: [],
-            cover_image: [],
-            gender: 'Female' as const
-        } as Model;
-    }, [profile, posts, isVerified]);
-
-    const selectedPost = searchParams.get('post') && modelLike
-        ? modelLike.posts.find((p: any) => p.id === searchParams.get('post')) 
-        : null;
-
-    const handleUpdateProfile = async (updatedData?: any, silent = false) => {
-        if (!user || !profile) return;
-        try {
-            setIsLoading(true);
-            
-            // Check if we are updating a model profile (if the user role is admin/model and they have a record in models table)
-            // For now, prioritize updating the 'profiles' table which is the source of truth for the current user
-            const { error } = await supabase.from('profiles').update(updatedData).eq('id', user.id);
-            if (error) throw error;
-            
-            await refreshProfile();
-            if (!silent) showToast(t('toast.profile_update_success'), "success");
-        } catch (error: any) {
-            showToast(t('toast.profile_update_error', { message: error.message }), "error");
-        } finally { setIsLoading(false); }
-    };
-
-    const handleLikePost = async (postId: string) => {
-        if (!user || !profile) return;
-        const updatedPosts = posts.map(p => {
-            if (p.id === postId) {
-                const liked = p.liked_by_users || [];
-                return { ...p, liked_by_users: liked.includes(user.id) ? liked.filter(id => id !== user.id) : [...liked, user.id] };
-            }
-            return p;
-        });
-        await handleUpdateProfile({ posts: updatedPosts });
-    };
-
-    const handleAddComment = async (postId: string, content: string) => {
-        if (!user || !profile) return;
-        const comment: Comment = { id: `c_${Date.now()}`, user_id: user.id, username: profile.username || 'User', user_avatar: profile.avatar_url, content, created_at: new Date().toISOString() };
-        const updatedPosts = posts.map(p => p.id === postId ? { ...p, comments: [...(p.comments || []), comment] } : p);
-        await handleUpdateProfile({ posts: updatedPosts });
-    };
-
-    const handleDeletePost = async (postId: string) => {
-        if (!window.confirm(t('admin.confirm_delete_post'))) return;
-        const updatedPosts = posts.filter(p => p.id !== postId);
-        await handleUpdateProfile({ posts: updatedPosts });
-    };
-
-    const handleGalleryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const files = e.target.files;
-        if (!files?.length || !user) return;
-        try {
-            setIsLoading(true);
-            const newPosts: Post[] = [];
-            for (let i = 0; i < files.length; i++) {
-                const file = files[i];
-                const path = `profiles/${user.id}/gallery/${Date.now()}_${file.name}`;
-                await supabase.storage.from('models').upload(path, file);
-                const { data } = supabase.storage.from('models').getPublicUrl(path);
-                newPosts.push({ id: `p_${Date.now()}_${i}`, src: data.publicUrl, type: 'image', caption: '', liked_by_users: [], comments: [], date: new Date().toISOString(), tags: [] });
-            }
-            await handleUpdateProfile({ posts: [...posts, ...newPosts] });
-        } catch (error: any) { showToast(error.message, "error"); }
-        finally { setIsLoading(false); }
-    };
-
-    const handleBackgroundUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file || !user) return;
-        try {
-            setIsLoading(true);
-            const path = `profiles/${user.id}/background/${Date.now()}_${file.name}`;
-            
-            // Upload to models bucket (confirmed public and existing)
-            const { error: uploadError } = await supabase.storage
-                .from('models')
-                .upload(path, file, { cacheControl: '3600', upsert: true });
-
-            if (uploadError) throw uploadError;
-
-            const { data: { publicUrl } } = supabase.storage.from('models').getPublicUrl(path);
-            
-            await handleUpdateProfile({ background_image: publicUrl });
-        } catch (error: any) { 
-            console.error('Upload Error:', error);
-            showToast(error.message || 'Upload failed', "error"); 
-        } finally { 
-            setIsLoading(false); 
-        }
-    };
-
-    if (authLoading) return <div className="min-h-screen flex items-center justify-center bg-black"><Loader2 className="w-10 h-10 text-gold-accent animate-spin" /></div>;
-    if (!profile || !modelLike) return null;
-
-    return (
-        <div className="min-h-screen bg-background relative">
-            {/* Background Hero */}
-            <div className="relative h-[30vh] md:h-[40vh] overflow-hidden group/bg">
-                {modelLike.background_image ? (
-                    <img src={modelLike.background_image} className="w-full h-full object-cover opacity-60 transition-all duration-1000 group-hover/bg:opacity-80" alt="Background" />
-                ) : (
-                    <div className="absolute inset-0 bg-zinc-900/50 backdrop-blur-3xl" />
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent z-10" />
-                
-                {/* Upload Background Label */}
-                <label className={`absolute bottom-4 right-4 z-20 cursor-pointer p-2 bg-black/40 hover:bg-black/60 rounded-full text-white transition-all opacity-0 group-hover/bg:opacity-100 border border-white/10 ${isLoading ? 'pointer-events-none' : ''}`}>
-                    {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
-                    <input type="file" className="hidden" onChange={handleBackgroundUpload} accept="image/*" disabled={isLoading} />
-                </label>
-            </div>
-
-            <div className="container mx-auto max-w-4xl px-4 md:px-0 relative z-10 pb-20 -mt-32">
-                <header className="flex flex-col items-center md:items-start pb-8">
-                    <div className="relative mb-6">
-                        <StoriesRing 
-                            model={modelLike} isAdmin={true} 
-                            onStoriesUpdate={() => {}} 
-                            onTriggerUpdate={(updates) => handleUpdateProfile(updates, true)}
-                            onViewStory={(stories) => { setActiveStories(stories); setShowStoryViewer(true); }}
-                        />
-                    </div>
-                    <div className="text-center md:text-left w-full">
-                        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-                            <div>
-                                <div className="flex items-center justify-center md:justify-start">
-                                    <h1 className="text-3xl md:text-5xl font-serif">{modelLike.name}</h1>
-                                    {modelLike.is_verified && <VerifiedIcon className="w-6 h-6 ml-2 mt-1" />}
-                                </div>
-                                <p className="text-gold-accent text-base md:text-lg font-medium mt-1 lowercase">@{modelLike.nickname}</p>
-                            </div>
-                            <div className="flex gap-2">
-                                <button 
-                                    onClick={() => setActiveTab(activeTab === 'settings' ? 'feed' : 'settings')}
-                                    className={`px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${
-                                        activeTab === 'settings' 
-                                            ? 'bg-gold-accent text-black shadow-[0_0_20px_rgba(212,175,55,0.3)]' 
-                                            : 'bg-white text-black hover:bg-white/90'
+                            <p className="text-zinc-400 text-sm leading-relaxed mb-8">
+                                {message}
+                            </p>
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={onCancel}
+                                    className="flex-1 py-3 border border-white/10 text-zinc-500 text-[10px] uppercase font-bold tracking-widest hover:text-white hover:bg-white/5 transition-all"
+                                >
+                                    {cancelLabel}
+                                </button>
+                                <button
+                                    onClick={onConfirm}
+                                    className={`flex-1 py-3 font-bold text-[10px] uppercase tracking-widest transition-all ${
+                                        isDanger ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-white text-black hover:bg-zinc-200'
                                     }`}
                                 >
-                                    {activeTab === 'settings' ? t('profile.view_mode', 'View Mode') : t('profile.edit_mode', 'Edit Mode')}
+                                    {confirmLabel}
                                 </button>
                             </div>
                         </div>
-                        <div className="mt-4 flex flex-wrap justify-center md:justify-start gap-2">
-                            {modelLike.categories?.map((cat: string) => (
-                                <span key={cat} className="text-[10px] uppercase tracking-widest bg-white/5 border border-white/10 text-text-muted px-4 py-1.5 rounded-none">
-                                    {t(`attributes.categories.${cat}`, cat)}
-                                </span>
-                            ))}
-                        </div>
-                        <p className="mt-6 text-sm text-text-muted max-w-xl mx-auto md:mx-0 font-light leading-relaxed">{modelLike.bio}</p>
-                    </div>
-                </header>
+                    </motion.div>
+                </div>
+            )}
+        </AnimatePresence>
+    );
+};
 
-                <div className="flex">
-                    {['feed', 'about', 'settings'].map(tab => (
-                        <button key={tab} onClick={() => setActiveTab(tab)} className={`flex-1 py-4 text-xs font-bold tracking-widest uppercase transition-all relative ${activeTab === tab ? 'text-gold-accent' : 'text-text-muted hover:text-white'}`}>
-                            {t(`profile.${tab}`, tab)} {tab === 'feed' && <span className="ml-1 opacity-50">({posts.length})</span>}
-                            {activeTab === tab && <motion.div layoutId="tab-underline" className="absolute bottom-0 left-0 right-0 h-0.5 bg-gold-accent" />}
+// ─── Таб Поръчки (Динамичен) ────────────────────────────────────────────────
+const OrdersTab: React.FC<{ orders: any[]; loading: boolean; user: any }> = ({ orders, loading, user }) => {
+    const [selectedOrder, setSelectedOrder] = useState<any>(null);
+
+    const closeDetails = () => setSelectedOrder(null);
+
+    // Prevent background scrolling when order details modal is open
+    useEffect(() => {
+        if (selectedOrder) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+        }
+        return () => {
+            document.body.style.overflow = '';
+        };
+    }, [selectedOrder]);
+
+    if (loading) {
+        return (
+            <div className="flex flex-col items-center justify-center py-20">
+                <Loader2 className="w-8 h-8 text-red-600 animate-spin mb-4" />
+                <p className="text-zinc-500 text-sm animate-pulse">Зареждане на историята...</p>
+            </div>
+        );
+    }
+
+    if (orders.length === 0) {
+        return (
+            <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex flex-col items-center justify-center py-24 text-center"
+            >
+                <div className="w-20 h-20 rounded-full bg-white/3 border border-white/8 flex items-center justify-center mb-5">
+                    <PackageOpen className="w-9 h-9 text-zinc-700" />
+                </div>
+                <h3 className="text-white font-bold text-base uppercase tracking-widest mb-2">
+                    Няма поръчки
+                </h3>
+                <p className="text-zinc-600 text-sm max-w-xs leading-relaxed">
+                    Когато направиш поръчка, тя ще се появи тук.
+                </p>
+                <a
+                    href="/catalog"
+                    className="mt-8 inline-flex items-center gap-2 px-6 py-3 bg-red-600 text-white text-xs font-bold uppercase tracking-widest hover:bg-red-700 transition-colors"
+                >
+                    <ShoppingBag className="w-4 h-4" />
+                    Разгледай Каталога
+                </a>
+            </motion.div>
+        );
+    }
+
+    const getStatusInfo = (status: string) => {
+        switch (status.toLowerCase()) {
+            case 'pending':
+                return { label: 'Обработва се', color: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20', icon: Clock };
+            case 'shipped':
+                return { label: 'Изпратена', color: 'text-blue-400 bg-blue-500/10 border-blue-500/20', icon: Truck };
+            case 'delivered':
+                return { label: 'Доставена', color: 'text-green-400 bg-green-500/10 border-green-500/20', icon: CheckCircle2 };
+            case 'cancelled':
+                return { label: 'Отказна', color: 'text-zinc-400 bg-white/5 border-white/10', icon: X };
+            default:
+                return { label: status, color: 'text-zinc-400 bg-white/5 border-white/10', icon: Receipt };
+        }
+    };
+
+    return (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
+            {orders.map((order) => {
+                const status = getStatusInfo(order.status);
+                const dateObj = new Date(order.created_at);
+                const orderDate = dateObj.toLocaleDateString('bg-BG', {
+                    weekday: 'long',
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric'
+                });
+                const orderTime = dateObj.toLocaleTimeString('bg-BG', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                
+                const items = Array.isArray(order.items) ? order.items : [];
+                const shipping = order.shipping_details || {};
+                const totalAmount = order.total_amount || 0;
+                const bgnAmount = totalAmount * 1.95583;
+
+                return (
+                    <motion.div
+                        key={order.id}
+                        initial={{ opacity: 0, scale: 0.98 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="bg-[#0f0f0f] border border-white/5 rounded-3xl overflow-hidden group hover:border-red-600/30 transition-all duration-500 flex flex-col h-full shadow-lg hover:shadow-red-600/5"
+                    >
+                        {/* Status Bar */}
+                        <div className={`h-1 w-full ${status.color.split(' ')[1]}`} />
+                        
+                        <div className="p-6 flex-1 flex flex-col">
+                            {/* Header */}
+                            <div className="flex justify-between items-start mb-6">
+                                <div className="space-y-1">
+                                    <div className="flex items-center gap-2">
+                                        <Hash className="w-3 h-3 text-zinc-600" />
+                                        <h4 className="text-[10px] text-zinc-400 font-black uppercase tracking-widest">
+                                            {order.id.slice(0, 8).toUpperCase()}
+                                        </h4>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <Clock className="w-3.5 h-3.5 text-zinc-500" />
+                                        <p className="text-white text-xs font-bold uppercase tracking-widest">
+                                            {orderDate} <span className="text-zinc-500 ml-1">{orderTime}</span>
+                                        </p>
+                                    </div>
+                                </div>
+                                <span className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider border ${status.color}`}>
+                                    <status.icon className="w-3 h-3" />
+                                    {status.label}
+                                </span>
+                            </div>
+
+                            {/* Product Thumbnails Grid */}
+                            <div className="flex gap-2 mb-8 overflow-hidden h-14">
+                                {items.slice(0, 4).map((item: any, idx: number) => (
+                                    <div key={idx} className="w-14 h-14 rounded-xl bg-black border border-white/5 overflow-hidden shrink-0">
+                                        <img 
+                                            src={item.image || item.product?.image_url || '/placeholder.png'} 
+                                            alt={item.name} 
+                                            className="w-full h-full object-cover" 
+                                        />
+                                    </div>
+                                ))}
+                                {items.length > 4 && (
+                                    <div className="w-14 h-14 rounded-xl bg-zinc-900 border border-white/5 flex items-center justify-center text-[10px] text-zinc-500 font-bold uppercase tracking-tight">
+                                        +{items.length - 4}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Info Footer */}
+                            <div className="mt-auto pt-6 border-t border-white/5 flex items-end justify-between">
+                                <div className="space-y-1">
+                                    <p className="text-[9px] text-zinc-600 uppercase tracking-widest font-black">Стойност</p>
+                                    <div className="flex flex-col">
+                                        <p className="text-xl font-black text-white leading-none">
+                                            {totalAmount.toFixed(2)} <span className="text-xs text-red-500 uppercase tracking-widest font-bold">€</span>
+                                        </p>
+                                        <p className="text-[10px] text-zinc-500 font-bold opacity-70 mt-1">
+                                            ≈ {bgnAmount.toFixed(2)} лв.
+                                        </p>
+                                    </div>
+                                </div>
+                                <button 
+                                    onClick={() => setSelectedOrder(order)}
+                                    className="p-3 rounded-2xl bg-white/[0.03] border border-white/5 text-zinc-400 hover:text-white hover:bg-red-600 hover:border-red-600 transition-all active:scale-95"
+                                >
+                                    <ArrowRight className="w-5 h-5" />
+                                </button>
+                            </div>
+                        </div>
+                    </motion.div>
+                );
+            })}
+
+            {/* Order Details Modal */}
+            <AnimatePresence>
+                {selectedOrder && (
+                    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={closeDetails}
+                            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                            className="relative w-full max-w-2xl bg-[#0d0d0d] border border-white/10 rounded-3xl overflow-hidden shadow-2xl"
+                        >
+                            {/* Modal Header */}
+                            <div className="p-6 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
+                                <div>
+                                    <h3 className="text-white font-black text-xl uppercase tracking-tighter flex items-center gap-3">
+                                        <Receipt className="w-6 h-6 text-red-600" />
+                                        Детайли за поръчка
+                                    </h3>
+                                    <p className="text-zinc-500 text-xs mt-1 uppercase tracking-widest flex items-center gap-2">
+                                        #{selectedOrder.id.toUpperCase()}
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={closeDetails}
+                                    className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10 transition-all"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+
+                            {/* Modal Content */}
+                            <div className="p-6 max-h-[70vh] overflow-y-auto custom-scrollbar space-y-8">
+                                {/* Status & Delivery Summary */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="bg-white/3 border border-white/5 p-4 rounded-2xl">
+                                        <div className="flex items-center gap-3 mb-3">
+                                            <div className="p-2 rounded-lg bg-red-600/10 border border-red-600/20">
+                                                <Info className="w-4 h-4 text-red-500" />
+                                            </div>
+                                            <span className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">Статус</span>
+                                        </div>
+                                        <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider border ${getStatusInfo(selectedOrder.status).color}`}>
+                                            {getStatusInfo(selectedOrder.status).label}
+                                        </div>
+                                    </div>
+                                    <div className="bg-white/3 border border-white/5 p-4 rounded-2xl">
+                                        <div className="flex items-center gap-3 mb-3">
+                                            <div className="p-2 rounded-lg bg-red-600/10 border border-red-600/20">
+                                                <Truck className="w-4 h-4 text-red-500" />
+                                            </div>
+                                            <span className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">Доставка</span>
+                                        </div>
+                                        <p className="text-white text-sm font-bold">
+                                            {selectedOrder.shipping_details?.delivery_type === 'econt' ? 'Еконт' : 'Спиди'} 
+                                            <span className="text-zinc-500 font-normal ml-2">— {selectedOrder.shipping_details?.office_name}</span>
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Items List */}
+                                <div>
+                                    <h4 className="text-[10px] uppercase tracking-[0.2em] text-zinc-600 font-black mb-4 flex items-center gap-3">
+                                        <ShoppingBag className="w-3.5 h-3.5" />
+                                        Артикули
+                                    </h4>
+                                    <div className="space-y-3">
+                                        {Array.isArray(selectedOrder.items) && selectedOrder.items.map((item: any, idx: number) => (
+                                            <div key={idx} className="flex items-center gap-4 p-3 bg-white/[0.02] border border-white/5 rounded-2xl">
+                                                <div className="w-14 h-14 bg-zinc-900 border border-white/5 rounded-xl overflow-hidden shrink-0">
+                                                    {item.image ? (
+                                                        <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <div className="w-full h-full flex items-center justify-center text-zinc-800">
+                                                            <ShoppingBag className="w-5 h-5" />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <h5 className="text-white text-xs font-bold truncate">{item.name}</h5>
+                                                    <p className="text-zinc-500 text-[10px] uppercase tracking-wider mt-0.5">
+                                                        {item.quantity} x {item.price ? item.price.toFixed(2) : '0.00'} €
+                                                    </p>
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className="text-white font-bold text-sm">{(item.quantity * (item.price || 0)).toFixed(2)} €</p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Address & Contact */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div className="space-y-4">
+                                        <h4 className="text-[10px] uppercase tracking-[0.2em] text-zinc-600 font-black flex items-center gap-3">
+                                            <MapPin className="w-3.5 h-3.5" />
+                                            Адрес за доставка
+                                        </h4>
+                                        <div className="space-y-1">
+                                            <p className="text-white text-sm font-bold">{selectedOrder.shipping_details?.full_name}</p>
+                                            <p className="text-zinc-400 text-sm">{selectedOrder.shipping_details?.city}</p>
+                                            <p className="text-zinc-500 text-xs">{selectedOrder.shipping_details?.office_name}</p>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-4">
+                                        <h4 className="text-[10px] uppercase tracking-[0.2em] text-zinc-600 font-black flex items-center gap-3">
+                                            <Phone className="w-3.5 h-3.5" />
+                                            Контакт
+                                        </h4>
+                                        <div className="space-y-1">
+                                            <p className="text-white text-sm font-bold">{selectedOrder.shipping_details?.phone}</p>
+                                             <p className="text-zinc-500 text-xs select-none pointer-events-none">{user?.email}</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Order Summary Table */}
+                                <div className="pt-6 border-t border-white/5">
+                                    <div className="bg-white/3 p-5 rounded-2xl space-y-3">
+                                        <div className="flex justify-between text-xs">
+                                            <span className="text-zinc-500">Междинна сума</span>
+                                            <span className="text-white">{(selectedOrder.total_amount + (selectedOrder.shipping_details?.discount_amount || 0)).toFixed(2)} €</span>
+                                        </div>
+                                        {selectedOrder.shipping_details?.discount_amount > 0 && (
+                                            <div className="flex justify-between text-xs">
+                                                <span className="text-red-500/80">Отстъпка</span>
+                                                <span className="text-red-500">-{selectedOrder.shipping_details.discount_amount.toFixed(2)} €</span>
+                                            </div>
+                                        )}
+                                        {selectedOrder.total_amount < 76.69 && (
+                                            <div className="flex justify-between text-xs">
+                                                <span className="text-[10px] text-red-500 font-black uppercase tracking-widest">До безплатна доставка</span>
+                                                <span className="text-[9px] text-zinc-500 uppercase tracking-widest font-bold">Още {((76.69 - selectedOrder.total_amount) * 1.95583).toFixed(2)} лв.</span>
+                                            </div>
+                                        )}
+                                         <div className="flex justify-between text-xs">
+                                            <span className="text-zinc-500">Доставка</span>
+                                            <span className="text-green-500 font-bold uppercase text-[9px] tracking-widest italic">
+                                                {selectedOrder.total_amount >= 76.69 ? "Безплатна" : "По споразумение"}
+                                            </span>
+                                        </div>
+                                        <div className="pt-3 border-t border-white/5 flex flex-col items-end">
+                                            <span className="text-[10px] uppercase tracking-[0.2em] text-zinc-400 font-black mb-1">За Плащане</span>
+                                            <div className="flex flex-col items-end gap-1">
+                                                <span className="text-3xl font-black text-white tracking-tighter">
+                                                    {selectedOrder.total_amount.toFixed(2)} <span className="text-sm text-red-600 uppercase">€</span>
+                                                </span>
+                                                <span className="text-xs text-zinc-500 font-bold opacity-70">
+                                                    ≈ {(selectedOrder.total_amount * 1.95583).toFixed(2)} лв.
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+};
+
+const SettingsTab: React.FC<{
+    profile: any;
+    user: any;
+    onAvatarClick: () => void;
+    onSignOut: () => void;
+    handleDeleteAccount: () => Promise<void>;
+}> = ({ profile, user, onAvatarClick, onSignOut, handleDeleteAccount }) => {
+    const { refreshProfile } = useAuth();
+    const { showToast } = useToast();
+
+    const [fullName, setFullName] = useState(profile?.full_name || '');
+    const [saving, setSaving] = useState(false);
+    const [nameEditing, setNameEditing] = useState(false);
+
+    const [userPhone, setUserPhone] = useState(profile?.phone || user?.user_metadata?.phone || '');
+    const [phoneSaving, setPhoneSaving] = useState(false);
+    const [phoneEditing, setPhoneEditing] = useState(false);
+
+    const [showPwdForm, setShowPwdForm] = useState(false);
+    const [oldPwd, setOldPwd] = useState('');
+    const [newPwd, setNewPwd] = useState('');
+    const [confirmPwd, setConfirmPwd] = useState('');
+    const [showOld, setShowOld] = useState(false);
+    const [showNew, setShowNew] = useState(false);
+    const [pwdSaving, setPwdSaving] = useState(false);
+    const [showDangerZone, setShowDangerZone] = useState(false);
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+
+    // Check if the user has a password set (usually means email provider)
+    const isPasswordUser = user?.identities?.some((id: any) => id.provider === 'email');
+
+    useEffect(() => {
+        setFullName(profile?.full_name || '');
+        setUserPhone(profile?.phone || user?.user_metadata?.phone || '');
+    }, [profile, user]);
+
+    const saveProfile = async () => {
+        if (!fullName.trim()) return;
+        setSaving(true);
+        try {
+            await supabase.auth.updateUser({ data: { full_name: fullName.trim() } });
+            const { error } = await supabase
+                .from('profiles')
+                .update({ full_name: fullName.trim(), updated_at: new Date().toISOString() })
+                .eq('id', user.id);
+            if (error) throw error;
+            await refreshProfile();
+            setNameEditing(false);
+            showToast('Профилът е обновен!', 'success');
+        } catch (e: any) {
+            showToast(e.message || 'Грешка при запазване.', 'error');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const isValidBulgarianPhone = (number: string) => {
+        const cleanNumber = number.replace(/[\s-]/g, '');
+        const currentRegex = /^(?:\+359|00359|0)(?:8[789]|9[89])\d{7}$/;
+        return currentRegex.test(cleanNumber);
+    };
+
+    const normalizePhone = (num: string) => {
+        let clean = num.replace(/[\s-]/g, '');
+        if (clean.startsWith('00')) clean = '+' + clean.substring(2);
+        if (clean.startsWith('0')) clean = '+359' + clean.substring(1);
+        if (!clean.startsWith('+')) clean = '+359' + clean;
+        return clean;
+    };
+
+    const savePhone = async () => {
+        if (!userPhone.trim()) return;
+
+        if (!isValidBulgarianPhone(userPhone)) {
+            showToast('Невалиден телефон! Въведете коректен български мобилен номер.', 'error');
+            return;
+        }
+
+        setPhoneSaving(true);
+        try {
+            const normalizedPhone = normalizePhone(userPhone);
+
+            // Update profile first for uniqueness check
+            const { error: profileError } = await supabase
+                .from('profiles')
+                .update({ phone: normalizedPhone, updated_at: new Date().toISOString() })
+                .eq('id', user.id);
+
+            if (profileError) {
+                if (profileError.code === '23505') {
+                    throw new Error('Този номер вече е свързан с друг профил.');
+                }
+                throw profileError;
+            }
+
+            // Sync with Auth
+            await supabase.auth.updateUser({ data: { phone: normalizedPhone } });
+            
+            await refreshProfile();
+            setPhoneEditing(false);
+            showToast('Телефонният номер е обновен!', 'success');
+        } catch (e: any) {
+            showToast(e.message || 'Грешка при запазване на телефон.', 'error');
+        } finally {
+            setPhoneSaving(false);
+        }
+    };
+
+    const changePassword = async () => {
+        if (isPasswordUser && !oldPwd) {
+            showToast('Моля, въведете старата си парола.', 'error');
+            return;
+        }
+        if (!newPwd || newPwd !== confirmPwd) {
+            showToast('Паролите не съвпадат.', 'error');
+            return;
+        }
+        if (newPwd.length < 8) {
+            showToast('Паролата трябва да е поне 8 символа.', 'error');
+            return;
+        }
+
+        setPwdSaving(true);
+        try {
+            // If user has a password, we should technically use secure password change if enabled in Supabase
+            // or re-authenticate if we want maximum security. 
+            // For now, we use the updateUser with password.
+            const updateParams: any = { password: newPwd };
+            
+            // If secure password change is ON in Supabase, this is where old_password goes:
+            // if (isPasswordUser) updateParams.old_password = oldPwd;
+
+            const { error } = await supabase.auth.updateUser(updateParams);
+            if (error) throw error;
+            
+            showToast(isPasswordUser ? 'Паролата е сменена успешно!' : 'Паролата е създадена успешно!', 'success');
+            setShowPwdForm(false);
+            setOldPwd('');
+            setNewPwd('');
+            setConfirmPwd('');
+        } catch (e: any) {
+            showToast(e.message || 'Грешка при смяна/създаване на парола.', 'error');
+        } finally {
+            setPwdSaving(false);
+        }
+    };
+
+    const inputCls =
+        'w-full bg-white/5 border border-white/10 text-white text-sm px-4 py-3 rounded-xl focus:outline-none focus:border-red-600/60 transition-colors shadow-inner placeholder-zinc-600';
+    const labelTitleCls = 'text-sm font-bold text-white';
+    const labelSubCls = 'text-xs text-zinc-500 mt-1';
+    const rowCls = 'flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 md:px-8 border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors';
+    const cardWrapCls = 'bg-[#0a0a0a] border border-white/10 rounded-3xl overflow-hidden shadow-2xl';
+
+    return (
+        <div className="space-y-6">
+            {/* General Settings Card */}
+            <div className={cardWrapCls}>
+                
+                {/* Avatar */}
+                <div className={rowCls}>
+                    <div className="md:w-1/3">
+                        <p className={labelTitleCls}>Профилна Снимка</p>
+                        <p className={labelSubCls}>Препоръчително 400x400px</p>
+                    </div>
+                    <div className="md:w-2/3 flex items-center justify-between md:justify-end gap-6">
+                        <div className="relative w-16 h-16 rounded-full overflow-hidden bg-zinc-900 border border-white/10 flex-shrink-0 shadow-inner">
+                            {(profile?.avatar_url || user?.user_metadata?.avatar_url || user?.user_metadata?.picture)
+                                ? <img src={profile?.avatar_url || user?.user_metadata?.avatar_url || user?.user_metadata?.picture} alt="avatar" className="w-full h-full object-cover" />
+                                : <User className="w-full h-full p-4 text-zinc-700" />
+                            }
+                        </div>
+                        <button
+                            onClick={onAvatarClick}
+                            className="flex items-center gap-2 px-5 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white hover:bg-white/10 transition-all text-xs font-bold tracking-wide shadow-lg"
+                        >
+                            <Camera className="w-4 h-4 text-zinc-400" />
+                            Промени
+                        </button>
+                    </div>
+                </div>
+
+                {/* Name */}
+                <div className={rowCls}>
+                    <div className="md:w-1/3">
+                        <p className={labelTitleCls}>Пълно Име</p>
+                        <p className={labelSubCls}>Името, видимо в поръчките ви</p>
+                    </div>
+                    <div className="md:w-2/3">
+                        {nameEditing ? (
+                            <div className="flex gap-2 w-full md:max-w-md ml-auto">
+                                <input
+                                    value={fullName}
+                                    onChange={e => setFullName(e.target.value)}
+                                    className={`${inputCls} flex-1`}
+                                    placeholder="Вашето Име"
+                                    autoFocus
+                                    onKeyDown={e => {
+                                        if (e.key === 'Enter') saveProfile();
+                                        if (e.key === 'Escape') { setNameEditing(false); setFullName(profile?.full_name || ''); }
+                                    }}
+                                />
+                                <button
+                                    onClick={saveProfile}
+                                    disabled={saving}
+                                    className="px-5 py-3 bg-red-600 text-white rounded-xl text-xs font-black uppercase hover:bg-red-700 transition-all disabled:opacity-50 flex items-center justify-center shadow-lg shadow-red-900/40"
+                                >
+                                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                </button>
+                                <button
+                                    onClick={() => { setNameEditing(false); setFullName(profile?.full_name || ''); }}
+                                    className="px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-zinc-400 hover:text-white hover:bg-white/10 transition-all"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="flex items-center justify-between gap-4 w-full md:max-w-md ml-auto bg-white/5 px-5 py-3.5 rounded-xl border border-white/5">
+                                <span className="text-white text-sm font-medium">
+                                    {fullName || <span className="text-zinc-600 italic font-normal">Не е зададено</span>}
+                                </span>
+                                <button
+                                    onClick={() => setNameEditing(true)}
+                                    className="text-zinc-400 hover:text-white transition-colors"
+                                >
+                                    <Edit3 className="w-4 h-4" />
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Phone */}
+                <div className={rowCls}>
+                    <div className="md:w-1/3">
+                        <p className={labelTitleCls}>Телефонен Номер</p>
+                        <p className={labelSubCls}>За контакт при доставка</p>
+                    </div>
+                    <div className="md:w-2/3">
+                        {phoneEditing ? (
+                            <div className="flex gap-2 w-full md:max-w-md ml-auto">
+                                <input
+                                    type="tel"
+                                    value={userPhone}
+                                    onChange={e => setUserPhone(e.target.value)}
+                                    className={`${inputCls} flex-1`}
+                                    placeholder="Вашият телефон"
+                                    autoFocus
+                                    onKeyDown={e => {
+                                        if (e.key === 'Enter') savePhone();
+                                        if (e.key === 'Escape') { setPhoneEditing(false); setUserPhone(profile?.phone || user?.user_metadata?.phone || ''); }
+                                    }}
+                                />
+                                <button
+                                    onClick={savePhone}
+                                    disabled={phoneSaving}
+                                    className="px-5 py-3 bg-red-600 text-white rounded-xl text-xs font-black uppercase hover:bg-red-700 transition-all disabled:opacity-50 flex items-center justify-center shadow-lg shadow-red-900/40"
+                                >
+                                    {phoneSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                </button>
+                                <button
+                                    onClick={() => { setPhoneEditing(false); setUserPhone(profile?.phone || user?.user_metadata?.phone || ''); }}
+                                    className="px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-zinc-400 hover:text-white hover:bg-white/10 transition-all"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="flex items-center justify-between gap-4 w-full md:max-w-md ml-auto bg-white/5 px-5 py-3.5 rounded-xl border border-white/5">
+                                <span className="text-white text-sm font-medium">
+                                    {userPhone || <span className="text-zinc-600 italic font-normal">Не е зададено</span>}
+                                </span>
+                                <button
+                                    onClick={() => setPhoneEditing(true)}
+                                    className="text-zinc-400 hover:text-white transition-colors"
+                                >
+                                    <Edit3 className="w-4 h-4" />
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Email (readonly) */}
+                <div className={rowCls}>
+                    <div className="md:w-1/3">
+                        <p className={labelTitleCls}>Имейл Адрес</p>
+                        <p className={labelSubCls}>Свързан с акаунта ви</p>
+                    </div>
+                    <div className="md:w-2/3 flex items-center justify-end">
+                        <div className="flex items-center gap-3 bg-white/5 px-5 py-3.5 rounded-xl border border-white/5 w-full md:max-w-md">
+                            <Mail className="w-4 h-4 text-zinc-500 flex-shrink-0" />
+                            <span className="text-zinc-300 text-sm pointer-events-none truncate">{user?.email}</span>
+                            <span className="ml-auto text-[9px] text-emerald-400 font-bold uppercase tracking-widest border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 rounded shadow-inner">
+                                Потвърден
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Security Section */}
+            <div className={cardWrapCls}>
+                
+                {/* Password Accordion */}
+                <div className="border-b border-white/5">
+                    <button
+                        onClick={() => {
+                            const nextState = !showPwdForm;
+                            setShowPwdForm(nextState);
+                            if (nextState) setShowDangerZone(false);
+                        }}
+                        className="w-full flex items-center justify-between text-left p-6 md:px-8 group/btn hover:bg-white/[0.02] transition-colors"
+                    >
+                        <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-zinc-400 group-hover/btn:text-white group-hover/btn:bg-white/10 transition-all border border-white/5 group-hover/btn:border-white/10">
+                                <KeyRound className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <span className="text-base font-bold text-white group-hover/btn:text-red-400 transition-colors block">
+                                    {isPasswordUser ? 'Смяна на парола' : 'Създаване на парола'}
+                                </span>
+                                <span className={labelSubCls}>Управление на сигурността</span>
+                            </div>
+                        </div>
+                        <ChevronRight
+                            className={`w-5 h-5 text-zinc-600 transition-transform group-hover/btn:text-white ${showPwdForm ? 'rotate-90' : ''}`}
+                        />
+                    </button>
+
+                    <AnimatePresence>
+                        {showPwdForm && (
+                            <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                className="overflow-hidden bg-black/40"
+                            >
+                                <div className="p-6 md:px-8 space-y-4 max-w-xl mx-auto border-t border-white/5">
+                                    {isPasswordUser && (
+                                        <div>
+                                            <label className="block text-xs font-bold text-zinc-400 mb-2 uppercase tracking-wide">Стара Парола</label>
+                                            <div className="relative">
+                                                <input
+                                                    type={showOld ? 'text' : 'password'}
+                                                    value={oldPwd}
+                                                    onChange={e => setOldPwd(e.target.value)}
+                                                    className={`${inputCls} pr-11`}
+                                                    placeholder="Въведете текущата си парола"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowOld(v => !v)}
+                                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white p-2"
+                                                >
+                                                    {showOld ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+                                    <div>
+                                        <label className="block text-xs font-bold text-zinc-400 mb-2 uppercase tracking-wide">{isPasswordUser ? 'Нова Парола' : 'Парола'}</label>
+                                        <div className="relative">
+                                            <input
+                                                type={showNew ? 'text' : 'password'}
+                                                value={newPwd}
+                                                onChange={e => setNewPwd(e.target.value)}
+                                                className={`${inputCls} pr-11`}
+                                                placeholder="Минимум 8 символа"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowNew(v => !v)}
+                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white p-2"
+                                            >
+                                                {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-zinc-400 mb-2 uppercase tracking-wide">Потвърди Новата Парола</label>
+                                        <input
+                                            type="password"
+                                            value={confirmPwd}
+                                            onChange={e => setConfirmPwd(e.target.value)}
+                                            className={inputCls}
+                                            placeholder="Повтори новата парола"
+                                        />
+                                    </div>
+
+                                    {newPwd && confirmPwd && newPwd !== confirmPwd && (
+                                        <p className="text-red-400 text-xs flex items-center gap-1.5 pt-1">
+                                            <AlertTriangle className="w-3.5 h-3.5" />
+                                            Паролите не съвпадат
+                                        </p>
+                                    )}
+
+                                    <div className="pt-2">
+                                        <button
+                                            onClick={changePassword}
+                                            disabled={pwdSaving || !newPwd || !confirmPwd || newPwd !== confirmPwd || (isPasswordUser && !oldPwd)}
+                                            className="w-full py-4 bg-gradient-to-r from-red-600 to-red-800 text-white font-black text-[13px] uppercase tracking-widest hover:from-red-500 hover:to-red-700 rounded-xl transition-all shadow-lg shadow-red-900/20 disabled:opacity-40 flex items-center justify-center gap-2"
+                                        >
+                                            {pwdSaving
+                                                ? <Loader2 className="w-4 h-4 animate-spin" />
+                                                : <Lock className="w-4 h-4" />}
+                                            {pwdSaving ? 'Запазване...' : (isPasswordUser ? 'Запази Новата Парола' : 'Създай Парола')}
+                                        </button>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
+
+                {/* Danger Zone Accordion */}
+                <div>
+                    <button
+                        onClick={() => {
+                            const nextState = !showDangerZone;
+                            setShowDangerZone(nextState);
+                            if (nextState) setShowPwdForm(false);
+                        }}
+                        className="w-full flex items-center justify-between text-left p-6 md:px-8 group/btn hover:bg-red-950/10 transition-colors"
+                    >
+                        <div className="flex items-center gap-4 text-red-500">
+                            <div className="w-10 h-10 rounded-xl bg-red-950/30 flex items-center justify-center text-red-500 group-hover/btn:bg-red-900/40 transition-all border border-red-900/30 group-hover/btn:border-red-500/30">
+                                <AlertTriangle className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <span className="text-base font-bold uppercase tracking-wider group-hover/btn:text-red-400 transition-colors block">Опасна зона</span>
+                                <span className="text-xs text-red-900/80 mt-1 uppercase font-bold tracking-widest">Изтриване на акаунта</span>
+                            </div>
+                        </div>
+                        <ChevronRight
+                            className={`w-5 h-5 text-red-900/50 transition-transform group-hover/btn:text-red-500/80 ${showDangerZone ? 'rotate-90' : ''}`}
+                        />
+                    </button>
+
+                    <AnimatePresence>
+                        {showDangerZone && (
+                            <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                className="overflow-hidden bg-black/40 lg:bg-transparent"
+                            >
+                                <div className="p-6 md:px-8 border-t border-white/5 flex flex-col items-center">
+                                    <div className="max-w-2xl w-full">
+                                        <p className="text-zinc-500 text-sm leading-relaxed font-medium bg-red-950/10 p-5 border border-red-900/20 rounded-xl mb-6">
+                                            ВНИМАНИЕ: Това действие ще премахне твоите лични данни и ще деактивира профила ти. 
+                                            Според нашите общи условия, данните за твоите поръчки ще бъдат запазени в архива за легални цели за определен период.
+                                        </p>
+                                        <button
+                                            onClick={() => setDeleteModalOpen(true)}
+                                            className="w-full py-4 bg-red-950/20 border border-red-900/40 text-red-500 hover:bg-red-600 hover:text-white text-[13px] font-black uppercase tracking-widest transition-all rounded-xl flex items-center justify-center gap-2 hover:shadow-lg hover:shadow-red-900/30 group/del"
+                                        >
+                                            <Trash2 className="w-4 h-4 group-hover/del:animate-bounce" />
+                                            Изтрий акаунта ми
+                                        </button>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
+                    <ConfirmDialog
+                        isOpen={deleteModalOpen}
+                        title="ПОТВЪРДИ ИЗТРИВАНЕТО"
+                        message="Сигурен ли си, че искаш да изтриеш своя акаунт? Акаунтът ти ще бъде насрочен за изтриване след 7 дни. През този 7-дневен период можеш да го възстановиш по всяко време, просто като влезеш отново в сайта ни! Ако изминат 7 дни без да се логнеш, действието става НАПЪЛНО НЕОБРАТИМО и всички твои данни ще бъдат безвъзвратно изтрити."
+                        confirmLabel="Да, изтрий акаунта"
+                        isDanger={true}
+                        onConfirm={() => {
+                            setDeleteModalOpen(false);
+                            handleDeleteAccount();
+                        }}
+                        onCancel={() => setDeleteModalOpen(false)}
+                    />
+                </div>
+            </div>
+
+            {/* Sign out */}
+            <div className="pt-4 flex justify-end">
+                <button
+                    onClick={onSignOut}
+                    className="flex items-center justify-center gap-2 px-8 py-4 bg-white/5 border border-white/10 text-zinc-300 hover:bg-white/10 hover:text-white hover:border-white/20 text-xs font-bold uppercase tracking-widest transition-all rounded-2xl w-full md:w-auto"
+                >
+                    <LogOut className="w-4 h-4" />
+                    Изход от профила
+                </button>
+            </div>
+        </div>
+    );
+};
+
+
+// ... inside ProfilePage component ...
+
+// ─── Главна страница ─────────────────────────────────────────────────────────
+const ProfilePage: React.FC = () => {
+    const { user, profile, loading: authLoading, refreshProfile, signOut } = useAuth();
+    const navigate = useNavigate();
+    const { showToast } = useToast();
+
+    const [activeTab, setActiveTab] = useState<ProfileTab>('orders');
+    const [cropModalOpen, setCropModalOpen] = useState(false);
+    const [imageToCrop, setImageToCrop] = useState<string | null>(null);
+    const [avatarLoading, setAvatarLoading] = useState(false);
+
+    const [orders, setOrders] = useState<any[]>([]);
+    const [ordersLoading, setOrdersLoading] = useState(true);
+    const [deleting, setDeleting] = useState(false);
+
+    const avatarInputRef = useRef<HTMLInputElement>(null);
+
+    const handleDeleteAccount = async () => {
+        if (!user) return;
+        setDeleting(true);
+        try {
+            const { error } = await supabase.rpc('schedule_account_deletion', { reason: 'Потребителят пожела изтриване на акаунта (Профил)' });
+
+            if (error) {
+                throw new Error(error.message || 'Грешка при насрочване за изтриване на акаунта.');
+            }
+
+            showToast('Акаунтът е насрочен за изтриване. Имаш 7 дни за възстановяване чрез повторен вход.', 'success');
+            
+            // Wait for toast and then sign out locally
+            setTimeout(async () => {
+                await signOut();
+                navigate('/');
+            }, 3000);
+
+        } catch (e: any) {
+            showToast(e.message || 'Възникна грешка.', 'error');
+            setDeleting(false);
+        }
+    };
+
+    useEffect(() => {
+        if (!authLoading && !user) navigate('/');
+        
+        if (user) {
+            fetchOrders();
+        }
+    }, [user, authLoading, navigate]);
+
+    const fetchOrders = async () => {
+        if (!user) return;
+        setOrdersLoading(true);
+        try {
+            const { data, error } = await supabase
+                .from('orders')
+                .select('*')
+                .eq('user_id', user.id)
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+            setOrders(data || []);
+        } catch (e: any) {
+            console.error("Error fetching orders:", e);
+        } finally {
+            setOrdersLoading(false);
+        }
+    };
+
+    const handleAvatarFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = ev => {
+            if (ev.target?.result) {
+                setImageToCrop(ev.target.result as string);
+                setCropModalOpen(true);
+            }
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const handleCropComplete = async (croppedUrl: string) => {
+        try {
+            setAvatarLoading(true);
+            const res = await fetch(croppedUrl);
+            const blob = await res.blob();
+            const file = new File([blob], 'avatar.jpg', { type: 'image/jpeg' });
+            const folderName = user?.email || user?.id || 'unknown';
+            const displayName = profile?.full_name || user?.email?.split('@')[0] || 'avatar';
+            
+            // Supabase storage needs ASCII keys, so let's map bg to english letters
+            const bgToLatin = (str: string) => {
+                const map: Record<string, string> = {
+                    'А':'A','Б':'B','В':'V','Г':'G','Д':'D','Е':'E','Ж':'Zh','З':'Z','И':'I','Й':'Y','К':'K','Л':'L','М':'M','Н':'N','О':'O','П':'P','Р':'R','С':'S','Т':'T','У':'U','Ф':'F','Х':'H','Ц':'Ts','Ч':'Ch','Ш':'Sh','Щ':'Sht','Ъ':'A','Ь':'Y','Ю':'Yu','Я':'Ya',
+                    'а':'a','б':'b','в':'v','г':'g','д':'d','е':'e','ж':'zh','з':'z','и':'i','й':'y','к':'k','л':'l','м':'m','н':'n','о':'o','п':'p','р':'r','с':'s','т':'t','у':'u','ф':'f','х':'h','ц':'ts','ч':'ch','ш':'sh','щ':'sht','ъ':'a','ь':'y','ю':'yu','я':'ya'
+                };
+                return str.split('').map(c => map[c] || c).join('');
+            };
+
+            // Safe filename avoiding non-latin chars
+            const safeName = bgToLatin(displayName).replace(/[^a-zA-Z0-9\s-]/g, '').trim().replace(/\s+/g, '_');
+            const fileName = `${folderName}/${safeName}.jpg`;
+
+            // Optional: Cleanup old avatars in this user's folder
+            const { data: existingFiles } = await supabase.storage.from('avatars').list(folderName);
+            if (existingFiles && existingFiles.length > 0) {
+                const toDel = existingFiles.map(f => `${folderName}/${f.name}`);
+                await supabase.storage.from('avatars').remove(toDel);
+            }
+
+            const { error: uploadError } = await supabase.storage
+                .from('avatars')
+                .upload(fileName, file, { upsert: true });
+            if (uploadError) throw uploadError;
+
+            const { data } = supabase.storage.from('avatars').getPublicUrl(fileName);
+            const { error: updateError } = await supabase.from('profiles')
+                .update({ avatar_url: `${data.publicUrl}?t=${Date.now()}` })
+                .eq('id', user?.id);
+            if (updateError) throw updateError;
+
+            await refreshProfile();
+            showToast('Профилната снимка е обновена!', 'success');
+        } catch (e: any) {
+            showToast(e.message || 'Грешка при качване.', 'error');
+        } finally {
+            setAvatarLoading(false);
+            setCropModalOpen(false);
+            if (avatarInputRef.current) avatarInputRef.current.value = '';
+        }
+    };
+
+    const handleSignOut = async () => {
+        await signOut();
+        navigate('/');
+    };
+
+    if (authLoading) {
+        return (
+            <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+                <Loader2 className="w-10 h-10 text-red-600 animate-spin" />
+            </div>
+        );
+    }
+
+    if (!user) return null;
+
+    const memberSince = profile?.created_at
+        ? new Date(profile.created_at).toLocaleDateString('bg-BG', { month: 'long', year: 'numeric' })
+        : '—';
+
+    const roleLabel =
+        profile?.role === 'admin' ? 'Администратор'
+        : profile?.role === 'editor' ? 'Редактор'
+        : 'Клиент';
+
+    const roleColor =
+        profile?.role === 'admin'
+            ? 'text-red-400 bg-red-600/15 border-red-600/30'
+            : profile?.role === 'editor'
+            ? 'text-yellow-400 bg-yellow-600/15 border-yellow-600/30'
+            : 'text-zinc-400 bg-white/5 border-white/10';
+
+    const tabs: { id: ProfileTab; label: string; icon: React.ElementType }[] = [
+        { id: 'orders',   label: 'Поръчки',   icon: ShoppingBag },
+        { id: 'settings', label: 'Настройки', icon: Settings },
+    ];
+
+    return (
+        <div className="min-h-screen bg-[#0a0a0a] text-white">
+            {/* ──── Hero Header ──── */}
+            <div className="relative bg-gradient-to-b from-zinc-950 to-[#0a0a0a] border-b border-white/5 overflow-hidden">
+                {/* Grid bg */}
+                <div
+                    className="absolute inset-0 opacity-[0.03]"
+                    style={{
+                        backgroundImage:
+                            'repeating-linear-gradient(0deg,#fff 0,#fff 1px,transparent 1px,transparent 40px),repeating-linear-gradient(90deg,#fff 0,#fff 1px,transparent 1px,transparent 40px)',
+                    }}
+                />
+                {/* Red glow */}
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-32 bg-red-600/8 blur-3xl pointer-events-none" />
+
+                <div className="relative max-w-3xl mx-auto px-6 pt-16 pb-12">
+                    <div className="flex flex-col sm:flex-row items-center sm:items-end gap-6">
+                        {/* Avatar */}
+                        <div className="relative group flex-shrink-0">
+                            <div className="w-28 h-28 rounded-full overflow-hidden bg-zinc-900 border-2 border-white/10 shadow-2xl">
+                                {avatarLoading ? (
+                                    <div className="w-full h-full flex items-center justify-center">
+                                        <Loader2 className="w-8 h-8 text-red-600 animate-spin" />
+                                    </div>
+                                ) : (profile?.avatar_url || user?.user_metadata?.avatar_url || user?.user_metadata?.picture) ? (
+                                    <img
+                                        src={profile?.avatar_url || user?.user_metadata?.avatar_url || user?.user_metadata?.picture}
+                                        alt="avatar"
+                                        className="w-full h-full object-cover"
+                                    />
+                                ) : (
+                                    <User className="w-full h-full p-7 text-zinc-700" />
+                                )}
+                            </div>
+                            <button
+                                onClick={() => avatarInputRef.current?.click()}
+                                className="absolute bottom-0 right-0 w-8 h-8 bg-red-600 rounded-full flex items-center justify-center shadow-lg hover:bg-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                                title="Промени снимката"
+                            >
+                                <Camera className="w-3.5 h-3.5 text-white" />
+                            </button>
+                            <input
+                                ref={avatarInputRef}
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={handleAvatarFile}
+                            />
+                        </div>
+
+                        {/* Info */}
+                        <div className="flex-1 text-center sm:text-left">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
+                                <h1 className="text-2xl font-black tracking-tight text-white">
+                                    {profile?.full_name || user.email?.split('@')[0] || 'Потребител'}
+                                </h1>
+                                <span
+                                    className={`inline-flex items-center gap-1 text-[10px] uppercase tracking-widest font-bold px-2.5 py-1 border rounded-full w-fit mx-auto sm:mx-0 ${roleColor}`}
+                                >
+                                    <Shield className="w-2.5 h-2.5" />
+                                    {roleLabel}
+                                </span>
+                            </div>
+                            <p className="text-zinc-500 text-sm flex items-center gap-2 justify-center sm:justify-start">
+                                <Mail className="w-3.5 h-3.5 flex-shrink-0" />
+                                <span className="select-none pointer-events-none">{user.email}</span>
+                            </p>
+                            <p className="text-zinc-700 text-xs flex items-center gap-2 mt-1 justify-center sm:justify-start">
+                                <Calendar className="w-3 h-3 flex-shrink-0" />
+                                Член от {memberSince}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* ──── Tabs ──── */}
+            <div className="max-w-3xl mx-auto px-6">
+                <div className="flex border-b border-white/5">
+                    {tabs.map(tab => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id)}
+                            className={`flex items-center gap-2 px-6 py-5 text-[11px] font-bold uppercase tracking-[0.2em] border-b-2 transition-all ${
+                                activeTab === tab.id
+                                    ? 'border-red-600 text-white'
+                                    : 'border-transparent text-zinc-600 hover:text-zinc-400'
+                            }`}
+                        >
+                            <tab.icon className="w-3.5 h-3.5" />
+                            {tab.label}
                         </button>
                     ))}
                 </div>
 
-                <div className="mt-8">
-                    {activeTab === 'feed' && (
-                        <div className="space-y-6">
-                            <div className="flex justify-between items-center py-4">
-                                <h3 className="text-[10px] uppercase tracking-widest font-black text-text-muted">Personal Gallery</h3>
-                                <label className="flex items-center gap-2 cursor-pointer bg-gold-accent/10 hover:bg-gold-accent/20 text-gold-accent px-4 py-2 border border-gold-accent/20 transition-all">
-                                    {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                                    <span className="text-[10px] font-bold uppercase tracking-widest">Add Photos</span>
-                                    <input type="file" multiple className="hidden" onChange={handleGalleryUpload} accept="image/*" />
-                                </label>
-                            </div>
-                            <div className="grid grid-cols-3 gap-1">
-                                {posts.map((post) => (
-                                    <div key={post.id} className="relative aspect-square group cursor-pointer overflow-hidden">
-                                        <img src={post.src} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" onClick={() => setSearchParams({ post: post.id })} />
-                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-6 pointer-events-none">
-                                            <div className="flex items-center text-white"><HeartIcon className="w-5 h-5 mr-1" filled={true} /><span>{post.liked_by_users?.length || 0}</span></div>
-                                            <div className="flex items-center text-white"><ChatBubbleIcon className="w-5 h-5 mr-1" /><span>{post.comments?.length || 0}</span></div>
-                                        </div>
-                                        <button onClick={() => handleDeletePost(post.id)} className="absolute top-2 right-2 p-1.5 bg-red-500/80 hover:bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-all"><Trash2 className="w-3 h-3" /></button>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-                    {activeTab === 'about' && (
-                        <div className="p-10 bg-surface border border-border">
-                            <h3 className="text-2xl font-serif mb-6">{t('profile.about_title')} {modelLike.name}</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-sm">
-                                <div><span className="text-text-muted">{t('profile.location')}:</span> {modelLike.location}</div>
-                                <div><span className="text-text-muted">{t('profile.height')}:</span> {modelLike.height} cm</div>
-                                <div><span className="text-text-muted space-x-2">{t('profile.measurements')}:</span> {modelLike.measurements}</div>
-                                <div><span className="text-text-muted">{t('profile.hair_color')}:</span> {modelLike.hair_color}</div>
-                                <div><span className="text-text-muted">{t('profile.eye_color')}:</span> {modelLike.eye_color}</div>
-                            </div>
-                        </div>
-                    )}
-                    {activeTab === 'settings' && <SettingsPageController profile={profile} onUpdate={handleUpdateProfile} isLoading={isLoading} />}
+                {/* ──── Content ──── */}
+                <div className="py-6 pb-20">
+                    <AnimatePresence mode="wait">
+                        <motion.div
+                            key={activeTab}
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -8 }}
+                            transition={{ duration: 0.15 }}
+                        >
+                            {activeTab === 'orders' && <OrdersTab orders={orders} loading={ordersLoading} user={user} />}
+                            {activeTab === 'settings' && (
+                                <SettingsTab
+                                    profile={profile}
+                                    user={user}
+                                    onAvatarClick={() => avatarInputRef.current?.click()}
+                                    onSignOut={handleSignOut}
+                                    handleDeleteAccount={handleDeleteAccount}
+                                />
+                            )}
+                        </motion.div>
+                    </AnimatePresence>
                 </div>
             </div>
 
-            <AnimatePresence>
-                {selectedPost && (
-                    <ImageLightbox 
-                        post={selectedPost} index={posts.indexOf(selectedPost)} total={posts.length} model={modelLike} 
-                        onClose={() => setSearchParams({})} onLike={handleLikePost} onComment={handleAddComment}
-                    />
-                )}
-            </AnimatePresence>
-
-            {showStoryViewer && activeStories.length > 0 && (
-                <StoryViewer stories={activeStories} title={modelLike.name} avatar={modelLike.avatar} onClose={() => setShowStoryViewer(false)} />
+            {/* Avatar Crop Modal */}
+            {cropModalOpen && imageToCrop && (
+                <AvatarCropModal
+                    isOpen={cropModalOpen}
+                    imageUrl={imageToCrop}
+                    onCropComplete={handleCropComplete}
+                    onClose={() => {
+                        setCropModalOpen(false);
+                        if (avatarInputRef.current) avatarInputRef.current.value = '';
+                    }}
+                />
             )}
         </div>
     );

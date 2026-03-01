@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils"
 const labelVariants = cva([
   "block mb-2 text-xs uppercase tracking-widest text-text-muted transition-colors",
   /* Focused/Active */
-  "group-data-[focus-within]:text-gold-accent group-data-[open]:text-gold-accent",
+  "group-data-[focus-within]:text-red-600 group-data-[open]:text-red-600",
   /* Disabled */
   "data-[disabled]:opacity-50",
   /* Invalid */
@@ -65,7 +65,7 @@ const fieldGroupVariants = cva("", {
       default: [
         "relative flex h-14 w-full items-center overflow-hidden border border-border bg-surface/50 px-4 text-text-primary transition-all outline-none",
         /* Focus Within */
-        "data-[focus-within]:ring-1 data-[focus-within]:ring-gold-accent data-[focus-within]:border-gold-accent",
+        "data-[focus-within]:ring-1 data-[focus-within]:ring-red-600 data-[focus-within]:border-red-600",
         /* Disabled */
         "data-[disabled]:opacity-50",
       ],

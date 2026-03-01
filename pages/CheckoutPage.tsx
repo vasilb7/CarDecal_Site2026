@@ -1,776 +1,605 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
+import { Link, useNavigate } from 'react-router-dom';
 import { 
-    ChevronLeft, ShieldCheck, CreditCard, Sparkles, 
-    Check, Briefcase, Globe, FileText, Headphones, 
-    User, ArrowRight, Building2, Camera, Mail, 
-    Shield, ArrowUpRight, Zap, Target, Phone,
-    MapPin, StickyNote, UserCheck, CheckCircle2,
-    ChevronRight, Lock, Star, Award
+    ArrowLeft, ShieldCheck, Truck, CreditCard, 
+    ChevronRight, MapPin, Phone, User, Mail, 
+    CheckCircle2, AlertCircle, Loader2, Package
 } from 'lucide-react';
-import { supabase } from '../lib/supabase';
-import { useToast } from '../hooks/useToast';
+import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
-import { cn } from '@/lib/utils';
-
-import { PurchaseSuccessModal } from '../components/PurchaseSuccessModal';
-
-/* ─── Step Icons ─── */
-const stepIcons = [
-    <Building2 className="w-4 h-4" />,
-    <FileText className="w-4 h-4" />,
-    <Target className="w-4 h-4" />,
-];
+import { supabase } from '../lib/supabase';
+import { useToast } from '../components/Toast/ToastProvider';
 
 const CheckoutPage: React.FC = () => {
+    const { activeItems, subtotal, total, discountPercentage, clearCart, isFreeShipping, amountToFreeShipping } = useCart();
+    const { user, profile } = useAuth();
     const { t } = useTranslation();
-    const { lang, planId } = useParams<{ lang: string, planId: string }>();
     const navigate = useNavigate();
     const { showToast } = useToast();
-    const { user, profile } = useAuth();
+
     const [loading, setLoading] = useState(false);
-    const [isSuccess, setIsSuccess] = useState(false);
-    const [currentStep, setCurrentStep] = useState(0);
-    const [profileLoaded, setProfileLoaded] = useState(false);
-    const [agreedToTerms, setAgreedToTerms] = useState(false);
-    const formRef = useRef<HTMLFormElement>(null);
+    const [step, setStep] = useState(1); // 1: Info, 2: Review, 3: Success
 
-    const plansMetas: Record<string, any> = {
-        scouting: {
-            nameKey: "pricing.scouting",
-            price: "49€",
-            featuresKeys: [
-                "pricing.benefits.new_faces",
-                "pricing.benefits.online_booking",
-                "pricing.benefits.response_24h"
-            ],
-            gradient: "from-rose-600/20 via-pink-600/10 to-rose-900/30",
-            accent: "rose",
-            icon: <Camera className="w-5 h-5" />,
-        },
-        casting: {
-            nameKey: "pricing.casting",
-            price: "149€",
-            featuresKeys: [
-                "pricing.benefits.mainboard",
-                "pricing.benefits.priority_booking",
-                "pricing.benefits.casting_reels",
-                "pricing.benefits.dedicated_agent"
-            ],
-            gradient: "from-violet-600/20 via-purple-600/10 to-indigo-900/30",
-            accent: "violet",
-            icon: <Star className="w-5 h-5" />,
-        },
-        campaign: {
-            nameKey: "pricing.campaign",
-            price: t('pricing.custom'),
-            featuresKeys: [
-                "pricing.benefits.full_database",
-                "pricing.benefits.priority_247",
-                "pricing.benefits.wholistic_rights",
-                "pricing.benefits.producer"
-            ],
-            gradient: "from-sky-600/20 via-blue-600/10 to-slate-900/30",
-            accent: "sky",
-            icon: <Award className="w-5 h-5" />,
-        }
-    };
-
-    const currentPlan = plansMetas[planId || 'scouting'] || plansMetas.scouting;
-
-    const [formData, setFormData] = useState({
-        client_type: 'Brand',
-        full_name: '',
-        email: '',
-        company_name: '',
-        vat_number: '',
-        billing_address: '',
-        phone: '',
-        notes: '',
-        project_intent: 'Campaign'
-    });
-
-    /* ─── Auto-fill from profile ─── */
+    // Authentication Guard
     useEffect(() => {
-        if (user && profile) {
-            const autoData: Partial<typeof formData> = {};
-            let hasData = false;
-
-            if (profile.full_name) {
-                autoData.full_name = profile.full_name;
-                hasData = true;
-            }
-            if (user.email) {
-                autoData.email = user.email;
-                hasData = true;
-            }
-            if (profile.location) {
-                autoData.billing_address = profile.location;
-                hasData = true;
-            }
-
-            if (hasData) {
-                setFormData(prev => ({ ...prev, ...autoData }));
-                setProfileLoaded(true);
-            }
+        if (!user) {
+            navigate('/login', { state: { from: '/checkout' } });
         }
-    }, [user, profile]);
+    }, [user, navigate]);
+
+    // Form State
+    const [formData, setFormData] = useState({
+        fullName: profile?.full_name || profile?.last_full_name || '',
+        email: user?.email || '',
+        phone: profile?.phone || profile?.preferred_phone || '',
+        city: profile?.preferred_city || '',
+        deliveryType: (profile?.preferred_delivery_type as 'econt' | 'speedy') || 'econt',
+        officeName: profile?.preferred_office_name || '',
+        notes: ''
+    });
+    const [saveForFuture, setSaveForFuture] = useState(true);
+
+    // Update form when profile loads if it was empty
+    React.useEffect(() => {
+        if (profile) {
+            setFormData(prev => ({
+                ...prev,
+                fullName: prev.fullName || profile.full_name || (profile as any).last_full_name || '',
+                phone: prev.phone || profile.phone || (profile as any).preferred_phone || '',
+                city: prev.city || (profile as any).preferred_city || '',
+                deliveryType: prev.deliveryType || ((profile as any).preferred_delivery_type as any) || 'econt',
+                officeName: prev.officeName || (profile as any).preferred_office_name || ''
+            }));
+        }
+    }, [profile]);
+
+    const totalAmount = total;
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setLoading(true);
+    const validateStep1 = () => {
+        if (!formData.fullName || formData.fullName.length < 3) {
+            showToast('Моля, въведете валидно име.', 'warning');
+            return false;
+        }
+        if (!formData.phone || formData.phone.length < 8) {
+            showToast('Моля, въведете валиден телефонен номер.', 'warning');
+            return false;
+        }
+        if (!formData.city || formData.city.length < 2) {
+            showToast('Моля, въведете град.', 'warning');
+            return false;
+        }
+        if (!formData.officeName || formData.officeName.length < 3) {
+            showToast('Моля, въведете име или адрес на офиса.', 'warning');
+            return false;
+        }
+        return true;
+    };
 
+    const nextStep = () => {
+        if (step === 1 && validateStep1()) {
+            setStep(2);
+            window.scrollTo(0, 0);
+        }
+    };
+
+    const prevStep = () => {
+        if (step > 1) {
+            setStep(step - 1);
+            window.scrollTo(0, 0);
+        }
+    };
+
+    const submitOrder = async () => {
+        setLoading(true);
         try {
-            const { error } = await supabase
-                .from('promo_orders')
-                .insert([
-                    {
-                        plan_id: planId,
-                        plan_name: t(currentPlan.nameKey),
-                        price: currentPlan.price,
-                        ...formData,
-                        created_at: new Date().toISOString()
-                    }
-                ]);
+            // Simplified order submission logic
+            // In a real app, you'd save this to a 'orders' table
+            const { error } = await supabase.from('orders').insert({
+                user_id: user?.id || null,
+                items: activeItems,
+                total_amount: totalAmount,
+                shipping_details: formData,
+                status: 'pending',
+                payment_method: 'cash_on_delivery'
+            });
 
             if (error) throw error;
 
-            if (user) {
-                const updates: any = { active_plan: planId };
-                if (planId === 'scouting' || planId === 'casting') {
-                    updates.is_verified = true;
-                    updates.verified_until = new Date(Date.now() + 20000).toISOString();
-                }
-                await supabase.from('profiles').update(updates).eq('id', user.id);
+            // Save preferences if requested
+            if (user && saveForFuture) {
+                await supabase.from('profiles').update({
+                    preferred_city: formData.city,
+                    preferred_delivery_type: formData.deliveryType,
+                    preferred_office_name: formData.officeName,
+                    preferred_phone: formData.phone,
+                    last_full_name: formData.fullName
+                }).eq('id', user.id);
             }
 
-            setIsSuccess(true);
-            showToast("✨ " + t('checkout.payment.title') + "!", "success");
-        } catch (error: any) {
-            console.error('Checkout error:', error);
-            showToast(error.message || "Error processing order", "error");
+            showToast('Поръчката е приета успешно!', 'success');
+            setStep(3);
+            clearCart();
+        } catch (err: any) {
+            console.error('Order error:', err);
+            showToast(err.message || 'Възникна грешка при изпращане на поръчката.', 'error');
         } finally {
             setLoading(false);
         }
     };
 
-    const steps = [
-        t('checkout.step_client'),
-        t('checkout.step_details'),
-        t('checkout.step_intent'),
-    ];
-
-    const clientTypes = ['Brand', 'Photographer', 'Agency', 'Production'];
-    const intentTypes = ['Campaign', 'E-commerce', 'Editorial', 'Social', 'Runway', 'Lookbook'];
-
-    const clientTypeIcons: Record<string, React.ReactNode> = {
-        'Brand': <Briefcase className="w-4 h-4" />,
-        'Photographer': <Camera className="w-4 h-4" />,
-        'Agency': <Building2 className="w-4 h-4" />,
-        'Production': <Globe className="w-4 h-4" />,
-    };
-
-    const intentIcons: Record<string, React.ReactNode> = {
-        'Campaign': <Target className="w-4 h-4" />,
-        'E-commerce': <Globe className="w-4 h-4" />,
-        'Editorial': <FileText className="w-4 h-4" />,
-        'Social': <Sparkles className="w-4 h-4" />,
-        'Runway': <ArrowUpRight className="w-4 h-4" />,
-        'Lookbook': <Camera className="w-4 h-4" />,
-    };
-
-    /* ─── Step validation ─── */
-    const canProceed = () => {
-        if (currentStep === 0) return !!formData.client_type;
-        if (currentStep === 1) return !!(formData.full_name && formData.email && formData.company_name);
-        if (currentStep === 2) return !!formData.project_intent;
-        return true;
-    };
-
-    /* ─── Animated Input Component ─── */
-    const FloatingInput = ({ label, icon, name, type = "text", required = false, placeholder = "", value, onChange }: {
-        label: string; icon: React.ReactNode; name: string; type?: string; required?: boolean; placeholder?: string;
-        value: string; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-    }) => (
-        <div className="group relative">
-            <div className="flex items-center gap-2 mb-2">
-                <span className="text-zinc-500 group-focus-within:text-white transition-colors">{icon}</span>
-                <label className="text-[10px] uppercase font-black tracking-[0.15em] text-zinc-500 group-focus-within:text-zinc-300 transition-colors">
-                    {label}
-                </label>
-                {profileLoaded && value && (
-                    <span className="ml-auto flex items-center gap-1 text-emerald-500/60">
-                        <UserCheck className="w-3 h-3" />
-                        <span className="text-[8px] uppercase tracking-widest font-bold">Auto</span>
-                    </span>
-                )}
+    if (step === 3) {
+        return (
+            <div className="pt-32 pb-24 min-h-screen flex flex-col items-center justify-center px-4">
+                <motion.div 
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="text-center max-w-lg"
+                >
+                    <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <CheckCircle2 className="w-10 h-10 text-green-500" />
+                    </div>
+                    <h1 className="text-3xl font-black text-white uppercase tracking-widest mb-4">Благодарим Ви!</h1>
+                    <p className="text-[#B0BEC5] uppercase tracking-widest text-sm mb-8 leading-relaxed">
+                        Вашата поръчка е приета успешно. Ще се свържем с Вас по телефона за потвърждение преди изпращане.
+                    </p>
+                    <Link 
+                        to="/" 
+                        className="px-8 py-4 bg-gradient-to-r from-[#3d0000] to-[#950101] text-white text-xs font-bold uppercase tracking-[0.2em] rounded-sm transition-all hover:bg-red-600 shadow-lg shadow-red-900/20"
+                    >
+                        КЪМ НАЧАЛО
+                    </Link>
+                </motion.div>
             </div>
-            <input
-                type={type}
-                required={required}
-                name={name}
-                placeholder={placeholder}
-                className="w-full bg-white/[0.03] border border-white/[0.06] rounded-xl px-4 py-3.5 text-white/90 text-sm placeholder:text-zinc-700 
-                           focus:border-white/20 focus:bg-white/[0.05] focus:ring-1 focus:ring-white/10 
-                           transition-all duration-300 outline-none"
-                value={value}
-                onChange={onChange}
-            />
-        </div>
-    );
+        );
+    }
 
-    /* ─── Step Content ─── */
-    const renderStepContent = () => {
-        switch (currentStep) {
-            case 0:
-                return (
-                    <motion.div
-                        key="step-0"
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -20 }}
-                        transition={{ duration: 0.3 }}
-                        className="space-y-6"
-                    >
-                        <div className="grid grid-cols-2 gap-3">
-                            {clientTypes.map((type) => (
-                                <motion.button
-                                    key={type}
-                                    type="button"
-                                    whileHover={{ scale: 1.02 }}
-                                    whileTap={{ scale: 0.98 }}
-                                    onClick={() => setFormData(f => ({...f, client_type: type}))}
-                                    className={cn(
-                                        "relative py-5 px-4 rounded-2xl border text-left transition-all duration-300 overflow-hidden group",
-                                        formData.client_type === type 
-                                            ? "bg-white text-black border-white shadow-[0_0_30px_rgba(255,255,255,0.1)]" 
-                                            : "bg-white/[0.02] border-white/[0.06] text-zinc-400 hover:border-white/20 hover:bg-white/[0.04]"
-                                    )}
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <div className={cn(
-                                            "w-8 h-8 rounded-lg flex items-center justify-center transition-colors",
-                                            formData.client_type === type
-                                                ? "bg-black/10"
-                                                : "bg-white/5"
-                                        )}>
-                                            {clientTypeIcons[type]}
-                                        </div>
-                                        <div>
-                                            <div className="text-[10px] font-black uppercase tracking-[0.15em]">
-                                                {t(`checkout.client_types.${type}`)}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    {formData.client_type === type && (
-                                        <motion.div
-                                            layoutId="client-check"
-                                            className="absolute top-2 right-2"
-                                        >
-                                            <CheckCircle2 className="w-4 h-4 text-black" />
-                                        </motion.div>
-                                    )}
-                                </motion.button>
-                            ))}
-                        </div>
-                    </motion.div>
-                );
-            case 1:
-                return (
-                    <motion.div
-                        key="step-1"
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -20 }}
-                        transition={{ duration: 0.3 }}
-                        className="space-y-5"
-                    >
-                        {/* Auto-fill banner */}
-                        {profileLoaded && (
-                            <motion.div
-                                initial={{ opacity: 0, y: -10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className="flex items-center gap-3 p-3 rounded-xl bg-emerald-500/[0.06] border border-emerald-500/10"
-                            >
-                                <UserCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-                                <div>
-                                    <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">
-                                        {t('checkout.profile_loaded')}
-                                    </p>
-                                    <p className="text-[10px] text-emerald-500/60 mt-0.5">
-                                        {t('checkout.review_data')}
-                                    </p>
-                                </div>
-                            </motion.div>
-                        )}
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                            <FloatingInput
-                                label={t('checkout.fields.full_name')}
-                                icon={<User className="w-3.5 h-3.5" />}
-                                name="full_name"
-                                required
-                                placeholder={t('checkout.fields.full_name_placeholder')}
-                                value={formData.full_name}
-                                onChange={handleInputChange}
-                            />
-                            <FloatingInput
-                                label={t('checkout.fields.email')}
-                                icon={<Mail className="w-3.5 h-3.5" />}
-                                name="email"
-                                type="email"
-                                required
-                                placeholder={t('checkout.fields.email_placeholder')}
-                                value={formData.email}
-                                onChange={handleInputChange}
-                            />
-                            <FloatingInput
-                                label={t('checkout.fields.company_name')}
-                                icon={<Building2 className="w-3.5 h-3.5" />}
-                                name="company_name"
-                                required
-                                placeholder={t('checkout.fields.company_placeholder')}
-                                value={formData.company_name}
-                                onChange={handleInputChange}
-                            />
-                            <FloatingInput
-                                label={t('checkout.fields.vat')}
-                                icon={<FileText className="w-3.5 h-3.5" />}
-                                name="vat_number"
-                                placeholder={t('checkout.fields.vat_placeholder')}
-                                value={formData.vat_number}
-                                onChange={handleInputChange}
-                            />
-                        </div>
-                        <FloatingInput
-                            label={t('checkout.fields.billing_address')}
-                            icon={<MapPin className="w-3.5 h-3.5" />}
-                            name="billing_address"
-                            required
-                            placeholder={t('checkout.fields.billing_placeholder')}
-                            value={formData.billing_address}
-                            onChange={handleInputChange}
-                        />
-                        <FloatingInput
-                            label={t('checkout.fields.phone')}
-                            icon={<Phone className="w-3.5 h-3.5" />}
-                            name="phone"
-                            type="tel"
-                            placeholder={t('checkout.fields.phone_placeholder')}
-                            value={formData.phone}
-                            onChange={handleInputChange}
-                        />
-                    </motion.div>
-                );
-            case 2:
-                return (
-                    <motion.div
-                        key="step-2"
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -20 }}
-                        transition={{ duration: 0.3 }}
-                        className="space-y-6"
-                    >
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                            {intentTypes.map((intent) => (
-                                <motion.button
-                                    key={intent}
-                                    type="button"
-                                    whileHover={{ scale: 1.02 }}
-                                    whileTap={{ scale: 0.98 }}
-                                    onClick={() => setFormData(f => ({...f, project_intent: intent}))}
-                                    className={cn(
-                                        "relative py-4 px-4 rounded-2xl border text-left transition-all duration-300 overflow-hidden",
-                                        formData.project_intent === intent 
-                                            ? "bg-white text-black border-white shadow-[0_0_30px_rgba(255,255,255,0.1)]" 
-                                            : "bg-white/[0.02] border-white/[0.06] text-zinc-400 hover:border-white/20 hover:bg-white/[0.04]"
-                                    )}
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <div className={cn(
-                                            "w-7 h-7 rounded-lg flex items-center justify-center transition-colors",
-                                            formData.project_intent === intent
-                                                ? "bg-black/10"
-                                                : "bg-white/5"
-                                        )}>
-                                            {intentIcons[intent]}
-                                        </div>
-                                        <span className="text-[10px] font-black uppercase tracking-[0.12em]">
-                                            {t(`checkout.intents.${intent}`)}
-                                        </span>
-                                    </div>
-                                    {formData.project_intent === intent && (
-                                        <motion.div layoutId="intent-check" className="absolute top-2 right-2">
-                                            <CheckCircle2 className="w-3.5 h-3.5 text-black" />
-                                        </motion.div>
-                                    )}
-                                </motion.button>
-                            ))}
-                        </div>
-
-                        {/* Notes */}
-                        <div className="group relative">
-                            <div className="flex items-center gap-2 mb-2">
-                                <span className="text-zinc-500 group-focus-within:text-white transition-colors">
-                                    <StickyNote className="w-3.5 h-3.5" />
-                                </span>
-                                <label className="text-[10px] uppercase font-black tracking-[0.15em] text-zinc-500 group-focus-within:text-zinc-300 transition-colors">
-                                    {t('checkout.fields.notes')}
-                                </label>
-                            </div>
-                            <textarea
-                                name="notes"
-                                rows={3}
-                                placeholder={t('checkout.fields.notes_placeholder')}
-                                className="w-full bg-white/[0.03] border border-white/[0.06] rounded-xl px-4 py-3.5 text-white/90 text-sm placeholder:text-zinc-700 
-                                           focus:border-white/20 focus:bg-white/[0.05] focus:ring-1 focus:ring-white/10 
-                                           transition-all duration-300 outline-none resize-none"
-                                value={formData.notes}
-                                onChange={handleInputChange}
-                            />
-                        </div>
-                    </motion.div>
-                );
-            default:
-                return null;
-        }
-    };
+    const inputCls = "w-full bg-black/40 border border-white/10 text-white text-sm px-4 py-2.5 md:py-3 rounded-lg focus:outline-none focus:border-red-600/60 transition-colors placeholder:text-zinc-600";
+    const labelCls = "block text-[10px] uppercase tracking-widest text-zinc-500 mb-1.5 font-bold ml-1";
 
     return (
-        <div className="min-h-screen bg-[#060607] text-white selection:bg-white/10">
-            {/* Ambient background glow */}
-            <div className="fixed inset-0 pointer-events-none overflow-hidden">
-                <div className={cn(
-                    "absolute -top-40 -right-40 w-[600px] h-[600px] rounded-full blur-[120px] opacity-[0.04] transition-all duration-1000",
-                    planId === 'scouting' ? "bg-rose-500" : planId === 'casting' ? "bg-violet-500" : "bg-sky-500"
-                )} />
-                <div className="absolute -bottom-40 -left-40 w-[400px] h-[400px] rounded-full bg-white blur-[120px] opacity-[0.02]" />
-            </div>
-
-            {/* Success Modal */}
-            <PurchaseSuccessModal 
-                open={isSuccess}
-                planName={t(currentPlan.nameKey)}
-                priceLabel={currentPlan.price}
-                onDashboard={() => navigate(`/${lang || 'bg'}/profile`)}
-                onInvoice={() => showToast("Invoice generated and sent to your email.", "success")}
-            />
-
-            {/* ─── Header ─── */}
-            <div className="relative z-10 max-w-7xl mx-auto px-6 py-6 flex items-center justify-between">
-                <button 
-                    onClick={() => navigate(-1)}
-                    className="flex items-center gap-2 text-zinc-500 hover:text-white transition-colors group"
-                >
-                    <ChevronLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em]">{t('checkout.exit')}</span>
-                </button>
-                <div className="flex flex-col items-center">
-                    <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500">{t('checkout.agency_division')}</span>
-                    <div className="w-12 h-px bg-zinc-800 mt-2" />
-                </div>
-                <div className="flex items-center gap-2 text-emerald-500/80">
-                    <ShieldCheck className="w-4 h-4" />
-                    <span className="text-[10px] font-black uppercase tracking-widest">{t('checkout.secure_3d')}</span>
-                </div>
-            </div>
-
-            {/* ─── Main Content ─── */}
-            <div className="relative z-10 max-w-7xl mx-auto px-6 py-8 lg:py-16">
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20 items-start">
-                    
-                    {/* ═══════ LEFT COLUMN: SUMMARY ═══════ */}
-                    <div className="lg:col-span-5 space-y-8">
-                        {/* Title area */}
-                        <div className="space-y-5">
-                            <motion.h1 
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className="text-4xl lg:text-5xl font-serif leading-[1.1] tracking-tight"
-                            >
-                                {t('checkout.title')} – <br/>
-                                <span className="text-zinc-500 italic">{t('checkout.subtitle')}</span>
-                            </motion.h1>
-                            <div className="flex items-center gap-4 text-zinc-400">
-                                <div className="flex -space-x-2">
-                                    {[1,2,3].map(i => (
-                                        <div key={i} className="w-8 h-8 rounded-full border-2 border-[#060607] bg-zinc-800 overflow-hidden">
-                                            <img src={`https://i.pravatar.cc/100?img=${i+10}`} alt="avatar" className="w-full h-full object-cover" />
-                                        </div>
-                                    ))}
-                                </div>
-                                <p className="text-xs font-medium tracking-wide">{t('checkout.trusted_by')}</p>
-                            </div>
+        <div className="min-h-screen bg-[#050505] flex flex-col font-sans">
+            {/* Minimalist Standalone Header */}
+            <header className="h-20 border-b border-white/5 bg-black/60 backdrop-blur-md flex items-center shrink-0 z-50">
+                <div className="container mx-auto px-4 md:px-6 flex items-center justify-between">
+                    <Link to="/" className="flex items-center gap-3 group">
+                        <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-[0_0_15px_rgba(255,255,255,0.1)] group-hover:scale-105 transition-transform">
+                            <span className="text-black font-black text-xl leading-none">CD</span>
                         </div>
-
-                        {/* ─── Plan Card ─── */}
-                        <motion.div 
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.1 }}
-                            className={cn(
-                                "rounded-[28px] p-7 border border-white/[0.08] relative overflow-hidden bg-gradient-to-br backdrop-blur-sm",
-                                currentPlan.gradient
-                            )}
+                        <span className="text-xl font-bold tracking-tight text-white hidden sm:block">CarDecal</span>
+                    </Link>
+                    
+                    <div className="flex items-center gap-6">
+                        <div className="flex items-center gap-2 text-zinc-500 text-[10px] uppercase tracking-[0.2em] font-bold">
+                            <ShieldCheck className="w-4 h-4 text-green-500/50" />
+                            <span className="hidden xs:block">Secure Checkout</span>
+                        </div>
+                        <button 
+                            onClick={() => navigate('/cart')}
+                            className="bg-white/5 hover:bg-white/10 text-white text-[10px] font-black uppercase tracking-[0.2em] px-4 py-2 rounded-lg transition-all border border-white/10"
                         >
-                            {/* Shimmer accent */}
-                            <div className="absolute inset-0 bg-[linear-gradient(135deg,transparent_40%,rgba(255,255,255,0.02)_50%,transparent_60%)]" />
-                            
-                            <div className="relative z-10 space-y-6">
-                                <div>
-                                    <div className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30 mb-2 flex items-center gap-2">
-                                        {currentPlan.icon}
-                                        {t('checkout.package_selected')}
-                                    </div>
-                                    <div className="flex items-baseline justify-between gap-4">
-                                        <h3 className="text-2xl font-black tracking-tight">{t(currentPlan.nameKey)}</h3>
-                                        <div className="text-2xl font-light tabular-nums">{currentPlan.price}</div>
-                                    </div>
-                                </div>
+                            Количка
+                        </button>
+                    </div>
+                </div>
+            </header>
 
-                                <div className="space-y-3">
-                                    {currentPlan.featuresKeys.map((fKey: string, i: number) => (
-                                        <div key={i} className="flex items-center gap-3 text-sm text-white/70">
-                                            <div className="w-5 h-5 rounded-md bg-white/[0.06] flex items-center justify-center">
-                                                <Check className="w-3 h-3 text-white/50" />
+            <main className="flex-grow py-8 md:py-16">
+                <div className="container mx-auto px-4 md:px-6">
+                
+                {/* Header & Steps Nav */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-6 mb-8 md:mb-12">
+                    <div className="space-y-0.5">
+                        <div className="inline-flex items-center text-[#B0BEC5] text-[9px] uppercase tracking-[0.2em] gap-2 mb-1 opacity-60">
+                            Стъпка {step} от 2
+                        </div>
+                        <h1 className="text-xl md:text-3xl font-black text-white uppercase tracking-tighter leading-none">
+                            Завършване на <span className="text-[#ff0000]">Поръчката</span>
+                        </h1>
+                    </div>
+                    
+                    {/* Steps Indicator */}
+                    <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
+                            <div className={`w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center text-[10px] md:text-xs font-bold ${step >= 1 ? 'bg-red-600 text-white' : 'bg-zinc-800 text-zinc-500'}`}>1</div>
+                            <span className={`text-[9px] md:text-[10px] uppercase tracking-widest font-bold ${step >= 1 ? 'text-white' : 'text-zinc-600'}`}>Данни</span>
+                        </div>
+                        <div className="w-6 md:w-8 h-[1px] bg-zinc-800" />
+                        <div className="flex items-center gap-2">
+                            <div className={`w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center text-[10px] md:text-xs font-bold ${step >= 2 ? 'bg-red-600 text-white' : 'bg-zinc-800 text-zinc-500'}`}>2</div>
+                            <span className={`text-[9px] md:text-[10px] uppercase tracking-widest font-bold ${step >= 2 ? 'text-white' : 'text-zinc-600'}`}>Преглед</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 items-start">
+                    {/* Left Column - Forms */}
+                    <div className="lg:col-span-7 space-y-6">
+                        <AnimatePresence mode="wait">
+                            {step === 1 ? (
+                                <motion.div 
+                                    key="step1"
+                                    initial={{ opacity: 0, x: -20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    exit={{ opacity: 0, x: 20 }}
+                                    className="space-y-4 md:space-y-6"
+                                >
+                                    {/* Personal Info */}
+                                    <section className="bg-[#101010] border border-white/5 rounded-2xl p-4 md:p-8">
+                                        <div className="flex items-center gap-3 mb-4">
+                                            <User className="w-4 h-4 text-red-500" />
+                                            <h2 className="text-xs uppercase tracking-widest text-white font-black">Лична Информация</h2>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div className="md:col-span-2">
+                                                <label className={labelCls}>Име и Фамилия *</label>
+                                                <input 
+                                                    type="text" 
+                                                    name="fullName"
+                                                    value={formData.fullName}
+                                                    onChange={handleInputChange}
+                                                    className={inputCls} 
+                                                    placeholder="Иван Иванов"
+                                                />
                                             </div>
-                                            {t(fKey)}
+                                            <div>
+                                                <label className={labelCls}>Email Адрес</label>
+                                                <input 
+                                                    type="email" 
+                                                    name="email"
+                                                    value={formData.email}
+                                                    onChange={handleInputChange}
+                                                    className={inputCls} 
+                                                    placeholder="ivan@example.com"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className={labelCls}>Телефонен Номер *</label>
+                                                <input 
+                                                    type="tel" 
+                                                    name="phone"
+                                                    value={formData.phone}
+                                                    onChange={handleInputChange}
+                                                    className={inputCls} 
+                                                    placeholder="08XXXXXXXX"
+                                                />
+                                            </div>
                                         </div>
-                                    ))}
-                                </div>
+                                    </section>
 
-                                <div className="pt-6 border-t border-white/[0.06] space-y-2.5">
-                                    {[t('checkout.no_hidden_fees'), t('checkout.commercial_usage'), t('checkout.gdpr_release')].map((badge, i) => (
-                                        <div key={i} className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest text-white/40">
-                                            <Check className="w-3 h-3" />
-                                            {badge}
+                                    {/* Shipping Info */}
+                                    <section className="bg-[#101010] border border-white/5 rounded-2xl p-4 md:p-8">
+                                        <div className="flex items-center gap-3 mb-4">
+                                            <Truck className="w-4 h-4 text-red-500" />
+                                            <h2 className="text-xs uppercase tracking-widest text-white font-black">Доставка</h2>
                                         </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </motion.div>
+                                        
+                                        <div className="grid grid-cols-2 gap-2 md:gap-3 mb-4">
+                                            {(['econt', 'speedy'] as const).map((type) => (
+                                                <button
+                                                    key={type}
+                                                    type="button"
+                                                    onClick={() => setFormData(prev => ({ ...prev, deliveryType: type }))}
+                                                    className={`py-4 px-2 rounded-xl border flex flex-col items-center gap-2 transition-all ${
+                                                        formData.deliveryType === type 
+                                                        ? 'border-red-600 bg-red-600/5 text-white' 
+                                                        : 'border-white/5 bg-white/2 text-zinc-500 hover:border-white/20'
+                                                    }`}
+                                                >
+                                                    <span className="text-xs uppercase tracking-tighter font-black">
+                                                        {type === 'econt' ? 'Еконт Офис' : 'Спиди Офис'}
+                                                    </span>
+                                                </button>
+                                            ))}
+                                        </div>
 
-                        {/* ─── Agent Info ─── */}
-                        <motion.div 
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.2 }}
-                            className="flex items-center gap-4 p-5 rounded-2xl bg-white/[0.02] border border-white/[0.05] group hover:border-white/10 transition-all"
-                        >
-                            <div className="w-12 h-12 rounded-xl bg-zinc-800 overflow-hidden grayscale group-hover:grayscale-0 transition-all duration-500">
-                                <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80" alt="Maria K" className="w-full h-full object-cover" />
-                            </div>
-                            <div>
-                                <h4 className="text-sm font-bold">Maria K.</h4>
-                                <p className="text-xs text-zinc-500 mb-1">{t('checkout.booking_director')}</p>
-                                <div className="flex items-center gap-1.5">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                    <span className="text-[9px] uppercase font-black tracking-widest text-zinc-500">{t('checkout.reply_within')}</span>
-                                </div>
-                            </div>
-                        </motion.div>
+                                        <div className="space-y-4">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className={labelCls}>Град *</label>
+                                                    <input 
+                                                        type="text" 
+                                                        name="city"
+                                                        value={formData.city}
+                                                        onChange={handleInputChange}
+                                                        className={inputCls} 
+                                                        placeholder="Напр. София"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className={labelCls}>Име/Адрес на Офис *</label>
+                                                    <input 
+                                                        type="text" 
+                                                        name="officeName"
+                                                        value={formData.officeName}
+                                                        onChange={handleInputChange}
+                                                        className={inputCls} 
+                                                        placeholder="Напр. Офис Център"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <label className={labelCls}>Бележка към поръчката</label>
+                                                <textarea 
+                                                    name="notes"
+                                                    value={formData.notes}
+                                                    onChange={handleInputChange}
+                                                    className={`${inputCls} min-h-[80px] resize-none`} 
+                                                    placeholder="Напр. Цвят на фолиото..."
+                                                />
+                                            </div>
+
+                                            <label className="flex items-center gap-4 cursor-pointer group pt-2 px-1">
+                                                <div className="relative">
+                                                    <input 
+                                                        type="checkbox" 
+                                                        checked={saveForFuture}
+                                                        onChange={(e) => setSaveForFuture(e.target.checked)}
+                                                        className="sr-only peer"
+                                                    />
+                                                    <motion.div 
+                                                        animate={{ 
+                                                            backgroundColor: saveForFuture ? 'rgba(220, 38, 38, 1)' : 'rgba(255, 255, 255, 0.05)',
+                                                            borderColor: saveForFuture ? 'rgba(220, 38, 38, 1)' : 'rgba(255, 255, 255, 0.1)'
+                                                        }}
+                                                        className="w-10 h-10 border rounded-2xl flex items-center justify-center transition-all shadow-lg"
+                                                    >
+                                                        <AnimatePresence>
+                                                            {saveForFuture && (
+                                                                <motion.div 
+                                                                    initial={{ scale: 0, opacity: 0 }}
+                                                                    animate={{ scale: 1, opacity: 1 }}
+                                                                    exit={{ scale: 0, opacity: 0 }}
+                                                                    className="w-6 h-6 border-2 border-white rounded-full flex items-center justify-center pt-0.5"
+                                                                >
+                                                                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                                        <path d="M2.5 6L4.5 8L9.5 3.5" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                                                    </svg>
+                                                                </motion.div>
+                                                            )}
+                                                        </AnimatePresence>
+                                                    </motion.div>
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <span className="text-[11px] uppercase tracking-[0.2em] font-black text-white leading-tight">Запомни данните</span>
+                                                    <span className="text-[9px] uppercase tracking-widest text-zinc-500 font-bold">За следващи поръчки</span>
+                                                </div>
+                                            </label>
+                                        </div>
+                                    </section>
+
+                                    <button 
+                                        onClick={nextStep}
+                                        className="w-full py-5 bg-gradient-to-r from-[#3d0000] to-[#950101] text-white text-xs font-black uppercase tracking-[0.3em] rounded-xl hover:from-[#950101] hover:to-[#ff0000] transition-all shadow-xl shadow-red-900/20 flex items-center justify-center gap-3"
+                                    >
+                                        ПРЕГЛЕД НА ПОРЪЧКАТА
+                                        <ChevronRight className="w-4 h-4" />
+                                    </button>
+                                </motion.div>
+                            ) : (
+                                <motion.div 
+                                    key="step2"
+                                    initial={{ opacity: 0, x: 20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    exit={{ opacity: 0, x: -20 }}
+                                    className="space-y-6"
+                                >
+                                    <section className="bg-[#101010] border border-white/5 rounded-2xl p-6 md:p-8">
+                                        <div className="flex items-center justify-between mb-6">
+                                            <div className="flex items-center gap-3">
+                                                <CheckCircle2 className="w-5 h-5 text-red-500" />
+                                                <h2 className="text-sm uppercase tracking-widest text-white font-black">Потвърждение на Данни</h2>
+                                            </div>
+                                            <button onClick={prevStep} className="text-[10px] text-red-500 uppercase tracking-widest font-bold hover:underline">Редактирай</button>
+                                        </div>
+                                        
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                            <div>
+                                                <h3 className="text-[10px] text-zinc-500 uppercase tracking-widest mb-3 font-bold">Получател</h3>
+                                                <p className="text-white text-sm font-medium">{formData.fullName}</p>
+                                                <p className="text-zinc-400 text-sm">{formData.phone}</p>
+                                                 <p className="text-zinc-400 text-sm select-none pointer-events-none">{formData.email}</p>
+                                            </div>
+                                            <div>
+                                                <h3 className="text-[10px] text-zinc-500 uppercase tracking-widest mb-3 font-bold">Доставка</h3>
+                                                <p className="text-white text-sm font-medium">
+                                                    {formData.deliveryType === 'econt' ? 'Еконт Офис' : 'Спиди Офис'}
+                                                </p>
+                                                <p className="text-zinc-400 text-sm">{formData.city}</p>
+                                                <p className="text-zinc-400 text-sm">{formData.officeName}</p>
+                                            </div>
+                                        </div>
+                                        
+                                        {formData.notes && (
+                                            <div className="mt-6 pt-6 border-t border-white/5">
+                                                <h3 className="text-[10px] text-zinc-500 uppercase tracking-widest mb-2 font-bold">Бележка</h3>
+                                                <p className="text-zinc-400 text-xs italic">"{formData.notes}"</p>
+                                            </div>
+                                        )}
+                                    </section>
+
+                                    {/* Payment Method - Only Cash on Delivery */}
+                                    <section className="bg-red-600/5 border border-red-600/20 rounded-2xl p-6 flex items-center gap-4">
+                                        <CreditCard className="w-6 h-6 text-red-500" />
+                                        <div>
+                                            <h3 className="text-xs uppercase tracking-widest text-white font-black">Начин на плащане</h3>
+                                            <p className="text-[#B0BEC5] text-[10px] uppercase tracking-widest">Наложен платеж (Плащане при доставка)</p>
+                                        </div>
+                                    </section>
+
+                                    <div className="flex flex-col sm:flex-row gap-4">
+                                        <button 
+                                            onClick={prevStep}
+                                            className="flex-1 py-4 border border-white/10 text-zinc-400 text-xs font-black uppercase tracking-[0.2em] rounded-xl hover:text-white hover:bg-white/5 transition-all"
+                                        >
+                                            НАЗАД
+                                        </button>
+                                        <button 
+                                            onClick={submitOrder}
+                                            disabled={loading}
+                                            className="flex-[2] py-4 bg-red-600 text-white text-xs font-black uppercase tracking-[0.3em] rounded-xl hover:bg-red-700 transition-all shadow-xl shadow-red-900/40 flex items-center justify-center gap-3 disabled:opacity-50"
+                                        >
+                                            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <ShieldCheck className="w-5 h-5" />}
+                                            ПОТВЪРДИ ПОРЪЧКАТА
+                                        </button>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
                     </div>
 
-                    {/* ═══════ RIGHT COLUMN: FORM ═══════ */}
-                    <div className="lg:col-span-7">
+                    {/* Right Column - Order Summary */}
+                    <div className="lg:col-span-5">
                         <motion.div 
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.15 }}
-                            className="bg-white/[0.015] rounded-[32px] border border-white/[0.06] p-6 lg:p-10 backdrop-blur-xl"
+                            className="bg-[#101010] border border-white/5 rounded-2xl p-5 md:p-8 sticky top-24"
                         >
-                            {/* ─── Stepper ─── */}
-                            <div className="mb-10">
-                                <div className="flex items-center justify-between relative">
-                                    {/* Progress line bg */}
-                                    <div className="absolute top-5 left-6 right-6 h-px bg-white/[0.06]" />
-                                    {/* Progress line fill */}
-                                    <motion.div 
-                                        className="absolute top-5 left-6 h-px bg-white/20"
-                                        initial={{ width: "0%" }}
-                                        animate={{ width: `${(currentStep / (steps.length - 1)) * 100}%` }}
-                                        transition={{ duration: 0.5, ease: "easeInOut" }}
-                                        style={{ maxWidth: 'calc(100% - 48px)' }}
-                                    />
-                                    
-                                    {steps.map((stepLabel, i) => (
-                                        <button
-                                            key={i}
-                                            type="button"
-                                            onClick={() => setCurrentStep(i)}
-                                            className="relative z-10 flex flex-col items-center gap-2 group"
-                                        >
-                                            <motion.div
-                                                animate={{
-                                                    scale: currentStep === i ? 1 : 0.9,
-                                                    backgroundColor: i <= currentStep ? 'rgba(255,255,255,1)' : 'rgba(255,255,255,0.04)',
-                                                }}
-                                                className={cn(
-                                                    "w-10 h-10 rounded-xl flex items-center justify-center border transition-all duration-300",
-                                                    i < currentStep
-                                                        ? "border-white/20"
-                                                        : i === currentStep
-                                                        ? "border-white shadow-[0_0_20px_rgba(255,255,255,0.1)]"
-                                                        : "border-white/[0.06]"
-                                                )}
-                                            >
-                                                {i < currentStep ? (
-                                                    <Check className="w-4 h-4 text-black" />
-                                                ) : (
-                                                    <span className={cn(
-                                                        "transition-colors",
-                                                        i === currentStep ? "text-black" : "text-zinc-600"
-                                                    )}>
-                                                        {stepIcons[i]}
-                                                    </span>
-                                                )}
-                                            </motion.div>
-                                            <span className={cn(
-                                                "text-[9px] font-black uppercase tracking-widest transition-colors whitespace-nowrap",
-                                                i <= currentStep ? "text-zinc-300" : "text-zinc-700"
-                                            )}>
-                                                {stepLabel}
-                                            </span>
-                                        </button>
-                                    ))}
-                                </div>
+                            <h2 className="text-sm uppercase tracking-widest text-white font-black mb-6 border-b border-white/10 pb-4">Вашата Поръчка</h2>
+                            
+                            {/* Items List */}
+                            <div className="max-h-[300px] overflow-y-auto pr-2 space-y-4 mb-8 custom-scrollbar">
+                                {activeItems.map(item => (
+                                    <div key={item.id} className="flex gap-4 group">
+                                        <div className="w-16 h-16 bg-black border border-white/5 rounded-lg overflow-hidden shrink-0">
+                                            <img src={item.image} alt={item.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <h3 className="text-xs font-black text-white uppercase tracking-wider truncate">{item.name}</h3>
+                                            <p className="text-[10px] text-zinc-500 uppercase tracking-widest mt-0.5">{item.variant}</p>
+                                            <div className="flex justify-between items-center mt-1">
+                                                <span className="text-[10px] text-zinc-400">x{item.quantity}</span>
+                                                <span className="text-sm font-black text-red-500">{(item.price * item.quantity).toFixed(2)} €</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                             
-                            <form ref={formRef} onSubmit={handleSubmit} className="space-y-8">
-                                {/* ─── Step Content ─── */}
-                                <div className="min-h-[280px]">
-                                    <AnimatePresence mode="wait">
-                                        {renderStepContent()}
-                                    </AnimatePresence>
-                                </div>
-
-                                {/* ─── Navigation ─── */}
-                                <div className="flex items-center justify-between gap-4 pt-4">
-                                    {currentStep > 0 ? (
-                                        <button
-                                            type="button"
-                                            onClick={() => setCurrentStep(s => s - 1)}
-                                            className="flex items-center gap-2 text-zinc-500 hover:text-white transition-colors text-[10px] uppercase font-black tracking-widest"
-                                        >
-                                            <ChevronLeft className="w-4 h-4" />
-                                            {t('nav.back')}
-                                        </button>
-                                    ) : <div />}
-
-                                    {currentStep < steps.length - 1 ? (
-                                        <motion.button
-                                            type="button"
-                                            whileHover={{ scale: canProceed() ? 1.02 : 1 }}
-                                            whileTap={{ scale: canProceed() ? 0.98 : 1 }}
-                                            onClick={() => canProceed() && setCurrentStep(s => s + 1)}
-                                            disabled={!canProceed()}
-                                            className={cn(
-                                                "flex items-center gap-2 px-6 py-3 rounded-xl text-[10px] uppercase font-black tracking-widest transition-all",
-                                                canProceed()
-                                                    ? "bg-white text-black hover:bg-zinc-200"
-                                                    : "bg-white/5 text-zinc-600 cursor-not-allowed"
-                                            )}
-                                        >
-                                            <span>{steps[currentStep + 1]}</span>
-                                            <ChevronRight className="w-4 h-4" />
-                                        </motion.button>
-                                    ) : null}
-                                </div>
-
-                                {/* ─── Payment Section (visible on last step) ─── */}
-                                {currentStep === steps.length - 1 && (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 20 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: 0.15 }}
-                                        className="pt-8 border-t border-white/[0.05] space-y-6"
-                                    >
-                                        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-                                            <div className="space-y-1">
-                                                <h4 className="text-sm font-bold flex items-center gap-2">
-                                                    <Lock className="w-3.5 h-3.5 text-emerald-500/60" />
-                                                    {t('checkout.payment.title')}
-                                                </h4>
-                                                <p className="text-xs text-zinc-500">{t('checkout.payment.subtitle')}</p>
-                                            </div>
-                                            <div className="flex items-center gap-4 grayscale opacity-30">
-                                                <img src="https://upload.wikimedia.org/wikipedia/commons/b/ba/Stripe_Logo%2C_revised_2016.svg" className="h-4" alt="Stripe" />
-                                                <img src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg" className="h-3" alt="Visa" />
-                                                <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" className="h-5" alt="Mastercard" />
-                                            </div>
+                            {/* Free Shipping Progress */}
+                            <div className="mb-6 p-4 rounded-xl bg-red-600/5 border border-red-600/10">
+                                {isFreeShipping ? (
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center shrink-0">
+                                            <Truck className="w-4 h-4 text-green-500" />
                                         </div>
-
-                                        <div className="bg-zinc-800/10 p-4 rounded-xl border border-white/[0.04]">
-                                            <div className="flex gap-3">
-                                                <Shield className="w-4 h-4 text-zinc-500 shrink-0 mt-0.5" />
-                                                <p className="text-[11px] text-zinc-500 leading-relaxed">
-                                                    {t('checkout.payment.legal_notice')}
-                                                </p>
-                                            </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-[10px] text-green-500 font-black uppercase tracking-widest">Поздравления!</span>
+                                            <span className="text-[10px] text-zinc-400 uppercase tracking-widest">Имате БЕЗПЛАТНА ДОСТАВКА</span>
                                         </div>
-
-                                        {/* Terms agreement */}
-                                        <label className="flex items-start gap-3 cursor-pointer group select-none">
-                                            <div 
-                                                onClick={() => setAgreedToTerms(!agreedToTerms)}
-                                                className={cn(
-                                                    "w-5 h-5 rounded-md border flex items-center justify-center mt-0.5 transition-all shrink-0",
-                                                    agreedToTerms
-                                                        ? "bg-white border-white"
-                                                        : "bg-white/[0.03] border-white/10 group-hover:border-white/30"
-                                                )}
-                                            >
-                                                {agreedToTerms && <Check className="w-3 h-3 text-black" />}
+                                    </div>
+                                ) : (
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between items-end">
+                                            <div className="flex flex-col">
+                                                <span className="text-[10px] text-red-500 font-black uppercase tracking-widest">До безплатна доставка</span>
+                                                <span className="text-[9px] text-zinc-500 uppercase tracking-widest font-bold">Още {(amountToFreeShipping * 1.95583).toFixed(2)} лв.</span>
                                             </div>
-                                            <span className="text-[11px] text-zinc-400 leading-relaxed">
-                                                {t('auth.terms')}{' '}
-                                                <a 
-                                                    href={`/${lang || 'bg'}/terms`} 
-                                                    target="_blank" 
-                                                    rel="noopener noreferrer" 
-                                                    className="text-white/80 underline decoration-dotted underline-offset-2 hover:text-white transition-colors"
-                                                >
-                                                    {t('auth.terms_link')}
-                                                </a>
-                                            </span>
-                                        </label>
-
-                                        <motion.button
-                                            whileHover={{ scale: 1.01 }}
-                                            whileTap={{ scale: 0.99 }}
-                                            disabled={loading || !agreedToTerms || !canProceed()}
-                                            type="submit"
-                                            className={cn(
-                                                "w-full font-black py-5 rounded-2xl uppercase tracking-[0.2em] text-[10px] flex items-center justify-center gap-3 transition-all duration-300",
-                                                agreedToTerms && canProceed()
-                                                    ? "bg-white text-black shadow-[0_0_40px_rgba(255,255,255,0.08)] hover:shadow-[0_0_60px_rgba(255,255,255,0.12)]"
-                                                    : "bg-white/5 text-zinc-600 cursor-not-allowed"
-                                            )}
-                                        >
-                                            {loading ? <Zap className="w-4 h-4 animate-spin" /> : <Target className="w-4 h-4" />}
-                                            {loading ? t('checkout.payment.loading') : t('checkout.payment.submit')}
-                                        </motion.button>
-
-                                        <div className="text-center">
-                                            <a href="mailto:booking@agency.com" className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-600 hover:text-zinc-400 transition-colors">
-                                                {t('checkout.payment.help')}
-                                            </a>
+                                            <Truck className="w-4 h-4 text-red-600 mb-0.5" />
                                         </div>
-                                    </motion.div>
+                                        <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
+                                            <motion.div 
+                                                initial={{ width: 0 }}
+                                                animate={{ width: `${Math.min((total / (total + amountToFreeShipping)) * 100, 100)}%` }}
+                                                className="h-full bg-red-600 shadow-[0_0_10px_rgba(220,38,38,0.5)]"
+                                            />
+                                        </div>
+                                    </div>
                                 )}
-                            </form>
+                            </div>
+
+                            {/* Totals */}
+                            <div className="space-y-3 pt-6 border-t border-white/5 text-[10px] uppercase font-bold tracking-widest">
+                                <div className="flex justify-between text-zinc-500">
+                                    <span>Междинна сума</span>
+                                    <span>{subtotal.toFixed(2)} €</span>
+                                </div>
+                                {discountPercentage > 0 && (
+                                    <div className="flex justify-between text-red-500">
+                                        <span>Отстъпка (-{discountPercentage}%)</span>
+                                        <span>-{(subtotal - total).toFixed(2)} €</span>
+                                    </div>
+                                )}
+                                <div className="flex justify-between text-zinc-500">
+                                    <span>Доставка</span>
+                                    {isFreeShipping ? (
+                                        <span className="text-green-500 font-black">БЕЗПЛАТНА</span>
+                                    ) : (
+                                        <span className="italic">Калкулира се при изпращане</span>
+                                    )}
+                                </div>
+                                
+                                <div className="pt-4 mt-2 border-t border-white/10 flex justify-between items-end">
+                                    <span className="text-white">ОБЩО</span>
+                                    <div className="flex flex-col items-end">
+                                        <div className="flex items-baseline gap-2">
+                                            <span className="text-2xl font-black text-red-600 italic">{(total).toFixed(2)}</span>
+                                            <span className="text-sm font-black text-red-600">€</span>
+                                        </div>
+                                        <div className="text-[10px] text-zinc-500 font-bold opacity-70">
+                                            ≈ {(total * 1.95583).toFixed(2)} лв.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Info Box */}
+                            <div className="mt-8 p-4 bg-white/2 rounded-xl border border-white/5 space-y-3">
+                                <div className="flex items-start gap-3">
+                                    <Package className="w-4 h-4 text-zinc-400 shrink-0 mt-0.5" />
+                                    <p className="text-[10px] text-zinc-400 leading-relaxed uppercase tracking-widest">
+                                        Поръчките се обработват в рамките на 24-48 часа. Плащането се извършва в лева по курса на деня при доставка.
+                                    </p>
+                                </div>
+                                <div className="flex items-start gap-3">
+                                    <ShieldCheck className="w-4 h-4 text-green-500 shrink-0 mt-0.5" />
+                                    <p className="text-[10px] text-zinc-400 leading-relaxed uppercase tracking-widest">
+                                        Всяка поръчка включва опция за преглед преди плащане.
+                                    </p>
+                                </div>
+                            </div>
                         </motion.div>
                     </div>
                 </div>
             </div>
+        </main>
+
+            {/* Minimalist Standalone Footer */}
+            <footer className="py-8 border-t border-white/5 bg-black/40 mt-auto">
+                <div className="container mx-auto px-4 md:px-6 text-center">
+                    <p className="text-[10px] text-zinc-600 uppercase tracking-[0.3em] font-bold mb-4">
+                        &copy; {new Date().getFullYear()} CARDECAL. Всички права запазени.
+                    </p>
+                    <div className="flex items-center justify-center gap-6 text-[9px] text-zinc-500 uppercase tracking-widest font-black">
+                        <Link to="/privacy" className="hover:text-white transition-colors">Поверителност</Link>
+                        <Link to="/terms" className="hover:text-white transition-colors">Общи Условия</Link>
+                        <Link to="/legal" className="hover:text-white transition-colors">Доставка</Link>
+                    </div>
+                </div>
+            </footer>
+            
+            <style dangerouslySetInnerHTML={{ __html: `
+                .custom-scrollbar::-webkit-scrollbar {
+                    width: 4px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-track {
+                    background: rgba(255, 255, 255, 0.02);
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb {
+                    background: rgba(255, 255, 255, 0.1);
+                    border-radius: 10px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+                    background: rgba(255, 0, 0, 0.3);
+                }
+            `}} />
         </div>
     );
 };

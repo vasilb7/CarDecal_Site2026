@@ -6,20 +6,25 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     />
-    <title>VB VISION</title>
+    <title>CarDecal</title>
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
     <link rel="manifest" href="/site.webmanifest" />
+    <link rel="preconnect" href="https://res.cloudinary.com" />
+    <link rel="dns-prefetch" href="https://res.cloudinary.com" />
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&family=Cormorant+Garamond:wght@400;500;600;700&family=Montserrat:wght@300;400;500;600;700&family=Raleway:wght@300;400;500;600;700&family=Oswald:wght@300;400;500;600;700&family=Lora:wght@400;500;600;700&family=Merriweather:wght@300;400;700&family=Poppins:wght@300;400;500;600;700&family=Roboto+Slab:wght@300;400;500;600;700&family=Dancing+Script:wght@400;500;600;700&family=Great+Vibes&family=Cinzel:wght@400;500;600;700&family=Bebas+Neue&family=Abril+Fatface&family=Josefin+Sans:wght@300;400;500;600;700&family=Libre+Baskerville:wght@400;700&family=Nunito:wght@300;400;500;600;700&family=Crimson+Text:wght@400;600;700&family=DM+Serif+Display&family=Italiana&family=Bodoni+Moda:wght@400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
     <script>
       tailwind.config = {
+        future: {
+          hoverOnlyWhenSupported: true,
+        },
         theme: {
           extend: {
             colors: {
@@ -28,10 +33,10 @@
               border: "#1C1C20",
               "text-primary": "#F2F2F2",
               "text-muted": "#A0A0A8",
-              "gold-accent": "#C9A227",
-              "gold-glow": "rgba(201,162,39,0.15)",
+              "red-accent": "#e60000",
+              "red-glow": "rgba(230,0,0,0.15)",
               primary: {
-                DEFAULT: "#C9A227",
+                DEFAULT: "#e60000",
                 foreground: "#0B0B0C",
               },
               secondary: {

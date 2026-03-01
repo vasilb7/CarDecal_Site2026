@@ -11,8 +11,8 @@ interface AuthContextType {
   loading: boolean;
   signOut: () => Promise<void>;
   isAdmin: boolean;
-  isVerified: boolean;
-  activePlan: string | null;
+  isEditor: boolean;
+  userRole: 'user' | 'editor' | 'admin' | undefined;
   refreshProfile: () => Promise<void>;
   getSecureNow: () => Date;
 }
@@ -36,46 +36,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return new Date(timeOffset + performance.now() - startRef.current);
   };
   
-  const [isVerified, setIsVerified] = useState(false);
-  const [activePlan, setActivePlan] = useState<string | null>(null);
-
-  useEffect(() => {
-    const check = () => {
-      if (!profile?.is_verified) return false;
-      if (!profile.verified_until) return true;
-      return new Date(profile.verified_until) > getSecureNow();
-    };
-
-    const isCurrentlyVerified = check();
-    setIsVerified(isCurrentlyVerified);
-
-    if (profile?.active_plan) {
-      // If it's a test plan (starter/pro), it should expire with verification
-      const isTestPlan = ['scouting', 'casting', 'starter', 'pro'].includes(profile.active_plan.toLowerCase());
-      if (isTestPlan) {
-        setActivePlan(isCurrentlyVerified ? profile.active_plan : null);
-      } else {
-        setActivePlan(profile.active_plan);
-      }
-    } else {
-      setActivePlan(null);
-    }
-
-    if (profile?.is_verified && profile.verified_until) {
-      const remaining = new Date(profile.verified_until).getTime() - getSecureNow().getTime();
-      if (remaining > 0) {
-        const timer = setTimeout(() => {
-          setIsVerified(false);
-          // Also update activePlan if it was a test plan
-          const isTestPlan = profile.active_plan && ['scouting', 'casting', 'starter', 'pro'].includes(profile.active_plan.toLowerCase());
-          if (isTestPlan) {
-            setActivePlan(null);
-          }
-        }, remaining + 100); 
-        return () => clearTimeout(timer);
-      }
-    }
-  }, [profile, timeOffset]);
+  const isVerified = React.useMemo(() => {
+     if (!profile?.is_verified) return false;
+     if (!profile.verified_until) return true; // Lifetime
+     
+     // Use secure time for check
+     return new Date(profile.verified_until) > getSecureNow();
+     
+     // Note: We need this to update as time passes. 
+     // Since this is a boolean value in context, consumers should poll if they need exact second precision,
+     // or we rely on re-renders via Realtime updates or local ticks.
+     // For safety, we return the calculation.
+  }, [profile, timeOffset]); // Dependent on profile changes. Note: Time flowing doesn't auto-update this memo without external tick.
   
   // Actually, exposes a function is better for real-time checks in components
   const checkIsVerified = () => {
@@ -139,15 +111,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .on(
         'postgres_changes',
         {
-          event: '*', // Listen to all events (UPDATE, etc.)
+          event: '*', // Listen to all events
           schema: 'public',
           table: 'profiles',
           filter: `id=eq.${user.id}`,
         },
-        (payload) => {
+        async (payload) => {
           console.log('⚡ Realtime Update Received:', payload);
+          
+          // If profile is deleted, force logout
+          if (payload.eventType === 'DELETE') {
+              console.warn('🚨 Profile deleted! Logging out...');
+              signOut();
+              return;
+          }
+
           if (payload.new) {
-            // Merge strictly to avoid type issues, but usually payload.new IS the record
             setProfile(payload.new as UserProfile);
           }
         }
@@ -161,6 +140,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [user]);
 
+  // Record login info (Device, OS, Browser)
+  useEffect(() => {
+    if (user && profile) {
+        const updateLoginInfo = async () => {
+             const ua = navigator.userAgent;
+             // Simple parser for human readable device/browser
+             let deviceInfo = "Unknown Device";
+             if (ua.includes("Windows")) deviceInfo = "Windows PC";
+             else if (ua.includes("Android")) deviceInfo = "Android Phone";
+             else if (ua.includes("iPhone")) deviceInfo = "iPhone";
+             else if (ua.includes("Macintosh")) deviceInfo = "Mac / Apple";
+             else if (ua.includes("Linux")) deviceInfo = "Linux Device";
+
+             // Only update if it hasn't been updated in this session
+             const hasRecentlyUpdated = sessionStorage.getItem(`last_login_sync_${user.id}`);
+             if (!hasRecentlyUpdated) {
+                 await supabase.from('profiles').update({
+                     last_device_info: deviceInfo,
+                     last_login_at: new Date().toISOString()
+                 }).eq('id', user.id);
+                 sessionStorage.setItem(`last_login_sync_${user.id}`, 'true');
+             }
+        };
+        updateLoginInfo();
+    }
+  }, [user, !!profile]);
+
   const fetchProfile = async (userId: string) => {
     try {
       const { data, error } = await supabase
@@ -170,10 +176,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .single();
       
       if (!error && data) {
+        // If account was scheduled for deletion, cancel it upon login/fetch
+        if (data.deletion_scheduled_at) {
+            console.log('🔄 Account restoration triggered: User logged in during the 7-day grace period.');
+            const { error: restoreError } = await supabase
+                .from('profiles')
+                .update({ 
+                    deletion_scheduled_at: null, 
+                    deletion_reason: null 
+                })
+                .eq('id', userId);
+                
+            if (!restoreError) {
+                data.deletion_scheduled_at = null;
+                data.deletion_reason = null;
+                // Toast notifications aren't directly available in AuthContext,
+                // but we can alert the user via an event or the return data.
+            }
+        }
+
+        console.log('👤 Profile fetched successfully:', data);
         setProfile(data);
+      } else if (error) {
+        console.error('❌ Error fetching profile:', error);
       }
     } catch (error) {
-      console.error('Error fetching profile:', error);
+      console.error('🔥 Unexpected error fetching profile:', error);
     } finally {
       setLoading(false);
     }
@@ -192,10 +220,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setSession(null);
   };
   
-  const isAdmin = profile?.role?.toLowerCase() === 'admin';
+  const isAdmin = profile?.role === 'admin';
+  const isEditor = profile?.role === 'editor' || profile?.role === 'admin';
+  const userRole = profile?.role;
+
+  console.log('🔐 Auth Context State:', { userId: user?.id, email: user?.email, role: userRole, isAdmin, isEditor, loading });
 
   return (
-    <AuthContext.Provider value={{ user, session, profile, loading, signOut, isAdmin, isVerified, activePlan, refreshProfile, getSecureNow }}>
+    <AuthContext.Provider value={{ user, session, profile, loading, signOut, isAdmin, isEditor, userRole, refreshProfile, getSecureNow }}>
       {children}
     </AuthContext.Provider>
   );

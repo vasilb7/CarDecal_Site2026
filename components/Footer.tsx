@@ -1,166 +1,213 @@
+import React, { useRef, useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
+interface RollingLinkProps {
+  to?: string;
+  href?: string;
+  className?: string;
+  children: string;
+}
+
+const RollingLink: React.FC<RollingLinkProps> = ({ to, href, className, children }) => {
+  const letters = children.split("");
+
+  const content = (
+    <span className={`rolling-link ${className}`}>
+      {letters.map((char, i) => (
+        <span key={i} className="letter-container" style={{ '--index': i } as React.CSSProperties}>
+          <span className="letter letter-top">{char === " " ? "\u00A0" : char}</span>
+          <span className="letter letter-bottom">{char === " " ? "\u00A0" : char}</span>
+        </span>
+      ))}
+    </span>
+  );
+
+  if (to) return <Link to={to}>{content}</Link>;
+  return <a href={href || "#"}>{content}</a>;
+};
 
 const Footer: React.FC = () => {
-  const { t, i18n } = useTranslation();
-  const currentLang = i18n.language.split('-')[0];
-  
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isHovered, setIsHovered] = useState(false);
+  const location = useLocation();
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    containerRef.current.style.setProperty('--mouse-x', `${x}px`);
+    containerRef.current.style.setProperty('--mouse-y', `${y}px`);
+  };
+
+  let topBgClass = "bg-background";
+  const path = location.pathname;
+
+  if (path === '/') {
+    topBgClass = "bg-red-600";
+  } else if (path.startsWith('/catalog')) {
+    topBgClass = "bg-[#0F0F0F]";
+  } else if (path === '/profile' || path === '/cart') {
+    topBgClass = "bg-[#0a0a0a]";
+  } else if (path === '/book-now') {
+    topBgClass = "bg-[#080808]";
+  }
+
   return (
-    <footer className="bg-background text-silver-text pt-20 pb-10 overflow-hidden border-t border-red-accent/10">
-      <div className="container mx-auto px-6">
-        
-        {/* TOP SECTION: LARGE HEADING */}
-        <div className="text-center mb-16 select-none">
-          <h2 className="flex flex-col md:flex-row items-center justify-center gap-x-3 md:gap-x-6 text-[11vw] md:text-[7vw] lg:text-[6.5vw] leading-[1.1] font-bold tracking-tight uppercase mb-4 px-4">
-            <span className="text-silver-text">{t('footer.title_part1')}</span>
-            <span className="relative inline-block italic font-serif text-red-accent transform -rotate-1 px-2">
-               {t('footer.title_part2')}
-               <span className="absolute left-0 bottom-[15%] w-full h-[0.03em] bg-red-accent/40 transform scale-x-105"></span>
-            </span>
-            <span className="text-silver-text">{t('footer.title_part3')}</span>
-          </h2>
-        </div>
+    <footer className={`${topBgClass} pt-8 sm:pt-12 lg:pt-20 pb-0 w-full relative z-10`}>
+      {/* ── OUTER RED WRAP ── */}
+      <div className="bg-[#ff0000] rounded-t-[2rem] sm:rounded-t-[2.5rem] lg:rounded-t-[4rem] px-2 pt-2 sm:px-3 sm:pt-3 lg:px-4 lg:pt-4 flex flex-col relative w-full overflow-hidden pb-6">
 
-        {/* MIDDLE SECTION: HERO IMAGE WITH POP-OUT EFFECT (STATIC) */}
-        <div className="relative w-full aspect-[21/9] mb-32 mt-20 flex justify-center items-end bg-transparent">
-          {/* РАМКА И ФОН */}
-          <div className="absolute inset-0 overflow-hidden rounded-[2.5rem] md:rounded-[4rem] shadow-2xl border border-white/5 pointer-events-none">
-            <img 
-              /* МЕСТЕНЕ НА ФОНА */
-              src="/Site_Pics/Footer/backround.png" 
-              alt="VB Vision Background" 
-              className="w-full h-full object-cover"
+        {/* ── INNER DARK BOX ── */}
+        <div
+          ref={containerRef}
+          onMouseMove={handleMouseMove}
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+          className="
+          bg-[#1b1c18] relative w-full overflow-hidden
+          rounded-[1.7rem] sm:rounded-[2.2rem] lg:rounded-[3.5rem]
+          min-h-[500px] sm:min-h-0 sm:aspect-[4/3] lg:aspect-[21/9] flex flex-col items-center justify-start
+          cursor-crosshair
+        ">
+
+          {/* ── HUGE CENTER TEXT ── */}
+          <div className="pt-8 sm:pt-0 sm:absolute sm:top-[10%] lg:top-[14%]
+            left-0 right-0 flex flex-col items-center pointer-events-none z-10 w-full relative scale-[0.9] xs:scale-100">
+            <div className="font-black uppercase tracking-tighter
+              drop-shadow-[0_20px_40px_rgba(0,0,0,0.7)] flex flex-col items-center">
+
+              {/* Ред 1 */}
+              <div className="flex flex-row items-center gap-[2vw] leading-[0.85] mb-2 sm:mb-[0.5vw]">
+                <span className="text-[9.5vw] sm:text-[9.5vw] lg:text-[8.5vw] xl:text-[7.5vw] text-white">ПРЕОТКРИЙ</span>
+                <span className="text-[9.5vw] sm:text-[9.5vw] lg:text-[8.5vw] xl:text-[7.5vw] text-[#dc2626]">СТИЛА</span>
+              </div>
+
+              {/* Ред 2 */}
+              <div className="flex flex-row items-center gap-[2vw] leading-[0.85]">
+                <span className="text-[9.5vw] sm:text-[9.5vw] lg:text-[8.5vw] xl:text-[7.5vw] text-white">ЗА</span>
+                <span className="text-[9.5vw] sm:text-[9.5vw] lg:text-[8.5vw] xl:text-[7.5vw] text-[#dc2626]">СЕБЕ СИ.</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Car Image Area */}
+          <div className="absolute
+            bottom-[32%] sm:bottom-[10%] lg:bottom-[-10%] xl:bottom-[-25%]
+            left-1/2 -translate-x-1/2 z-20 pointer-events-none
+            w-[100%] sm:w-[95%] lg:w-[68%] xl:w-[88%]">
+            <img
+              src="/Footer/2026.png"
+              alt="Car"
+              className="w-full h-auto object-contain drop-shadow-[0_-5px_60px_rgba(0,0,0,0.9)] origin-bottom"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-60" />
           </div>
 
-          {/* МОДЕЛИТЕ - "ИЗЛИЗАЩИ" ОТ РАМКАТА (СТАТИЧНИ) */}
-          <div className="relative z-10 w-full h-full flex justify-center items-end pointer-events-none">
-            <img 
-              /* МЕСТЕНЕ НА МОМИЧЕТАТА */
-              src="/Site_Pics/Footer/1.png" 
-              alt="Models" 
-              className="h-[150%] w-auto object-contain transform translate-y-[0%]"
-              style={{ filter: 'drop-shadow(0 40px 50px rgba(0,0,0,0.6))' }}
-            />
+          {/* ── RED LIQUID MASK — появява се под курсора ── */}
+          <div
+            className="absolute inset-0 z-30 pointer-events-none transition-opacity duration-700 ease-out"
+            style={{
+              opacity: isHovered ? 1 : 0,
+              WebkitMaskImage: 'radial-gradient(circle 350px at var(--mouse-x, 50%) var(--mouse-y, 50%), black 15%, transparent 100%)',
+              maskImage: 'radial-gradient(circle 350px at var(--mouse-x, 50%) var(--mouse-y, 50%), black 15%, transparent 100%)',
+            }}
+          >
+            <div className="absolute
+              bottom-[32%] sm:bottom-[10%] lg:bottom-[-10%] xl:bottom-[-25%]
+              left-1/2 -translate-x-1/2 pointer-events-none
+              w-[100%] sm:w-[95%] lg:w-[68%] xl:w-[88%] mix-blend-screen">
+              <img
+                src="/Footer/2026red.png"
+                alt="Car Red"
+                className="w-full h-auto object-contain drop-shadow-[0_0_80px_rgba(255,0,0,0.4)] origin-bottom"
+              />
+            </div>
           </div>
+
+          {/* ── MENUS — bottom section ── */}
+          <div className="relative mt-auto sm:mt-0 sm:absolute
+            sm:bottom-[5%] lg:bottom-[7%] xl:bottom-[9%]
+            left-0 right-0 z-40
+            px-6 sm:px-8 lg:px-14 xl:px-24 mb-16 sm:mb-0
+            flex flex-row justify-between sm:justify-between items-start sm:items-end gap-4">
+
+            {/* Страници */}
+            <div className="flex flex-col items-start text-left">
+              <span className="text-[9px] sm:text-[9px] lg:text-[11px]
+                text-white/40 font-black tracking-[0.2em] mb-4 sm:mb-2 lg:mb-4">
+                СТРАНИЦИ
+              </span>
+              <div className="flex flex-col gap-3 sm:gap-[0.7vw] lg:gap-[0.8vw] items-start">
+                <RollingLink to="/catalog"  className="text-[0.95rem] sm:text-[2.8vw] lg:text-[2vw] xl:text-[1.7vw] font-black uppercase text-white leading-none inline-block">КАТАЛОГ</RollingLink>
+                <RollingLink to="/about"    className="text-[0.95rem] sm:text-[2.8vw] lg:text-[2vw] xl:text-[1.7vw] font-black uppercase text-white leading-none inline-block">ЗА НАС</RollingLink>
+                <RollingLink to="/book-now" className="text-[0.95rem] sm:text-[2.8vw] lg:text-[2vw] xl:text-[1.7vw] font-black uppercase text-white leading-none inline-block">ПОРЪЧКИ</RollingLink>
+                <RollingLink to="/contact"  className="text-[0.95rem] sm:text-[2.8vw] lg:text-[2vw] xl:text-[1.7vw] font-black uppercase text-white leading-none inline-block">КОНТАКТИ</RollingLink>
+              </div>
+            </div>
+
+            {/* ИНФОРМАЦИЯ */}
+            <div className="hidden md:flex flex-col items-start text-left">
+              <span className="text-[9px] sm:text-[9px] lg:text-[11px]
+                text-white/40 font-black tracking-[0.2em] mb-4 sm:mb-2 lg:mb-4">
+                ИНФОРМАЦИЯ
+              </span>
+              <div className="flex flex-col gap-3 sm:gap-[0.7vw] lg:gap-[0.8vw] items-start">
+                <RollingLink to="/privacy" className="text-[0.95rem] sm:text-[2.8vw] lg:text-[2vw] xl:text-[1.7vw] font-black uppercase text-white leading-none inline-block">ПОВЕРИТЕЛНОСТ</RollingLink>
+                <RollingLink to="/terms"   className="text-[0.95rem] sm:text-[2.8vw] lg:text-[2vw] xl:text-[1.7vw] font-black uppercase text-white leading-none inline-block">ОБЩИ УСЛОВИЯ</RollingLink>
+                <RollingLink to="/legal"   className="text-[0.95rem] sm:text-[2.8vw] lg:text-[2vw] xl:text-[1.7vw] font-black uppercase text-white leading-none inline-block">ДОСТАВКА</RollingLink>
+              </div>
+            </div>
+
+            {/* Социални */}
+            <div className="flex flex-col items-end text-right">
+              <span className="text-[9px] sm:text-[9px] lg:text-[11px]
+                text-white/40 font-black tracking-[0.2em] mb-4 sm:mb-2 lg:mb-4">
+                ПОСЛЕДВАЙ НИ
+              </span>
+              <div className="flex flex-col gap-3 sm:gap-[0.7vw] lg:gap-[0.8vw] items-end">
+                <RollingLink href="#" className="text-[0.95rem] sm:text-[2.8vw] lg:text-[2vw] xl:text-[1.7vw] font-black uppercase text-white leading-none inline-block">TIKTOK</RollingLink>
+                <RollingLink href="#" className="text-[0.95rem] sm:text-[2.8vw] lg:text-[2vw] xl:text-[1.7vw] font-black uppercase text-white leading-none inline-block">INSTAGRAM</RollingLink>
+                <RollingLink href="#" className="text-[0.95rem] sm:text-[2.8vw] lg:text-[2vw] xl:text-[1.7vw] font-black uppercase text-white leading-none inline-block">YOUTUBE</RollingLink>
+                <RollingLink href="#" className="text-[0.95rem] sm:text-[2.8vw] lg:text-[2vw] xl:text-[1.7vw] font-black uppercase text-white leading-none inline-block">FACEBOOK</RollingLink>
+              </div>
+            </div>
+
+          </div>
+
         </div>
+        {/* ── END INNER DARK BOX ── */}
 
-        {/* BOTTOM SECTION: COLUMNS */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-16 mb-20">
-          {/* EXPLORE */}
-          <div>
-            <h4 className="text-red-accent text-xl font-bold uppercase mb-8 tracking-widest border-b border-red-accent/20 pb-4">
-              EXPLORE
-            </h4>
-            <ul className="space-y-4">
-              <li><Link to={`/${currentLang}/models`} className="text-silver-text/60 hover:text-red-accent transition-all hover:pl-2 duration-300 font-medium">{t('nav.models')}</Link></li>
-              <li><Link to={`/${currentLang}/about`} className="text-silver-text/60 hover:text-red-accent transition-all hover:pl-2 duration-300 font-medium">{t('nav.about')}</Link></li>
-              <li><Link to={`/${currentLang}/services`} className="text-silver-text/60 hover:text-red-accent transition-all hover:pl-2 duration-300 font-medium">{t('nav.services')}</Link></li>
-              <li><Link to={`/${currentLang}/contact`} className="text-silver-text/60 hover:text-red-accent transition-all hover:pl-2 duration-300 font-medium">{t('nav.contact')}</Link></li>
-            </ul>
-          </div>
+        {/* ── BOTTOM RED STRIP ── */}
+        <div className="relative flex flex-col items-center justify-center w-full z-40 pt-[48px] sm:pt-[36px] lg:pt-[40px] pb-4">
 
-          {/* FOLLOW */}
-          <div>
-            <h4 className="text-red-accent text-xl font-bold uppercase mb-8 tracking-widest border-b border-red-accent/20 pb-4">
-              FOLLOW
-            </h4>
-            <ul className="space-y-4 text-silver-text/60">
-              <li>
-                <a 
-                  href="https://www.instagram.com/vbvision.agency/" 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="hover:text-red-accent transition-all hover:pl-2 duration-300 font-medium"
-                >
-                  INSTAGRAM
-                </a>
-              </li>
-              <li>
-                <a 
-                  href="https://www.tiktok.com/@vbvision.agency" 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="hover:text-red-accent transition-all hover:pl-2 duration-300 font-medium"
-                >
-                  TIKTOK
-                </a>
-              </li>
-              <li>
-                <a 
-                  href="https://www.linkedin.com/company/vb-vision" 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="hover:text-red-accent transition-all hover:pl-2 duration-300 font-medium"
-                >
-                  LINKEDIN
-                </a>
-              </li>
-              <li>
-                <a 
-                  href="https://www.facebook.com/vbvision.official" 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="hover:text-red-accent transition-all hover:pl-2 duration-300 font-medium"
-                >
-                  FACEBOOK
-                </a>
-              </li>
-            </ul>
-          </div>
-
-          {/* CONTACT */}
-          <div>
-            <h4 className="text-red-accent text-xl font-bold uppercase mb-8 tracking-widest border-b border-red-accent/20 pb-4">
-              CONTACT
-            </h4>
-            <p className="text-silver-text/80 font-bold mb-2">AGENCY@VBVISION.COM</p>
-            <p className="text-silver-text/60 text-sm leading-relaxed mb-6">
-              SOFIA, BULGARIA<br />
-              UL. EXARCH YOSIF 15
-            </p>
-            <Link 
-              to={`/${currentLang}/contact`}
-              className="inline-block mt-6 px-10 py-4 bg-white text-black text-xs font-bold uppercase tracking-[0.22em] rounded-full relative overflow-hidden transition-all duration-500 ease-out hover:shadow-[0_12px_40px_rgba(255,255,255,0.18)] hover:scale-[1.06] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-black before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/60 before:to-transparent before:translate-x-[-120%] hover:before:translate-x-[120%] before:transition-transform before:duration-700 before:ease-out shadow-[0_8px_24px_rgba(255,255,255,0.06)] text-center"
-            >
-            REACH OUT
+          {/* Overlapping button */}
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50
+            hover:-translate-y-[55%] transition-transform duration-300">
+            <Link
+              to="/contact"
+              className="inline-flex items-center justify-center
+                px-10 sm:px-12 lg:px-16 py-5 sm:py-3.5 lg:py-4
+                bg-black text-white
+                text-[12px] sm:text-[10px] lg:text-[12px]
+                font-black uppercase tracking-[0.12em] lg:tracking-[0.15em]
+                rounded-md whitespace-nowrap
+                shadow-[0_5px_20px_rgba(0,0,0,0.7)]
+                hover:bg-white hover:text-black
+                hover:shadow-[0_10px_30px_rgba(0,0,0,0.4)]">
+              СВЪРЖИ СЕ С НАС
             </Link>
           </div>
-        </div>
-      </div>
 
-      {/* MARQUEE (PARTNERS) - FULL WIDTH SECTION */}
-      <div className="w-full border-y border-silver-text/10 pt-10 pb-10 my-10 hover:opacity-100 transition-opacity duration-500 overflow-hidden">
-        <div className="flex animate-marquee whitespace-nowrap items-center">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="flex items-center gap-16 md:gap-32 px-8 md:px-16 shrink-0">
-              <img src="/Site_Pics/Partners_Footer/CD logo.png" alt="Partner" className="h-10 object-contain hover:scale-110 transition-transform duration-300" />
-              <img src="/Site_Pics/Partners_Footer/MaxNutrition.png" alt="Partner" className="h-8 object-contain hover:scale-110 transition-transform duration-300" />
-              <img src="/Site_Pics/Partners_Footer/Alexander-McQueen.png" alt="Partner" className="h-8 object-contain hover:scale-110 transition-transform duration-300" />
-              <img src="/Site_Pics/Partners_Footer/BURBERRY.png" alt="Partner" className="h-8 object-contain hover:scale-110 transition-transform duration-300" />
-              <img src="/Site_Pics/Partners_Footer/VOGUE.png" alt="Partner" className="h-8 object-contain hover:scale-110 transition-transform duration-300" />
-            </div>
-          ))}
-        </div>
-      </div>
+          <span className="text-[8px] sm:text-[9px] lg:text-[11px]
+            font-black tracking-widest uppercase text-black/80 text-center px-4 mt-1 sm:mt-0">
+            © {new Date().getFullYear()} CAR DECAL. ВСИЧКИ ПРАВА ЗАПАЗЕНИ
+          </span>
 
-      <div className="container mx-auto px-6">
-        {/* COPYRIGHT */}
-        <div className="pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-silver-text/30 text-[10px] uppercase font-bold tracking-[0.2em]">
-          <p>© {new Date().getFullYear()} VB VISION. {t('footer.rights')}</p>
-          <div className="flex gap-8">
-            <Link to={`/${currentLang}/privacy`} className="hover:text-red-accent transition-colors">{t('footer.privacy')}</Link>
-            <Link to={`/${currentLang}/terms`} className="hover:text-red-accent transition-colors">{t('footer.terms')}</Link>
-          </div>
-          <p>STAY VISIONARY</p>
         </div>
+
       </div>
     </footer>
   );
 };
 
 export default Footer;
-

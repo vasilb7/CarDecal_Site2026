@@ -1,301 +1,294 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Link } from 'react-router-dom';
+import { Eye, EyeOff, X } from 'lucide-react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 
-// --- HELPER COMPONENTS (ICONS) ---
-
 const GoogleIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 48 48">
-        <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s12-5.373 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-2.641-.21-5.236-.611-7.743z" />
-        <path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z" />
-        <path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238C29.211 35.091 26.715 36 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z" />
-        <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303c-.792 2.237-2.231 4.166-4.087 5.571l6.19 5.238C42.022 35.026 44 30.038 44 24c0-2.641-.21-5.236-.611-7.743z" />
+     <svg viewBox="0 0 24 24" className="h-5 w-5 mr-2">
+        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F3"/>
+        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+        <path d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.1s.13-1.44.35-2.1V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.23.81-.6z" fill="#FBBC05"/>
+        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.66l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
     </svg>
 );
 
-export interface Testimonial {
-  avatarSrc: string;
-  name: string;
-  handle: string;
-  text: string;
-}
-
 interface SignUpPageProps {
-  title?: React.ReactNode;
-  description?: React.ReactNode;
-  heroImageSrc?: string;
-  heroImagePosition?: string;
-  mobileHeroImageSrc?: string;
-  mobileHeroImagePosition?: string;
-  testimonials?: Testimonial[];
   onSignUp?: (event: React.FormEvent<HTMLFormElement>) => void;
   onGoogleSignUp?: () => void;
 }
 
-const GlassInputWrapper = ({ children }: { children: React.ReactNode }) => (
-  <div className="border border-border bg-surface/50 backdrop-blur-sm transition-all focus-within:border-gold-accent focus-within:ring-1 focus-within:ring-gold-accent">
-    {children}
-  </div>
-);
+const FloatingInput = ({ 
+    label, 
+    name, 
+    type = "text", 
+    required = false, 
+    isPassword = false,
+    showPassword,
+    onTogglePassword,
+    ...props 
+}: any) => {
+    const [isFocused, setIsFocused] = useState(false);
+    const [value, setValue] = useState("");
 
-const TestimonialCard = ({ testimonial, index }: { testimonial: Testimonial, index: number }) => (
-  <motion.div 
-    initial={{ opacity: 0, scale: 0.9, y: 20 }}
-    animate={{ opacity: 1, scale: 1, y: 0 }}
-    transition={{ delay: 1 + index * 0.2, duration: 0.8, ease: "easeOut" }}
-    className="flex items-start gap-3 bg-surface/80 backdrop-blur-xl border border-border p-5 w-64"
-  >
-    <img src={testimonial.avatarSrc} className="h-10 w-10 object-cover grayscale" alt="avatar" />
-    <div className="text-sm leading-snug font-sans">
-      <p className="flex items-center gap-1 font-medium text-text-primary">{testimonial.name}</p>
-      <p className="text-text-muted">{testimonial.handle}</p>
-      <p className="mt-1 text-text-primary/80">{testimonial.text}</p>
-    </div>
-  </motion.div>
-);
+    return (
+        <div className="relative group w-full">
+            <motion.label
+                initial={false}
+                animate={{
+                    y: (isFocused || value) ? -40 : 0,
+                    x: (isFocused || value) ? -4 : 0,
+                    scale: (isFocused || value) ? 0.82 : 1,
+                    color: isFocused ? "#ef4444" : (value ? "rgba(255,255,255,0.6)" : "rgba(255,255,255,0.4)")
+                }}
+                className="absolute left-6 top-3.5 pointer-events-none transition-all duration-300 z-10 px-1 select-none"
+            >
+                {label}
+            </motion.label>
+            
+            <div className="relative flex items-center">
+                <input 
+                    {...props}
+                    name={name}
+                    type={isPassword ? (showPassword ? 'text' : 'password') : type}
+                    value={value}
+                    onChange={(e) => {
+                        setValue(e.target.value);
+                        if (props.onChange) props.onChange(e);
+                    }}
+                    onFocus={() => setIsFocused(true)}
+                    onBlur={() => setIsFocused(false)}
+                    className={`w-full bg-white/[0.03] border ${isFocused ? 'border-red-600 shadow-[0_0_25px_rgba(239,68,68,0.15)]' : 'border-white/10'} rounded-full px-6 py-4 shadow-sm outline-none text-white placeholder:text-transparent backdrop-blur-xl transition-all ${isPassword ? 'pr-14' : ''}`}
+                    required={required}
+                    placeholder=" "
+                />
+                
+                {isPassword && (
+                    <div className="absolute right-2 inset-y-0 flex items-center">
+                        <button 
+                            type="button"
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={onTogglePassword}
+                            className="w-10 h-10 flex items-center justify-center text-white/30 hover:text-red-500 transition-all z-30 focus:outline-none rounded-full hover:bg-white/5"
+                        >
+                            <div className="relative w-5 h-5 pointer-events-none">
+                                <motion.div
+                                    animate={{ 
+                                        opacity: showPassword ? 0 : 1,
+                                        scale: showPassword ? 0.5 : 1,
+                                        y: showPassword ? 5 : 0
+                                    }}
+                                    transition={{ duration: 0.15 }}
+                                    className="absolute inset-0 flex items-center justify-center"
+                                >
+                                    <Eye size={20} strokeWidth={1.5} />
+                                </motion.div>
+                                <motion.div
+                                    animate={{ 
+                                        opacity: showPassword ? 1 : 0,
+                                        scale: showPassword ? 1 : 0.5,
+                                        y: showPassword ? 0 : -5
+                                    }}
+                                    transition={{ duration: 0.15 }}
+                                    className="absolute inset-0 flex items-center justify-center"
+                                >
+                                    <EyeOff size={20} strokeWidth={1.5} />
+                                </motion.div>
+                            </div>
+                        </button>
+                    </div>
+                )}
+            </div>
+            <style>{`
+                input::-ms-reveal,
+                input::-ms-clear { display: none; }
+                input::-webkit-contacts-auto-fill-button { visibility: hidden; display: none !important; pointer-events: none; }
+            `}</style>
+        </div>
+    );
+};
 
 export const SignUpPage: React.FC<SignUpPageProps> = ({
-  title,
-  description,
-  heroImageSrc,
-  heroImagePosition = "center 40%", // Default to faces, can be overridden
-  mobileHeroImageSrc,
-  mobileHeroImagePosition,
-  testimonials = [],
   onSignUp,
   onGoogleSignUp,
 }) => {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [showPassword, setShowPassword] = useState(false);
-  const currentLang = i18n.language.split('-')[0];
 
-  const displayTitle = title || <span className="font-serif text-text-primary tracking-tight">{t('auth.register_title')}</span>;
-  const displayDescription = description || t('auth.register_subtitle');
-
-  const handleFocus = (e: React.FocusEvent) => {
-    // Only scroll into view on mobile devices to prevent keyboard overlap
-    const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
-    if (!isMobile) return;
-
-    setTimeout(() => {
-      (e.target as HTMLElement).scrollIntoView({
-        behavior: "smooth",
-        block: "center",
-      });
-    }, 300);
-  };
+  // Detect mobile keyboard close effect properly
+  React.useEffect(() => {
+    if (typeof window !== 'undefined' && window.visualViewport) {
+      let isKeyboardOpen = false;
+      const handleViewportResize = () => {
+        const currentHeight = window.visualViewport?.height || window.innerHeight;
+        const screenHeight = window.innerHeight;
+        if (currentHeight < screenHeight * 0.8) {
+          isKeyboardOpen = true;
+        } else if (currentHeight > screenHeight * 0.9 && isKeyboardOpen) {
+          isKeyboardOpen = false;
+          if (document.activeElement instanceof HTMLInputElement || document.activeElement instanceof HTMLTextAreaElement) {
+            document.activeElement.blur();
+          }
+        }
+      };
+      window.visualViewport.addEventListener('resize', handleViewportResize);
+      return () => window.visualViewport?.removeEventListener('resize', handleViewportResize);
+    }
+  }, []);
 
   return (
-    <div className="min-h-[100dvh] flex flex-col-reverse md:flex-row w-full bg-background relative overflow-x-hidden">
-      <section className="flex-1 flex items-start md:items-center justify-center p-8 pt-8 md:pt-8 z-10">
-        <div className="w-full max-w-sm">
-          <div className="flex flex-col gap-6">
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2, duration: 0.6 }}
-              className="space-y-1"
+    <div className="flex w-full min-h-screen bg-[#111] overflow-hidden font-sans selection:bg-red-500/30 text-white">
+        {/* Left Side - Form Section */}
+        <div className="flex-1 flex flex-col justify-center px-6 sm:px-12 lg:px-20 py-12 relative overflow-y-auto">
+            
+            {/* Mobile Close Button */}
+            <button 
+                onClick={() => navigate('/')}
+                className="absolute top-8 right-8 lg:hidden w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-all z-10"
             >
-              <h1 className="text-4xl md:text-5xl font-serif leading-tight">{displayTitle}</h1>
-              <p className="text-text-muted text-sm uppercase tracking-widest">{displayDescription}</p>
+                <X size={20} />
+            </button>
+
+            {/* Logo */}
+            <motion.div 
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="mb-6 absolute top-8 left-8 sm:left-12 lg:left-20"
+            >
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-[0_0_15px_rgba(255,255,255,0.3)]">
+                        <span className="text-black font-black text-xl leading-none">CD</span>
+                    </div>
+                    <span className="text-2xl font-bold tracking-tight text-white">CarDecal</span>
+                </div>
             </motion.div>
 
-            <form className="space-y-4" onSubmit={onSignUp} onFocus={handleFocus}>
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-                <label className="block mb-1 text-xs uppercase tracking-widest text-text-muted">{t('auth.full_name')}</label>
-                <GlassInputWrapper>
-                  <input name="name" type="text" placeholder="John Doe" className="w-full bg-transparent text-sm p-4 text-text-primary outline-none" required />
-                </GlassInputWrapper>
-              </motion.div>
+            {/* Form Container */}
+            <div className="max-w-md w-full mx-auto flex flex-col justify-center">
+                <div className="mb-6 text-center lg:text-left pt-12">
+                    <motion.h1 
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.1 }}
+                        className="text-[40px] font-semibold text-white leading-tight mb-3"
+                    >
+                        {t('auth.register_title', 'Създай акаунт')}
+                    </motion.h1>
+                    <motion.p 
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.2 }}
+                        className="text-white/60 text-lg font-light"
+                    >
+                        {t('auth.register_subtitle', 'Регистрирайте се, за да поръчвате индивидуални дизайни и да следите историята на вашите поръчки.')}
+                    </motion.p>
+                </div>
 
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
-                <label className="block mb-1 text-xs uppercase tracking-widest text-text-muted">{t('auth.email')}</label>
-                <GlassInputWrapper>
-                  <input name="email" type="email" placeholder="email@example.com" className="w-full bg-transparent text-sm p-4 text-text-primary outline-none" required />
-                </GlassInputWrapper>
-              </motion.div>
+                <form className="space-y-8 pt-4" onSubmit={onSignUp}>
+                    {/* Name - Restrict to two names via label instructions */}
+                    <FloatingInput 
+                        label={t('auth.name_label', 'Име и Фамилия')}
+                        name="name"
+                        required
+                    />
 
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
-                <label className="block mb-1 text-xs uppercase tracking-widest text-text-muted">{t('auth.password')}</label>
-                <GlassInputWrapper>
-                  <div className="relative">
-                    <input name="password" type={showPassword ? 'text' : 'password'} placeholder="••••••••" className="w-full bg-transparent text-sm p-4 pr-12 text-text-primary outline-none" required />
-                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-4 flex items-center">
-                      {showPassword ? <EyeOff className="w-5 h-5 text-text-muted hover:text-gold-accent transition-colors" /> : <Eye className="w-5 h-5 text-text-muted hover:text-gold-accent transition-colors" />}
-                    </button>
-                  </div>
-                </GlassInputWrapper>
-              </motion.div>
+                    {/* Email */}
+                    <FloatingInput 
+                        label={t('auth.email', 'Имейл адрес')}
+                        name="email"
+                        type="email"
+                        required
+                    />
 
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }} className="flex items-center gap-3 cursor-pointer py-2" id="auth-terms">
-                <input type="checkbox" id="terms" name="terms" className="accent-gold-accent w-4 h-4" required />
-                <label htmlFor="terms" className="text-[10px] uppercase tracking-widest text-text-muted">
-                  {t('auth.terms')} <Link to={`/${currentLang}/terms`} className="text-gold-accent underline ml-1">{t('auth.terms_link')}</Link>
-                </label>
-              </motion.div>
+                    {/* Phone Number */}
+                    <FloatingInput 
+                        label={t('auth.phone', 'Телефонен номер')}
+                        name="phone"
+                        type="tel"
+                        required
+                    />
 
-              <motion.button 
-                whileHover={{ scale: 1.01 }}
-                whileTap={{ scale: 0.98 }}
+                    {/* Password */}
+                    <FloatingInput 
+                        label={t('auth.password', 'Парола')}
+                        name="password"
+                        isPassword
+                        showPassword={showPassword}
+                        onTogglePassword={() => setShowPassword(!showPassword)}
+                        required
+                    />
+
+                    {/* Submit Button */}
+                    <motion.button
+                        whileHover={{ scale: 1.01 }}
+                        whileTap={{ scale: 0.98 }}
+                        type="submit"
+                        className="w-full bg-red-600 text-white font-semibold py-3.5 rounded-full mt-2 text-lg shadow-lg shadow-red-600/20 transition-all hover:bg-red-700"
+                    >
+                        {t('auth.create_account', 'Създай профил')}
+                    </motion.button>
+
+                    {/* Social Buttons */}
+                    <div className="flex gap-4 pt-4">
+                        <motion.button
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            type="button"
+                            onClick={onGoogleSignUp}
+                            className="w-full flex items-center justify-center gap-2 border border-white/10 rounded-full py-3.5 bg-white/5 hover:bg-white/10 transition-colors"
+                        >
+                            <GoogleIcon />
+                            <span className="text-sm font-medium text-white/80">Google</span>
+                        </motion.button>
+                    </div>
+                </form>
+            </div>
+
+            {/* Bottom Links */}
+            <div className="flex justify-center items-center text-sm mt-8 px-2">
+                    {t('auth.already_have_account', 'Have an account?')}{' '}
+                    <Link 
+                        to="/login" 
+                        state={location.state}
+                        className="text-white font-semibold underline underline-offset-4 hover:text-red-500 transition-colors"
+                    >
+                        {t('auth.sign_in_link', 'Sign in')}
+                    </Link>
+            </div>
+        </div>
+
+        {/* Right Side - Square Hero Section */}
+        <div className="hidden lg:block lg:w-[100vh] relative overflow-hidden h-screen bg-black">
+            <motion.div 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ delay: 0.7 }}
-                type="submit" 
-                className="w-full bg-gold-accent py-5 text-background font-bold text-xs uppercase tracking-widest hover:bg-white transition-all duration-300"
-              >
-                {t('auth.create_account')}
-              </motion.button>
-            </form>
-
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }} className="relative flex items-center justify-center py-2">
-              <span className="w-full border-t border-border"></span>
-              <span className="px-4 text-[10px] uppercase tracking-[0.2em] text-text-muted bg-background absolute">{t('auth.or_continue_with')}</span>
-            </motion.div>
-
-            <motion.button 
-              whileHover={{ backgroundColor: "rgba(255,255,255,0.05)" }}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.9 }}
-              type="button" 
-              onClick={onGoogleSignUp} 
-              className="w-full flex items-center justify-center gap-3 border border-border py-4 text-xs font-bold uppercase tracking-widest transition-all duration-300"
+                transition={{ duration: 1.2 }}
+                className="w-full h-full relative"
             >
-                <GoogleIcon />
-                {t('auth.continue_with_google')}
-            </motion.button>
+                {/* Background Image - Fixed Base */}
+                <img 
+                    src="/Sign/regbg.jpeg" 
+                    alt="Registration background"
+                    className="w-full h-full object-cover"
+                />
 
-            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.0 }} className="text-center text-[11px] uppercase tracking-widest text-text-muted">
-              {t('auth.already_have_account')} <Link to={`/${currentLang}/login`} className="text-gold-accent hover:underline ml-1">{t('auth.login_now')}</Link>
-            </motion.p>
-          </div>
+
+                {/* Subtle Overlay to blend */}
+                <div className="absolute inset-0 bg-black/10 z-0" />
+
+                {/* Close Button */}
+                <button 
+                    onClick={() => navigate('/')}
+                    className="absolute top-8 right-8 w-12 h-12 rounded-full bg-white/90 backdrop-blur-md flex items-center justify-center text-[#333] shadow-lg hover:bg-white transition-all transform hover:rotate-90 z-20"
+                >
+                    <X size={24} />
+                </button>
+            </motion.div>
         </div>
-      </section>
 
-      {/* Right column on desktop / Top card on mobile: hero image + testimonials */}
-      {heroImageSrc && (
-        <section className="relative p-4 pt-24 md:pt-6 md:p-6 md:flex-1 h-[320px] md:h-auto flex-shrink-0 overflow-hidden">
-          <motion.div 
-            layoutId="auth-hero-container"
-            className="absolute inset-4 md:inset-0 bg-cover bg-center rounded-[2rem] md:rounded-none overflow-hidden" 
-            style={{ 
-              backgroundImage: `url("${mobileHeroImageSrc && typeof window !== 'undefined' && window.innerWidth < 768 ? mobileHeroImageSrc : heroImageSrc}")`,
-              backgroundPosition: mobileHeroImagePosition && typeof window !== 'undefined' && window.innerWidth < 768 ? mobileHeroImagePosition : heroImagePosition || heroImagePosition
-            }}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
-          >
-            <div className="absolute inset-0 bg-black/10"></div>
-            
-            {/* Advertisement Blur Module */}
-            <motion.div 
-              initial={{ opacity: 0, y: 50 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 1.2, duration: 1 }}
-              className="absolute bottom-0 left-0 right-0 h-[50%] md:h-[22%] bg-surface/30 backdrop-blur-2xl border-t border-white/10 flex items-center justify-center overflow-visible select-none"
-            >
-              <div className="flex flex-col items-start px-6 md:px-24 relative z-10 w-full">
-                <span className="text-[9px] md:text-[10px] uppercase tracking-[0.3em] md:tracking-[0.5em] text-gold-accent mb-1 md:mb-3 block font-bold opacity-90">
-                  MaxiNutrition
-                </span>
-                <h3 className="text-text-primary font-serif text-xl md:text-4xl mb-1 md:mb-4 leading-none tracking-tight">
-                  Classic Protein Bars
-                </h3>
-                <div className="hidden md:flex flex-wrap gap-x-4 md:gap-x-8 gap-y-2 text-[9px] md:text-[10px] uppercase tracking-[0.2em] text-gold-accent font-bold mb-4 md:mb-6">
-                  <span className="flex items-center gap-2">20G Protein</span>
-                  <span className="w-1 h-1 md:w-1.5 md:h-1.5 rounded-full bg-gold-accent/40 self-center"></span>
-                  <span className="flex items-center gap-2">Low Sugar</span>
-                  <span className="w-1 h-1 md:w-1.5 md:h-1.5 rounded-full bg-gold-accent/40 self-center"></span>
-                  <span className="flex items-center gap-2">145 Kcal</span>
-                </div>
-                <p className="hidden md:block text-white/80 text-sm md:text-[13px] font-medium leading-[1.4] max-w-[400px] italic drop-shadow-sm">
-                  "High-quality whey blend for muscle growth and maintenance. The perfect treat without the cheat."
-                </p>
-              </div>
 
-              {/* Floating Product Images - Protein Box & Brownie */}
-              <div className="absolute right-0 bottom-0 w-full h-full pointer-events-none">
-                {/* Protein Box */}
-                <motion.div 
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 1.5, duration: 0.8 }}
-                  className="absolute right-[1%] bottom-[5%] w-[27%] z-40 pointer-events-auto"
-                >
-                  <img 
-                    src="/Site_Pics/SponsorShip/Protein_Snack/ProteinBox.png" 
-                    alt="Protein Box" 
-                    className="relative z-10 w-full h-auto"
-                    draggable="false"
-                  />
-                  <div className="absolute bottom-[-5%] left-1/2 -translate-x-1/2 w-[90%] h-[15%] bg-black/40 blur-xl rounded-[100%] z-0" />
-                </motion.div>
-
-                {/* Protein Brownie - Animates from right */}
-                <a 
-                  href="https://www.maxinutrition.com/products/classic-bars" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="absolute right-[23%] bottom-[8%] w-[14%] z-50 pointer-events-auto block"
-                >
-                  <motion.div 
-                    initial="initial"
-                    animate="animate"
-                    whileHover="hover"
-                    variants={{
-                      initial: { opacity: 0, x: 200, scale: 0.9 },
-                      animate: { x: 0, opacity: 1, scale: 1 }
-                    }}
-                    transition={{ 
-                      delay: 1.8, 
-                      duration: 1.2, 
-                      type: "spring",
-                      stiffness: 50
-                    }}
-                  >
-                    {/* The Product Image itself with lift and glow */}
-                    <motion.div
-                      variants={{
-                        initial: { y: 0, filter: "drop-shadow(0 0 0px rgba(212, 175, 55, 0))" },
-                        animate: { y: 0, filter: "drop-shadow(0 0 0px rgba(212, 175, 55, 0))" },
-                        hover: { y: -10, filter: "drop-shadow(0 0 15px rgba(212, 175, 55, 0.4))" }
-                      }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      <img 
-                        src="/Site_Pics/SponsorShip/Protein_Snack/ProteinBrownie.png" 
-                        alt="Protein Brownie" 
-                        className="relative z-10 w-full h-auto"
-                        draggable="false"
-                      />
-                    </motion.div>
-                    
-                    {/* Golden Shadow - Appears ONLY on hover */}
-                    <motion.div 
-                      variants={{
-                        initial: { opacity: 0, scale: 0.5 },
-                        animate: { opacity: 0, scale: 0.5 },
-                        hover: { opacity: 1, scale: 1 }
-                      }}
-                      transition={{ duration: 0.3 }}
-                      className="absolute bottom-[-8%] left-1/2 -translate-x-1/2 w-[80%] h-[20%] bg-gold-accent/20 blur-xl rounded-[100%] z-0"
-                    />
-                  </motion.div>
-                </a>
-              </div>
-            </motion.div>
-          </motion.div>
-          {testimonials.length > 0 && (
-            <div className="hidden md:flex absolute bottom-12 left-1/2 -translate-x-1/2 gap-4 px-8 w-full justify-center">
-              <TestimonialCard testimonial={testimonials[0]} index={0} />
-            </div>
-          )}
-        </section>
-      )}
     </div>
   );
 };

@@ -1,0 +1,91 @@
+const fs = require('fs');
+
+const imagesData = [
+  {
+    "name": "5cm-01",
+    "imageUrl": "https://lh3.googleusercontent.com/sitesv/APaQ0STA5ZxccExnbuFhxh7KMJra98HshigbjUPBC9sbecgSf2UU1tqIhARcPCihmifF6MAqsg6ojw6-K64lzNETYNheXZb5XzvwQZMgkKKab23K9JWxkcguXf_RQxwgCwOIMTmtL5Iaauib2Z716YktVyBYlTa_MyYdcGVQ1LqDsAhM8pmmYtjsqyXXbNVU4xp_1Lf1kzce5jIiWqbRqsrEEYv7LFA4Wqlq-r85Wb4=w1280"
+  },
+  {
+    "name": "5cm-02",
+    "imageUrl": "https://lh3.googleusercontent.com/sitesv/APaQ0SQ7lt1CKBw-btVx_igLiSWzRQxi6Mx4q5G0vKkIMQ_T7eYZFuj_PIoBUl4alW6U76NW68O2DJIlU4oYGBqblZjn9NSi4bt4DoI_edvPVnKCxk4db0kQsa7A_qy6e2iLRVmpcSHDx1loaefeWkBUYQTDi_bHpwyXHEdAmchCjvi5OALHp0C4lqhKkLGtj-0COvGeJ0fjZ3KbtnEzBdcMVl_LSN5knsna3qmX=w1280"
+  },
+  {
+    "name": "5cm-03",
+    "imageUrl": "https://lh3.googleusercontent.com/sitesv/APaQ0SQ7lt1CKBw-btVx_igLiSWzRQxi6Mx4q5G0vKkIMQ_T7eYZFuj_PIoBUl4alW6U76NW68O2DJIlU4oYGBqblZjn9NSi4bt4DoI_edvPVnKCxk4db0kQsa7A_qy6e2iLRVmpcSHDx1loaefeWkBUYQTDi_bHpwyXHEdAmchCjvi5OALHp0C4lqhKkLGtj-0COvGeJ0fjZ3KbtnEzBdcMVl_LSN5knsna3qmX=w1280"
+  },
+  {
+    "name": "5x33-04",
+    "imageUrl": "https://lh3.googleusercontent.com/sitesv/APaQ0SSVVFnPuzH520DeXGW51-FBC5-bJ4JssqZ2KOdL7_86WlqSv7eI58POw6LFU6l3qfMj5DVevD42jRgwAByD_0JKhruO3frHcSjvcInqrb-WZ2FQshwng3ClV8tQ_i_8zcz6eZ1puvspZ81Exo2sHhEs5lj-ZygfwmjAMUms_Ow4lrTnIKnVG1ktZG3A74LIMPBQq8svevq-k0vNY-DYzgqb9SxxKwc8xbdC_cc=w1280"
+  },
+  {
+    "name": "5cm-05",
+    "imageUrl": "https://lh3.googleusercontent.com/sitesv/APaQ0STIanZeLDQBOlhlvc1tQO-KwWNRsR1CWRL5N-kBf1SGtSmPtDd2Mo0grWPhHgSv8ZTJBRST00nnw4WXbQxXSCwPbV0-HzRIrl6rQzsPhS3FsyGqnuZj04zTo07U22OJ1vAroUwlh0eQ3g4IG84D1Y7jAsjXNcqzlL0RmQjKPZbWS0KD-iSpb4KXz0_ZyRXoouRfIGPWdTtU2Huw8vhyDdJhFiAtRHi4cEFdiKo=w1280"
+  },
+  {
+    "name": "5cm-06",
+    "imageUrl": "https://lh3.googleusercontent.com/sitesv/APaQ0STIanZeLDQBOlhlvc1tQO-KwWNRsR1CWRL5N-kBf1SGtSmPtDd2Mo0grWPhHgSv8ZTJBRST00nnw4WXbQxXSCwPbV0-HzRIrl6rQzsPhS3FsyGqnuZj04zTo07U22OJ1vAroUwlh0eQ3g4IG84D1Y7jAsjXNcqzlL0RmQjKPZbWS0KD-iSpb4KXz0_ZyRXoouRfIGPWdTtU2Huw8vhyDdJhFiAtRHi4cEFdiKo=w1280"
+  },
+  {
+    "name": "5cm-07",
+    "imageUrl": "https://lh3.googleusercontent.com/sitesv/APaQ0SQipXEcyfqJYo-SZ8QkZ23vZDQhIFyvD5rsGE4TXmrtNdg8tNkBs624lwBOc_w7z8WsuQWbBGHh7b2F2PRN-5dISBHQxqA8wpFesNSqrzDFjibg6BZSdHZLUOG2lQTkb0TZyBRcDTJXwPsrO5psiQN3p4fyPzn-8rn3QK0UydWzt0dshTz-3JTCs-Eqp4yU_ReOJZRjF23H516OXF-iljVDaiXnWYWmvLXX=w1280"
+  },
+  {
+    "name": "5cm-08",
+    "imageUrl": "https://lh3.googleusercontent.com/sitesv/APaQ0STUYnnZMVueRzbniln6Vy73HKUGPoYAgxYBa7jNbreT52ec7ngL6Ca4cetgfaP-nRUdzqDImwX5Ji4OvjYb3cyOSA1wOd-MFy3sLlhTKjksWkhSy3OE_W5NHzCrxMaVZUkt16SCwnGUT9q1JKpXDvmwoVtYGmDCUTmM9cw4fAW7aL-3TEaSLpDsMu9vO4SmSdcndkO4GyrdAUBvJCPyBIzOLnFxYEOzCaQNgCE=w1280"
+  },
+  {
+    "name": "5x33cm-09",
+    "imageUrl": "https://lh3.googleusercontent.com/sitesv/APaQ0STUYnnZMVueRzbniln6Vy73HKUGPoYAgxYBa7jNbreT52ec7ngL6Ca4cetgfaP-nRUdzqDImwX5Ji4OvjYb3cyOSA1wOd-MFy3sLlhTKjksWkhSy3OE_W5NHzCrxMaVZUkt16SCwnGUT9q1JKpXDvmwoVtYGmDCUTmM9cw4fAW7aL-3TEaSLpDsMu9vO4SmSdcndkO4GyrdAUBvJCPyBIzOLnFxYEOzCaQNgCE=w1280"
+  },
+  {
+    "name": "5x33cm-10",
+    "imageUrl": "https://lh3.googleusercontent.com/sitesv/APaQ0SQSS8blV5XYzuqk2l1Sq3Cjb_EHmm4I4X3yp123IHj3xbuT3DXt6gydamdPFff5AQnHQDOizMFo2clp2TgPV2NgkBwt9lI1wsA_riYtbVAakI_vED7UVTJmDL-2s0-Gb8PNn9NC0YE81ZHbnRF6t9pW1EbPwGyZ_zJj133TExsvQZC-AEUCexF-49Q1y3ga6VBxKAimuLvbjeRdNlKBGE8L4njUgROLt2IeSyA=w1280"
+  },
+  {
+    "name": "5cm-11",
+    "imageUrl": "https://lh3.googleusercontent.com/sitesv/APaQ0SS2XVaYLNcjyuECr636XFvjLaUO2lGWYiT-tQA-uT1FTWg0P55DwlaAPDVm9AjW-wfidJNVPkqsLc6o9qkX8IiSABEpo1NkDxJcxfkfwmCS0EPRYBYzqF4Nj0H4Aar8YMNVgn3w7Q7mbPHfrxGiBNKnpIu54LuKUUeLTMRTXFupNB2f2F13LUONVgd91QrTIle_oFw9DqhSKu4j1lbhLCfRlZYgxiCyZCkY=w1280"
+  },
+  {
+    "name": "5cm-12",
+    "imageUrl": "https://lh3.googleusercontent.com/sitesv/APaQ0SSYbQiXXQbJpI2Fpl0kbAxB3o4fEMJKdHHgNQBWmoDIpHS6N0wf_SnR3C5pGIIfDjl8hyEcFc2XOA8Yq8rr162CEK_RqDJ0VhsS9TZpdYpPagFjcFm_SO7wK3VtXw16ZaF6Z34UNnr0wezMEu5e2SulxNAJcF1YhgHKiSVcatsJDdUYJfuiSr0hOBJ1NlXIdjrqwJeg_wkbEzSLP8MN5QOqMTsLFq9J63hK8Y4=w1280"
+  },
+  {
+    "name": "5cm-13",
+    "imageUrl": "https://lh3.googleusercontent.com/sitesv/APaQ0SROunQLdMV1EHdt9evbEE1KRHZr-Zt6b_05Gpa3c3HU1jJMZyTAexSvRU5uTTf1KZQY1_BEq1yVUUS-Zc519RR0oMndua36wNlh9aBhRw2xCsGO0Pmc6TaWaWUNNQWrygf1g2n3lcVYw5UVqfbAWx-KNlN9aP_L7xEIYxtak_k7fTwAxlmmchHZC0RuOru_tEVsTowrH_8_eLiPwQ2gXMZya7qt1i2-s76WdT4=w1280"
+  },
+  {
+    "name": "5x33cm-14",
+    "imageUrl": "https://lh3.googleusercontent.com/sitesv/APaQ0STXiU_Ewqs-OXpmlgClgP7suTFHjMiXG1KkFehD7SWSXtnBiNtUUIE19azzlV8zrquvom_mgfPxnk0Mp801UPeMQA1BkSAxu42cQb9_hxya8D8QY4V2eXZpnD_cIYPrm-FsN0H3qVaF5BWKXBT28pqaCXi7tFeeZSAmpLlQdidJ4nlx7FnQQtCDlTnri1d1fg561S3IkUfddDXTvcDyxGyA6RpyLyS5bGWkG6U=w1280"
+  },
+  {
+    "name": "5cm-15",
+    "imageUrl": "https://lh3.googleusercontent.com/sitesv/APaQ0SRw8bDpy0VtQScC3G15rGZyGU-xA2zAmFcrJNCzq07x5AFsE-oPnAjBgRI5-ZNXAW0vlBD7i3m7vxUWDkknUOARK9BgoqvoXZeiU9-wiFhdHoJEfiWKTqP94Q9Y_Sq-xD1Vr2z-KPQU5mDq8OO1gkiYBTX0Eg_tJZuGE6DuHc9iXLG9nPwjLHHq_CtUDuEENFhInrtd2E0SAW3ZIqlHwxDmzKmCf9ccNNTpjmg=w1280"
+  }
+];
+
+const https = require('https');
+const path = 'e:/Antigravity/CarDecal3/public/Site_Pics/Decals/5cm';
+
+if (!fs.existsSync(path)) {
+    fs.mkdirSync(path, { recursive: true });
+}
+
+Promise.all(imagesData.map(({name, imageUrl}) => {
+  return new Promise((resolve, reject) => {
+    https.get(imageUrl, (res) => {
+      if (res.statusCode !== 200) {
+         res.resume();
+         resolve(`Failed: ${name}`);
+         return;
+      }
+      const fileStream = fs.createWriteStream(`${path}/${name}.jpg`);
+      res.pipe(fileStream);
+      fileStream.on('finish', () => {
+        fileStream.close();
+        resolve(`Success: ${name}`);
+      });
+    }).on('error', err => resolve(`Error: ${name} ${err.message}`));
+  });
+})).then(results => {
+  console.log(results.join('\n'));
+});

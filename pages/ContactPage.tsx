@@ -1,10 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import { InstagramIcon, TwitterIcon, LinkedInIcon } from "../components/IconComponents";
 import { useToast } from "../hooks/useToast";
-import { settingsService } from "../lib/settingsService";
-import { supabase } from "../lib/supabase";
 
 const UnderlinedInput: React.FC<{
     id: string;
@@ -14,69 +12,40 @@ const UnderlinedInput: React.FC<{
     value: string;
     onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
     isTextArea?: boolean;
-}> = ({ id, label, type = "text", placeholder, value, onChange, isTextArea = false }) => {
-    const handleFocus = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        // Delayed scroll to allow keyboard to start opening and viewport to adjust
-        setTimeout(() => {
-            e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 300);
-    };
-
-    return (
-        <div className="group relative pt-4">
-            <label 
-                htmlFor={id} 
-                className="block text-xs font-medium text-text-muted mb-2 uppercase tracking-wide group-focus-within:text-gold-accent transition-colors"
-            >
-                {label}
-            </label>
-            {isTextArea ? (
-                <textarea
-                    id={id}
-                    rows={1}
-                    value={value}
-                    onChange={onChange}
-                    onFocus={handleFocus}
-                    placeholder={placeholder}
-                    className="w-full bg-transparent border-b border-white/20 py-2 text-white placeholder-white/10 focus:border-gold-accent outline-none transition-all resize-none scroll-mt-24"
-                />
-            ) : (
-                <input
-                    type={type}
-                    id={id}
-                    value={value}
-                    onChange={onChange}
-                    onFocus={handleFocus}
-                    placeholder={placeholder}
-                    className="w-full bg-transparent border-b border-white/20 py-2 text-white placeholder-white/10 focus:border-gold-accent outline-none transition-all scroll-mt-24"
-                />
-            )}
-        </div>
-    );
-};
+}> = ({ id, label, type = "text", placeholder, value, onChange, isTextArea = false }) => (
+    <div className="group relative pt-4">
+        <label 
+            htmlFor={id} 
+            className="block text-xs font-medium text-text-muted mb-2 uppercase tracking-wide group-focus-within:text-red-600 transition-colors"
+        >
+            {label}
+        </label>
+        {isTextArea ? (
+            <textarea
+                id={id}
+                rows={1}
+                value={value}
+                onChange={onChange}
+                placeholder={placeholder}
+                className="w-full bg-transparent border-b border-white/20 py-2 text-white placeholder-white/10 focus:border-red-600 outline-none transition-all resize-none"
+            />
+        ) : (
+            <input
+                type={type}
+                id={id}
+                value={value}
+                onChange={onChange}
+                placeholder={placeholder}
+                className="w-full bg-transparent border-b border-white/20 py-2 text-white placeholder-white/10 focus:border-red-600 outline-none transition-all"
+            />
+        )}
+    </div>
+);
 
 const ContactPage: React.FC = () => {
     const { t, i18n } = useTranslation();
     const { showToast } = useToast();
     const [form, setForm] = useState({ name: "", email: "", message: "" });
-    const [bgImage, setBgImage] = useState("");
-
-    useEffect(() => {
-        const loadBg = async () => {
-            const bgs = await settingsService.getPageBackgrounds();
-            setBgImage(bgs.bg_contact);
-        };
-        loadBg();
-
-        const channel = supabase
-            .channel('contact_bg_changes')
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'site_settings' }, (payload: any) => {
-                if (payload.new.key === 'bg_contact') setBgImage(payload.new.value);
-            })
-            .subscribe();
-
-        return () => { supabase.removeChannel(channel); };
-    }, []);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -86,8 +55,8 @@ const ContactPage: React.FC = () => {
     };
 
     return (
-        <div className="min-h-[100dvh] bg-background flex flex-col lg:justify-center px-4 md:px-12 pt-28 pb-20 overflow-y-auto">
-            <div className="max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-2 gap-12 items-start lg:items-center">
+        <div className="min-h-screen bg-background flex flex-col justify-center px-4 md:px-12 py-20">
+            <div className="max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
                 
                 {/* Left Side: Image (Hidden on very small screens if preferred, or stacked) */}
                 <motion.div 
@@ -96,12 +65,14 @@ const ContactPage: React.FC = () => {
                     transition={{ duration: 0.8 }}
                    className="h-[500px] md:h-[700px] w-full relative overflow-hidden hidden lg:block rounded-lg"
                 >
-                     <div 
-                        className="absolute inset-0 bg-cover bg-left"
-                        style={{ backgroundImage: `url("${bgImage}")` }} // Using a premium model image
-                    >
-                        {/* Overlay to blend with dark theme if needed, or keep raw for contrast */}
-                        <div className="absolute inset-0 bg-black/10" /> 
+                    <div className="absolute inset-0">
+                        <img 
+                            src="/Contacts/1.jpeg" 
+                            alt="Contact CarDecal" 
+                            className="w-full h-full object-cover grayscale md:grayscale-0 hover:grayscale-0 transition-all duration-700"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60" />
+                        <div className="absolute inset-0 border border-white/5" />
                     </div>
                 </motion.div>
 
@@ -160,7 +131,7 @@ const ContactPage: React.FC = () => {
                                 <div className="pt-4">
                                     <button 
                                         type="submit" 
-                                        className="bg-black border border-white/20 text-white px-8 py-3 rounded-full text-xs uppercase tracking-widest hover:bg-gold-accent hover:text-black hover:border-gold-accent transition-all duration-300 w-full md:w-auto"
+                                        className="bg-black border border-white/20 text-white px-8 py-3 rounded-full text-xs uppercase tracking-widest hover:bg-red-600 hover:text-black hover:border-red-600 transition-all duration-300 w-full md:w-auto"
                                     >
                                         {t('contact.booking.submit')}
                                     </button>
@@ -172,25 +143,22 @@ const ContactPage: React.FC = () => {
                                 <div className="space-y-8">
                                     <div>
                                         <h3 className="text-lg font-serif text-white mb-1">{t('contact.info.title')}</h3>
-                                        <a href="mailto:info@vbmodels.com" className="text-text-muted hover:text-gold-accent transition-colors text-sm">
-                                            info@vbmodels.com
+                                        <a href="mailto:cardecal@abv.bg" className="text-text-muted hover:text-red-500 transition-colors text-sm">
+                                            cardecal@abv.bg
                                         </a>
                                     </div>
 
                                     <div>
                                         <h3 className="text-lg font-serif text-white mb-1">{t('contact.info.based_in')}</h3>
                                         <p className="text-text-muted text-sm leading-relaxed">
-                                            Sofia, Bulgaria<br/>
-                                            London, UK
+                                            Варна, България<br/>
                                         </p>
                                     </div>
                                 </div>
 
                                 {/* Socials at bottom right of the box area */}
                                 <div className="flex gap-6 items-center">
-                                    <SocialIcon href="#" icon={<InstagramIcon className="w-4 h-4" />} />
-                                    <SocialIcon href="#" icon={<TwitterIcon className="w-4 h-4" />} />
-                                    <SocialIcon href="#" icon={<LinkedInIcon className="w-4 h-4" />} />
+                                     {/* Removed placeholder social icons */}
                                 </div>
                             </div>
 
@@ -203,7 +171,7 @@ const ContactPage: React.FC = () => {
 };
 
 const SocialIcon: React.FC<{ href: string; icon: React.ReactNode }> = ({ href, icon }) => (
-    <a href={href} className="text-text-muted hover:text-gold-accent transition-colors">
+    <a href={href} className="text-text-muted hover:text-red-600 transition-colors">
         {icon}
     </a>
 );

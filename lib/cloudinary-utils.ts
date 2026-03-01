@@ -1,0 +1,70 @@
+import { cloudinaryConfig } from './cloudinary';
+
+/**
+ * Generates a SHA-1 signature for Cloudinary signed uploads.
+ * Note: This uses the API Secret which is exposed via VITE_ prefix.
+ */
+async function generateSignature(params: Record<string, any>, secret: string): Promise<string> {
+  const sortedParams = Object.keys(params)
+    .sort()
+    .map(key => `${key}=${params[key]}`)
+    .join('&');
+    
+  const signatureString = sortedParams + secret;
+  const msgUint8 = new TextEncoder().encode(signatureString);
+  const hashBuffer = await crypto.subtle.digest('SHA-1', msgUint8);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+export async function uploadToCloudinary(file: File, folder: string = 'general'): Promise<string> {
+  const timestamp = Math.round(new Date().getTime() / 1000);
+  const params = {
+    folder,
+    timestamp,
+  };
+
+  const signature = await generateSignature(params, cloudinaryConfig.apiSecret);
+
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('api_key', cloudinaryConfig.apiKey);
+  formData.append('timestamp', timestamp.toString());
+  formData.append('signature', signature);
+  formData.append('folder', folder);
+
+  const response = await fetch(
+    `https://api.cloudinary.com/v1_1/${cloudinaryConfig.cloudName}/image/upload`,
+    {
+      method: 'POST',
+      body: formData,
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error?.message || 'Cloudinary upload failed');
+  }
+
+  const data = await response.json();
+  return data.secure_url;
+}
+
+/**
+ * Optimizes a Cloudinary URL by adding auto-format, auto-quality, and optional resizing.
+ */
+export function getOptimizedUrl(url: string, options: { width?: number; height?: number; crop?: string } = {}): string {
+  if (!url || !url.includes('cloudinary.com')) return url;
+
+  const parts = url.split('/upload/');
+  if (parts.length !== 2) return url;
+
+  const { width, height, crop = 'fill' } = options;
+  const transformations = ['f_auto', 'q_auto'];
+
+  if (width) transformations.push(`w_${width}`);
+  if (height) transformations.push(`h_${height}`);
+  if (width || height) transformations.push(`c_${crop}`);
+
+  return `${parts[0]}/upload/${transformations.join(',')}/${parts[1]}`;
+}

@@ -1,0 +1,10 @@
+components/ui/dark-gradient-pricing.tsx(74,22): error TS2322: Type '{ text: string; checked: boolean; key: number; }' is not assignable to type 'BenefitProps'.
+  Property 'key' does not exist on type 'BenefitProps'.
+pages/RegisterPage.tsx(3,22): error TS2305: Module '"../components/ui/sign-up"' has no exported member 'Testimonial'.
+supabase/functions/resend-email/index.ts(1,23): error TS2307: Cannot find module 'https://deno.land/std@0.168.0/http/server.ts' or its corresponding type declarations.
+supabase/functions/resend-email/index.ts(2,30): error TS2307: Cannot find module 'https://esm.sh/@supabase/supabase-js@2.39.3' or its corresponding type declarations.
+supabase/functions/resend-email/index.ts(4,24): error TS2304: Cannot find name 'Deno'.
+supabase/functions/resend-email/index.ts(5,25): error TS2304: Cannot find name 'Deno'.
+supabase/functions/resend-email/index.ts(6,38): error TS2304: Cannot find name 'Deno'.
+supabase/functions/send-booking-email/index.ts(1,23): error TS2307: Cannot find module 'https://deno.land/std@0.168.0/http/server.ts' or its corresponding type declarations.
+supabase/functions/send-booking-email/index.ts(3,24): error TS2304: Cannot find name 'Deno'.

@@ -12,12 +12,12 @@ interface LightboxPortalProps {
 export const LightboxPortal: React.FC<LightboxPortalProps> = ({ isOpen, onClose, imageSrc }) => {
     useEffect(() => {
         if (isOpen) {
-            document.body.classList.add('modal-open');
+            document.body.style.overflow = 'hidden';
         } else {
-            document.body.classList.remove('modal-open');
+            document.body.style.overflow = 'unset';
         }
         return () => {
-            document.body.classList.remove('modal-open');
+            document.body.style.overflow = 'unset';
         };
     }, [isOpen]);
 
@@ -59,7 +59,7 @@ export const LightboxPortal: React.FC<LightboxPortalProps> = ({ isOpen, onClose,
                     />
                     
                     {/* Subtle Gradient Backlight */}
-                    <div className="absolute inset-0 bg-gold-accent/5 blur-[120px] rounded-full pointer-events-none -z-10" />
+                    <div className="absolute inset-0 bg-red-600/5 blur-[120px] rounded-full pointer-events-none -z-10" />
                 </motion.div>
             </motion.div>
         </AnimatePresence>,

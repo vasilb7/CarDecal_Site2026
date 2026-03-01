@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Check } from 'lucide-react';
 import {
@@ -26,6 +26,18 @@ export const AvatarCropModal: React.FC<AvatarCropModalProps> = ({
   const [cropArea, setCropArea] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [zoom, setZoom] = useState(1);
+
+  // Disable background scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
 
   const handleSave = async () => {
     if (!cropArea || !imageUrl) return;
@@ -91,7 +103,7 @@ export const AvatarCropModal: React.FC<AvatarCropModalProps> = ({
           >
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-serif text-white">Crop Profile Picture</h2>
+              <h2 className="text-2xl font-serif text-white">Изрязване на профилна снимка</h2>
               <button
                 onClick={onClose}
                 className="text-zinc-400 hover:text-white transition-colors p-2"
@@ -118,7 +130,7 @@ export const AvatarCropModal: React.FC<AvatarCropModalProps> = ({
               
               {/* Zoom Slider */}
               <div className="px-4 flex items-center gap-4">
-                 <span className="text-xs text-white/50 font-medium uppercase tracking-wider">Zoom</span>
+                 <span className="text-xs text-white/50 font-medium uppercase tracking-wider">Увеличение</span>
                  <Slider 
                     value={[zoom]} 
                     onValueChange={(vals) => setZoom(vals[0])} 
@@ -137,7 +149,7 @@ export const AvatarCropModal: React.FC<AvatarCropModalProps> = ({
                 onClick={onClose}
                 className="px-6 border-white/10 hover:bg-white/5 hover:text-white"
               >
-                Cancel
+                Отказ
               </Button>
               <Button
                 onClick={handleSave}
@@ -145,11 +157,11 @@ export const AvatarCropModal: React.FC<AvatarCropModalProps> = ({
                 className="px-6 bg-white text-black hover:bg-white/90"
               >
                 {isProcessing ? (
-                  <span className="flex items-center gap-2">Processing...</span>
+                  <span className="flex items-center gap-2">Обработка...</span>
                 ) : (
                   <>
                     <Check className="w-4 h-4 mr-2" />
-                    Save
+                    Запази
                   </>
                 )}
               </Button>

@@ -1,0 +1,10 @@
+UPDATE products SET price='3.79', wholesale_price='3.79', price_eur=1.94, wholesale_price_eur=1.94 WHERE slug='20cm-42';
+UPDATE products SET price='3.79', wholesale_price='3.79', price_eur=1.94, wholesale_price_eur=1.94 WHERE slug='20cm-45';
+UPDATE products SET price='3.70', wholesale_price='3.70', price_eur=1.89, wholesale_price_eur=1.89 WHERE slug='20cm-171';
+UPDATE products SET price='3.00', wholesale_price='3.00', price_eur=1.53, wholesale_price_eur=1.53 WHERE slug='20cm-172';
+UPDATE products SET price='3.00', wholesale_price='3.00', price_eur=1.53, wholesale_price_eur=1.53 WHERE slug='20cm-175';
+UPDATE products SET price='3.00', wholesale_price='3.00', price_eur=1.53, wholesale_price_eur=1.53 WHERE slug='20cm-176';
+UPDATE products SET price='3.00', wholesale_price='3.00', price_eur=1.53, wholesale_price_eur=1.53 WHERE slug='20cm-177';
+UPDATE products SET price='3.65', wholesale_price='3.65', price_eur=1.87, wholesale_price_eur=1.87 WHERE slug='20cm-178';
+UPDATE products SET price='3.65', wholesale_price='3.65', price_eur=1.87, wholesale_price_eur=1.87 WHERE slug='20cm-181';
+UPDATE products SET price='2.48', wholesale_price='2.48', price_eur=1.27, wholesale_price_eur=1.27 WHERE slug='20cm-183';

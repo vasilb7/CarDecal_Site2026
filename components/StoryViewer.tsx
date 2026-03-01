@@ -1,96 +1,113 @@
-/**
- * Legacy StoryViewer adapter
- * Uses the new shadcn StoryViewerModal for display while maintaining backward compatibility
- */
 
-import React, { useMemo } from 'react';
-import { AnimatePresence } from 'framer-motion';
-import { StoryViewerModal, type Story as ShadcnStory } from './ui/story-viewer';
-import type { Story } from '../types';
+import React, { useState, useEffect } from 'react';
+import { CloseIcon } from './IconComponents';
 
 interface StoryViewerProps {
-  // Support both old format (string[]) and new format (Story[])
-  images?: string[];
-  stories?: Story[];
+  images: string[];
   onClose: () => void;
   onAllStoriesEnd?: () => void;
   title: string;
-  avatar?: string;
 }
 
-const StoryViewer: React.FC<StoryViewerProps> = ({ 
-  images, 
-  stories, 
-  onClose, 
-  onAllStoriesEnd, 
-  title,
-  avatar 
-}) => {
-  // Convert stories to shadcn format
-  const normalizedStories: ShadcnStory[] = useMemo(() => {
-    if (stories && stories.length > 0) {
-      return stories.map((s, idx) => ({
-        id: s.id || `story_${idx}`,
-        type: s.type || 'image',
-        src: s.src,
-        duration: s.duration
-      }));
+const StoryViewer: React.FC<StoryViewerProps> = ({ images, onClose, onAllStoriesEnd, title }) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [progress, setProgress] = useState(0);
+
+  // Disable background scroll when open
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, []);
+
+  useEffect(() => {
+    const duration = 5000; // 5 seconds per story
+    const interval = 50; // update progress every 50ms
+    const step = (interval / duration) * 100;
+
+    const timer = setInterval(() => {
+      setProgress((prev) => {
+        if (prev >= 100) {
+          if (currentIndex < images.length - 1) {
+            setCurrentIndex(currentIndex + 1);
+            return 0;
+          } else {
+            onAllStoriesEnd?.();
+            onClose();
+            return 100;
+          }
+        }
+        return prev + step;
+      });
+    }, interval);
+
+    return () => clearInterval(timer);
+  }, [currentIndex, images.length, onClose]);
+
+  const handlePrev = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (currentIndex > 0) {
+      setCurrentIndex(currentIndex - 1);
+      setProgress(0);
     }
-    
-    // Convert old images array format
-    if (images && images.length > 0) {
-      return images.map((src, idx) => ({
-        id: `image_${idx}`,
-        type: 'image' as const,
-        src
-      }));
-    }
-    
-    return [];
-  }, [stories, images]);
+  };
 
-  // Get timestamp from first story if available
-  const timestamp = useMemo(() => {
-    if (stories && stories.length > 0 && stories[0].created_at) {
-      return stories[0].created_at;
-    }
-    return undefined;
-  }, [stories]);
-
-  if (normalizedStories.length === 0) {
-    return null;
-  }
-
-  const viewedStories = JSON.parse(localStorage.getItem('viewed_stories') || '[]');
-  const firstUnviewedIndex = stories ? stories.findIndex(s => !viewedStories.includes(s.id)) : 0;
-  const initialIndex = firstUnviewedIndex === -1 ? 0 : firstUnviewedIndex;
-
-  const handleStoryChange = (index: number) => {
-    if (stories && stories[index]) {
-      const storyId = stories[index].id;
-      const viewed = JSON.parse(localStorage.getItem('viewed_stories') || '[]');
-      if (!viewed.includes(storyId)) {
-        const newViewed = [...viewed, storyId];
-        localStorage.setItem('viewed_stories', JSON.stringify(newViewed));
-        // Dispatch custom event to notify StoriesRing in the same window
-        window.dispatchEvent(new Event('storyViewed'));
-      }
+  const handleNext = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (currentIndex < images.length - 1) {
+      setCurrentIndex(currentIndex + 1);
+      setProgress(0);
+    } else {
+      onAllStoriesEnd?.();
+      onClose();
     }
   };
 
   return (
-    <AnimatePresence>
-      <StoryViewerModal
-        stories={normalizedStories}
-        username={title}
-        avatar={avatar || '/placeholder-avatar.png'}
-        timestamp={timestamp}
-        initialIndex={initialIndex}
-        viewedIndices={new Set()}
-        onClose={onClose}
-        onStoryChange={handleStoryChange}
-      />
-    </AnimatePresence>
+    <div className="fixed inset-0 z-[100] bg-black flex flex-center items-center justify-center">
+      <div className="relative w-full max-w-[450px] h-full md:h-[90vh] bg-neutral-900 overflow-hidden md:rounded-xl shadow-2xl flex flex-col">
+        {/* Progress Bars */}
+        <div className="absolute top-4 left-0 right-0 z-20 px-4 flex gap-1">
+          {images.map((_, index) => (
+            <div key={index} className="h-1 flex-1 bg-white/20 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-white transition-all duration-50"
+                style={{ 
+                  width: index === currentIndex ? `${progress}%` : index < currentIndex ? '100%' : '0%' 
+                }}
+              />
+            </div>
+          ))}
+        </div>
+
+        {/* Header */}
+        <div className="absolute top-8 left-4 right-4 z-20 flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+             <div className="w-8 h-8 rounded-full border border-red-600 overflow-hidden">
+                <img src={images[0]} alt="avatar" className="w-full h-full object-cover" />
+             </div>
+             <span className="text-white text-sm font-semibold shadow-sm">{title}</span>
+          </div>
+          <button onClick={onClose} className="p-2 text-white/80 hover:text-white transition-colors">
+            <CloseIcon className="w-6 h-6" />
+          </button>
+        </div>
+
+        {/* Navigation Areas */}
+        <div className="absolute inset-0 z-10 flex">
+          <div className="w-1/3 h-full cursor-pointer" onClick={handlePrev} />
+          <div className="w-2/3 h-full cursor-pointer" onClick={handleNext} />
+        </div>
+
+        {/* Image */}
+        <img 
+          src={images[currentIndex]} 
+          alt={`Story ${currentIndex + 1}`} 
+          className="w-full h-full object-cover select-none"
+        />
+      </div>
+    </div>
   );
 };
 

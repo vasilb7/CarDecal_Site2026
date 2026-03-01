@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
 import { ToastContainer } from './Toast.tsx';
+import { useUI } from '../../context/UIContext';
 
 type ToastType = 'success' | 'error' | 'warning' | 'info';
 
@@ -27,13 +28,32 @@ export const useToast = () => {
 
 export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const { isCartOpen } = useUI();
+
+  // Clear toasts when cart is opened
+  useEffect(() => {
+    if (isCartOpen) {
+      setToasts([]);
+    }
+  }, [isCartOpen]);
 
   const showToast = useCallback((message: string, type: ToastType = 'info', duration: number = 4000) => {
     const id = Math.random().toString(36).substring(2, 9);
-    const maxToasts = window.innerWidth < 768 ? 1 : 2;
+    
     setToasts((prev) => {
-      const next = [...prev, { id, message, type, duration }];
-      return next.length > maxToasts ? next.slice(-maxToasts) : next;
+      // Prevent spamming the exact same message
+      const isDuplicate = prev.some(t => t.message === message);
+      if (isDuplicate) return prev;
+
+      const isMobile = window.innerWidth <= 768;
+      const limit = isMobile ? 1 : 2;
+      
+      const newToasts = [...prev, { id, message, type, duration }];
+      
+      if (newToasts.length > limit) {
+        return newToasts.slice(newToasts.length - limit);
+      }
+      return newToasts;
     });
   }, []);
 

@@ -38,29 +38,12 @@ import { useNavigate, useLocation } from 'react-router-dom';
 
 const LanguageSwitcher: React.FC = () => {
     const { i18n } = useTranslation();
-    const navigate = useNavigate();
-    const location = useLocation();
-    
-    // Safety check for current language to avoid broken links
-    const rawLang = i18n.language?.split("-")[0];
-    const currentLang = ["bg", "en"].includes(rawLang) ? rawLang : "bg";
+    const currentLang = i18n.language.split('-')[0];
 
     const toggleLanguage = (e: React.MouseEvent) => {
         e.stopPropagation();
         const nextLang = currentLang === 'en' ? 'bg' : 'en';
-        
-        // Update URL to include the new language prefix
-        const pathParts = location.pathname.split('/');
-        // pathParts looks like ["", "bg", "models", "slug"]
-        if (pathParts[1] === 'bg' || pathParts[1] === 'en') {
-            pathParts[1] = nextLang;
-        } else {
-            // If for some reason there is no prefix, add it
-            pathParts.splice(1, 0, nextLang);
-        }
-        
-        const newPath = pathParts.join('/') || `/${nextLang}`;
-        navigate(newPath);
+        i18n.changeLanguage(nextLang);
     };
 
     return (
@@ -82,7 +65,7 @@ const LanguageSwitcher: React.FC = () => {
                 </motion.div>
             </AnimatePresence>
             
-            <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-4 h-0.5 bg-gold-accent scale-x-0 gold-line transition-transform duration-300" />
+            <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-4 h-0.5 bg-red-600 scale-x-0 red-line transition-transform duration-300" />
         </button>
     );
 };

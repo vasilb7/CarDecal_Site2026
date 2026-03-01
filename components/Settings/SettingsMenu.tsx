@@ -30,11 +30,11 @@ const SettingsMenu: React.FC<SettingsMenuProps> = ({ onSelect }) => {
                             onClick={() => onSelect(section.id)}
                             className="group relative flex flex-col items-start p-6 rounded-2xl border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/20 transition-all text-left overflow-hidden"
                         >
-                            <div className="mb-4 p-3 rounded-xl bg-white/5 text-white/70 group-hover:text-gold-accent group-hover:bg-gold-accent/10 transition-colors">
+                            <div className="mb-4 p-3 rounded-xl bg-white/5 text-white/70 group-hover:text-red-600 group-hover:bg-red-600/10 transition-colors">
                                 <Icon className="w-6 h-6" />
                             </div>
                             
-                            <h3 className="text-sm font-bold text-white mb-1 group-hover:text-gold-accent transition-colors">
+                             <h3 className="text-sm font-bold text-white mb-1 group-hover:text-red-600 transition-colors">
                                 {t(section.title).toUpperCase()}
                             </h3>
                             <p className="text-xs text-white/40 leading-relaxed line-clamp-2">
@@ -42,7 +42,7 @@ const SettingsMenu: React.FC<SettingsMenuProps> = ({ onSelect }) => {
                             </p>
 
                             <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <ChevronRight className="w-4 h-4 text-gold-accent" />
+                                 <ChevronRight className="w-4 h-4 text-red-600" />
                             </div>
                         </motion.button>
                     );
@@ -50,7 +50,7 @@ const SettingsMenu: React.FC<SettingsMenuProps> = ({ onSelect }) => {
             </div>
             
             <footer className="mt-12 pt-8 border-t border-white/5 text-center">
-                <p className="text-[10px] text-white/20 uppercase tracking-[0.3em]">VB Agency v2.0 • Secure & Encrypted</p>
+                <p className="text-[10px] text-white/20 uppercase tracking-[0.3em]">CarDecal v2.0 • СИГУРНО И КРИПТИРАНО</p>
             </footer>
         </div>
     );

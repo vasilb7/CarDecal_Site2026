@@ -1,0 +1,2 @@
+download-images2.js(30,39): error TS1127: Invalid character.
+download-images2.js(47,1): error TS1160: Unterminated template literal.
