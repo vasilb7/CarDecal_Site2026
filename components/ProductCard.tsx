@@ -49,11 +49,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onQuickView, isPrior
     <motion.div
       whileHover={{ y: -8 }}
       transition={{ duration: 0.4, ease: "easeOut" }}
-      className="bg-[#1A1A1A] rounded-[32px] md:rounded-[40px] p-6 md:p-8 flex flex-col items-center justify-between relative aspect-square overflow-hidden shadow-2xl border border-transparent hover:border-[#333] transition-colors h-full"
+      className="bg-[#1A1A1A] rounded-[28px] md:rounded-[40px] p-5 md:p-8 flex flex-col justify-between relative shadow-2xl border border-transparent hover:border-[#333] transition-colors h-full"
     >
       {/* Product Image Area */}
-      <div className="relative w-full flex-1 flex items-center justify-center min-h-0 mb-4 md:mb-6">
-        <div className="relative w-full h-full flex items-center justify-center group-hover:scale-110 transition-transform duration-700">
+      <div className="relative w-full aspect-[4/3] md:aspect-[1/1] flex-shrink-0 flex items-center justify-center mb-6 md:mb-8">
+        <div className="relative w-full h-full flex items-center justify-center group-hover:scale-105 transition-transform duration-700">
           {/* Subtle Soft Glow behind the item */}
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.03)_0%,transparent_70%)] blur-2xl pointer-events-none" />
 

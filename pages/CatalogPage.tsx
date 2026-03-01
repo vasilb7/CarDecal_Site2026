@@ -516,7 +516,7 @@ const CatalogPage: React.FC = () => {
                         </div>
 
                         {/* Product Grid - Reduced padding for mobile to gain space */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-3 gap-5 md:gap-8 min-h-[500px] items-start">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-3 gap-5 md:gap-8 min-h-[500px]">
                             {paginatedProducts.map((product, index) => (
                                 <motion.div
                                     key={product.slug}
