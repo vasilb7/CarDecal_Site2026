@@ -245,16 +245,9 @@ const CatalogPage: React.FC = () => {
 
     // Prefetch logic for pagination
     const prefetchPage = (pageNumber: number) => {
-        if (pageNumber < 1 || pageNumber > totalPages || pageNumber === currentPage) return;
-        const start = (pageNumber - 1) * itemsPerPage;
-        const productsToPrefetch = filteredProducts.slice(start, start + itemsPerPage);
-        
-        productsToPrefetch.forEach(product => {
-            if (product.avatar) {
-                const img = new Image();
-                img.src = getOptimizedUrl(product.avatar, { width: 500, crop: 'fit' });
-            }
-        });
+        // Disabled to prevent Cloudinary/Supabase free limit exhaustion 
+        // especially on mobile devices where touch events can fire multiple times rapidly.
+        return;
     };
 
     const renderFilters = () => (
@@ -529,20 +522,18 @@ const CatalogPage: React.FC = () => {
                             ))}
                         </div>
 
-                        {/* Pagination - Much bigger buttons for mobile (h-14) and more spacing */}
+                        {/* Pagination - Add flex-wrap and slightly smaller mobile buttons to prevent horizontal overflow on middle pages */}
                         {totalPages > 1 && (
-                            <div className="mt-16 md:mt-24 flex items-center justify-center gap-2 md:gap-3 px-2">
+                            <div className="mt-16 md:mt-24 flex flex-wrap items-center justify-center gap-2 md:gap-3 px-2">
                                 <button 
                                     onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                                    onMouseEnter={() => prefetchPage(currentPage - 1)}
-                                    onTouchStart={() => prefetchPage(currentPage - 1)}
                                     disabled={currentPage === 1}
-                                    className="w-12 h-12 md:w-12 md:h-12 rounded-2xl bg-[#1A1A1A] border border-[#262626] flex items-center justify-center text-[#A3A3A3] hover:text-white hover:border-[#404040] disabled:opacity-20 disabled:cursor-not-allowed transition-all active:scale-90"
+                                    className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-[#1A1A1A] border border-[#262626] flex items-center justify-center text-[#A3A3A3] hover:text-white hover:border-[#404040] disabled:opacity-20 disabled:cursor-not-allowed transition-all active:scale-90 shrink-0"
                                 >
                                     <ChevronDown size={20} className="rotate-90" />
                                 </button>
                                 
-                                <div className="flex items-center gap-2 md:gap-2">
+                                <div className="flex flex-wrap items-center justify-center gap-1.5 md:gap-2">
                                     {[...Array(totalPages)].map((_, i) => {
                                         const page = i + 1;
                                         // Show only current, prev, next and ends on mobile
@@ -553,9 +544,7 @@ const CatalogPage: React.FC = () => {
                                                 <button
                                                     key={page}
                                                     onClick={() => setCurrentPage(page)}
-                                                    onMouseEnter={() => prefetchPage(page)}
-                                                    onTouchStart={() => prefetchPage(page)}
-                                                    className={`w-12 h-12 md:w-12 md:h-12 rounded-2xl text-sm font-black transition-all border ${
+                                                    className={`w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl md:rounded-2xl text-xs md:text-sm font-black transition-all border shrink-0 ${
                                                         currentPage === page 
                                                         ? 'bg-white text-black border-white shadow-[0_4px_20px_rgba(255,255,255,0.4)] scale-110 z-10' 
                                                         : 'bg-[#1A1A1A] text-[#525252] border-transparent hover:border-[#404040] hover:text-[#A3A3A3] active:scale-95'
@@ -566,7 +555,7 @@ const CatalogPage: React.FC = () => {
                                             );
                                         }
                                         if ((page === currentPage - 2 && page > 1) || (page === currentPage + 2 && page < totalPages)) {
-                                            return <span key={page} className="text-[#262626] px-0.5 text-xs">...</span>;
+                                            return <span key={page} className="text-[#262626] px-0.5 text-xs font-bold shrink-0">...</span>;
                                         }
                                         return null;
                                     })}
@@ -574,10 +563,8 @@ const CatalogPage: React.FC = () => {
 
                                 <button 
                                     onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                                    onMouseEnter={() => prefetchPage(currentPage + 1)}
-                                    onTouchStart={() => prefetchPage(currentPage + 1)}
                                     disabled={currentPage === totalPages}
-                                    className="w-12 h-12 md:w-12 md:h-12 rounded-2xl bg-[#1A1A1A] border border-[#262626] flex items-center justify-center text-[#A3A3A3] hover:text-white hover:border-[#404040] disabled:opacity-20 disabled:cursor-not-allowed transition-all active:scale-90"
+                                    className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-[#1A1A1A] border border-[#262626] flex items-center justify-center text-[#A3A3A3] hover:text-white hover:border-[#404040] disabled:opacity-20 disabled:cursor-not-allowed transition-all active:scale-90 shrink-0"
                                 >
                                     <ChevronDown size={20} className="-rotate-90" />
                                 </button>
