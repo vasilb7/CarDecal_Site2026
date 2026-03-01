@@ -207,12 +207,37 @@ const HomePage: React.FC = () => {
   const [currentPremiumIndex, setCurrentPremiumIndex] = useState(0);
   const [mediaLoaded, setMediaLoaded] = useState(false);
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentPremiumIndex((prev) => (prev + 1) % individualProjects.length);
-    }, 3000);
-    return () => clearInterval(timer);
+  const [isSlideAnimating, setIsSlideAnimating] = useState(false);
+  const slideTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const startSlideTimer = useCallback(() => {
+    if (slideTimerRef.current) clearInterval(slideTimerRef.current);
+    slideTimerRef.current = setInterval(() => {
+      setCurrentPremiumIndex((prev) => {
+        setIsSlideAnimating(true);
+        setTimeout(() => setIsSlideAnimating(false), 1000);
+        return (prev + 1) % individualProjects.length;
+      });
+    }, 4500); // 4.5s per slide
   }, []);
+
+  useEffect(() => {
+    startSlideTimer();
+    return () => {
+      if (slideTimerRef.current) clearInterval(slideTimerRef.current);
+    };
+  }, [startSlideTimer]);
+
+  const handleManualSlide = (index: number) => {
+    if (isSlideAnimating || index === currentPremiumIndex) return;
+    
+    setCurrentPremiumIndex(index);
+    setIsSlideAnimating(true);
+    setTimeout(() => setIsSlideAnimating(false), 1000);
+    
+    // Reset timer so it doesn't immediately slide right after click
+    startSlideTimer();
+  };
 
   useEffect(() => {
     if (!displayProducts || displayProducts.length === 0) return;
@@ -503,9 +528,12 @@ const HomePage: React.FC = () => {
             {/* Indicators */}
             <div className="absolute bottom-6 flex gap-3 z-40">
               {individualProjects.map((_, idx) => (
-                <div
+                <button
                   key={idx}
-                  className={`h-1.5 rounded-full transition-all duration-500 ${idx === currentPremiumIndex ? "w-8 bg-red-600 shadow-[0_0_10px_rgba(230,0,0,0.8)]" : "w-2 bg-white/40"}`}
+                  onClick={() => handleManualSlide(idx)}
+                  disabled={isSlideAnimating}
+                  className={`h-2 rounded-full transition-all duration-500 cursor-pointer hover:bg-white ${idx === currentPremiumIndex ? "w-8 bg-red-600 shadow-[0_0_10px_rgba(230,0,0,0.8)]" : "w-2 bg-white/40"}`}
+                  aria-label={`Go to slide ${idx + 1}`}
                 />
               ))}
             </div>
