@@ -525,6 +525,20 @@ const HomePage: React.FC = () => {
               })}
             </div>
 
+            {/* Manual Navigation Controls - Invisible touch zones */}
+            <div className="absolute inset-x-0 inset-y-10 z-30 flex">
+              <button 
+                onClick={() => handleManualSlide((currentPremiumIndex - 1 + individualProjects.length) % individualProjects.length)}
+                className="w-1/4 h-full cursor-w-resize"
+                aria-label="Previous project"
+              />
+              <button 
+                onClick={() => handleManualSlide((currentPremiumIndex + 1) % individualProjects.length)}
+                className="w-3/4 h-full cursor-e-resize"
+                aria-label="Next project"
+              />
+            </div>
+
             {/* Indicators */}
             <div className="absolute bottom-6 flex gap-3 z-40">
               {individualProjects.map((_, idx) => (
