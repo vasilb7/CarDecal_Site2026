@@ -328,9 +328,9 @@ const CatalogPage: React.FC = () => {
                         <button
                             key={size}
                             onClick={() => setSelectedSizes(prev => prev.includes(size) ? prev.filter(s => s !== size) : [...prev, size])}
-                            className={`h-10 px-3 rounded-xl flex items-center justify-center text-[10px] font-bold transition-all border ${
+                            className={`h-11 md:h-10 px-3 rounded-xl flex items-center justify-center text-xs md:text-[10px] font-bold transition-all border ${
                                 selectedSizes.includes(size) 
-                                ? 'bg-white text-black border-white' 
+                                ? 'bg-white text-black border-white shadow-[0_4px_12px_rgba(255,255,255,0.2)]' 
                                 : 'bg-[#1A1A1A] text-[#525252] border-transparent hover:border-[#404040] hover:text-[#A3A3A3]'
                             }`}
                         >

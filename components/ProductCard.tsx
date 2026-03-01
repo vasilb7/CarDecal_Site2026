@@ -64,7 +64,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onQuickView, isPrior
                 initial={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.5 }}
-                className="absolute inset-0 m-auto w-24 h-24 border-t-2 border-red-600 rounded-full animate-spin flex items-center justify-center after:content-[''] after:absolute after:inset-2 after:border-r-2 after:border-white/30 after:rounded-full"
+                className="absolute inset-0 m-auto w-10 h-10 border-2 border-white/5 border-t-red-600 rounded-full animate-spin"
               />
             )}
           </AnimatePresence>
