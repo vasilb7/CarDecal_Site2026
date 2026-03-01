@@ -134,10 +134,10 @@ const CatalogPage: React.FC = () => {
         setCurrentPage(1);
     }, [searchTerm, selectedSizes, selectedCategory, sortBy]);
 
-    // Scroll to top when page changes
+    // Scroll to top when page or filters change
     useEffect(() => {
-        window.scrollTo(0, 0);
-    }, [currentPage]);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, [currentPage, searchTerm, selectedSizes, selectedCategory, sortBy]);
 
     // Sync initial price range once products load
     useEffect(() => {
