@@ -10,6 +10,7 @@ import { Search, SlidersHorizontal, X, ChevronDown } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import ProductQuickView from '../components/ProductQuickView';
 import type { Product } from '../types';
+import { getOptimizedUrl } from '../lib/cloudinary-utils';
 
 const CatalogPage: React.FC = () => {
     const { t, i18n } = useTranslation();
@@ -30,7 +31,7 @@ const CatalogPage: React.FC = () => {
     const [priceRange, setPriceRange] = useState<[number, number]>([0, 100]); 
     const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
     const [isSortOpen, setIsSortOpen] = useState(false);
-    const itemsPerPage = 12;
+    const itemsPerPage = 18;
 
     const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
     const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
@@ -249,14 +250,9 @@ const CatalogPage: React.FC = () => {
         const productsToPrefetch = filteredProducts.slice(start, start + itemsPerPage);
         
         productsToPrefetch.forEach(product => {
-            if (product.avatar && product.avatar.includes('cloudinary.com')) {
+            if (product.avatar) {
                 const img = new Image();
-                // Match the exact URL used in ProductCard (w_500, c_fit, f_auto, q_auto)
-                const optimizedParams = ['f_auto', 'q_auto', 'w_500', 'c_fit'];
-                const parts = product.avatar.split('/upload/');
-                if (parts.length === 2) {
-                    img.src = `${parts[0]}/upload/${optimizedParams.join(',')}/${parts[1]}`;
-                }
+                img.src = getOptimizedUrl(product.avatar, { width: 500, crop: 'fit' });
             }
         });
     };
