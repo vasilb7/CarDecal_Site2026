@@ -515,8 +515,8 @@ const CatalogPage: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* Product Grid */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-3 gap-6 md:gap-8 min-h-[600px] items-start">
+                        {/* Product Grid - Reduced padding for mobile to gain space */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-3 gap-5 md:gap-8 min-h-[500px] items-start">
                             {paginatedProducts.map((product, index) => (
                                 <motion.div
                                     key={product.slug}
@@ -529,33 +529,36 @@ const CatalogPage: React.FC = () => {
                             ))}
                         </div>
 
-                        {/* Pagination */}
+                        {/* Pagination - Much bigger buttons for mobile (h-14) and more spacing */}
                         {totalPages > 1 && (
-                            <div className="mt-12 md:mt-20 flex items-center justify-center gap-2 md:gap-3">
+                            <div className="mt-16 md:mt-24 flex items-center justify-center gap-2 md:gap-3 px-2">
                                 <button 
                                     onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                                     onMouseEnter={() => prefetchPage(currentPage - 1)}
                                     onTouchStart={() => prefetchPage(currentPage - 1)}
                                     disabled={currentPage === 1}
-                                    className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-[#1A1A1A] border border-[#262626] flex items-center justify-center text-[#A3A3A3] hover:text-white hover:border-[#404040] disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                                    className="w-12 h-12 md:w-12 md:h-12 rounded-2xl bg-[#1A1A1A] border border-[#262626] flex items-center justify-center text-[#A3A3A3] hover:text-white hover:border-[#404040] disabled:opacity-20 disabled:cursor-not-allowed transition-all active:scale-90"
                                 >
-                                    <ChevronDown size={18} className="rotate-90" />
+                                    <ChevronDown size={20} className="rotate-90" />
                                 </button>
                                 
-                                <div className="flex items-center gap-1 md:gap-2">
+                                <div className="flex items-center gap-2 md:gap-2">
                                     {[...Array(totalPages)].map((_, i) => {
                                         const page = i + 1;
-                                        if (page === 1 || page === totalPages || (page >= currentPage - 1 && page <= currentPage + 1)) {
+                                        // Show only current, prev, next and ends on mobile
+                                        const isPageVisible = page === 1 || page === totalPages || (page >= currentPage - 1 && page <= currentPage + 1);
+                                        
+                                        if (isPageVisible) {
                                             return (
                                                 <button
                                                     key={page}
                                                     onClick={() => setCurrentPage(page)}
                                                     onMouseEnter={() => prefetchPage(page)}
                                                     onTouchStart={() => prefetchPage(page)}
-                                                    className={`w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl text-[13px] md:text-sm font-bold transition-all border ${
+                                                    className={`w-12 h-12 md:w-12 md:h-12 rounded-2xl text-sm font-black transition-all border ${
                                                         currentPage === page 
-                                                        ? 'bg-white text-black border-white shadow-[0_0_20px_rgba(255,255,255,0.3)]' 
-                                                        : 'bg-[#1A1A1A] text-[#525252] border-transparent hover:border-[#404040] hover:text-[#A3A3A3]'
+                                                        ? 'bg-white text-black border-white shadow-[0_4px_20px_rgba(255,255,255,0.4)] scale-110 z-10' 
+                                                        : 'bg-[#1A1A1A] text-[#525252] border-transparent hover:border-[#404040] hover:text-[#A3A3A3] active:scale-95'
                                                     }`}
                                                 >
                                                     {page}
@@ -563,7 +566,7 @@ const CatalogPage: React.FC = () => {
                                             );
                                         }
                                         if ((page === currentPage - 2 && page > 1) || (page === currentPage + 2 && page < totalPages)) {
-                                            return <span key={page} className="text-[#262626] px-1">...</span>;
+                                            return <span key={page} className="text-[#262626] px-0.5 text-xs">...</span>;
                                         }
                                         return null;
                                     })}
@@ -574,9 +577,9 @@ const CatalogPage: React.FC = () => {
                                     onMouseEnter={() => prefetchPage(currentPage + 1)}
                                     onTouchStart={() => prefetchPage(currentPage + 1)}
                                     disabled={currentPage === totalPages}
-                                    className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-[#1A1A1A] border border-[#262626] flex items-center justify-center text-[#A3A3A3] hover:text-white hover:border-[#404040] disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                                    className="w-12 h-12 md:w-12 md:h-12 rounded-2xl bg-[#1A1A1A] border border-[#262626] flex items-center justify-center text-[#A3A3A3] hover:text-white hover:border-[#404040] disabled:opacity-20 disabled:cursor-not-allowed transition-all active:scale-90"
                                 >
-                                    <ChevronDown size={18} className="-rotate-90" />
+                                    <ChevronDown size={20} className="-rotate-90" />
                                 </button>
                             </div>
                         )}
