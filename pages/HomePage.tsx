@@ -573,14 +573,12 @@ const HomePage: React.FC = () => {
             Опишете вашата концепция, прикачете файл с дизайн и посочете
             желаните размери за изработка.
           </p>
-          {user && (
-            <Link
-              to={`/book-now`}
-              className="inline-flex items-center gap-2 px-10 sm:px-12 md:px-16 py-4 md:py-5 bg-black text-white font-bold uppercase tracking-widest text-xs md:text-sm shadow-[0_15px_30px_rgba(0,0,0,0.4)] hover:bg-white hover:text-black hover:shadow-[0_20px_40px_rgba(0,0,0,0.2)] hover:scale-105 active:scale-95 transition-all duration-300"
-            >
-              Изпрати Запитване
-            </Link>
-          )}
+          <Link
+            to={`/book-now`}
+            className="inline-flex items-center gap-2 px-10 sm:px-12 md:px-16 py-4 md:py-5 bg-black text-white font-bold uppercase tracking-widest text-xs md:text-sm shadow-[0_15px_30px_rgba(0,0,0,0.4)] hover:bg-white hover:text-black hover:shadow-[0_20px_40px_rgba(0,0,0,0.2)] hover:scale-105 active:scale-95 transition-all duration-300"
+          >
+            Изпрати Запитване
+          </Link>
         </div>
       </section>
       {quickViewProduct && (
