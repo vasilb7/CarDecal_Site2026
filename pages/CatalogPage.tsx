@@ -31,6 +31,7 @@ const CatalogPage: React.FC = () => {
     const [priceRange, setPriceRange] = useState<[number, number]>([0, 100]); 
     const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
     const [isSortOpen, setIsSortOpen] = useState(false);
+    const [isAtBottom, setIsAtBottom] = useState(false);
     const itemsPerPage = 18;
 
     const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
@@ -185,6 +186,19 @@ const CatalogPage: React.FC = () => {
             window.visualViewport?.removeEventListener('resize', handleViewportResize);
           };
         }
+    }, []);
+
+    // Detect scroll to hide floating filter button near the bottom (pagination/footer)
+    useEffect(() => {
+        const handleScroll = () => {
+            const scrollPosition = window.scrollY + window.innerHeight;
+            const bottomPosition = document.documentElement.scrollHeight;
+            // 450px threshold is roughly the space taken by pagination + footer
+            setIsAtBottom(bottomPosition - scrollPosition < 450);
+        };
+        handleScroll();
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
     const filteredProducts = useMemo(() => {
@@ -362,20 +376,28 @@ const CatalogPage: React.FC = () => {
             `}</style>
             
             {/* --- Mobile Bottom Nav (Filter Toggle) --- */}
-            {!isMobileNavOpen && (
-                <div className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[100]">
-                    <button 
-                        onClick={() => setIsMobileFiltersOpen(true)}
-                        className="bg-white text-black px-6 py-3.5 rounded-full flex items-center gap-2 font-bold shadow-[0_10px_30px_rgba(255,255,255,0.2)] active:scale-95 transition-all text-sm uppercase tracking-wider"
+            <AnimatePresence>
+                {!isMobileNavOpen && !isAtBottom && (
+                    <motion.div 
+                        initial={{ opacity: 0, y: 50 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 50 }}
+                        transition={{ duration: 0.3 }}
+                        className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[100]"
                     >
-                        <SlidersHorizontal size={18} />
-                        <span>{t('catalog.filters')}</span>
-                        { (selectedCategory !== 'All' || selectedSizes.length > 0) && (
-                            <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse" />
-                        )}
-                    </button>
-                </div>
-            )}
+                        <button 
+                            onClick={() => setIsMobileFiltersOpen(true)}
+                            className="bg-white text-black px-6 py-3.5 rounded-full flex items-center gap-2 font-bold shadow-[0_10px_30px_rgba(255,255,255,0.2)] active:scale-95 transition-all text-sm uppercase tracking-wider"
+                        >
+                            <SlidersHorizontal size={18} />
+                            <span>{t('catalog.filters')}</span>
+                            { (selectedCategory !== 'All' || selectedSizes.length > 0) && (
+                                <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse" />
+                            )}
+                        </button>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* --- Mobile Filter Drawer --- */}
             <AnimatePresence>
