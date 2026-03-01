@@ -377,7 +377,7 @@ const CatalogPage: React.FC = () => {
             
             {/* --- Mobile Bottom Nav (Filter Toggle) --- */}
             <AnimatePresence>
-                {!isMobileNavOpen && (
+                {!isMobileNavOpen && !isAtBottom && (
                     <motion.div 
                         initial={{ opacity: 0, y: 50, x: "-50%" }}
                         animate={{ opacity: 1, y: 0, x: "-50%" }}
