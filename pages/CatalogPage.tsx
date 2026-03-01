@@ -377,13 +377,13 @@ const CatalogPage: React.FC = () => {
             
             {/* --- Mobile Bottom Nav (Filter Toggle) --- */}
             <AnimatePresence>
-                {!isMobileNavOpen && !isAtBottom && (
+                {!isMobileNavOpen && (
                     <motion.div 
-                        initial={{ opacity: 0, y: 50 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 50 }}
+                        initial={{ opacity: 0, y: 50, x: "-50%" }}
+                        animate={{ opacity: 1, y: 0, x: "-50%" }}
+                        exit={{ opacity: 0, y: 50, x: "-50%" }}
                         transition={{ duration: 0.3 }}
-                        className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[100]"
+                        className="lg:hidden fixed bottom-10 left-1/2 z-[100]"
                     >
                         <button 
                             onClick={() => setIsMobileFiltersOpen(true)}
@@ -555,29 +555,34 @@ const CatalogPage: React.FC = () => {
                                     <ChevronDown size={20} className="rotate-90" />
                                 </button>
                                 
-                                <div className="flex flex-wrap items-center justify-center gap-1.5 md:gap-2">
+                                <div className="flex items-center justify-center gap-1.5 md:gap-2 overflow-x-auto no-scrollbar max-w-[calc(100vw-120px)] sm:max-w-none px-2 py-2">
                                     {[...Array(totalPages)].map((_, i) => {
                                         const page = i + 1;
-                                        // Show only current, prev, next and ends on mobile
-                                        const isPageVisible = page === 1 || page === totalPages || (page >= currentPage - 1 && page <= currentPage + 1);
+                                        // Mobile Window Logic: First, Last, Current, and neighbors
+                                        const isPageVisible = 
+                                            page === 1 || 
+                                            page === totalPages || 
+                                            (page >= currentPage - 1 && page <= currentPage + 1);
                                         
                                         if (isPageVisible) {
                                             return (
                                                 <button
                                                     key={page}
                                                     onClick={() => setCurrentPage(page)}
-                                                    className={`w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl md:rounded-2xl text-xs md:text-sm font-black transition-all border shrink-0 ${
+                                                    className={`w-10 h-10 md:w-12 md:h-12 flex-shrink-0 flex items-center justify-center rounded-xl md:rounded-2xl text-xs md:text-sm font-black transition-all border ${
                                                         currentPage === page 
-                                                        ? 'bg-white text-black border-white shadow-[0_4px_20px_rgba(255,255,255,0.4)] scale-110 z-10' 
-                                                        : 'bg-[#1A1A1A] text-[#525252] border-transparent hover:border-[#404040] hover:text-[#A3A3A3] active:scale-95'
+                                                        ? 'bg-white text-black border-white shadow-[0_4px_15px_rgba(255,255,255,0.3)] scale-110 z-10' 
+                                                        : 'bg-[#1A1A1A] text-[#525252] border-transparent hover:border-[#404040] hover:text-[#A3A3A3]'
                                                     }`}
                                                 >
                                                     {page}
                                                 </button>
                                             );
                                         }
-                                        if ((page === currentPage - 2 && page > 1) || (page === currentPage + 2 && page < totalPages)) {
-                                            return <span key={page} className="text-[#262626] px-0.5 text-xs font-bold shrink-0">...</span>;
+                                        
+                                        // Show Dots if gap exists
+                                        if (page === currentPage - 2 || page === currentPage + 2) {
+                                            return <span key={page} className="text-[#333] px-1 text-[10px] font-bold shrink-0 self-center">...</span>;
                                         }
                                         return null;
                                     })}
