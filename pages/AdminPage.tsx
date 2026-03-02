@@ -2074,6 +2074,8 @@ interface RegularOrder {
 const OrdersTab: React.FC = () => {
     const [orders, setOrders] = useState<RegularOrder[]>([]);
     const [loading, setLoading] = useState(true);
+    const [deletingId, setDeletingId] = useState<string | null>(null);
+    const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
     const { showToast } = useToast();
 
     const fetchOrders = async () => {
@@ -2105,6 +2107,38 @@ const OrdersTab: React.FC = () => {
         }
     };
 
+    const confirmDeleteAction = async () => {
+        if (!confirmDelete) return;
+        const id = confirmDelete;
+        setConfirmDelete(null);
+        setDeletingId(id);
+        try {
+            const { error } = await supabase.from('orders').delete().eq('id', id);
+            if (error) throw error;
+            showToast('Поръчката е изтрита успешно', 'success');
+            setOrders(prev => prev.filter(o => o.id !== id));
+        } catch (err: any) {
+            showToast('Грешка при изтриване: ' + err.message, 'error');
+        } finally {
+            setDeletingId(null);
+        }
+    };
+
+    const handleExport = () => {
+        try {
+            const dataStr = JSON.stringify(orders, null, 2);
+            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+            const exportFileDefaultName = `orders_export_${new Date().toISOString().slice(0, 10)}.json`;
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', exportFileDefaultName);
+            linkElement.click();
+            showToast('Успешно изтеглен файл', 'success');
+        } catch (err: any) {
+            showToast('Грешка при експорт', 'error');
+        }
+    };
+
     useEffect(() => {
         fetchOrders();
     }, []);
@@ -2123,7 +2157,26 @@ const OrdersTab: React.FC = () => {
 
     return (
         <div className="space-y-6">
-            <h2 className="text-xl font-bold uppercase tracking-widest text-white mb-6">Всички Поръчки ({orders.length})</h2>
+            <ConfirmDialog 
+                isOpen={!!confirmDelete}
+                title="Изтриване на поръчка"
+                message="Сигурни ли сте, че искате да изтриете тази поръчка? Това действие е необратимо и всички данни за поръчката ще бъдат загубени."
+                confirmLabel="Изтрий Перманентно"
+                cancelLabel="Отказ"
+                onConfirm={confirmDeleteAction}
+                onCancel={() => setConfirmDelete(null)}
+                isDanger={true}
+            />
+
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                <h2 className="text-xl font-bold uppercase tracking-widest text-white">Всички Поръчки ({orders.length})</h2>
+                <button
+                    onClick={handleExport}
+                    className="flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-[10px] uppercase tracking-widest transition-colors border border-white/10"
+                >
+                    Експорт JSON
+                </button>
+            </div>
             
             <div className="space-y-4">
                 {orders.map(order => (
@@ -2191,18 +2244,31 @@ const OrdersTab: React.FC = () => {
                             </div>
 
                             {/* Right Side: Actions */}
-                            <div className="lg:w-48 space-y-3 border-l-0 lg:border-l border-white/5 lg:pl-8">
-                                <h4 className="text-[10px] text-zinc-500 uppercase tracking-widest mb-3 font-bold">Управление</h4>
-                                <select 
-                                    value={order.status} 
-                                    onChange={(e) => updateStatus(order.id, e.target.value)}
-                                    className="w-full bg-black/60 border border-white/10 text-white text-[10px] uppercase font-black p-2 focus:outline-none focus:border-red-600 transition-colors cursor-pointer"
-                                >
-                                    <option value="pending">Изчакваща</option>
-                                    <option value="shipped">Изпратена</option>
-                                    <option value="completed">Завършена</option>
-                                    <option value="cancelled">Отказна</option>
-                                </select>
+                            <div className="lg:w-48 space-y-4 border-l-0 lg:border-l border-white/5 lg:pl-8">
+                                <div>
+                                    <h4 className="text-[10px] text-zinc-500 uppercase tracking-widest mb-3 font-bold">Статус</h4>
+                                    <select 
+                                        value={order.status} 
+                                        onChange={(e) => updateStatus(order.id, e.target.value)}
+                                        className="w-full bg-black/60 border border-white/10 text-white text-[10px] uppercase font-black p-2 focus:outline-none focus:border-red-600 transition-colors cursor-pointer"
+                                    >
+                                        <option value="pending">Изчакваща</option>
+                                        <option value="shipped">Изпратена</option>
+                                        <option value="completed">Завършена</option>
+                                        <option value="cancelled">Отказна</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <h4 className="text-[10px] text-zinc-500 uppercase tracking-widest mb-3 font-bold">Управление</h4>
+                                    <button
+                                        onClick={() => setConfirmDelete(order.id)}
+                                        disabled={deletingId === order.id}
+                                        className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-red-900/10 border border-red-500/20 text-red-500 font-bold text-[10px] uppercase tracking-widest hover:bg-red-900/30 transition-colors disabled:opacity-50"
+                                    >
+                                        {deletingId === order.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                                        Изтрий
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -2286,11 +2352,34 @@ const CustomOrdersTab: React.FC = () => {
         }
     };
 
+    const handleExport = () => {
+        try {
+            const dataStr = JSON.stringify(orders, null, 2);
+            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+            const exportFileDefaultName = `custom_orders_export_${new Date().toISOString().slice(0, 10)}.json`;
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', exportFileDefaultName);
+            linkElement.click();
+            showToast('Успешно изтеглен файл', 'success');
+        } catch (err: any) {
+            showToast('Грешка при експорт', 'error');
+        }
+    };
+
     if (loading) return <div className="flex items-center justify-center p-10"><Loader2 className="w-8 h-8 animate-spin text-red-600" /></div>;
 
     return (
         <div className="space-y-6">
-            <h2 className="text-xl font-bold uppercase tracking-widest text-white mb-6">Индивидуални дизайни ({orders.length})</h2>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                <h2 className="text-xl font-bold uppercase tracking-widest text-white">Индивидуални дизайни ({orders.length})</h2>
+                <button
+                    onClick={handleExport}
+                    className="flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-[10px] uppercase tracking-widest transition-colors border border-white/10"
+                >
+                    Експорт JSON
+                </button>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {orders.map(order => (
                     <div key={order.id} className="bg-black/40 border border-white/10 p-5 relative group">

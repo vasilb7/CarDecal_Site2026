@@ -106,10 +106,10 @@ const Header: React.FC = () => {
 
         const seenKey = `ann_seen_${autoStart}`;
         if (sessionStorage.getItem(seenKey) !== 'true') {
-            showToast(settings.announcement_text || "Предстои профилактика на сайта.", "info");
+            showToast("Предстои профилактика на сайта.", "info");
             sessionStorage.setItem(seenKey, 'true');
         }
-    }, [settings.maintenance_auto_start_at, isMaintenanceOn, settings.announcement_text]);
+    }, [settings.maintenance_auto_start_at, isMaintenanceOn]);
     
     // Active Maintenance Toast for Admins/Editors
     useEffect(() => {
@@ -277,7 +277,7 @@ const Header: React.FC = () => {
                                                 {isMaintenanceWarningActive ? (
                                                     <span className="flex items-center gap-3">
                                                         <span className="w-1.5 h-1.5 rounded-full bg-[#ff0000] animate-pulse shrink-0" />
-                                                        {renderMessageWithTimer(settings.announcement_text || "Поддръжка на сайта ще започне скоро", true)}
+                                                        {renderMessageWithTimer("Внимание! Предстои профилактика. Сайтът ще бъде временно недостъпен.", true)}
                                                     </span>
                                                 ) : (
                                                     renderMessageWithTimer(annMessages[currentMsgIndex] || "")
