@@ -272,9 +272,23 @@ const ProductQuickViewModal: React.FC = () => {
                                 >
                                     <Minus size={18} />
                                 </button>
-                                <div className="w-12 sm:w-14 flex items-center justify-center font-mono font-black text-white/90 border-x border-white/10 text-lg">
-                                    {quantity}
-                                </div>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    value={quantity}
+                                    onChange={(e) => {
+                                        const val = parseInt(e.target.value);
+                                        if (!isNaN(val)) {
+                                            setQuantity(val);
+                                        } else {
+                                            setQuantity(0);
+                                        }
+                                    }}
+                                    onBlur={() => {
+                                        if (quantity < 1) setQuantity(1);
+                                    }}
+                                    className="w-12 sm:w-14 bg-transparent text-center font-mono font-black border-x border-white/10 text-white focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-lg"
+                                />
                                 <button 
                                     onClick={() => setQuantity(q => q + 1)}
                                     className="flex-1 flex items-center justify-center text-white/60 hover:bg-white/10 hover:text-white transition-colors outline-none focus-visible:bg-white/10 active:bg-white/5"
