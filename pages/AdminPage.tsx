@@ -2717,7 +2717,7 @@ const OrdersTab: React.FC = () => {
             </tr>
         `).join('');
 
-        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${window.location.origin}/order/${order.id}`;
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${window.location.origin}/order/receipt/${order.id}`;
         const logoUrl = `${window.location.origin}/LOGO.png`;
 
         const html = `
@@ -2871,7 +2871,7 @@ const OrdersTab: React.FC = () => {
                             </div>
                             <div class="summary-row">
                                 <span>Доставка (Econt/Speedy):</span>
-                                <strong>0.00 <span style="font-size: 10px; color: #888;">EUR</span></strong>
+                                <strong>по тарифа</strong>
                             </div>
                             <div class="summary-row" style="margin-top: 5px;">
                                 <span>Междинна сума:</span>

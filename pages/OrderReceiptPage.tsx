@@ -197,17 +197,7 @@ const OrderReceiptPage: React.FC = () => {
                     {/* QR Code Placeholder (SVG) */}
                     <div className="text-center space-y-2">
                         <div className="w-24 h-24 bg-white border-2 border-black p-1">
-                            <svg viewBox="0 0 100 100" className="w-full h-full">
-                                <rect width="100" height="100" fill="white" />
-                                <rect x="10" y="10" width="20" height="20" fill="black" />
-                                <rect x="70" y="10" width="20" height="20" fill="black" />
-                                <rect x="10" y="70" width="20" height="20" fill="black" />
-                                <rect x="40" y="40" width="20" height="20" fill="black" />
-                                <rect x="30" y="30" width="10" height="10" fill="black" />
-                                <rect x="60" y="60" width="10" height="10" fill="black" />
-                                <rect x="20" y="50" width="5" height="5" fill="black" />
-                                <rect x="50" y="20" width="5" height="5" fill="black" />
-                            </svg>
+                            <img src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${window.location.origin}/order/receipt/${order.id}`} alt="QR Code" className="w-full h-full object-contain" />
                         </div>
                         <p className="text-[8px] font-black uppercase tracking-tighter">СКАНИРАЙ ЗА ДЕТАЙЛИ</p>
                     </div>
