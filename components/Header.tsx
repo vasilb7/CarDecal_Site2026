@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { NavLink, Link, useLocation } from 'react-router-dom';
+import { NavLink, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { User, LogOut, ChevronDown, Shield, X, Mail, Lock, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../hooks/useToast';
+import { useCart } from '../context/CartContext';
 import { useSiteSettings } from '../context/SiteSettingsContext';
 import { useUI } from '../context/UIContext';
 import { CartIcon } from './CartIcon';
@@ -14,6 +15,8 @@ const Header: React.FC = () => {
     const { t } = useTranslation();
     const { user, profile, signOut, isAdmin, isEditor } = useAuth();
     const { showToast } = useToast();
+    const { clearCart } = useCart();
+    const navigate = useNavigate();
     const { settings, serverTimeOffset } = useSiteSettings();
     const location = useLocation();
     const { isMobileNavOpen: isMenuOpen, setIsMobileNavOpen: setIsMenuOpen } = useUI();
@@ -84,20 +87,39 @@ const Header: React.FC = () => {
         setManualTick(curr => curr + 1);
     };
 
-    // LOCK BODY SCROLL
+    // Body Scroll Lock & Back Button Handling for Mobile Menu
     useEffect(() => {
         if (isMenuOpen) {
             document.body.style.overflow = 'hidden';
             document.body.style.touchAction = 'none';
-        } else {
-            document.body.style.overflow = 'unset';
-            document.body.style.touchAction = 'auto';
+            
+            // Push state for back button handling
+            window.history.pushState({ modal: 'mobile-nav' }, '');
+            
+            const handlePopState = () => {
+                setIsMenuOpen(false);
+            };
+
+            window.addEventListener('popstate', handlePopState);
+            
+            return () => {
+                window.removeEventListener('popstate', handlePopState);
+                document.body.style.overflow = '';
+                document.body.style.touchAction = 'auto';
+            };
         }
-        return () => {
-            document.body.style.overflow = 'unset';
-            document.body.style.touchAction = 'auto';
-        };
     }, [isMenuOpen]);
+
+    const handleManualClose = () => {
+        setIsMenuOpen(false);
+        if (window.history.state?.modal === 'mobile-nav') {
+            window.history.back();
+        }
+    };
+
+    const handleCloseMenu = () => {
+        setIsMenuOpen(false);
+    };
 
     // Announcement Effect (Toast)
     useEffect(() => {
@@ -120,8 +142,6 @@ const Header: React.FC = () => {
                 sessionStorage.setItem(activeKey, 'true');
             }
         } else if (!isMaintenanceOn) {
-            // Clear keys if maintenance is off so it shows again next time
-            // We use a prefix search or specific keys
             const keys = Object.keys(sessionStorage).filter(k => k.startsWith('maint_active_seen_'));
             keys.forEach(k => sessionStorage.removeItem(k));
         }
@@ -157,17 +177,12 @@ const Header: React.FC = () => {
         };
 
         if (tick()) return;
-        const interval = setInterval(() => {
-            if (tick()) clearInterval(interval);
-        }, 1000);
-
+        const interval = setInterval(() => { if (tick()) clearInterval(interval); }, 1000);
         return () => clearInterval(interval);
     }, [settings.maintenance_auto_start_at]);
 
-    // Helper to replace {timer} in strings or append if missing for maintenance
     const renderMessageWithTimer = (text: string, forceTimer: boolean = false) => {
         if (!text) return null;
-        
         const hasPlaceholder = text.includes("{timer}");
         const timerElement = timeLeftToStart ? (
             <span className="inline-flex items-center justify-center px-2 py-0.5 bg-[#ff0000] text-white text-[10px] font-black rounded font-mono ml-2 shrink-0 shadow-[0_0_12px_rgba(255,0,0,0.5)] border border-white/20 animate-pulse">
@@ -200,8 +215,6 @@ const Header: React.FC = () => {
         setIsProfileMenuOpen(false);
     }, [location.pathname]);
 
-    const logoHeightClass = "h-8 md:h-8"; 
-
     const handleLogoClick = (e: React.MouseEvent) => {
         if (location.pathname === '/') {
             e.preventDefault();
@@ -209,26 +222,12 @@ const Header: React.FC = () => {
         }
     };
 
-    const navLinkClasses = ({ isActive }: { isActive: boolean }) =>
-        `relative text-xl md:text-sm uppercase tracking-[0.3em] font-light transition-all duration-500 hover:text-[#ff0000] ${isActive ? 'text-[#ff0000]' : 'text-white'}`;
-
-    const closeMenu = () => setIsMenuOpen(false);
+    const closeMenu = handleCloseMenu;
     
     const menuLinks = [
         { path: `/catalog`, label: "КАТАЛОГ" },
         { path: `/contact`, label: "КОНТАКТИ" },
     ];
-
-    const containerVars = {
-        initial: { transition: { staggerChildren: 0.05, staggerDirection: -1 } },
-        animate: { transition: { staggerChildren: 0.08, delayChildren: 0.2 } }
-    };
-
-    const linkVars = {
-        initial: { opacity: 0, y: 30 },
-        animate: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } },
-        exit: { opacity: 0, y: 20, transition: { duration: 0.3 } }
-    };
 
     const showMaintenanceBanner = isMaintenanceOn && (isAdmin || isEditor) && isBannerVisible && !location.pathname.startsWith('/admin');
 
@@ -295,8 +294,6 @@ const Header: React.FC = () => {
                                 )}
                             </div>
 
-
-
                             {isMaintenanceWarningActive && (
                                 <button 
                                     onClick={() => {
@@ -334,293 +331,290 @@ const Header: React.FC = () => {
                     </motion.div>
                 )}
             </AnimatePresence>
+
             <header className="sticky top-0 z-[100] w-full bg-background/95 backdrop-blur-md border-b border-white/5 pt-[env(safe-area-inset-top)]">
-            <div className="container mx-auto px-4 sm:px-6 flex items-center justify-between relative h-14 sm:h-20">
-                <Link 
-                    to="/" 
-                    onClick={(e) => { handleLogoClick(e); closeMenu(); }}
-                    className="hover:opacity-80 transition-all shrink-0 z-[110]"
-                >
-                    <img 
-                        src="/LOGO.png" 
-                        alt="CarDecal Logo" 
-                        className="h-6 sm:h-8 w-auto object-contain transition-transform duration-300 hover:scale-105"
-                    />
-                </Link>
-
-                {/* Desktop Nav */}
-                <nav className="hidden lg:flex items-center space-x-12 ml-16 flex-grow">
-                    {menuLinks.map(link => (
-                        <NavLink key={link.path} to={link.path} className={({ isActive }) =>
-                            `relative text-xs uppercase tracking-widest transition-colors duration-300 hover:text-[#ff0000] ${isActive ? 'text-[#ff0000]' : 'text-text-primary'
-                            } after:content-[''] after:absolute after:left-0 after:bottom-[-4px] after:w-full after:h-[1px] after:bg-[#ff0000] after:transition-transform after:duration-300 after:scale-x-0 ${isActive ? 'after:scale-x-100' : 'hover:after:scale-x-50'}`
-                        }>
-                            {link.label}
-                        </NavLink>
-                    ))}
-                </nav>
-
-                <div className="hidden lg:flex items-center space-x-6 shrink-0 ml-auto">
-                    <CartIcon />
-                    {user ? (
-                        <div className="relative">
-                            <button 
-                                onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-                                className="flex items-center gap-2 text-xs uppercase tracking-widest text-white hover:text-[#ff0000] transition-colors focus:outline-none"
-                            >
-                                <div className="w-8 h-8 rounded-full bg-surface border border-white/20 flex items-center justify-center overflow-hidden">
-                                    {(profile?.avatar_url || user?.user_metadata?.avatar_url || user?.user_metadata?.picture) ? (
-                                        <img 
-                                            src={profile?.avatar_url || user?.user_metadata?.avatar_url || user?.user_metadata?.picture} 
-                                            alt="Profile" 
-                                            className="w-full h-full object-cover"
-                                        />
-                                    ) : (
-                                        <User className="w-4 h-4" />
-                                    )}
-                                </div>
-                                <span className="hidden xl:inline-block max-w-[120px] truncate">
-                                    {profile?.full_name || profile?.username || user.email?.split('@')[0]}
-                                </span>
-                                <ChevronDown className={`w-3 h-3 transition-transform duration-300 ${isProfileMenuOpen ? 'rotate-180' : ''}`} />
-                            </button>
-
-                            <AnimatePresence>
-                                {isProfileMenuOpen && (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                        transition={{ duration: 0.2 }}
-                                        className="absolute right-0 mt-4 w-48 bg-surface/95 backdrop-blur-xl border border-white/10 shadow-2xl overflow-hidden z-50"
-                                    >
-                                        <div className="py-2">
-                                            <div className="px-4 py-3 border-b border-white/5 mb-1">
-                                                <p className="text-[10px] text-text-muted uppercase tracking-wider">Вписан като</p>
-                                                 <p className="text-xs text-white truncate font-medium mt-1 select-none pointer-events-none">{user.email}</p>
-                                            </div>
-                                            
-                                            <Link 
-                                                to={`/profile`} 
-                                                onClick={() => setIsProfileMenuOpen(false)}
-                                                className="flex items-center gap-3 px-4 py-3 text-xs uppercase tracking-widest text-text-primary hover:bg-white/5 hover:text-[#ff0000] transition-colors"
-                                            >
-                                                <User className="w-3.5 h-3.5" />
-                                                Профил
-                                            </Link>
-
-                                            {(isAdmin || isEditor) && (
-                                                <Link 
-                                                    to="/admin" 
-                                                    onClick={() => setIsProfileMenuOpen(false)}
-                                                    className="flex items-center gap-3 px-4 py-3 text-xs uppercase tracking-widest text-red-400 hover:bg-white/5 hover:text-red-300 transition-colors border-b border-white/5"
-                                                >
-                                                    <Shield className="w-3.5 h-3.5" />
-                                                    {isAdmin ? 'Администрация' : 'Редактор Панел'}
-                                                </Link>
-                                            )}
-                                            
-                                            <button 
-                                                 onClick={async () => { 
-                                                     await signOut(); 
-                                                     setIsProfileMenuOpen(false);
-                                                     showToast(t('toast.logout_success'), "success");
-                                                 }}
-                                                 className="w-full flex items-center gap-3 px-4 py-3 text-xs uppercase tracking-widest text-text-primary hover:bg-white/5 hover:text-red-400 transition-colors text-left"
-                                             >
-                                                <LogOut className="w-3.5 h-3.5" />
-                                                Изход
-                                            </button>
-                                        </div>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </div>
-                    ) : (
-                        <NavLink to={`/login`} className="text-xs uppercase tracking-widest text-white hover:text-[#ff0000] transition-colors">
-                            Вход
-                        </NavLink>
-                    )}
-                    
-                    {user && (
-                        <Link to={`/book-now`} className="px-6 py-2.5 bg-gradient-to-r from-[#3d0000] to-[#950101] border border-[#ff0000]/30 text-white text-[11px] font-medium uppercase tracking-[0.25em] hover:from-[#950101] hover:to-[#ff0000] rounded-sm transition-all duration-300 shadow-[0_0_15px_rgba(149,1,1,0.3)] hover:shadow-[0_0_20px_rgba(255,0,0,0.5)] flex items-center gap-2">
-                            ИНДИВИДУАЛНИ ПОРЪЧКИ
-                        </Link>
-                    )}
-                </div>
-
-                {/* Mobile & Tablet Controls */}
-                <div className="flex lg:hidden items-center gap-2 z-[110]">
-                    <CartIcon />
-                    <button
-                        onClick={() => setIsMenuOpen(true)}
-                        className="text-white focus:outline-none p-2 w-12 h-12 flex flex-col justify-center items-center gap-1.5 rounded-full hover:bg-white/5 transition-colors"
-                        aria-label="Open menu"
+                <div className="container mx-auto px-4 sm:px-6 flex items-center justify-between relative h-16 sm:h-20">
+                    <Link 
+                        to="/" 
+                        onClick={(e) => { handleLogoClick(e); closeMenu(); }}
+                        className="hover:opacity-80 transition-all shrink-0 z-[110]"
                     >
-                        <span className="w-6 h-[1.5px] bg-white block rounded-full" />
-                        <span className="w-6 h-[1.5px] bg-white block rounded-full" />
-                        <span className="w-6 h-[1.5px] bg-white block rounded-full" />
-                    </button>
-                </div>
-            </div>
-        </header>
+                        <img 
+                            src="/LOGO.png" 
+                            alt="CarDecal Logo" 
+                            className="h-8 w-auto object-contain transition-transform duration-300 hover:scale-105"
+                        />
+                    </Link>
 
-        {/* Mobile & Tablet Menu Overlay (Drawer) */}
-                <AnimatePresence>
-                    {isMenuOpen && (
-                        <>
-                            {/* Backdrop */}
-                            <motion.div 
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                transition={{ duration: 0.25 }}
-                                onClick={closeMenu}
-                                className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[115] lg:hidden"
-                            />
+                    {/* Desktop Nav */}
+                    <nav className="hidden lg:flex items-center space-x-12 ml-16 flex-grow">
+                        {menuLinks.map(link => (
+                            <NavLink key={link.path} to={link.path} className={({ isActive }) =>
+                                `relative text-xs uppercase tracking-widest transition-colors duration-300 hover:text-[#ff0000] ${isActive ? 'text-[#ff0000]' : 'text-text-primary'
+                                } after:content-[''] after:absolute after:left-0 after:bottom-[-4px] after:w-full after:h-[1px] after:bg-[#ff0000] after:transition-transform after:duration-300 after:scale-x-0 ${isActive ? 'after:scale-x-100' : 'hover:after:scale-x-50'}`
+                            }>
+                                {link.label}
+                            </NavLink>
+                        ))}
+                    </nav>
 
-                            {/* Drawer sliding from right */}
-                            <motion.div 
-                                initial={{ x: '100%' }}
-                                animate={{ x: 0 }}
-                                exit={{ x: '100%' }}
-                                transition={{ type: 'spring', damping: 25, stiffness: 220 }}
-                                className="fixed inset-y-0 right-0 w-[85%] max-w-sm bg-[#0a0a0a] z-[120] shadow-2xl flex flex-col lg:hidden border-l border-white/5"
-                            >
-                                {/* 1. Header Bar of Drawer */}
-                                <div className="flex items-center justify-between px-6 h-20 border-b border-white/5 bg-background/60 backdrop-blur-md shrink-0 shadow-sm">
-                                    <img src="/LOGO.png" alt="CarDecal Logo" className="h-6 w-auto object-contain" />
-                                    <button 
-                                        onClick={closeMenu}
-                                        className="w-12 h-12 -mr-3 flex items-center justify-center text-white/60 hover:text-white transition-colors focus:outline-none"
-                                        aria-label="Close menu"
-                                    >
-                                        <X className="w-7 h-7" />
-                                    </button>
-                                </div>
+                    <div className="hidden lg:flex items-center space-x-6 shrink-0 ml-auto">
+                        <CartIcon />
+                        {user ? (
+                            <div className="relative">
+                                <button 
+                                    onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+                                    className="flex items-center gap-2 text-xs uppercase tracking-widest text-white hover:text-[#ff0000] transition-colors focus:outline-none"
+                                >
+                                    <div className="w-8 h-8 rounded-full bg-surface border border-white/20 flex items-center justify-center overflow-hidden">
+                                        {(profile?.avatar_url || user?.user_metadata?.avatar_url || user?.user_metadata?.picture) ? (
+                                            <img 
+                                                src={profile?.avatar_url || user?.user_metadata?.avatar_url || user?.user_metadata?.picture} 
+                                                alt="Profile" 
+                                                className="w-full h-full object-cover"
+                                            />
+                                        ) : (
+                                            <User className="w-4 h-4" />
+                                        )}
+                                    </div>
+                                    <span className="hidden xl:inline-block max-w-[120px] truncate">
+                                        {profile?.full_name || profile?.username || user.email?.split('@')[0]}
+                                    </span>
+                                    <ChevronDown className={`w-3 h-3 transition-transform duration-300 ${isProfileMenuOpen ? 'rotate-180' : ''}`} />
+                                </button>
 
-                                {/* Menu Content block - Scrollable */}
-                                <div className="flex-1 overflow-y-auto py-8 px-6 flex flex-col">
-                                    {/* 2. Main Navigation */}
-                                    <nav className="flex flex-col space-y-2 mb-8">
-                                        {menuLinks.map((link) => (
-                                            <NavLink 
-                                                key={link.path}
-                                                to={link.path} 
-                                                onClick={closeMenu} 
-                                                className="group"
-                                            >
-                                                {({ isActive }) => (
-                                                    <div className={`flex items-center p-3 -ml-3 rounded-xl transition-colors min-h-[48px] ${isActive ? 'bg-white/5' : 'hover:bg-white/5'}`}>
-                                                        <span className={`w-1.5 h-1.5 rounded-full mr-4 transition-colors shrink-0 ${isActive ? 'bg-red-500' : 'bg-white/10 group-hover:bg-white/30'}`} />
-                                                        <span className={`text-xl uppercase tracking-widest transition-colors ${isActive ? 'text-[#E0F2F1] font-bold' : 'text-white/80 group-hover:text-white font-medium'}`}>
-                                                            {link.label}
-                                                        </span>
-                                                    </div>
-                                                )}
-                                            </NavLink>
-                                        ))}
-                                    </nav>
-
-                                    {/* Divider */}
-                                    <div className="w-full h-px bg-gradient-to-r from-white/10 to-transparent mb-8 shrink-0" />
-
-                                    {/* 3. Account Section */}
-                                    <div className="flex flex-col space-y-1 mb-auto">
-                                        {user ? (
-                                            <>
-                                                <Link 
-                                                    to={`/profile`}
-                                                    onClick={closeMenu}
-                                                    className="flex items-center gap-4 text-[#B0BEC5] hover:text-white transition-colors group p-3 -ml-3 rounded-xl hover:bg-white/5 min-h-[48px]"
-                                                >
-                                                    <div className="w-8 h-8 rounded-full border border-white/20 bg-white/5 overflow-hidden flex items-center justify-center shrink-0">
-                                                        {(profile?.avatar_url || user?.user_metadata?.avatar_url || user?.user_metadata?.picture) ? (
-                                                            <img src={profile?.avatar_url || user?.user_metadata?.avatar_url || user?.user_metadata?.picture} alt="Profile" className="w-full h-full object-cover" />
-                                                        ) : (
-                                                            <User className="w-4 h-4 text-white" />
-                                                        )}
-                                                    </div>
-                                                    <span className="text-base font-normal">Профил</span>
-                                                </Link>
+                                <AnimatePresence>
+                                    {isProfileMenuOpen && (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                                            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                            transition={{ duration: 0.2 }}
+                                            className="absolute right-0 mt-4 w-48 bg-surface/95 backdrop-blur-xl border border-white/10 shadow-2xl overflow-hidden z-50"
+                                        >
+                                            <div className="py-2">
+                                                <div className="px-4 py-3 border-b border-white/5 mb-1">
+                                                    <p className="text-[10px] text-text-muted uppercase tracking-wider">Вписан като</p>
+                                                     <p className="text-xs text-white truncate font-medium mt-1 select-none pointer-events-none">{user.email}</p>
+                                                </div>
                                                 
+                                                <Link 
+                                                    to={`/profile`} 
+                                                    onClick={() => setIsProfileMenuOpen(false)}
+                                                    className="flex items-center gap-3 px-4 py-3 text-xs uppercase tracking-widest text-text-primary hover:bg-white/5 hover:text-[#ff0000] transition-colors"
+                                                >
+                                                    <User className="w-3.5 h-3.5" />
+                                                    Профил
+                                                </Link>
+
                                                 {(isAdmin || isEditor) && (
                                                     <Link 
-                                                        to="/admin"
-                                                        onClick={closeMenu}
-                                                        className="flex items-center gap-4 text-[#B0BEC5] hover:text-white transition-colors p-3 -ml-3 rounded-xl hover:bg-white/5 min-h-[48px]"
+                                                        to="/admin" 
+                                                        onClick={() => setIsProfileMenuOpen(false)}
+                                                        className="flex items-center gap-3 px-4 py-3 text-xs uppercase tracking-widest text-red-400 hover:bg-white/5 hover:text-red-300 transition-colors border-b border-white/5"
                                                     >
-                                                        <div className="w-8 h-8 flex items-center justify-center shrink-0">
-                                                            <Shield className="w-5 h-5 opacity-70" />
-                                                        </div>
-                                                        <span className="text-base font-normal">Администрация</span>
+                                                        <Shield className="w-3.5 h-3.5" />
+                                                        {isAdmin ? 'Администрация' : 'Редактор Панел'}
                                                     </Link>
                                                 )}
                                                 
                                                 <button 
                                                      onClick={async () => { 
                                                          await signOut(); 
-                                                         closeMenu(); 
+                                                         clearCart();
+                                                         setIsProfileMenuOpen(false);
                                                          showToast(t('toast.logout_success'), "success");
-                                                     }} 
-                                                     className="flex items-center gap-4 text-white/40 hover:text-red-400 transition-colors p-3 -ml-3 rounded-xl hover:bg-white/5 text-left w-full min-h-[48px] mt-2"
+                                                         navigate('/');
+                                                     }}
+                                                     className="w-full flex items-center gap-3 px-4 py-3 text-xs uppercase tracking-widest text-text-primary hover:bg-white/5 hover:text-red-400 transition-colors text-left"
                                                  >
-                                                    <div className="w-8 h-8 flex items-center justify-center shrink-0">
-                                                        <LogOut className="w-5 h-5" />
-                                                    </div>
-                                                    <span className="text-base font-normal">Изход</span>
+                                                    <LogOut className="w-3.5 h-3.5" />
+                                                    Изход
                                                 </button>
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </div>
+                        ) : (
+                            <NavLink to={`/login`} className="text-xs uppercase tracking-widest text-white hover:text-[#ff0000] transition-colors">
+                                Вход
+                            </NavLink>
+                        )}
+                        
+                        {user && (
+                            <Link to={`/book-now`} className="px-6 py-2.5 bg-gradient-to-r from-[#3d0000] to-[#950101] border border-[#ff0000]/30 text-white text-[11px] font-medium uppercase tracking-[0.25em] hover:from-[#950101] hover:to-[#ff0000] rounded-sm transition-all duration-300 shadow-[0_0_15px_rgba(149,1,1,0.3)] hover:shadow-[0_0_20px_rgba(255,0,0,0.5)] flex items-center gap-2">
+                                ИНДИВИДУАЛНИ ПОРЪЧКИ
+                            </Link>
+                        )}
+                    </div>
 
-                                                 <div className="flex items-center gap-3 text-white/30 transition-colors mt-8 p-3 -ml-3 min-h-[48px] select-none pointer-events-none">
-                                                     <Mail className="w-4 h-4 shrink-0" />
-                                                     <span className="text-sm font-light truncate">{user.email}</span>
-                                                 </div>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <NavLink 
-                                                    to={`/login`} 
-                                                    onClick={closeMenu} 
+                    {/* Mobile & Tablet Controls */}
+                    <div className="flex lg:hidden items-center gap-3 z-[110]">
+                        <CartIcon />
+                        <button
+                            onClick={() => setIsMenuOpen(true)}
+                            className="text-white focus:outline-none w-10 h-10 flex flex-col justify-center items-center gap-1.5 rounded-full hover:bg-white/5 transition-colors"
+                            aria-label="Open menu"
+                        >
+                            <span className="w-6 h-[1.5px] bg-white block rounded-full" />
+                            <span className="w-6 h-[1.5px] bg-white block rounded-full" />
+                            <span className="w-6 h-[1.5px] bg-white block rounded-full" />
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            {/* Mobile & Tablet Menu Overlay (Drawer) */}
+            <AnimatePresence>
+                {isMenuOpen && (
+                    <>
+                        <motion.div 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.25 }}
+                            onClick={handleManualClose}
+                            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[115] lg:hidden"
+                        />
+
+                        <motion.div 
+                            initial={{ x: '100%' }}
+                            animate={{ x: 0 }}
+                            exit={{ x: '100%' }}
+                            transition={{ type: 'spring', damping: 25, stiffness: 220 }}
+                            className="fixed inset-y-0 right-0 w-[85%] max-w-sm bg-[#0a0a0a] z-[120] shadow-2xl flex flex-col lg:hidden border-l border-white/5"
+                        >
+                            <div className="flex items-center justify-between px-6 h-20 border-b border-white/5 bg-background/60 backdrop-blur-md shrink-0 shadow-sm">
+                                <img src="/LOGO.png" alt="CarDecal Logo" className="h-6 w-auto object-contain" />
+                                <button 
+                                    onClick={handleManualClose}
+                                    className="w-12 h-12 -mr-3 flex items-center justify-center text-white/60 hover:text-white transition-colors focus:outline-none"
+                                    aria-label="Close menu"
+                                >
+                                    <X className="w-7 h-7" />
+                                </button>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto py-8 px-6 flex flex-col">
+                                <nav className="flex flex-col space-y-2 mb-8">
+                                    {menuLinks.map((link) => (
+                                        <NavLink 
+                                            key={link.path}
+                                            to={link.path} 
+                                            onClick={closeMenu} 
+                                            className="group"
+                                        >
+                                            {({ isActive }) => (
+                                                <div className={`flex items-center p-3 -ml-3 rounded-xl transition-colors min-h-[48px] ${isActive ? 'bg-white/5' : 'hover:bg-white/5'}`}>
+                                                    <span className={`w-1.5 h-1.5 rounded-full mr-4 transition-colors shrink-0 ${isActive ? 'bg-red-500' : 'bg-white/10 group-hover:bg-white/30'}`} />
+                                                    <span className={`text-xl uppercase tracking-widest transition-colors ${isActive ? 'text-[#E0F2F1] font-bold' : 'text-white/80 group-hover:text-white font-medium'}`}>
+                                                        {link.label}
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </NavLink>
+                                    ))}
+                                </nav>
+
+                                <div className="w-full h-px bg-gradient-to-r from-white/10 to-transparent mb-8 shrink-0" />
+
+                                <div className="flex flex-col space-y-1 mb-auto">
+                                    {user ? (
+                                        <>
+                                            <Link 
+                                                to={`/profile`}
+                                                onClick={closeMenu}
+                                                className="flex items-center gap-4 text-[#B0BEC5] hover:text-white transition-colors group p-3 -ml-3 rounded-xl hover:bg-white/5 min-h-[48px]"
+                                            >
+                                                <div className="w-8 h-8 rounded-full border border-white/20 bg-white/5 overflow-hidden flex items-center justify-center shrink-0">
+                                                    {(profile?.avatar_url || user?.user_metadata?.avatar_url || user?.user_metadata?.picture) ? (
+                                                        <img src={profile?.avatar_url || user?.user_metadata?.avatar_url || user?.user_metadata?.picture} alt="Profile" className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <User className="w-4 h-4 text-white" />
+                                                    )}
+                                                </div>
+                                                <span className="text-base font-normal">Профил</span>
+                                            </Link>
+                                            
+                                            {(isAdmin || isEditor) && (
+                                                <Link 
+                                                    to="/admin"
+                                                    onClick={closeMenu}
                                                     className="flex items-center gap-4 text-[#B0BEC5] hover:text-white transition-colors p-3 -ml-3 rounded-xl hover:bg-white/5 min-h-[48px]"
                                                 >
                                                     <div className="w-8 h-8 flex items-center justify-center shrink-0">
-                                                        <User className="w-5 h-5 opacity-70" />
+                                                        <Shield className="w-5 h-5 opacity-70" />
                                                     </div>
-                                                    <span className="text-base font-normal">Вход</span>
-                                                </NavLink>
-                                                <NavLink 
-                                                    to={`/register`} 
-                                                    onClick={closeMenu} 
-                                                    className="flex items-center gap-4 text-[#B0BEC5] hover:text-white transition-colors p-3 -ml-3 rounded-xl hover:bg-white/5 min-h-[48px]"
-                                                >
-                                                    <div className="w-8 h-8 flex items-center justify-center shrink-0 bg-white/5 rounded-full">
-                                                        <span className="text-xl leading-none -mt-0.5 opacity-80">+</span>
-                                                    </div>
-                                                    <span className="text-base font-normal">Регистрация</span>
-                                                </NavLink>
-                                            </>
-                                        )}
-                                    </div>
-                                </div>
+                                                    <span className="text-base font-normal">Администрация</span>
+                                                </Link>
+                                            )}
+                                            
+                                            <button 
+                                                 onClick={async () => { 
+                                                     await signOut(); 
+                                                     clearCart();
+                                                     closeMenu(); 
+                                                     showToast(t('toast.logout_success'), "success");
+                                                     navigate('/');
+                                                 }} 
+                                                 className="flex items-center gap-4 text-white/40 hover:text-red-400 transition-colors p-3 -ml-3 rounded-xl hover:bg-white/5 text-left w-full min-h-[48px] mt-2"
+                                             >
+                                                <div className="w-8 h-8 flex items-center justify-center shrink-0">
+                                                    <LogOut className="w-5 h-5" />
+                                                </div>
+                                                <span className="text-base font-normal">Изход</span>
+                                            </button>
 
-                                {/* 4. Sticky CTA */}
-                                <div className="p-6 pb-8 border-t border-white/5 bg-gradient-to-t from-black to-[#0a0a0a] shrink-0">
-                                    {user && (
-                                        <Link 
-                                            to={`/book-now`} 
-                                            onClick={closeMenu} 
-                                            className="flex items-center justify-center gap-2 w-full px-4 py-4 md:py-5 bg-gradient-to-r from-[#3d0000] to-[#950101] border border-[#ff0000]/30 text-white text-[13px] font-bold uppercase tracking-[0.2em] rounded-xl hover:from-[#950101] hover:to-[#ff0000] transition-all duration-300 shadow-[0_4px_20px_rgba(255,0,0,0.15)] focus:scale-[0.98] active:scale-[0.98]"
-                                        >
-                                            ИНДИВИДУАЛНИ ПОРЪЧКИ
-                                        </Link>
+                                             <div className="flex items-center gap-3 text-white/30 transition-colors mt-8 p-3 -ml-3 min-h-[48px] select-none pointer-events-none">
+                                                 <Mail className="w-4 h-4 shrink-0" />
+                                                 <span className="text-sm font-light truncate">{user.email}</span>
+                                             </div>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <NavLink 
+                                                to={`/login`} 
+                                                onClick={closeMenu} 
+                                                className="flex items-center gap-4 text-[#B0BEC5] hover:text-white transition-colors p-3 -ml-3 rounded-xl hover:bg-white/5 min-h-[48px]"
+                                            >
+                                                <div className="w-8 h-8 flex items-center justify-center shrink-0">
+                                                    <User className="w-5 h-5 opacity-70" />
+                                                </div>
+                                                <span className="text-base font-normal">Вход</span>
+                                            </NavLink>
+                                            <NavLink 
+                                                to={`/register`} 
+                                                onClick={closeMenu} 
+                                                className="flex items-center gap-4 text-[#B0BEC5] hover:text-white transition-colors p-3 -ml-3 rounded-xl hover:bg-white/5 min-h-[48px]"
+                                            >
+                                                <div className="w-8 h-8 flex items-center justify-center shrink-0 bg-white/5 rounded-full">
+                                                    <span className="text-xl leading-none -mt-0.5 opacity-80">+</span>
+                                                </div>
+                                                <span className="text-base font-normal">Регистрация</span>
+                                            </NavLink>
+                                        </>
                                     )}
                                 </div>
-                            </motion.div>
-                        </>
-                    )}
-                </AnimatePresence>
+                            </div>
 
-        <CartDrawer />
+                            <div className="p-6 pb-8 border-t border-white/5 bg-gradient-to-t from-black to-[#0a0a0a] shrink-0">
+                                {user && (
+                                    <Link 
+                                        to={`/book-now`} 
+                                        onClick={closeMenu} 
+                                        className="flex items-center justify-center gap-2 w-full px-4 py-4 md:py-5 bg-gradient-to-r from-[#3d0000] to-[#950101] border border-[#ff0000]/30 text-white text-[13px] font-bold uppercase tracking-[0.2em] rounded-xl hover:from-[#950101] hover:to-[#ff0000] transition-all duration-300 shadow-[0_4px_20px_rgba(255,0,0,0.15)] focus:scale-[0.98] active:scale-[0.98]"
+                                    >
+                                        ИНДИВИДУАЛНИ ПОРЪЧКИ
+                                    </Link>
+                                )}
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+
+            <CartDrawer />
         </>
     );
 };

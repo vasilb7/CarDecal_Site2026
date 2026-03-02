@@ -136,11 +136,11 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
       const handleViewportResize = () => {
         const currentHeight = window.visualViewport?.height || window.innerHeight;
         const screenHeight = window.innerHeight;
-        if (currentHeight < screenHeight * 0.8) {
+        if (currentHeight < screenHeight * 0.75) {
           isKeyboardOpen = true;
         } else if (currentHeight > screenHeight * 0.9 && isKeyboardOpen) {
           isKeyboardOpen = false;
-          if (document.activeElement instanceof HTMLInputElement || document.activeElement instanceof HTMLTextAreaElement) {
+          if (document.activeElement instanceof HTMLElement) {
             document.activeElement.blur();
           }
         }

@@ -188,7 +188,7 @@ const Footer: React.FC = () => {
           </div>
 
           <div className="flex flex-col items-center gap-1 mt-1 sm:mt-0">
-            <span className="text-[7px] sm:text-[8px] lg:text-[10px]
+            <span className="text-[10px] sm:text-[10px] lg:text-[12px]
               font-black tracking-[0.2em] uppercase text-black/70 text-center px-4">
               © {new Date().getFullYear()} CAR DECAL. ВСИЧКИ ПРАВА ЗАПАЗЕНИ
             </span>
@@ -200,14 +200,14 @@ const Footer: React.FC = () => {
             >
               <Link
                 to="/privacy"
-                className="text-[6px] sm:text-[7px] lg:text-[8px] font-bold uppercase tracking-[0.1em] text-black/80 hover:text-black transition-colors"
+                className="text-[9px] sm:text-[9px] lg:text-[11px] font-bold uppercase tracking-[0.1em] text-black/80 hover:text-black transition-colors"
               >
                 Политика за поверителност
               </Link>
 
               <Link
                 to="/terms"
-                className="text-[6px] sm:text-[7px] lg:text-[8px] font-bold uppercase tracking-[0.1em] text-black/80 hover:text-black transition-colors"
+                className="text-[9px] sm:text-[9px] lg:text-[11px] font-bold uppercase tracking-[0.1em] text-black/80 hover:text-black transition-colors"
               >
                 Общи условия
               </Link>

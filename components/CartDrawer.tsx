@@ -13,27 +13,46 @@ export const CartDrawer: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const close = () => setIsCartOpen(false);
-
-  const handleCheckout = () => {
-    close();
-    if (!user) {
-      navigate('/login', { state: { from: '/checkout' } });
-    } else {
-      navigate('/checkout');
-    }
-  };
-
+  // Handle Cart Drawer (Body Scroll Lock & Back Button)
   useEffect(() => {
     if (isCartOpen) {
       document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
+      
+      // Push state for back button handling
+      window.history.pushState({ modal: 'cart-drawer' }, '');
+      
+      const handlePopState = () => {
+        // When back button is pressed, close the cart
+        setIsCartOpen(false);
+      };
+
+      window.addEventListener('popstate', handlePopState);
+      
+      return () => {
+        window.removeEventListener('popstate', handlePopState);
+        document.body.style.overflow = 'unset';
+      };
     }
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, [isCartOpen]);
+  }, [isCartOpen, setIsCartOpen]);
+
+  const handleCloseCart = () => {
+    setIsCartOpen(false);
+    // If we still have our custom state in history, go back to remove it
+    if (window.history.state?.modal === 'cart-drawer') {
+      window.history.back();
+    }
+  };
+
+  const close = handleCloseCart;
+
+  const handleCheckout = () => {
+    if (user) {
+      navigate('/checkout');
+    } else {
+      navigate('/login?redirect=/checkout');
+    }
+    handleCloseCart();
+  };
 
   return (
     <AnimatePresence>

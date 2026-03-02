@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { 
     ArrowLeft, ShieldCheck, Truck, CreditCard, 
     ChevronRight, MapPin, Phone, User, Mail, 
@@ -17,45 +17,46 @@ const CheckoutPage: React.FC = () => {
     const { user, profile } = useAuth();
     const { t } = useTranslation();
     const navigate = useNavigate();
+    const location = useLocation();
     const { showToast } = useToast();
 
     const [loading, setLoading] = useState(false);
-    const [step, setStep] = useState(1); // 1: Info, 2: Review, 3: Success
+    const [step, setStep] = useState(1); // 1: Info, 2: Review
 
-    // Authentication Guard
+    // 1) AUTH GATING
     useEffect(() => {
         if (!user) {
-            navigate('/login', { state: { from: '/checkout' } });
+            // Save current path for return after login
+            showToast('Моля, влезте в профила си, за да завършите поръчката.', 'info');
+            navigate('/login', { state: { from: location.pathname }, replace: true });
         }
-    }, [user, navigate]);
+    }, [user, navigate, location, showToast]);
 
-    // Form State
+    // Form State initialization
     const [formData, setFormData] = useState({
-        fullName: profile?.full_name || profile?.last_full_name || '',
+        fullName: profile?.full_name || (profile as any)?.last_full_name || '',
         email: user?.email || '',
-        phone: profile?.phone || profile?.preferred_phone || '',
-        city: profile?.preferred_city || '',
-        deliveryType: (profile?.preferred_delivery_type as 'econt' | 'speedy') || 'econt',
-        officeName: profile?.preferred_office_name || '',
+        phone: profile?.phone || (profile as any)?.preferred_phone || '',
+        city: (profile as any)?.preferred_city || '',
+        deliveryType: ((profile as any)?.preferred_delivery_type as 'econt' | 'speedy') || 'econt',
+        officeName: (profile as any)?.preferred_office_name || '',
         notes: ''
     });
     const [saveForFuture, setSaveForFuture] = useState(true);
 
-    // Update form when profile loads if it was empty
-    React.useEffect(() => {
+    // Sync form with profile when it loads
+    useEffect(() => {
         if (profile) {
             setFormData(prev => ({
                 ...prev,
                 fullName: prev.fullName || profile.full_name || (profile as any).last_full_name || '',
                 phone: prev.phone || profile.phone || (profile as any).preferred_phone || '',
                 city: prev.city || (profile as any).preferred_city || '',
-                deliveryType: prev.deliveryType || ((profile as any).preferred_delivery_type as any) || 'econt',
+                deliveryType: prev.deliveryType || (profile as any).preferred_delivery_type || 'econt',
                 officeName: prev.officeName || (profile as any).preferred_office_name || ''
             }));
         }
     }, [profile]);
-
-    const totalAmount = total;
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -96,19 +97,21 @@ const CheckoutPage: React.FC = () => {
         }
     };
 
+    // 2) ORDER CREATE FLOW & 7) STATE CLEANUP
     const submitOrder = async () => {
+        if (loading) return; // Protection from double-submit
+        
         setLoading(true);
         try {
-            // Simplified order submission logic
-            // In a real app, you'd save this to a 'orders' table
-            const { error } = await supabase.from('orders').insert({
-                user_id: user?.id || null,
+            // a) POST /orders
+            const { data, error } = await supabase.from('orders').insert({
+                user_id: user?.id,
                 items: activeItems,
-                total_amount: totalAmount,
+                total_amount: total,
                 shipping_details: formData,
                 status: 'pending',
                 payment_method: 'cash_on_delivery'
-            });
+            }).select('id').single();
 
             if (error) throw error;
 
@@ -123,42 +126,27 @@ const CheckoutPage: React.FC = () => {
                 }).eq('id', user.id);
             }
 
-            showToast('Поръчката е приета успешно!', 'success');
-            setStep(3);
+            // 7) State Cleanup
             clearCart();
+            showToast('Поръчката е приета успешно!', 'success');
+            
+            // c) Redirect to success page with replace:true
+            navigate(`/order/success/${data.id}`, { replace: true });
+
         } catch (err: any) {
-            console.error('Order error:', err);
+            console.error('Order Submission Error:', err);
             showToast(err.message || 'Възникна грешка при изпращане на поръчката.', 'error');
         } finally {
             setLoading(false);
         }
     };
 
-    if (step === 3) {
-        return (
-            <div className="pt-32 pb-24 min-h-screen flex flex-col items-center justify-center px-4">
-                <motion.div 
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="text-center max-w-lg"
-                >
-                    <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <CheckCircle2 className="w-10 h-10 text-green-500" />
-                    </div>
-                    <h1 className="text-3xl font-black text-white uppercase tracking-widest mb-4">Благодарим Ви!</h1>
-                    <p className="text-[#B0BEC5] uppercase tracking-widest text-sm mb-8 leading-relaxed">
-                        Вашата поръчка е приета успешно. Ще се свържем с Вас по телефона за потвърждение преди изпращане.
-                    </p>
-                    <Link 
-                        to="/" 
-                        className="px-8 py-4 bg-gradient-to-r from-[#3d0000] to-[#950101] text-white text-xs font-bold uppercase tracking-[0.2em] rounded-sm transition-all hover:bg-red-600 shadow-lg shadow-red-900/20"
-                    >
-                        КЪМ НАЧАЛО
-                    </Link>
-                </motion.div>
-            </div>
-        );
-    }
+    // If no items in cart and not logged in (to prevent flicker), redirect to cart
+    useEffect(() => {
+        if (activeItems.length === 0 && user) {
+             navigate('/cart');
+        }
+    }, [activeItems.length, user, navigate]);
 
     const inputCls = "w-full bg-black/40 border border-white/10 text-white text-sm px-4 py-2.5 md:py-3 rounded-lg focus:outline-none focus:border-red-600/60 transition-colors placeholder:text-zinc-600";
     const labelCls = "block text-[10px] uppercase tracking-widest text-zinc-500 mb-1.5 font-bold ml-1";
@@ -180,12 +168,6 @@ const CheckoutPage: React.FC = () => {
                             <ShieldCheck className="w-4 h-4 text-green-500/50" />
                             <span className="hidden xs:block">Secure Checkout</span>
                         </div>
-                        <button 
-                            onClick={() => navigate('/cart')}
-                            className="bg-white/5 hover:bg-white/10 text-white text-[10px] font-black uppercase tracking-[0.2em] px-4 py-2 rounded-lg transition-all border border-white/10"
-                        >
-                            Количка
-                        </button>
                     </div>
                 </div>
             </header>
@@ -255,8 +237,8 @@ const CheckoutPage: React.FC = () => {
                                                     name="email"
                                                     value={formData.email}
                                                     onChange={handleInputChange}
-                                                    className={inputCls} 
-                                                    placeholder="ivan@example.com"
+                                                    className={`${inputCls} opacity-60 cursor-not-allowed`} 
+                                                    readOnly
                                                 />
                                             </div>
                                             <div>
@@ -405,11 +387,11 @@ const CheckoutPage: React.FC = () => {
                                                 <h3 className="text-[10px] text-zinc-500 uppercase tracking-widest mb-3 font-bold">Получател</h3>
                                                 <p className="text-white text-sm font-medium">{formData.fullName}</p>
                                                 <p className="text-zinc-400 text-sm">{formData.phone}</p>
-                                                 <p className="text-zinc-400 text-sm select-none pointer-events-none">{formData.email}</p>
+                                                 <p className="text-zinc-400 text-sm">{formData.email}</p>
                                             </div>
                                             <div>
                                                 <h3 className="text-[10px] text-zinc-500 uppercase tracking-widest mb-3 font-bold">Доставка</h3>
-                                                <p className="text-white text-sm font-medium">
+                                                <p className="text-white text-sm font-medium uppercase tracking-tight">
                                                     {formData.deliveryType === 'econt' ? 'Еконт Офис' : 'Спиди Офис'}
                                                 </p>
                                                 <p className="text-zinc-400 text-sm">{formData.city}</p>
@@ -430,7 +412,7 @@ const CheckoutPage: React.FC = () => {
                                         <CreditCard className="w-6 h-6 text-red-500" />
                                         <div>
                                             <h3 className="text-xs uppercase tracking-widest text-white font-black">Начин на плащане</h3>
-                                            <p className="text-[#B0BEC5] text-[10px] uppercase tracking-widest">Наложен платеж (Плащане при доставка)</p>
+                                            <p className="text-[#B0BEC5] text-[10px] uppercase tracking-widest font-bold">Наложен платеж (Плащане при доставка)</p>
                                         </div>
                                     </section>
 
@@ -476,45 +458,13 @@ const CheckoutPage: React.FC = () => {
                                             <p className="text-[10px] text-zinc-500 uppercase tracking-widest mt-0.5">{item.variant}</p>
                                             <div className="flex justify-between items-center mt-1">
                                                 <span className="text-[10px] text-zinc-400">x{Math.max(1, item.quantity)}</span>
-                                                <span className="text-sm font-black text-red-500">{(item.price * Math.max(1, item.quantity)).toFixed(2)} €</span>
+                                                <span className="text-sm font-black text-red-500 italic">{(item.price * Math.max(1, item.quantity)).toFixed(2)} €</span>
                                             </div>
                                         </div>
                                     </div>
                                 ))}
                             </div>
                             
-                            {/* Free Shipping Progress */}
-                            <div className="mb-6 p-4 rounded-xl bg-red-600/5 border border-red-600/10">
-                                {isFreeShipping ? (
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center shrink-0">
-                                            <Truck className="w-4 h-4 text-green-500" />
-                                        </div>
-                                        <div className="flex flex-col">
-                                            <span className="text-[10px] text-green-500 font-black uppercase tracking-widest">Поздравления!</span>
-                                            <span className="text-[10px] text-zinc-400 uppercase tracking-widest">Имате БЕЗПЛАТНА ДОСТАВКА</span>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-2">
-                                        <div className="flex justify-between items-end">
-                                            <div className="flex flex-col">
-                                                <span className="text-[10px] text-red-500 font-black uppercase tracking-widest">До безплатна доставка</span>
-                                                <span className="text-[9px] text-zinc-500 uppercase tracking-widest font-bold">Още {(amountToFreeShipping * 1.95583).toFixed(2)} лв.</span>
-                                            </div>
-                                            <Truck className="w-4 h-4 text-red-600 mb-0.5" />
-                                        </div>
-                                        <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
-                                            <motion.div 
-                                                initial={{ width: 0 }}
-                                                animate={{ width: `${Math.min((total / (total + amountToFreeShipping)) * 100, 100)}%` }}
-                                                className="h-full bg-red-600 shadow-[0_0_10px_rgba(220,38,38,0.5)]"
-                                            />
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-
                             {/* Totals */}
                             <div className="space-y-3 pt-6 border-t border-white/5 text-[10px] uppercase font-bold tracking-widest">
                                 <div className="flex justify-between text-zinc-500">
@@ -532,7 +482,7 @@ const CheckoutPage: React.FC = () => {
                                     {isFreeShipping ? (
                                         <span className="text-green-500 font-black">БЕЗПЛАТНА</span>
                                     ) : (
-                                        <span className="italic">Калкулира се при изпращане</span>
+                                        <span className="italic">По тарифа</span>
                                     )}
                                 </div>
                                 
@@ -549,57 +499,19 @@ const CheckoutPage: React.FC = () => {
                                     </div>
                                 </div>
                             </div>
-
-                            {/* Info Box */}
-                            <div className="mt-8 p-4 bg-white/2 rounded-xl border border-white/5 space-y-3">
-                                <div className="flex items-start gap-3">
-                                    <Package className="w-4 h-4 text-zinc-400 shrink-0 mt-0.5" />
-                                    <p className="text-[10px] text-zinc-400 leading-relaxed uppercase tracking-widest">
-                                        Поръчките се обработват в рамките на 24-48 часа. Плащането се извършва в лева по курса на деня при доставка.
-                                    </p>
-                                </div>
-                                <div className="flex items-start gap-3">
-                                    <ShieldCheck className="w-4 h-4 text-green-500 shrink-0 mt-0.5" />
-                                    <p className="text-[10px] text-zinc-400 leading-relaxed uppercase tracking-widest">
-                                        Всяка поръчка включва опция за преглед преди плащане.
-                                    </p>
-                                </div>
-                            </div>
                         </motion.div>
                     </div>
                 </div>
             </div>
         </main>
 
-            {/* Minimalist Standalone Footer */}
             <footer className="py-8 border-t border-white/5 bg-black/40 mt-auto">
                 <div className="container mx-auto px-4 md:px-6 text-center">
                     <p className="text-[10px] text-zinc-600 uppercase tracking-[0.3em] font-bold mb-4">
                         &copy; {new Date().getFullYear()} CARDECAL. Всички права запазени.
                     </p>
-                    <div className="flex items-center justify-center gap-6 text-[9px] text-zinc-500 uppercase tracking-widest font-black">
-                        <Link to="/privacy" className="hover:text-white transition-colors">Поверителност</Link>
-                        <Link to="/terms" className="hover:text-white transition-colors">Общи Условия</Link>
-                        <Link to="/legal" className="hover:text-white transition-colors">Доставка</Link>
-                    </div>
                 </div>
             </footer>
-            
-            <style dangerouslySetInnerHTML={{ __html: `
-                .custom-scrollbar::-webkit-scrollbar {
-                    width: 4px;
-                }
-                .custom-scrollbar::-webkit-scrollbar-track {
-                    background: rgba(255, 255, 255, 0.02);
-                }
-                .custom-scrollbar::-webkit-scrollbar-thumb {
-                    background: rgba(255, 255, 255, 0.1);
-                    border-radius: 10px;
-                }
-                .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-                    background: rgba(255, 0, 0, 0.3);
-                }
-            `}} />
         </div>
     );
 };

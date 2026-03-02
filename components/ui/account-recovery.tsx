@@ -7,6 +7,60 @@ interface RecoveryPageProps {
   onRecover?: (email: string) => Promise<void>;
 }
 
+// ──── Sub-components ────
+
+const FloatingInput = ({ 
+    label, 
+    name, 
+    type = "text", 
+    required = false, 
+    icon: Icon,
+    value,
+    onChange,
+    onFocus,
+    onBlur,
+    ...props 
+}: any) => {
+    const [isFocused, setIsFocused] = useState(false);
+
+    return (
+        <div className="relative group">
+            <motion.label
+                initial={false}
+                animate={{
+                    y: (isFocused || value) ? -40 : 0,
+                    x: (isFocused || value) ? -4 : 0,
+                    scale: (isFocused || value) ? 0.82 : 1,
+                    color: isFocused ? "#ef4444" : (value ? "rgba(255,255,255,0.6)" : "rgba(255,255,255,0.4)")
+                }}
+                className="absolute left-6 top-3.5 pointer-events-none transition-all duration-300 z-10 px-1 text-[14px] md:text-sm"
+            >
+                {label}
+            </motion.label>
+            <div className={`relative transition-all duration-300 ${isFocused ? 'scale-[1.01]' : ''}`}>
+                <input 
+                    {...props}
+                    name={name}
+                    type={type}
+                    value={value}
+                    onChange={onChange}
+                    onFocus={(e) => {
+                        setIsFocused(true);
+                        if (onFocus) onFocus(e);
+                    }}
+                    onBlur={(e) => {
+                        setIsFocused(false);
+                        if (onBlur) onBlur(e);
+                    }}
+                    className={`w-full bg-white/[0.03] border ${isFocused ? 'border-red-600 shadow-[0_0_15px_rgba(239,68,68,0.15)]' : 'border-white/10'} rounded-xl px-6 py-3.5 md:py-4 shadow-sm outline-none text-white placeholder:text-transparent backdrop-blur-md transition-all`}
+                    required={required}
+                    placeholder=" "
+                />
+            </div>
+        </div>
+    );
+};
+
 export const RecoveryPage: React.FC<RecoveryPageProps> = ({ onRecover }) => {
     const navigate = useNavigate();
     const [email, setEmail] = useState('');
@@ -21,11 +75,11 @@ export const RecoveryPage: React.FC<RecoveryPageProps> = ({ onRecover }) => {
           const handleViewportResize = () => {
             const currentHeight = window.visualViewport?.height || window.innerHeight;
             const screenHeight = window.innerHeight;
-            if (currentHeight < screenHeight * 0.8) {
+            if (currentHeight < screenHeight * 0.75) {
               isKeyboardOpen = true;
             } else if (currentHeight > screenHeight * 0.9 && isKeyboardOpen) {
               isKeyboardOpen = false;
-              if (document.activeElement instanceof HTMLInputElement || document.activeElement instanceof HTMLTextAreaElement) {
+              if (document.activeElement instanceof HTMLElement) {
                 document.activeElement.blur();
               }
             }
@@ -35,51 +89,7 @@ export const RecoveryPage: React.FC<RecoveryPageProps> = ({ onRecover }) => {
         }
     }, []);
 
-const FloatingInput = ({ 
-    label, 
-    name, 
-    type = "text", 
-    required = false, 
-    icon: Icon,
-    ...props 
-}: any) => {
-    const [isFocused, setIsFocused] = useState(false);
-    const [value, setValue] = useState("");
 
-    return (
-        <div className="relative group">
-            <motion.label
-                initial={false}
-                animate={{
-                    y: (isFocused || value) ? -40 : 0,
-                    x: (isFocused || value) ? -4 : 0,
-                    scale: (isFocused || value) ? 0.82 : 1,
-                    color: isFocused ? "#ef4444" : (value ? "rgba(255,255,255,0.6)" : "rgba(255,255,255,0.4)")
-                }}
-                className="absolute left-6 top-3.5 pointer-events-none transition-all duration-300 z-10 px-1"
-            >
-                {label}
-            </motion.label>
-            <div className={`relative transition-all duration-300 ${isFocused ? 'scale-[1.01]' : ''}`}>
-                <input 
-                    {...props}
-                    name={name}
-                    type={type}
-                    value={value}
-                    onChange={(e) => {
-                        setValue(e.target.value);
-                        if (props.onChange) props.onChange(e);
-                    }}
-                    onFocus={() => setIsFocused(true)}
-                    onBlur={() => setIsFocused(false)}
-                    className={`w-full bg-white/[0.03] border ${isFocused ? 'border-red-600 shadow-[0_0_15px_rgba(239,68,68,0.15)]' : 'border-white/10'} rounded-xl px-6 py-3.5 md:py-4 shadow-sm outline-none text-white placeholder:text-transparent backdrop-blur-md transition-all`}
-                    required={required}
-                    placeholder=" "
-                />
-            </div>
-        </div>
-    );
-};
 
     const handleClose = () => {
         if (window.history.length > 2) navigate(-1);

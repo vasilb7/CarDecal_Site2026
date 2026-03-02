@@ -137,17 +137,35 @@ const CatalogPage: React.FC = () => {
         }
     }, [allProducts.length, filterStats.maxPrice]);
 
-    // Prevent body scroll when mobile filters are open
+    // Handle mobile filters drawer (Body Scroll Lock & Back Button)
     useEffect(() => {
         if (isMobileFiltersOpen) {
             document.body.style.overflow = 'hidden';
-        } else {
-            document.body.style.overflow = '';
+            
+            // Push state for back button handling
+            window.history.pushState({ modal: 'mobile-filters' }, '');
+            
+            const handlePopState = (e: PopStateEvent) => {
+                // When back button is pressed, close the filters
+                setIsMobileFiltersOpen(false);
+            };
+
+            window.addEventListener('popstate', handlePopState);
+            
+            return () => {
+                window.removeEventListener('popstate', handlePopState);
+                document.body.style.overflow = '';
+            };
         }
-        return () => {
-            document.body.style.overflow = '';
-        };
     }, [isMobileFiltersOpen]);
+
+    const handleCloseFilters = () => {
+        setIsMobileFiltersOpen(false);
+        // If we still have our custom state in history, go back to remove it
+        if (window.history.state?.modal === 'mobile-filters') {
+            window.history.back();
+        }
+    };
 
     // Detect mobile keyboard close (e.g. via Android/iOS Back button or done button) and remove focus
     useEffect(() => {
@@ -398,7 +416,7 @@ const CatalogPage: React.FC = () => {
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            onClick={() => setIsMobileFiltersOpen(false)}
+                            onClick={handleCloseFilters}
                             className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[110] lg:hidden"
                         />
                         <motion.aside 
@@ -410,7 +428,7 @@ const CatalogPage: React.FC = () => {
                         >
                             <div className="flex items-center justify-between mb-8">
                                 <h2 className="text-xl font-semibold text-white">{t('catalog.filters')}</h2>
-                                <button onClick={() => setIsMobileFiltersOpen(false)} className="w-10 h-10 rounded-full bg-[#1A1A1A] flex items-center justify-center text-white">
+                                <button onClick={handleCloseFilters} className="w-10 h-10 rounded-full bg-[#1A1A1A] flex items-center justify-center text-white">
                                     <X size={20} />
                                 </button>
                             </div>
@@ -537,16 +555,16 @@ const CatalogPage: React.FC = () => {
 
                         {/* Pagination - Add flex-wrap and slightly smaller mobile buttons to prevent horizontal overflow on middle pages */}
                         {totalPages > 1 && (
-                            <div className="mt-16 md:mt-24 flex flex-wrap items-center justify-center gap-2 md:gap-3 px-2">
+                            <div className="mt-16 md:mt-24 flex flex-wrap items-center justify-center gap-2 px-2">
                                 <button 
                                     onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                                     disabled={currentPage === 1}
-                                    className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-[#1A1A1A] border border-[#262626] flex items-center justify-center text-[#A3A3A3] hover:text-white hover:border-[#404040] disabled:opacity-20 disabled:cursor-not-allowed transition-all active:scale-90 shrink-0"
+                                    className="w-12 h-12 rounded-xl md:rounded-2xl bg-[#1A1A1A] border border-[#262626] flex items-center justify-center text-[#A3A3A3] hover:text-white hover:border-[#404040] disabled:opacity-20 disabled:cursor-not-allowed transition-all active:scale-90 shrink-0"
                                 >
                                     <ChevronDown size={20} className="rotate-90" />
                                 </button>
                                 
-                                <div className="flex items-center justify-center gap-1.5 md:gap-2 overflow-x-auto no-scrollbar max-w-[calc(100vw-120px)] sm:max-w-none px-2 py-2">
+                                <div className="flex items-center justify-center gap-2 overflow-x-auto no-scrollbar max-w-[calc(100vw-130px)] sm:max-w-none px-2 py-2">
                                     {[...Array(totalPages)].map((_, i) => {
                                         const page = i + 1;
                                         // Mobile Window Logic: First, Last, Current, and neighbors
@@ -560,7 +578,7 @@ const CatalogPage: React.FC = () => {
                                                 <button
                                                     key={page}
                                                     onClick={() => setCurrentPage(page)}
-                                                    className={`w-10 h-10 md:w-12 md:h-12 flex-shrink-0 flex items-center justify-center rounded-xl md:rounded-2xl text-xs md:text-sm font-black transition-all border ${
+                                                    className={`w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-xl md:rounded-2xl text-[15px] font-black transition-all border ${
                                                         currentPage === page 
                                                         ? 'bg-white text-black border-white shadow-[0_4px_15px_rgba(255,255,255,0.3)] scale-110 z-10' 
                                                         : 'bg-[#1A1A1A] text-[#525252] border-transparent hover:border-[#404040] hover:text-[#A3A3A3]'
@@ -582,7 +600,7 @@ const CatalogPage: React.FC = () => {
                                 <button 
                                     onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                                     disabled={currentPage === totalPages}
-                                    className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-[#1A1A1A] border border-[#262626] flex items-center justify-center text-[#A3A3A3] hover:text-white hover:border-[#404040] disabled:opacity-20 disabled:cursor-not-allowed transition-all active:scale-90 shrink-0"
+                                    className="w-12 h-12 rounded-xl md:rounded-2xl bg-[#1A1A1A] border border-[#262626] flex items-center justify-center text-[#A3A3A3] hover:text-white hover:border-[#404040] disabled:opacity-20 disabled:cursor-not-allowed transition-all active:scale-90 shrink-0"
                                 >
                                     <ChevronDown size={20} className="-rotate-90" />
                                 </button>

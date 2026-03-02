@@ -18,6 +18,9 @@ import RecoveryPage from './pages/RecoveryPage';
 import AdminPage from './pages/AdminPage';
 import CartPage from './pages/CartPage';
 import CheckoutPage from './pages/CheckoutPage';
+import OrderSuccessPage from './pages/OrderSuccessPage';
+import OrderReceiptPage from './pages/OrderReceiptPage';
+import OrderDetailPage from './pages/OrderDetailPage';
 import { ToastProvider } from './components/Toast/ToastProvider';
 import { useAuth } from './context/AuthContext';
 import { useSiteSettings, SiteSettingsProvider } from './context/SiteSettingsContext';
@@ -44,45 +47,21 @@ function PageWrapper({ children }: { children: React.ReactNode }) {
 }
 
 function AppContent() {
-  const { loading, isAdmin, isEditor } = useAuth();
-  const { settings, loading: settingsLoading } = useSiteSettings();
   const location = useLocation();
-  
-  const isMaintenancePageAllowed = 
-    location.pathname.startsWith('/admin') || 
-    location.pathname === '/login';
-
-  const showMaintenance = 
-    settings.maintenance_mode && 
-    !isAdmin && 
-    !isEditor && 
-    !isMaintenancePageAllowed;
-
-  if (loading || settingsLoading) {
-    return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <Loader2 className="w-10 h-10 text-red-600 animate-spin" />
-      </div>
-    );
-  }
-
-  // Reactive Maintenance Trigger
-  const [isTimeUp, setIsTimeUp] = useState(() => {
-    if (!settings.maintenance_auto_start_at) return false;
-    return new Date().getTime() >= new Date(settings.maintenance_auto_start_at).getTime();
-  });
+  const { user, loading: authLoading, isAdmin, isEditor } = useAuth();
+  const { settings, loading: settingsLoading, serverTimeOffset } = useSiteSettings();
+  const [isTimeUp, setIsTimeUp] = useState(false);
 
   useEffect(() => {
-    const autoStart = settings.maintenance_auto_start_at;
-    if (!autoStart || settings.maintenance_mode) {
+    if (!settings?.maintenance_auto_start_at) {
       setIsTimeUp(false);
       return;
     }
 
     const checkTime = () => {
-      const now = new Date().getTime();
-      const target = new Date(autoStart).getTime();
-      if (now >= target) {
+      const serverNow = Date.now() + serverTimeOffset;
+      const target = new Date(settings.maintenance_auto_start_at).getTime();
+      if (serverNow >= target) {
         setIsTimeUp(true);
         return true;
       }
@@ -90,40 +69,48 @@ function AppContent() {
     };
 
     if (checkTime()) return;
-
-    const interval = setInterval(() => {
-      if (checkTime()) {
-        clearInterval(interval);
-      }
-    }, 1000);
-
+    const interval = setInterval(() => { if (checkTime()) clearInterval(interval); }, 1000);
     return () => clearInterval(interval);
-  }, [settings.maintenance_auto_start_at, settings.maintenance_mode]);
+  }, [settings?.maintenance_auto_start_at, settings?.maintenance_mode, serverTimeOffset]);
 
-  // Double check: if maintenance is ON or scheduled and reached
-  if ((settings.maintenance_mode || isTimeUp) && !isAdmin && !isEditor && !isMaintenancePageAllowed) {
-    return <MaintenancePage />;
+  // Derived state
+  const isAuthenticated = !!user;
+  const isMaintenancePageAllowed = 
+    location.pathname.startsWith('/admin') || 
+    location.pathname === '/login';
+  const isGlobalMaintenanceActive = settings.maintenance_mode || isTimeUp;
+  const backgroundLocation = (location.state as any)?.backgroundLocation;
+
+  // Early return for loading - AFTER hooks
+  if (authLoading || settingsLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-black text-white">
+        <Loader2 className="w-10 h-10 animate-spin text-red-600" />
+      </div>
+    );
   }
 
-  const isGlobalMaintenanceActive = settings.maintenance_mode || isTimeUp;
-
-  const state = location.state as { backgroundLocation?: Location };
-  const backgroundLocation = state?.backgroundLocation;
+  // Maintenance Check
+  if (isGlobalMaintenanceActive && !isAdmin && !isEditor && !isMaintenancePageAllowed) {
+    return <MaintenancePage />;
+  }
 
   return (
     <>
       <ScrollToTop />
       <Routes location={backgroundLocation || location}>
-        {/* Admin - No Layout */}
-        <Route path="/admin/*" element={<AdminPage />} />
+        {/* Admin - Protected */}
+        <Route path="/admin/*" element={isAdmin || isEditor ? <AdminPage /> : <Navigate to="/login" replace />} />
 
         {/* Auth Pages - No Header/Footer */}
         <Route path="/login" element={<PageWrapper><LoginPage /></PageWrapper>} />
         <Route path="/register" element={<PageWrapper><RegisterPage /></PageWrapper>} />
         <Route path="/recovery" element={<PageWrapper><RecoveryPage /></PageWrapper>} />
         <Route path="/checkout" element={<PageWrapper><CheckoutPage /></PageWrapper>} />
+        <Route path="/order/success/:orderId" element={<PageWrapper><OrderSuccessPage /></PageWrapper>} />
+        <Route path="/order/receipt/:orderId" element={<OrderReceiptPage />} />
 
-        {/* Pages with Layout - Content Animates Inside */}
+        {/* Regular Pages with Layout */}
         <Route path="*" element={
           <Layout>
             <AnimatePresence mode="wait" initial={false}>
@@ -137,10 +124,10 @@ function AppContent() {
                   <Route path="/pricing" element={<PageWrapper><PricingPage /></PageWrapper>} />
                   <Route path="/privacy" element={<PageWrapper><PrivacyPage /></PageWrapper>} />
                   <Route path="/terms" element={<PageWrapper><TermsPage /></PageWrapper>} />
-
                   <Route path="/book-now" element={<PageWrapper><BookingPage /></PageWrapper>} />
                   <Route path="/cart" element={<PageWrapper><CartPage /></PageWrapper>} />
-                  <Route path="/profile" element={<PageWrapper><ProfilePage /></PageWrapper>} />
+                  <Route path="/profile" element={isAuthenticated ? <PageWrapper><ProfilePage /></PageWrapper> : <Navigate to="/login" replace />} />
+                  <Route path="/account/orders/:orderId" element={isAuthenticated ? <PageWrapper><OrderDetailPage /></PageWrapper> : <Navigate to="/login" replace />} />
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
               </motion.div>
@@ -150,6 +137,7 @@ function AppContent() {
         } />
       </Routes>
 
+      {/* Modal Overlay Section */}
       {backgroundLocation && (
         <React.Suspense fallback={null}>
           <Routes>

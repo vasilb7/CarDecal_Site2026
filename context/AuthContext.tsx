@@ -233,12 +233,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-    localStorage.removeItem('remember_me');
-    sessionStorage.removeItem('temp_session');
-    setProfile(null);
-    setUser(null);
-    setSession(null);
+    try {
+      // 1. Supabase SignOut handles local storage cleanup for Supabase tokens
+      await supabase.auth.signOut();
+      
+      // 2. Clear manual session trackers
+      localStorage.removeItem('remember_me');
+      sessionStorage.removeItem('temp_session');
+      
+      // 3. Clear all sensitive session data
+      sessionStorage.clear();
+      
+      // 4. Reset global state
+      setProfile(null);
+      setUser(null);
+      setSession(null);
+      
+      // 5. Invalidate any local storage keys if necessary
+      // (Supabase usually does this, but we reinforce it)
+      const keysToRemove = Object.keys(localStorage);
+      keysToRemove.forEach(key => {
+        if (key.includes('supabase.auth.token') || key.includes('sb-')) {
+          localStorage.removeItem(key);
+        }
+      });
+
+      console.log('✅ Logout complete and state cleared.');
+    } catch (error) {
+      console.error('❌ Error during logout:', error);
+    }
   };
   
   const isAdmin = profile?.role === 'admin';

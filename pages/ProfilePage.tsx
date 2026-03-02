@@ -92,21 +92,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
 
 // ─── Таб Поръчки (Динамичен) ────────────────────────────────────────────────
 const OrdersTab: React.FC<{ orders: any[]; loading: boolean; user: any }> = ({ orders, loading, user }) => {
-    const [selectedOrder, setSelectedOrder] = useState<any>(null);
-
-    const closeDetails = () => setSelectedOrder(null);
-
-    // Prevent background scrolling when order details modal is open
-    useEffect(() => {
-        if (selectedOrder) {
-            document.body.style.overflow = 'hidden';
-        } else {
-            document.body.style.overflow = '';
-        }
-        return () => {
-            document.body.style.overflow = '';
-        };
-    }, [selectedOrder]);
+    const navigate = useNavigate();
 
     if (loading) {
         return (
@@ -245,7 +231,7 @@ const OrdersTab: React.FC<{ orders: any[]; loading: boolean; user: any }> = ({ o
                                     </div>
                                 </div>
                                 <button 
-                                    onClick={() => setSelectedOrder(order)}
+                                    onClick={() => navigate(`/account/orders/${order.id}`)}
                                     className="p-3 rounded-2xl bg-white/[0.03] border border-white/5 text-zinc-400 hover:text-white hover:bg-red-600 hover:border-red-600 transition-all active:scale-95"
                                 >
                                     <ArrowRight className="w-5 h-5" />
@@ -269,186 +255,6 @@ const OrdersTab: React.FC<{ orders: any[]; loading: boolean; user: any }> = ({ o
                 );
             })}
 
-            {/* Order Details Modal */}
-            <AnimatePresence>
-                {selectedOrder && (
-                    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4">
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            onClick={closeDetails}
-                            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-                        />
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                            className="relative w-full max-w-2xl bg-[#0d0d0d] border border-white/10 rounded-3xl overflow-hidden shadow-2xl"
-                        >
-                            {/* Modal Header */}
-                            <div className="p-6 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
-                                <div>
-                                    <h3 className="text-white font-black text-xl uppercase tracking-tighter flex items-center gap-3">
-                                        <Receipt className="w-6 h-6 text-red-600" />
-                                        Детайли за поръчка
-                                    </h3>
-                                    <p className="text-zinc-500 text-xs mt-1 uppercase tracking-widest flex items-center gap-2">
-                                        #{selectedOrder.id.toUpperCase()}
-                                    </p>
-                                </div>
-                                <button
-                                    onClick={closeDetails}
-                                    className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10 transition-all"
-                                >
-                                    <X className="w-5 h-5" />
-                                </button>
-                            </div>
-
-                            {/* Modal Content */}
-                            <div className="p-6 max-h-[70vh] overflow-y-auto custom-scrollbar space-y-8">
-                                {/* Status & Delivery Summary */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="bg-white/3 border border-white/5 p-4 rounded-2xl">
-                                        <div className="flex items-center gap-3 mb-3">
-                                            <div className="p-2 rounded-lg bg-red-600/10 border border-red-600/20">
-                                                <Info className="w-4 h-4 text-red-500" />
-                                            </div>
-                                            <span className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">Статус</span>
-                                        </div>
-                                        <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider border ${getStatusInfo(selectedOrder.status).color}`}>
-                                            {getStatusInfo(selectedOrder.status).label}
-                                        </div>
-                                    </div>
-                                    <div className="bg-white/3 border border-white/5 p-4 rounded-2xl">
-                                        <div className="flex items-center gap-3 mb-3">
-                                            <div className="p-2 rounded-lg bg-red-600/10 border border-red-600/20">
-                                                <Truck className="w-4 h-4 text-red-500" />
-                                            </div>
-                                            <span className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">Доставка</span>
-                                        </div>
-                                        <p className="text-white text-sm font-bold">
-                                            {selectedOrder.shipping_details?.delivery_type === 'econt' ? 'Еконт' : 'Спиди'} 
-                                            <span className="text-zinc-500 font-normal ml-2">— {selectedOrder.shipping_details?.office_name}</span>
-                                        </p>
-                                    </div>
-                                </div>
-
-                                {/* Admin Notes in Detail Modal */}
-                                {selectedOrder.admin_notes && (
-                                    <div className="bg-red-600/5 border border-red-600/10 p-5 rounded-2xl animate-in fade-in zoom-in-95 duration-500">
-                                        <div className="flex items-center gap-3 mb-3">
-                                            <div className="p-2 rounded-xl bg-red-600/10 border border-red-600/20 shadow-lg shadow-red-900/10">
-                                                <ClipboardCheck className="w-4 h-4 text-red-500" />
-                                            </div>
-                                            <span className="text-[10px] uppercase tracking-[0.2em] text-red-500 font-black">Коментар от екипа</span>
-                                        </div>
-                                        <p className="text-zinc-300 text-sm leading-relaxed border-l-2 border-red-600/20 pl-4 py-1 italic">
-                                            {selectedOrder.admin_notes}
-                                        </p>
-                                    </div>
-                                )}
-
-                                {/* Items List */}
-                                <div>
-                                    <h4 className="text-[10px] uppercase tracking-[0.2em] text-zinc-600 font-black mb-4 flex items-center gap-3">
-                                        <ShoppingBag className="w-3.5 h-3.5" />
-                                        Артикули
-                                    </h4>
-                                    <div className="space-y-3">
-                                        {Array.isArray(selectedOrder.items) && selectedOrder.items.map((item: any, idx: number) => (
-                                            <div key={idx} className="flex items-center gap-4 p-3 bg-white/[0.02] border border-white/5 rounded-2xl">
-                                                <div className="w-14 h-14 bg-zinc-900 border border-white/5 rounded-xl overflow-hidden shrink-0">
-                                                    {item.image ? (
-                                                        <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
-                                                    ) : (
-                                                        <div className="w-full h-full flex items-center justify-center text-zinc-800">
-                                                            <ShoppingBag className="w-5 h-5" />
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <h5 className="text-white text-xs font-bold truncate">{item.name}</h5>
-                                                    <p className="text-zinc-500 text-[10px] uppercase tracking-wider mt-0.5">
-                                                        {item.quantity} x {item.price ? item.price.toFixed(2) : '0.00'} €
-                                                    </p>
-                                                </div>
-                                                <div className="text-right">
-                                                    <p className="text-white font-bold text-sm">{(item.quantity * (item.price || 0)).toFixed(2)} €</p>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* Address & Contact */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    <div className="space-y-4">
-                                        <h4 className="text-[10px] uppercase tracking-[0.2em] text-zinc-600 font-black flex items-center gap-3">
-                                            <MapPin className="w-3.5 h-3.5" />
-                                            Адрес за доставка
-                                        </h4>
-                                        <div className="space-y-1">
-                                            <p className="text-white text-sm font-bold">{selectedOrder.shipping_details?.full_name}</p>
-                                            <p className="text-zinc-400 text-sm">{selectedOrder.shipping_details?.city}</p>
-                                            <p className="text-zinc-500 text-xs">{selectedOrder.shipping_details?.office_name}</p>
-                                        </div>
-                                    </div>
-                                    <div className="space-y-4">
-                                        <h4 className="text-[10px] uppercase tracking-[0.2em] text-zinc-600 font-black flex items-center gap-3">
-                                            <Phone className="w-3.5 h-3.5" />
-                                            Контакт
-                                        </h4>
-                                        <div className="space-y-1">
-                                            <p className="text-white text-sm font-bold">{selectedOrder.shipping_details?.phone}</p>
-                                             <p className="text-zinc-500 text-xs select-none pointer-events-none">{user?.email}</p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Order Summary Table */}
-                                <div className="pt-6 border-t border-white/5">
-                                    <div className="bg-white/3 p-5 rounded-2xl space-y-3">
-                                        <div className="flex justify-between text-xs">
-                                            <span className="text-zinc-500">Междинна сума</span>
-                                            <span className="text-white">{(selectedOrder.total_amount + (selectedOrder.shipping_details?.discount_amount || 0)).toFixed(2)} €</span>
-                                        </div>
-                                        {selectedOrder.shipping_details?.discount_amount > 0 && (
-                                            <div className="flex justify-between text-xs">
-                                                <span className="text-red-500/80">Отстъпка</span>
-                                                <span className="text-red-500">-{selectedOrder.shipping_details.discount_amount.toFixed(2)} €</span>
-                                            </div>
-                                        )}
-                                        {selectedOrder.total_amount < 76.69 && (
-                                            <div className="flex justify-between text-xs">
-                                                <span className="text-[10px] text-red-500 font-black uppercase tracking-widest">До безплатна доставка</span>
-                                                <span className="text-[9px] text-zinc-500 uppercase tracking-widest font-bold">Още {((76.69 - selectedOrder.total_amount) * 1.95583).toFixed(2)} лв.</span>
-                                            </div>
-                                        )}
-                                         <div className="flex justify-between text-xs">
-                                            <span className="text-zinc-500">Доставка</span>
-                                            <span className="text-green-500 font-bold uppercase text-[9px] tracking-widest italic">
-                                                {selectedOrder.total_amount >= 76.69 ? "Безплатна" : "По споразумение"}
-                                            </span>
-                                        </div>
-                                        <div className="pt-3 border-t border-white/5 flex flex-col items-end">
-                                            <span className="text-[10px] uppercase tracking-[0.2em] text-zinc-400 font-black mb-1">За Плащане</span>
-                                            <div className="flex flex-col items-end gap-1">
-                                                <span className="text-3xl font-black text-white tracking-tighter">
-                                                    {selectedOrder.total_amount.toFixed(2)} <span className="text-sm text-red-600 uppercase">€</span>
-                                                </span>
-                                                <span className="text-xs text-zinc-500 font-bold opacity-70">
-                                                    ≈ {(selectedOrder.total_amount * 1.95583).toFixed(2)} лв.
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </motion.div>
-                    </div>
-                )}
-            </AnimatePresence>
         </div>
     );
 };
