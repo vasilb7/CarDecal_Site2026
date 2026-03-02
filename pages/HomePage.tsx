@@ -325,7 +325,7 @@ const HomePage: React.FC = () => {
             {/* Action Buttons */}
             <motion.div
               variants={fadeInUp}
-              className="flex flex-col sm:flex-row gap-4 justify-center items-center w-full max-w-[320px] sm:max-w-none mx-auto"
+              className="flex flex-col gap-4 justify-center items-center w-full max-w-[320px] sm:max-w-none mx-auto"
             >
               <Link
                 to="/catalog"
@@ -333,6 +333,15 @@ const HomePage: React.FC = () => {
               >
                 Пазарувай сега
               </Link>
+
+              {user && (
+                <Link
+                  to="/book-now"
+                  className="group relative flex items-center justify-center w-full sm:w-[400px] h-12 bg-black/40 backdrop-blur-md text-white font-black uppercase tracking-widest text-[10px] sm:text-[11px] rounded-sm border border-white/20 shadow-[0_0_20px_rgba(0,0,0,0.3)] hover:bg-white hover:text-black hover:border-white transition-all duration-300 active:scale-95 focus:outline-none"
+                >
+                  Индивидуални поръчки
+                </Link>
+              )}
             </motion.div>
           </motion.div>
         </div>
