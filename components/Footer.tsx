@@ -107,77 +107,70 @@ const Footer: React.FC = () => {
             />
           </div>
 
-          {/* ── RED LIQUID MASK — появява се САМО под курсора (Spotlight Effect) ── */}
+          {/* Ambient Particles / Glowing Orbs for extra style */}
+          <div className="absolute inset-0 z-10 pointer-events-none">
+            {[...Array(6)].map((_, i) => (
+              <motion.div
+                key={i}
+                className="absolute w-1 h-1 sm:w-2 sm:h-2 bg-red-500/20 rounded-full blur-sm"
+                animate={{
+                  x: [Math.random() * 100 + "%", Math.random() * 100 + "%"],
+                  y: [Math.random() * 100 + "%", Math.random() * 100 + "%"],
+                  opacity: [0, 0.5, 0],
+                  scale: [0, 1.5, 0]
+                }}
+                transition={{
+                  duration: Math.random() * 10 + 10,
+                  repeat: Infinity,
+                  ease: "linear"
+                }}
+                style={{
+                  left: Math.random() * 100 + "%",
+                  top: Math.random() * 100 + "%"
+                }}
+              />
+            ))}
+          </div>
+
+          {/* ── RED LIQUID MASK / SPOTLIGHT ── */}
           <div
-            className="absolute inset-0 z-30 pointer-events-none transition-opacity duration-700 ease-in-out"
+            className="absolute inset-0 z-30 pointer-events-none transition-opacity duration-1000 ease-in-out"
             style={{
-              opacity: isHovered ? 1 : 0,
-              WebkitMaskImage: 'radial-gradient(circle 300px at var(--mouse-x, 50%) var(--mouse-y, 50%), black 20%, transparent 100%)',
-              maskImage: 'radial-gradient(circle 300px at var(--mouse-x, 50%) var(--mouse-y, 50%), black 20%, transparent 100%)',
+              // On desktop (hovered), we use the mask coords. On mobile, we show a subtle global animation
+              opacity: 1, 
+              WebkitMaskImage: isHovered 
+                ? 'radial-gradient(circle 350px at var(--mouse-x, 50%) var(--mouse-y, 50%), black 20%, transparent 100%)'
+                : 'radial-gradient(circle 600px at 50% 50%, black 5%, transparent 100%)',
+              maskImage: isHovered 
+                ? 'radial-gradient(circle 350px at var(--mouse-x, 50%) var(--mouse-y, 50%), black 20%, transparent 100%)'
+                : 'radial-gradient(circle 600px at 50% 50%, black 5%, transparent 100%)',
+              transition: 'mask-image 1s ease-in-out, -webkit-mask-image 1s ease-in-out'
             }}
           >
             {/* The color-shifting car inside the mask */}
             <div className="absolute
               bottom-[32%] sm:bottom-[10%] lg:bottom-[-10%] xl:bottom-[-25%]
               left-1/2 -translate-x-1/2 pointer-events-none
-              w-[100%] sm:w-[95%] lg:w-[68%] xl:w-[88%] mix-blend-screen">
+              w-[100%] sm:w-[95%] lg:w-[68%] xl:w-[88%] mix-blend-screen px-4">
               <motion.img
                 animate={{ 
                   filter: [
                     'hue-rotate(0deg) brightness(1.2) contrast(1.1)',
-                    'hue-rotate(90deg) brightness(1.2) contrast(1.1)',
-                    'hue-rotate(180deg) brightness(1.2) contrast(1.1)',
-                    'hue-rotate(270deg) brightness(1.2) contrast(1.1)',
+                    'hue-rotate(180deg) brightness(1.4) contrast(1.2)',
                     'hue-rotate(360deg) brightness(1.2) contrast(1.1)'
-                  ] 
+                  ],
+                  scale: isHovered ? [1, 1.02, 1] : [1, 1.01, 1]
                 }}
                 transition={{ 
-                  duration: 20, 
+                  duration: 15, 
                   repeat: Infinity, 
-                  ease: "linear" 
+                  ease: "easeInOut" 
                 }}
                 src="/Footer/2026red.png"
                 alt="Car Red"
-                className="w-full h-auto object-contain drop-shadow-[0_0_80px_rgba(255,0,0,0.4)] origin-bottom"
+                className="w-full h-auto object-contain drop-shadow-[0_0_100px_rgba(255,0,0,0.5)] origin-bottom"
               />
             </div>
-            
-            {/* ── "Z" Scan Lines — Visible only through the spotlight mask ── */}
-            <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-60 mix-blend-overlay" viewBox="0 0 100 100" preserveAspectRatio="none">
-              <motion.path 
-                d="M 10,20 L 90,40 L 10,60 L 90,80" 
-                stroke="white" 
-                strokeWidth="0.2" 
-                fill="none"
-                initial={{ pathLength: 0 }}
-                animate={{ 
-                  pathLength: isHovered ? [0, 1, 1, 0, 0] : 0,
-                  x: [0, 2, 0, -2, 0]
-                }}
-                transition={{ 
-                  duration: 4, 
-                  repeat: Infinity, 
-                  ease: "easeInOut",
-                  times: [0, 0.4, 0.6, 1, 1]
-                }}
-              />
-              <motion.path 
-                d="M 20,10 L 80,30 L 20,50 L 80,70 L 20,90" 
-                stroke="white" 
-                strokeWidth="0.1" 
-                fill="none"
-                initial={{ pathLength: 0 }}
-                animate={{ 
-                  pathLength: isHovered ? [0, 1, 1, 0] : 0
-                }}
-                transition={{ 
-                  duration: 6, 
-                  repeat: Infinity, 
-                  ease: "easeInOut",
-                  delay: 1
-                }}
-              />
-            </svg>
           </div>
 
           {/* ── MENUS — bottom section ── */}
