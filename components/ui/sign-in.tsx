@@ -131,22 +131,22 @@ export const SignInPage: React.FC<SignInPageProps> = ({
 
             {/* Form Container */}
             <div className="max-w-md w-full mx-auto flex flex-col justify-center">
-                <div className="mb-6 text-center lg:text-left pt-12">
+                <div className="mb-0 text-center lg:text-left pt-6 sm:pt-0">
                     <motion.h1 
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.1 }}
-                        className="text-[40px] font-semibold text-white leading-tight mb-3"
+                        className="text-[32px] sm:text-[40px] font-black text-white leading-tight mb-2 uppercase tracking-tighter"
                     >
-                        {t('auth.login_title', 'Sign in')}
+                        {t('auth.login_title', 'Добре Дошли')}
                     </motion.h1>
                     <motion.p 
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.2 }}
-                        className="text-white/60 text-base font-light"
+                        className="text-white/40 text-sm sm:text-base font-medium uppercase tracking-widest"
                     >
-                        {t('auth.login_subtitle', 'Welcome back! Please enter your details.')}
+                        {t('auth.login_subtitle', 'Достъп до вашия профил и поръчки')}
                     </motion.p>
                 </div>
 
@@ -202,33 +202,33 @@ export const SignInPage: React.FC<SignInPageProps> = ({
                         whileHover={{ scale: 1.01 }}
                         whileTap={{ scale: 0.98 }}
                         type="submit"
-                        className="w-full bg-red-600 text-white font-semibold py-3.5 rounded-full mt-2 text-lg shadow-lg shadow-red-600/20 transition-all hover:bg-red-700"
+                        className="w-full bg-red-600 text-white font-black py-4 rounded-xl mt-4 text-xs uppercase tracking-[0.2em] shadow-xl shadow-red-600/20 transition-all hover:bg-red-500 active:scale-95"
                     >
-                        {t('auth.sign_in', 'Sign in')}
+                        {t('auth.sign_in', 'Вход')}
                     </motion.button>
 
                     {/* Social Buttons */}
-                    <div className="flex flex-col gap-3 pt-4">
+                    <div className="flex flex-col gap-6 pt-2">
                         <motion.button
                             whileHover={{ scale: 1.01 }}
                             whileTap={{ scale: 0.98 }}
                             type="button"
                             onClick={onGoogleSignIn}
-                            className="w-full flex items-center justify-center gap-2 border border-white/10 rounded-full py-3.5 bg-white/5 hover:bg-white/10 transition-colors"
+                            className="w-full flex items-center justify-center gap-3 border border-white/5 rounded-xl py-4 bg-white/[0.03] hover:bg-white/[0.06] transition-all hover:border-white/10"
                         >
                             <GoogleIcon />
-                            <span className="text-sm font-medium text-white/80">Google</span>
+                            <span className="text-[11px] font-bold text-white/80 uppercase tracking-widest">Google</span>
                         </motion.button>
                         
-                        {/* Bottom Links Moved Inside Form Flow */}
-                        <div className="flex justify-center items-center text-sm pt-4 px-2 text-white/60">
-                            {t('auth.dont_have_account', "Don't have an account?")}{' '}
+                        {/* Bottom Links Grouped */}
+                        <div className="flex flex-col items-center gap-1 text-[11px] pt-2">
+                            <span className="text-white/40 uppercase tracking-widest">{t('auth.dont_have_account', "Нямате акаунт?")}</span>
                             <Link 
                                 to="/register" 
                                 state={location.state}
-                                className="ml-2 text-white font-semibold underline underline-offset-4 hover:text-red-500 transition-colors"
+                                className="text-white font-black uppercase tracking-widest border-b border-red-600/50 hover:border-red-600 hover:text-red-500 transition-all pb-0.5"
                             >
-                                {t('auth.register_link', 'Sign up')}
+                                {t('auth.register_link', 'Регистрирайте се')}
                             </Link>
                         </div>
                     </div>
