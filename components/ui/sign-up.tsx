@@ -265,22 +265,22 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
                         whileHover={{ scale: 1.01 }}
                         whileTap={{ scale: 0.98 }}
                         type="submit"
-                        className="w-full bg-red-600 text-white font-black py-4 rounded-xl mt-4 text-xs uppercase tracking-[0.2em] shadow-xl shadow-red-600/20 transition-all hover:bg-red-500 active:scale-95"
+                        className="w-full bg-red-600 text-white font-black py-4 rounded-full mt-2 text-base uppercase tracking-[0.1em] shadow-xl shadow-red-600/20 transition-all hover:bg-red-500 active:scale-95"
                     >
                         {t('auth.create_account', 'Регистрация')}
                     </motion.button>
 
                     {/* Social Buttons */}
-                    <div className="flex flex-col gap-6 pt-2">
+                    <div className="flex flex-col gap-4 pt-2">
                         <motion.button
                             whileHover={{ scale: 1.01 }}
                             whileTap={{ scale: 0.98 }}
                             type="button"
                             onClick={onGoogleSignUp}
-                            className="w-full flex items-center justify-center gap-3 border border-white/5 rounded-xl py-4 bg-white/[0.03] hover:bg-white/[0.06] transition-all hover:border-white/10"
+                            className="w-full flex items-center justify-center gap-3 rounded-full py-4 bg-white hover:bg-white/90 transition-all shadow-lg"
                         >
                             <GoogleIcon />
-                            <span className="text-[11px] font-bold text-white/80 uppercase tracking-widest">Google</span>
+                            <span className="text-xs font-black text-black uppercase tracking-widest">Google</span>
                         </motion.button>
 
                         {/* Bottom Links Grouped */}
