@@ -1224,6 +1224,10 @@ const UserProfileModal: React.FC<{
             <head>
                 <title>Разписка - Поръчка №${order.id}</title>
                 <style>
+                    @media print {
+                        @page { margin: 0; }
+                        body { padding: 40px !important; margin: 0 !important; }
+                    }
                     body { font-family: "Inter", sans-serif; padding: 40px; line-height: 1.6; color: #111; max-width: 800px; margin: 0 auto; }
                     .header { text-align: center; margin-bottom: 40px; border-bottom: 2px solid #eee; padding-bottom: 20px; }
                     .header h2 { margin: 0 0 10px 0; font-size: 24px; text-transform: uppercase; letter-spacing: 2px; }
