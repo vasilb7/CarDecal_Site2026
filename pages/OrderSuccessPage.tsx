@@ -174,7 +174,7 @@ const OrderSuccessPage: React.FC = () => {
                         to={`/account/orders/${orderId}`}
                         className="w-full md:w-auto px-10 py-5 bg-white text-black text-xs font-black uppercase tracking-[0.3em] rounded-2xl hover:bg-zinc-200 transition-all flex items-center justify-center gap-3 shadow-xl"
                     >
-                        Виж поръчката
+                        Виж детайли
                         <ArrowRight className="w-4 h-4" />
                     </Link>
                     
@@ -192,12 +192,12 @@ const OrderSuccessPage: React.FC = () => {
                         className="w-full md:w-auto px-10 py-5 text-zinc-500 hover:text-white text-xs font-black uppercase tracking-[0.3em] transition-all flex items-center justify-center gap-3"
                     >
                         <ShoppingBag className="w-4 h-4" />
-                        Продължи
+                        Към магазина
                     </Link>
                 </motion.div>
                 
-                <div className="mt-20 text-center opacity-40">
-                    <img src="/LOGO.png" alt="CarDecal" title="CarDecal" className="h-6 w-auto mx-auto grayscale invert" />
+                <div className="mt-16 pt-8 border-t border-white/5 text-center">
+                    <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-[0.4em]">CarDecal – Premium Style & Quality</p>
                 </div>
             </motion.div>
         </div>
