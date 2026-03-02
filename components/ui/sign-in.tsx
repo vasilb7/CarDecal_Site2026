@@ -150,7 +150,7 @@ export const SignInPage: React.FC<SignInPageProps> = ({
                     </motion.p>
                 </div>
 
-                <form className="space-y-4 pt-2" onSubmit={onSignIn}>
+                <form className="space-y-6 pt-2" onSubmit={onSignIn}>
                     {/* Email */}
                     <FloatingInput 
                         label={t('auth.email', 'Имейл адрес')}
@@ -180,19 +180,31 @@ export const SignInPage: React.FC<SignInPageProps> = ({
                     </div>
 
                     {/* Remember Me */}
-                    <div className="flex items-center gap-2 pt-2 px-2">
-                        <div className="relative flex items-center justify-center">
-                            <input 
-                                type="checkbox" 
-                                id="rememberMe" 
-                                name="rememberMe" 
-                                className="peer appearance-none w-5 h-5 border border-white/20 rounded-md bg-white/5 checked:bg-red-600 checked:border-red-600 cursor-pointer transition-all hover:bg-white/10"
+                    <div className="flex items-center gap-3 px-2">
+                        <label className="relative flex items-center cursor-pointer group">
+                            <input
+                                type="checkbox"
+                                name="rememberMe"
+                                id="rememberMe"
+                                className="peer sr-only"
+                                defaultChecked
                             />
-                            <svg className="absolute w-3.5 h-3.5 pointer-events-none opacity-0 peer-checked:opacity-100 peer-checked:text-white transition-opacity" viewBox="0 0 14 10" fill="none">
-                                <path d="M1 5L4.5 8.5L13 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                            </svg>
-                        </div>
-                        <label htmlFor="rememberMe" className="text-sm text-white/60 cursor-pointer select-none hover:text-white transition-colors">
+                            <div className="w-5 h-5 border-2 border-white/20 bg-white/5 transition-all duration-300 peer-checked:bg-white peer-checked:border-white group-hover:border-white/40 flex items-center justify-center">
+                                <motion.div 
+                                    initial={false}
+                                    animate={{ 
+                                        scale: 1,
+                                        opacity: 1
+                                    }}
+                                    className="text-black"
+                                >
+                                    <svg viewBox="0 0 24 24" fill="none" className="w-3.5 h-3.5 stroke-current stroke-[4]">
+                                        <polyline points="20 6 9 17 4 12" />
+                                    </svg>
+                                </motion.div>
+                            </div>
+                        </label>
+                        <label htmlFor="rememberMe" className="text-[11px] font-bold text-white/50 uppercase tracking-widest cursor-pointer select-none hover:text-white transition-colors">
                             {t('auth.remember_me', 'Запомни ме за 30 дни')}
                         </label>
                     </div>

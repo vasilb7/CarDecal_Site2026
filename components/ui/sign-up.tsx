@@ -198,7 +198,7 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
                     </motion.p>
                 </div>
 
-                <form className="space-y-4 pt-2" onSubmit={onSignUp}>
+                <form className="space-y-6 pt-2" onSubmit={onSignUp}>
                     {/* Name - Restrict to two names via label instructions */}
                     <FloatingInput 
                         label={t('auth.name_label', 'Име и Фамилия')}
@@ -238,16 +238,25 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
                     </div>
 
                     {/* Terms Agreement */}
-                    <div className="flex items-start gap-3 px-2 py-0">
-                        <div className="relative flex items-center h-5 mt-0.5">
+                    <div className="flex items-start gap-4 px-2">
+                        <label className="relative flex items-center cursor-pointer group mt-0.5">
                             <input
                                 id="terms"
                                 name="terms"
                                 type="checkbox"
                                 required
-                                className="w-5 h-5 rounded border-white/10 bg-white/5 text-red-600 focus:ring-red-600 cursor-pointer accent-red-600 transition-all hover:bg-white/10"
+                                className="peer sr-only"
                             />
-                        </div>
+                            <div className="w-5 h-5 border-2 border-white/20 bg-white/5 transition-all duration-300 peer-checked:bg-white peer-checked:border-white group-hover:border-white/40 flex items-center justify-center shrink-0">
+                                <motion.div 
+                                    className="text-black"
+                                >
+                                    <svg viewBox="0 0 24 24" fill="none" className="w-3.5 h-3.5 stroke-current stroke-[4]">
+                                        <polyline points="20 6 9 17 4 12" />
+                                    </svg>
+                                </motion.div>
+                            </div>
+                        </label>
                         <label htmlFor="terms" className="text-[10px] sm:text-xs text-white/40 leading-relaxed uppercase tracking-widest cursor-pointer select-none">
                             {t('auth.agree_to_terms', 'Съгласявам се с')}
                             <Link to="/terms" target="_blank" className="text-white hover:text-red-500 underline underline-offset-2 mx-1">
