@@ -250,7 +250,7 @@
     "terms_link": "Terms and Conditions"
   },
   "toast": {
-    "login_success": "Welcome back, {{name}}",
+    "login_success": "Welcome, {{name}}",
     "login_error_credentials": "Invalid email or password.",
     "login_error_generic": "An unexpected error occurred during sign in.",
     "register_success": "Registration successful! Welcome to Car Decal.",

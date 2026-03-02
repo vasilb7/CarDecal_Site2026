@@ -5,7 +5,7 @@ import {
     ArrowLeft, ShieldCheck, Truck, CreditCard, 
     ChevronRight, MapPin, Phone, User, Mail, 
     CheckCircle2, AlertCircle, Loader2, Package,
-    Edit2, Info, Building2, Home, Check
+    Edit2, Info, Building2, Check
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -42,8 +42,8 @@ const ShippingMethodCard = ({
         onClick={onClick}
         className={`relative flex flex-col p-4 rounded-2xl border text-left transition-all duration-300 group ${
             isActive 
-            ? 'border-red-600 bg-red-600/5 shadow-[0_0_20px_rgba(255,0,0,0.05)]' 
-            : 'border-white/5 bg-white/2 hover:border-white/20'
+            ? 'border-red-600 bg-red-600/[0.08] shadow-[0_0_20px_rgba(255,0,0,0.1)]' 
+            : 'border-white/[0.05] bg-[#0d0d0d] hover:border-white/10'
         }`}
     >
         <div className="flex items-start justify-between mb-3">
@@ -76,10 +76,9 @@ const CheckoutPage: React.FC = () => {
         fullName: '',
         email: '',
         phone: '',
-        deliveryType: 'econt' as 'econt' | 'speedy' | 'address',
+        deliveryType: 'econt' as 'econt' | 'speedy',
         city: '',
         officeName: '',
-        address: '',
         notes: ''
     });
     const [saveForFuture, setSaveForFuture] = useState(true);
@@ -93,9 +92,8 @@ const CheckoutPage: React.FC = () => {
                 email: user?.email || '',
                 phone: prev.phone || profile?.phone || (profile as any)?.preferred_phone || '',
                 city: prev.city || (profile as any)?.preferred_city || '',
-                deliveryType: prev.deliveryType || (profile as any)?.preferred_delivery_type || 'econt',
-                officeName: prev.officeName || (profile as any)?.preferred_office_name || '',
-                address: prev.address || (profile as any)?.preferred_address || ''
+                deliveryType: (prev.deliveryType as any) === 'address' ? 'econt' : (prev.deliveryType || (profile as any)?.preferred_delivery_type || 'econt'),
+                officeName: prev.officeName || (profile as any)?.preferred_office_name || ''
             }));
         }
     }, [profile, user]);
@@ -119,11 +117,7 @@ const CheckoutPage: React.FC = () => {
         if (!formData.phone.trim() || formData.phone.length < 8) newErrors.phone = "Въведете валиден телефон";
         if (!formData.city.trim()) newErrors.city = "Въведете град";
         
-        if (formData.deliveryType === 'address') {
-            if (!formData.address.trim()) newErrors.address = "Въведете точен адрес";
-        } else {
-            if (!formData.officeName.trim()) newErrors.officeName = "Въведете име или номер на офис";
-        }
+        if (!formData.officeName.trim()) newErrors.officeName = "Въведете име или номер на офис";
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -164,7 +158,6 @@ const CheckoutPage: React.FC = () => {
                     preferred_city: formData.city,
                     preferred_delivery_type: formData.deliveryType,
                     preferred_office_name: formData.officeName,
-                    preferred_address: formData.address,
                     preferred_phone: formData.phone,
                     last_full_name: formData.fullName
                 }).eq('id', user.id);
@@ -189,9 +182,10 @@ const CheckoutPage: React.FC = () => {
 
     // UI Helpers
     const inputStyle = (errorKey: string) => `
-        w-full h-[52px] bg-white/2 border ${errors[errorKey] ? 'border-red-600' : 'border-white/10 hover:border-white/20'} 
+        w-full h-[52px] bg-[#0d0d0d] border ${errors[errorKey] ? 'border-red-600' : 'border-white/[0.08] hover:border-white/20'} 
         text-white text-base px-4 rounded-xl focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600/20 
         transition-all placeholder:text-zinc-600 font-medium
+        autofill:shadow-[0_0_0_1000px_#0d0d0d_inset] autofill:text-white
     `;
 
     return (
@@ -263,7 +257,7 @@ const CheckoutPage: React.FC = () => {
                                                 <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500 mb-2 block ml-1">Имейл</label>
                                                 <input 
                                                     type="email" name="email" value={formData.email} readOnly 
-                                                    className="w-full h-[52px] bg-white/[0.02] border border-white/5 text-zinc-500 text-base px-4 rounded-xl cursor-not-allowed font-medium" 
+                                                    className="w-full h-[52px] bg-white/[0.03] border border-white/[0.05] text-zinc-500 text-base px-4 rounded-xl cursor-not-allowed font-medium" 
                                                 />
                                             </div>
                                         </div>
@@ -281,7 +275,7 @@ const CheckoutPage: React.FC = () => {
                                             </div>
                                         </div>
 
-                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-8">
+                                        <div className="grid grid-cols-2 gap-4 mb-8">
                                             <ShippingMethodCard 
                                                 id="econt" icon={Building2} title="Econt Офис" description="До офис на Еконт" time="1-2 дни"
                                                 isActive={formData.deliveryType === 'econt'} onClick={() => setFormData(p => ({...p, deliveryType: 'econt'}))}
@@ -289,10 +283,6 @@ const CheckoutPage: React.FC = () => {
                                             <ShippingMethodCard 
                                                 id="speedy" icon={Building2} title="Speedy Офис" description="До офис на Спиди" time="1-2 дни"
                                                 isActive={formData.deliveryType === 'speedy'} onClick={() => setFormData(p => ({...p, deliveryType: 'speedy'}))}
-                                            />
-                                            <ShippingMethodCard 
-                                                id="address" icon={Home} title="До Адрес" description="До Вашата врата" time="2-3 дни"
-                                                isActive={formData.deliveryType === 'address'} onClick={() => setFormData(p => ({...p, deliveryType: 'address'}))}
                                             />
                                         </div>
 
@@ -307,32 +297,21 @@ const CheckoutPage: React.FC = () => {
                                                     {errors.city && <p className="text-[10px] text-red-600 font-bold uppercase mt-1.5 ml-1">{errors.city}</p>}
                                                 </div>
                                                 
-                                                {formData.deliveryType !== 'address' ? (
-                                                    <div>
-                                                        <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500 mb-2 block ml-1">Офис на Куриер <span className="text-red-600">*</span></label>
-                                                        <input 
-                                                            type="text" name="officeName" value={formData.officeName} onChange={handleInputChange}
-                                                            className={inputStyle('officeName')} placeholder="Напр. Офис Център"
-                                                        />
-                                                        {errors.officeName && <p className="text-[10px] text-red-600 font-bold uppercase mt-1.5 ml-1">{errors.officeName}</p>}
-                                                    </div>
-                                                ) : (
-                                                    <div>
-                                                        <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500 mb-2 block ml-1">Пълен Адрес <span className="text-red-600">*</span></label>
-                                                        <input 
-                                                            type="text" name="address" value={formData.address} onChange={handleInputChange}
-                                                            className={inputStyle('address')} placeholder="жк., ул., блок, ап."
-                                                        />
-                                                        {errors.address && <p className="text-[10px] text-red-600 font-bold uppercase mt-1.5 ml-1">{errors.address}</p>}
-                                                    </div>
-                                                )}
+                                                <div>
+                                                    <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500 mb-2 block ml-1">Офис на Куриер <span className="text-red-600">*</span></label>
+                                                    <input 
+                                                        type="text" name="officeName" value={formData.officeName} onChange={handleInputChange}
+                                                        className={inputStyle('officeName')} placeholder="Напр. Офис Център"
+                                                    />
+                                                    {errors.officeName && <p className="text-[10px] text-red-600 font-bold uppercase mt-1.5 ml-1">{errors.officeName}</p>}
+                                                </div>
                                             </div>
 
                                             <div>
                                                 <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500 mb-2 block ml-1">Бележка към поръчката (Опционално)</label>
                                                 <textarea 
                                                     name="notes" value={formData.notes} onChange={handleInputChange} maxLength={300}
-                                                    className="w-full h-24 bg-white/2 border border-white/10 text-white text-base px-4 py-3 rounded-xl focus:outline-none focus:border-red-600 transition-all placeholder:text-zinc-600 font-medium resize-none" 
+                                                    className="w-full h-24 bg-[#0d0d0d] border border-white/[0.08] text-white text-base px-4 py-3 rounded-xl focus:outline-none focus:border-red-600 transition-all placeholder:text-zinc-600 font-medium resize-none shadow-inner" 
                                                     placeholder="Уточнения за цвят, размери или друго..."
                                                 />
                                                 <div className="flex justify-between items-center mt-1.5 ml-1">
@@ -404,10 +383,10 @@ const CheckoutPage: React.FC = () => {
                                                     <div className="flex items-center gap-2 text-white">
                                                          <Building2 size={14} className="text-red-600" />
                                                          <span className="text-sm font-black uppercase tracking-tight">
-                                                            {formData.deliveryType === 'econt' ? 'Еконт Офис' : formData.deliveryType === 'speedy' ? 'Спиди Офис' : 'Доставка до Врата'}
+                                                            {formData.deliveryType === 'econt' ? 'Еконт Офис' : 'Спиди Офис'}
                                                          </span>
                                                     </div>
-                                                    <p className="text-xs text-zinc-400 mt-1.5">{formData.city}, {formData.deliveryType === 'address' ? formData.address : formData.officeName}</p>
+                                                    <p className="text-xs text-zinc-400 mt-1.5">{formData.city}, {formData.officeName}</p>
                                                 </div>
                                             </div>
                                         </div>

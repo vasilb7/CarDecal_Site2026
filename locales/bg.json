@@ -259,7 +259,7 @@
     "or_sign_up_with": "Или се регистрирайте чрез"
   },
   "toast": {
-    "login_success": "Здравей отново, {{name}}",
+    "login_success": "Добре дошли, {{name}}",
     "login_error_credentials": "Грешен имейл или парола.",
     "login_error_generic": "Възникна неочаквана грешка при входа.",
     "register_success": "Регистрацията е успешна! Добре дошли в Car Decal.",

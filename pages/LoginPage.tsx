@@ -68,8 +68,6 @@ const LoginPage: React.FC = () => {
           localStorage.setItem('remember_me', 'false');
           sessionStorage.setItem('temp_session', 'true');
         }
-        const name = data.user?.user_metadata?.full_name || data.user?.email?.split('@')[0] || '';
-        showToast(t('toast.login_success', { name }), "success");
         navigate(from, { replace: true });
       }
     } catch (err) {

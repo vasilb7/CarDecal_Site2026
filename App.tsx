@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import ScrollToTop from './components/ScrollToTop';
 import Layout from './components/Layout';
@@ -27,9 +27,11 @@ import { useSiteSettings, SiteSettingsProvider } from './context/SiteSettingsCon
 import { UIProvider } from './context/UIContext';
 import { CartProvider } from './context/CartContext';
 import MaintenancePage from './pages/MaintenancePage';
-import { useLocation } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { CompleteRegistrationModal } from './components/ui/complete-registration';
+import { useToast } from './hooks/useToast';
+import { useTranslation } from 'react-i18next';
+
 const ProductQuickViewModal = React.lazy(() => import('./components/ProductQuickViewModal'));
 
 function PageWrapper({ children }: { children: React.ReactNode }) {
@@ -48,9 +50,25 @@ function PageWrapper({ children }: { children: React.ReactNode }) {
 
 function AppContent() {
   const location = useLocation();
-  const { user, loading: authLoading, isAdmin, isEditor } = useAuth();
+  const { user, loading: authLoading, isAdmin, isEditor, profile } = useAuth();
   const { settings, loading: settingsLoading, serverTimeOffset } = useSiteSettings();
+  const { showToast } = useToast();
+  const { t } = useTranslation();
   const [isTimeUp, setIsTimeUp] = useState(false);
+
+  // Welcome Toast Logic (handles OAuth and regular logins)
+  useEffect(() => {
+    if (user && profile && !authLoading) {
+      const storageKey = `welcome_shown_${user.id}`;
+      const shownInCurrentSession = sessionStorage.getItem(storageKey);
+      
+      if (!shownInCurrentSession) {
+        const name = profile.full_name || user.user_metadata?.full_name || user.email?.split('@')[0] || '';
+        showToast(t('toast.login_success', { name }), "success");
+        sessionStorage.setItem(storageKey, 'true');
+      }
+    }
+  }, [user, profile, authLoading, showToast, t]);
 
   useEffect(() => {
     if (!settings?.maintenance_auto_start_at) {
