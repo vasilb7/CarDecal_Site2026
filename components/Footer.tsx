@@ -1,4 +1,5 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
 
 interface RollingLinkProps {
@@ -53,6 +54,27 @@ const Footer: React.FC = () => {
     topBgClass = "bg-[#080808]";
   }
 
+  // Auto-scanning logic for touch devices (moves mask horizontally)
+  useEffect(() => {
+    let frameId: number;
+    let startTime = Date.now();
+    
+    const animateMask = () => {
+      if (!isHovered && containerRef.current) {
+        const time = (Date.now() - startTime) / 1000;
+        const rect = containerRef.current.getBoundingClientRect();
+        const x = (Math.sin(time * 0.5) * 0.4 + 0.5) * rect.width;
+        const y = (Math.cos(time * 0.3) * 0.1 + 0.5) * rect.height;
+        containerRef.current.style.setProperty('--mouse-x', `${x}px`);
+        containerRef.current.style.setProperty('--mouse-y', `${y}px`);
+      }
+      frameId = requestAnimationFrame(animateMask);
+    };
+    
+    frameId = requestAnimationFrame(animateMask);
+    return () => cancelAnimationFrame(frameId);
+  }, [isHovered]);
+
   return (
     <footer className={`${topBgClass} pt-8 sm:pt-12 lg:pt-20 pb-0 w-full relative z-10`}>
       {/* ── OUTER RED WRAP ── */}
@@ -103,11 +125,11 @@ const Footer: React.FC = () => {
             />
           </div>
 
-          {/* ── RED LIQUID MASK — появява се под курсора ── */}
+          {/* ── RED LIQUID MASK — появява се под курсора или автоматично сканира ── */}
           <div
-            className="absolute inset-0 z-30 pointer-events-none transition-opacity duration-700 ease-out"
+            className="absolute inset-0 z-30 pointer-events-none transition-opacity duration-1000 ease-in-out"
             style={{
-              opacity: isHovered ? 1 : 0,
+              opacity: 1, // Always visible scan on touch, but radial gradient handles area
               WebkitMaskImage: 'radial-gradient(circle 350px at var(--mouse-x, 50%) var(--mouse-y, 50%), black 15%, transparent 100%)',
               maskImage: 'radial-gradient(circle 350px at var(--mouse-x, 50%) var(--mouse-y, 50%), black 15%, transparent 100%)',
             }}
@@ -116,12 +138,65 @@ const Footer: React.FC = () => {
               bottom-[32%] sm:bottom-[10%] lg:bottom-[-10%] xl:bottom-[-25%]
               left-1/2 -translate-x-1/2 pointer-events-none
               w-[100%] sm:w-[95%] lg:w-[68%] xl:w-[88%] mix-blend-screen">
-              <img
+              <motion.img
+                animate={{ 
+                  filter: [
+                    'hue-rotate(0deg) brightness(1.2) contrast(1.1)',
+                    'hue-rotate(90deg) brightness(1.2) contrast(1.1)',
+                    'hue-rotate(180deg) brightness(1.2) contrast(1.1)',
+                    'hue-rotate(270deg) brightness(1.2) contrast(1.1)',
+                    'hue-rotate(360deg) brightness(1.2) contrast(1.1)'
+                  ] 
+                }}
+                transition={{ 
+                  duration: 20, 
+                  repeat: Infinity, 
+                  ease: "linear" 
+                }}
                 src="/Footer/2026red.png"
                 alt="Car Red"
                 className="w-full h-auto object-contain drop-shadow-[0_0_80px_rgba(255,0,0,0.4)] origin-bottom"
               />
             </div>
+            
+            {/* ── "Z" Scan Lines — as requested in image ── */}
+            <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-40 mix-blend-overlay" viewBox="0 0 100 100" preserveAspectRatio="none">
+              <motion.path 
+                d="M 10,20 L 90,40 L 10,60 L 90,80" 
+                stroke="white" 
+                strokeWidth="0.2" 
+                fill="none"
+                initial={{ pathLength: 0, opacity: 0 }}
+                animate={{ 
+                  pathLength: [0, 1, 1, 0, 0],
+                  opacity: [0, 1, 1, 0, 0],
+                  x: [0, 2, 0, -2, 0]
+                }}
+                transition={{ 
+                  duration: 4, 
+                  repeat: Infinity, 
+                  ease: "easeInOut",
+                  times: [0, 0.4, 0.6, 1, 1]
+                }}
+              />
+              <motion.path 
+                d="M 20,10 L 80,30 L 20,50 L 80,70 L 20,90" 
+                stroke="white" 
+                strokeWidth="0.1" 
+                fill="none"
+                initial={{ pathLength: 0, opacity: 0 }}
+                animate={{ 
+                  pathLength: [0, 1, 1, 0],
+                  opacity: [0, 0.5, 0.5, 0]
+                }}
+                transition={{ 
+                  duration: 6, 
+                  repeat: Infinity, 
+                  ease: "easeInOut",
+                  delay: 2
+                }}
+              />
+            </svg>
           </div>
 
           {/* ── MENUS — bottom section ── */}
