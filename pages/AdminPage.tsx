@@ -13,7 +13,7 @@ import {
     Eye, EyeOff, Tag, Image, ArrowLeft, Loader2, RefreshCw,
     UserCheck, UserX, Crown, Upload, Video, Film, AlertCircle, Mail,
     Megaphone, Palette, Type, ShoppingBag, Receipt, Printer, Download,
-    FileText, BoxSelect, LayoutGrid, ClipboardCheck, Boxes
+    FileText, BoxSelect, LayoutGrid, ClipboardCheck, Boxes, FileJson
 } from 'lucide-react';
 import { useToast } from '../components/Toast/ToastProvider';
 import { uploadToCloudinary } from '../lib/cloudinary-utils';
@@ -1204,6 +1204,91 @@ const UserProfileModal: React.FC<{
     const [searchTerm, setSearchTerm] = useState('');
     const { showToast } = useToast();
 
+    const handleExportJSON = (order: RegularOrder) => {
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(order, null, 2));
+        const downloadAnchorNode = document.createElement('a');
+        downloadAnchorNode.setAttribute("href", dataStr);
+        downloadAnchorNode.setAttribute("download", `order_${order.id}.json`);
+        document.body.appendChild(downloadAnchorNode);
+        downloadAnchorNode.click();
+        downloadAnchorNode.remove();
+        showToast('JSON генериран успешно', 'success');
+    };
+
+    const handlePrint = (order: RegularOrder) => {
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) return;
+        
+        const html = `
+            <html>
+            <head>
+                <title>Разписка - Поръчка №${order.id}</title>
+                <style>
+                    body { font-family: "Inter", sans-serif; padding: 40px; line-height: 1.6; color: #111; max-width: 800px; margin: 0 auto; }
+                    .header { text-align: center; margin-bottom: 40px; border-bottom: 2px solid #eee; padding-bottom: 20px; }
+                    .header h2 { margin: 0 0 10px 0; font-size: 24px; text-transform: uppercase; letter-spacing: 2px; }
+                    .header p { margin: 0; color: #666; font-size: 14px; }
+                    .details { margin-bottom: 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; background: #fafafa; padding: 20px; border-radius: 8px; }
+                    .details p { margin: 5px 0; font-size: 14px; }
+                    .details strong { color: #555; display: inline-block; width: 140px; }
+                    .items { width: 100%; border-collapse: collapse; margin-bottom: 40px; font-size: 14px; }
+                    .items th { border-bottom: 2px solid #eee; padding: 12px 8px; text-align: left; text-transform: uppercase; font-size: 11px; letter-spacing: 1px; color: #888; }
+                    .items td { border-bottom: 1px solid #eee; padding: 16px 8px; }
+                    .total-row { float: right; width: 300px; background: #fafafa; padding: 20px; border-radius: 8px; }
+                    .total { font-weight: bold; text-align: right; font-size: 20px; margin: 0; }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <h2>Разписка</h2>
+                    <p>ИД №${order.id}</p>
+                </div>
+                <div class="details">
+                    <div>
+                        <p><strong>Дата на създаване:</strong> ${new Date(order.created_at).toLocaleString('bg-BG')}</p>
+                        <p><strong>Клиент:</strong> ${order.shipping_details?.fullName || ''}</p>
+                        <p><strong>Телефон:</strong> ${order.shipping_details?.phone || ''}</p>
+                    </div>
+                    <div>
+                        <p><strong>Метод на плащане:</strong> ${order.payment_method === 'cash_on_delivery' ? 'Наложен Платеж' : order.payment_method}</p>
+                        <p><strong>Статус:</strong> <span style="text-transform:uppercase; font-size: 12px; font-weight: bold; padding: 4px 8px; background: #eee; border-radius: 4px;">${order.status}</span></p>
+                    </div>
+                </div>
+                <table class="items">
+                    <thead>
+                        <tr>
+                            <th>Артикул</th>
+                            <th>Количество</th>
+                            <th>Единична Цена</th>
+                            <th>Общо</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${order.items.map((item: any) => `
+                            <tr>
+                                <td><strong>${item.name_bg || item.name}</strong></td>
+                                <td>${item.quantity} бр.</td>
+                                <td>${(item.price_eur || 0).toFixed(2)} €</td>
+                                <td>${((item.price_eur || 0) * item.quantity).toFixed(2)} €</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+                <div class="total-row">
+                    <p class="total">Обща сума: ${order.total_amount.toFixed(2)} €</p>
+                </div>
+            </body>
+            </html>
+        `;
+
+        printWindow.document.write(html);
+        printWindow.document.close();
+        printWindow.focus();
+        setTimeout(() => {
+            printWindow.print();
+        }, 250);
+    };
+
     useEffect(() => {
         const fetchUserData = async () => {
             setLoading(true);
@@ -1406,6 +1491,30 @@ const UserProfileModal: React.FC<{
                                                                 <span className="text-[10px] text-zinc-400">{item.name} x{item.quantity}</span>
                                                             </div>
                                                         ))}
+                                                    </div>
+                                                    
+                                                    {/* Actions Row */}
+                                                    <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleExportJSON(order);
+                                                            }}
+                                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors border border-blue-600/10"
+                                                        >
+                                                            <FileJson className="w-3 h-3" />
+                                                            JSON
+                                                        </button>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handlePrint(order);
+                                                            }}
+                                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg text-xs font-bold uppercase tracking-widest transition-colors border border-white/5"
+                                                        >
+                                                            <Printer className="w-3 h-3 text-zinc-400" />
+                                                            Разписка
+                                                        </button>
                                                     </div>
                                                 </div>
                                             ))}

@@ -62,6 +62,12 @@ const LoginPage: React.FC = () => {
         }
       } else {
         console.log("Sign in success:", data);
+        
+        // Extract a friendly name
+        const md = data?.user?.user_metadata || {};
+        const name = md.full_name || md.name || md.first_name || (data?.user?.email?.split('@')[0]) || '';
+        showToast(name ? `Добре дошли, ${name}!` : 'Добре дошли!', 'success');
+
         if (rememberMe) {
           localStorage.setItem('remember_me', 'true');
         } else {
