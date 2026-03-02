@@ -2698,214 +2698,573 @@ const OrdersTab: React.FC = () => {
         };
 
         const itemsHtml = order.items.map((item, idx) => `
-            <tr style="background-color: ${idx % 2 === 0 ? '#ffffff' : '#fcfcfc'};">
-                <td style="padding: 10px 8px; border-bottom: 1px solid #f0f0f0;">
-                    <div style="font-weight: 700; color: #000; font-size: 14px; text-transform: uppercase;">${item.name_bg || item.name}</div>
-                    <div style="font-size: 11px; color: #888; margin-top: 4px; font-weight: 400;">
-                        ${item.variant || ''}
-                    </div>
+            <tr style="background-color: ${idx % 2 === 0 ? '#FFFFFF' : '#FAFAFA'};">
+                <td style="padding: 14px 16px;">
+                    <div style="font-weight: 800; color: #000000; font-size: 13px; text-transform: uppercase; margin-bottom: 2px;">${item.name_bg || item.name}</div>
+                    <div style="font-size: 10px; color: #666666; font-family: monospace; letter-spacing: 0.5px;">SKU: ${item.slug || 'N/A'}</div>
                 </td>
-                <td style="padding: 10px 8px; border-bottom: 1px solid #f0f0f0; text-align: center; font-weight: 600;">${item.quantity}</td>
-                <td style="padding: 10px 8px; border-bottom: 1px solid #f0f0f0; text-align: right;">
-                    <div style="font-weight: 500;">€${(Number(item.price)).toFixed(2)}</div>
-                    <div style="font-size: 10px; color: #888; margin-top: 2px;">${(Number(item.price) * 1.95583).toFixed(2)} лв.</div>
+                <td style="padding: 14px 16px; font-size: 12px; font-weight: 500; color: #4A0000;">
+                    ${item.variant || '-'}
+                    ${item.material ? `<br><span style="font-size:10px;color:#666666">${item.material}</span>` : ''}
                 </td>
-                <td style="padding: 10px 8px; border-bottom: 1px solid #f0f0f0; text-align: right;">
-                    <div style="font-weight: 700; color: #000;">€${(Number(item.price) * item.quantity).toFixed(2)}</div>
-                    <div style="font-size: 10px; color: #888; margin-top: 2px;">${(Number(item.price) * item.quantity * 1.95583).toFixed(2)} лв.</div>
+                <td style="padding: 14px 16px; font-size: 12px; font-weight: 600; color: #4A0000;">
+                    ${item.dimensions || '-'}
+                </td>
+                <td style="padding: 14px 16px; text-align: center; font-weight: 700; font-size: 13px; color: #000000;">
+                    ${item.quantity}
+                </td>
+                <td style="padding: 14px 16px; text-align: right; white-space: nowrap;">
+                    <div style="font-weight: 600; font-size: 13px; color: #4A0000;">${Number(item.price).toFixed(2)} €</div>
+                    <div style="font-size: 10px; color: #666666; margin-top: 2px;">${(Number(item.price) * 1.95583).toFixed(2)} лв.</div>
+                </td>
+                <td style="padding: 14px 16px; text-align: right; white-space: nowrap;">
+                    <div style="font-weight: 800; color: #000000; font-size: 14px;">${(Number(item.price) * item.quantity).toFixed(2)} €</div>
+                    <div style="font-size: 10px; color: #666666; margin-top: 2px;">${(Number(item.price) * item.quantity * 1.95583).toFixed(2)} лв.</div>
                 </td>
             </tr>
         `).join('');
 
-        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${window.location.origin}/order/receipt/${order.id}`;
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${window.location.origin}/order/receipt/${order.id}`;
         const logoUrl = `${window.location.origin}/LOGO.png`;
+
+        const rawSubtotal = order.items.reduce((sum, item) => sum + (Number(item.price) * (item.quantity || 1)), 0);
+        const discountAmount = rawSubtotal - order.total_amount;
+        const hasDiscount = discountAmount > 0.01;
+
+        const statusStyles: Record<string, { label: string, color: string, bg: string, border: string }> = {
+            'pending': { label: 'Приета', color: '#15803d', bg: '#dcfce7', border: '#bbf7d0' },
+            'processing': { label: 'Обработва се', color: '#c2410c', bg: '#ffedd5', border: '#fed7aa' },
+            'shipped': { label: 'Изпратена', color: '#1d4ed8', bg: '#dbeafe', border: '#bfdbfe' },
+            'completed': { label: 'Завършена', color: '#f8fafc', bg: '#0f172a', border: '#000000' },
+            'cancelled': { label: 'Отказана', color: '#b91c1c', bg: '#fee2e2', border: '#fecaca' }
+        };
+        const st = statusStyles[order.status] || { label: order.status, color: '#333', bg: '#f5f5f5', border: '#ddd' };
 
         const html = `
             <!DOCTYPE html>
             <html lang="bg">
-                <head>
-                    <meta charset="UTF-8">
-                    <title>Поръчка #${order.id.slice(0, 8)} - CarDecal.bg</title>
-                    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
-                    <style>
-                        @page { size: A4; margin: 0; }
-                        * { box-sizing: border-box; -webkit-print-color-adjust: exact; }
-                        body { 
-                            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
-                            margin: 0; padding: 40px; 
-                            color: #1a1a1a; background: #fff; line-height: 1.5;
-                        }
-                        .container { max-width: 800px; margin: 0 auto; }
-                        
-                        /* Header */
-                        .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px; }
-                        .brand { flex: 1; }
-                        .logo-container { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
-                        .logo-img { height: 45px; width: auto; }
-                        .brand-name { font-size: 24px; font-weight: 900; letter-spacing: 2px; color: #000; text-transform: uppercase; }
-                        .contact-info { font-size: 11px; color: #666; font-weight: 400; }
-                        .contact-info p { margin: 1px 0; }
-                        
-                        .order-meta { text-align: right; }
-                        .order-label { display: inline-block; padding: 6px 12px; background: #FF0000; color: #fff; font-size: 10px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; }
-                        .order-number { font-size: 20px; font-weight: 900; margin: 0; color: #3D0000; }
-                        .order-date { font-size: 13px; color: #888; margin-top: 2px; }
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Клиентска Разписка #${order.id.slice(0, 8)}</title>
+                <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+                <style>
+                    :root {
+                        --primary: #000000;
+                        --primary-dark: #3D0000;
+                        --primary-red: #950101;
+                        --accent-red: #D32F2F;
+                        --soft-red: #FFEBEE;
+                        --bg-color: #F9F9F9;
+                        --surface: #FFFFFF;
+                        --text-main: #4A0000;
+                        --text-muted: #666666;
+                        --border-light: #EAEAEA;
+                    }
 
-                        /* Double Column Blocks */
-                        .blocks-wrapper { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
-                        .block-title { font-size: 10px; font-weight: 900; color: #888; text-transform: uppercase; letter-spacing: 1.5px; border-bottom: 1px solid #eee; padding-bottom: 6px; margin-bottom: 8px; }
-                        .block-content p { margin: 3px 0; font-size: 13px; color: #333; }
-                        .block-content strong { color: #000; font-weight: 600; }
+                    @page { size: A4; margin: 0; }
+                    
+                    * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+                    
+                    body { 
+                        font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                        margin: 0; 
+                        padding: 40px; 
+                        color: var(--text-main); 
+                        background: var(--bg-color); 
+                        line-height: 1.5;
+                        -webkit-font-smoothing: antialiased;
+                    }
 
-                        .status-badge { display: inline-block; font-size: 11px; font-weight: 700; color: #000; margin-top: 4px; }
-                        
-                        /* Table */
-                        table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
-                        thead th { text-align: left; padding: 10px 8px; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; color: #888; border-top: 2px solid #000; border-bottom: 1px solid #000; }
-                        th.center { text-align: center; }
-                        th.right { text-align: right; }
+                    .invoice-wrapper {
+                        max-width: 900px;
+                        margin: 0 auto;
+                        background: var(--surface);
+                        padding: 40px 50px;
+                        border-radius: 16px;
+                        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.04);
+                    }
 
-                        /* Summary Card */
-                        .summary-card { 
-                            margin-top: 10px;
-                            float: right;
-                            width: 300px;
-                            background: #fdfdfd;
-                            padding: 16px;
-                            border: 1px solid #eee;
-                            border-radius: 8px;
-                        }
-                        .summary-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px; color: #666; }
-                        .summary-row.total { 
-                            margin-top: 12px; padding-top: 12px; 
-                            border-top: 1px solid #eee; 
-                            color: #FF0000; font-weight: 900; font-size: 20px; 
-                        }
-                        .currency { font-size: 0.5em; vertical-align: middle; margin-right: 4px; color: #888; }
+                    /* 1. Header Section */
+                    .header {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: flex-start;
+                        padding-bottom: 30px;
+                        border-bottom: 2px solid var(--border-light);
+                        margin-bottom: 40px;
+                    }
 
-                        /* Footer */
-                        .footer { clear: both; margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; display: flex; justify-content: space-between; align-items: flex-end; }
-                        .footer-note { font-size: 12px; color: #888; max-width: 450px; }
-                        .footer-note h4 { color: #000; font-size: 13px; margin: 0 0 6px 0; text-transform: uppercase; letter-spacing: 1px; }
-                        .qr-block { text-align: center; }
-                        .qr-img { width: 80px; height: 80px; margin-bottom: 6px; padding: 6px; border: 1px solid #eee; border-radius: 8px; background: #fff; }
-                        .qr-text { font-size: 9px; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; }
+                    .header-left .logo {
+                        height: 48px;
+                        margin-bottom: 16px;
+                    }
+                    
+                    .company-details {
+                        font-size: 12px;
+                        color: var(--text-muted);
+                        line-height: 1.6;
+                    }
+                    .company-details strong {
+                        color: var(--primary);
+                        font-size: 14px;
+                        display: block;
+                        margin-bottom: 4px;
+                    }
 
-                        @media print {
-                            body { padding: 20px; }
-                            .no-print { display: none; }
-                            .summary-card { break-inside: avoid; }
-                            .footer { break-inside: avoid; }
-                        }
-                    </style>
-                </head>
-                <body>
-                    <div class="container">
-                        <div class="header">
-                            <div class="brand">
-                                <div class="logo-container">
-                                    <img src="${logoUrl}" alt="CarDecal" class="logo-img">
-                                </div>
-                                <div class="contact-info">
-                                    <p>Телефон: +359 89 478 9942</p>
-                                    <p>Email: cardecal@abv.bg</p>
-                                    <p>Уебсайт: ${window.location.hostname}</p>
-                                </div>
-                            </div>
-                            <div class="order-meta">
-                                <div class="order-label">Клиентска разписка</div>
-                                <h1 class="order-number">№ ${order.id.slice(0, 10).toUpperCase()}</h1>
-                                <div class="order-date">${dateFormatted} ч.</div>
+                    .header-right {
+                        text-align: right;
+                    }
+
+                    .receipt-badge {
+                        font-size: 10px;
+                        font-weight: 800;
+                        letter-spacing: 2px;
+                        text-transform: uppercase;
+                        color: var(--accent-red);
+                        margin-bottom: 8px;
+                        display: block;
+                    }
+
+                    .order-number {
+                        font-size: 28px;
+                        font-weight: 900;
+                        color: var(--primary);
+                        margin: 0 0 4px 0;
+                        letter-spacing: -0.5px;
+                    }
+
+                    .order-date {
+                        font-size: 13px;
+                        color: var(--text-muted);
+                        margin-bottom: 16px;
+                    }
+
+                    .status-pill {
+                        display: inline-block;
+                        padding: 6px 16px;
+                        border-radius: 50px;
+                        font-size: 11px;
+                        font-weight: 800;
+                        text-transform: uppercase;
+                        letter-spacing: 1px;
+                        color: ${st.color};
+                        background-color: ${st.bg};
+                        border: 1px solid ${st.border};
+                    }
+
+                    /* 2. Customer & Delivery Cards */
+                    .cards-grid {
+                        display: grid;
+                        grid-template-columns: 1fr 1fr;
+                        gap: 24px;
+                        margin-bottom: 40px;
+                    }
+
+                    .info-card {
+                        background: var(--surface);
+                        border: 1px solid var(--border-light);
+                        border-radius: 12px;
+                        padding: 24px;
+                        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+                    }
+
+                    .card-title {
+                        font-size: 11px;
+                        font-weight: 800;
+                        color: var(--text-muted);
+                        text-transform: uppercase;
+                        letter-spacing: 1.5px;
+                        margin: 0 0 16px 0;
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                    }
+                    
+                    .card-title svg {
+                        width: 14px;
+                        height: 14px;
+                        color: var(--accent-red);
+                    }
+
+                    .info-row {
+                        margin-bottom: 12px;
+                        font-size: 13px;
+                        display: flex;
+                        flex-direction: column;
+                    }
+                    .info-row:last-child {
+                        margin-bottom: 0;
+                    }
+                    .info-label {
+                        font-size: 10px;
+                        color: var(--text-muted);
+                        text-transform: uppercase;
+                        font-weight: 600;
+                        margin-bottom: 3px;
+                        letter-spacing: 0.5px;
+                    }
+                    .info-value {
+                        color: var(--primary);
+                        font-weight: 600;
+                        font-size: 14px;
+                        line-height: 1.4;
+                    }
+
+                    /* 3. Products Table */
+                    .table-wrapper {
+                        border: 1px solid var(--border-light);
+                        border-radius: 12px;
+                        overflow: hidden;
+                        margin-bottom: 30px;
+                    }
+
+                    table {
+                        width: 100%;
+                        border-collapse: collapse;
+                    }
+
+                    thead {
+                        background: #F4F4F4;
+                    }
+
+                    th {
+                        text-align: left;
+                        padding: 14px 16px;
+                        font-size: 11px;
+                        font-weight: 800;
+                        color: var(--text-muted);
+                        text-transform: uppercase;
+                        letter-spacing: 1px;
+                        border-bottom: 1px solid var(--border-light);
+                    }
+
+                    td {
+                        border-bottom: 1px solid var(--border-light);
+                    }
+
+                    tr:last-child td {
+                        border-bottom: none;
+                    }
+
+                    /* 4. Summary Section */
+                    .summary-container {
+                        display: flex;
+                        justify-content: flex-end;
+                        margin-bottom: 50px;
+                    }
+
+                    .summary-card {
+                        width: 400px;
+                        background: var(--surface);
+                        border: 1px solid var(--border-light);
+                        border-radius: 12px;
+                        padding: 24px;
+                        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+                    }
+
+                    .summary-row {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        padding-bottom: 12px;
+                        margin-bottom: 12px;
+                        border-bottom: 1px solid var(--border-light);
+                        font-size: 13px;
+                        color: var(--text-muted);
+                        font-weight: 500;
+                    }
+                    
+                    .summary-row:last-of-type {
+                        border-bottom: none;
+                        margin-bottom: 0;
+                        padding-bottom: 0;
+                    }
+
+                    .summary-val {
+                        color: var(--primary);
+                        font-weight: 700;
+                        text-align: right;
+                    }
+
+                    .total-row {
+                        margin-top: 16px;
+                        padding-top: 16px;
+                        border-top: 2px solid var(--primary);
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: flex-start;
+                    }
+
+                    .total-label {
+                        font-size: 14px;
+                        font-weight: 900;
+                        color: var(--primary);
+                        text-transform: uppercase;
+                        letter-spacing: 1px;
+                        margin-top: 8px;
+                    }
+
+                    .total-amount {
+                        text-align: right;
+                    }
+
+                    .total-eur {
+                        font-size: 32px;
+                        font-weight: 900;
+                        color: var(--accent-red);
+                        line-height: 1;
+                        letter-spacing: -1px;
+                    }
+
+                    .total-eur-currency {
+                        font-size: 16px;
+                        font-weight: 700;
+                        margin-left: 4px;
+                    }
+
+                    .total-bgn {
+                        font-size: 15px;
+                        font-weight: 700;
+                        color: var(--text-muted);
+                        margin-top: 6px;
+                    }
+
+                    /* 5. Footer & Trust Section */
+                    .footer {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: flex-end;
+                        padding-top: 30px;
+                        border-top: 2px solid var(--border-light);
+                    }
+
+                    .footer-message {
+                        max-width: 400px;
+                    }
+
+                    .footer-thankyou {
+                        font-size: 16px;
+                        font-weight: 800;
+                        color: var(--primary);
+                        margin: 0 0 8px 0;
+                    }
+
+                    .footer-text {
+                        font-size: 12px;
+                        color: var(--text-muted);
+                        margin: 0 0 16px 0;
+                        line-height: 1.6;
+                    }
+
+                    .footer-links a {
+                        font-size: 11px;
+                        font-weight: 600;
+                        color: var(--text-muted);
+                        text-decoration: none;
+                        text-transform: uppercase;
+                        letter-spacing: 0.5px;
+                        margin-right: 16px;
+                        border-bottom: 1px solid transparent;
+                        transition: all 0.2s;
+                    }
+                    
+                    .footer-links a:hover {
+                        color: var(--primary);
+                        border-color: var(--primary);
+                    }
+
+                    .qr-section {
+                        text-align: center;
+                    }
+
+                    .qr-section img {
+                        width: 70px;
+                        height: 70px;
+                        margin-bottom: 8px;
+                        border-radius: 8px;
+                        padding: 4px;
+                        background: #fff;
+                        border: 1px solid var(--border-light);
+                    }
+
+                    .qr-section p {
+                        margin: 0;
+                        font-size: 9px;
+                        font-weight: 800;
+                        text-transform: uppercase;
+                        letter-spacing: 1px;
+                        color: var(--text-muted);
+                    }
+
+                    /* Print and Mobile Adjustments */
+                    @media (max-width: 768px) {
+                        .cards-grid { grid-template-columns: 1fr; }
+                        .header { flex-direction: column; gap: 24px; }
+                        .header-right { text-align: left; }
+                        .table-wrapper { overflow-x: auto; }
+                        .summary-container { justify-content: flex-start; }
+                        .summary-card { width: 100%; }
+                        .footer { flex-direction: column; gap: 30px; align-items: flex-start; }
+                        .invoice-wrapper { padding: 20px; border-radius: 0; box-shadow: none; background: transparent; }
+                        body { padding: 0; background: var(--surface); }
+                    }
+
+                    @media print {
+                        body { background: #fff; padding: 0; }
+                        .invoice-wrapper { box-shadow: none; padding: 0; max-width: 100%; border-radius: 0; }
+                        .no-print { display: none; }
+                        .summary-card, .info-card, .table-wrapper { border-color: #ddd; box-shadow: none; }
+                        .qr-section { border: none !important; }
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="invoice-wrapper">
+                    <!-- 1. Header -->
+                    <div class="header">
+                        <div class="header-left">
+                            <img src="${logoUrl}" alt="CarDecal" class="logo">
+                            <div class="company-details">
+                                <strong>CarDecal.bg</strong>
+                                ЕИК/БУЛСТАТ: 207399120<br>
+                                България, гр. София<br>
+                                Телефон: +359 89 478 9942<br>
+                                Email: cardecal@abv.bg
                             </div>
                         </div>
+                        <div class="header-right">
+                            <span class="receipt-badge">КЛИЕНТСКА РАЗПИСКА</span>
+                            <h1 class="order-number">№ ${order.id.slice(0, 10).toUpperCase()}</h1>
+                            <div class="order-date">${dateFormatted} ч.</div>
+                            <div class="status-pill">${st.label}</div>
+                        </div>
+                    </div>
 
-                        <div class="blocks-wrapper">
-                            <div>
-                                <div class="block-title">Данни за клиента</div>
-                                <div class="block-content">
-                                    <p><strong>${order.shipping_details.fullName}</strong></p>
-                                    <p>${order.shipping_details.phone}</p>
-                                    <p>${order.shipping_details.email || '-'}</p>
-                                </div>
+                    <!-- 2. Customer & Delivery -->
+                    <div class="cards-grid">
+                        <div class="info-card">
+                            <h2 class="card-title">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                Данни за клиента
+                            </h2>
+                            <div class="info-row">
+                                <span class="info-label">Име и Фамилия</span>
+                                <span class="info-value">${order.shipping_details.fullName}</span>
                             </div>
-                            <div>
-                                <div class="block-title">Детайли на поръчката</div>
-                                <div class="block-content">
-                                    <div>
-                                        <div style="font-size: 9px; color: #aaa; text-transform: uppercase;">Плащане</div>
-                                        <div class="status-badge">${paymentMap[order.payment_method] || order.payment_method}</div>
-                                    </div>
-                                </div>
+                            <div class="info-row">
+                                <span class="info-label">Телефон</span>
+                                <span class="info-value">${order.shipping_details.phone}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Имейл адрес</span>
+                                <span class="info-value">${order.shipping_details.email || '-'}</span>
                             </div>
                         </div>
-
-                        <div class="blocks-wrapper" style="margin-bottom: 15px;">
-                            <div style="grid-column: span 2;">
-                                <div class="block-title">Доставка</div>
-                                <div class="block-content">
-                                    <p><strong>Куриер:</strong> ${order.shipping_details.deliveryType === 'econt' ? 'Еконт' : order.shipping_details.deliveryType === 'speedy' ? 'Спиди' : 'Адрес'} - ${order.shipping_details.city}</p>
-                                    <p><strong>Офис/Адрес:</strong> ${order.shipping_details.officeName}</p>
-                                    ${order.shipping_details.notes ? `<p style="margin-top: 15px; font-style: italic; color: #666; font-size: 12px; padding: 10px; background: #f9f9f9; border-left: 2px solid #ddd;"><strong style="font-style: normal; color: #444;">Бележка:</strong> "${order.shipping_details.notes}"</p>` : ''}
-                                </div>
+                        <div class="info-card">
+                            <h2 class="card-title">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>
+                                Доставка и Плащане
+                            </h2>
+                            <div class="info-row">
+                                <span class="info-label">Куриер и Населено място</span>
+                                <span class="info-value">${order.shipping_details.deliveryType === 'econt' ? 'Еконт' : order.shipping_details.deliveryType === 'speedy' ? 'Спиди' : 'Адрес'} - г. ${order.shipping_details.city}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Офис / Адрес</span>
+                                <span class="info-value">${order.shipping_details.officeName}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Плащане</span>
+                                <span class="info-value">${paymentMap[order.payment_method] || order.payment_method}</span>
                             </div>
                         </div>
+                    </div>
 
+                    ${order.shipping_details.notes ? `
+                    <div style="background: #FFF9C4; border-left: 4px solid #FBC02D; padding: 16px; margin-bottom: 40px; border-radius: 8px;">
+                        <strong style="color: #F57F17; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 4px;">Бележка от клиента:</strong>
+                        <span style="color: #333; font-size: 13px; font-weight: 500;">${order.shipping_details.notes}</span>
+                    </div>
+                    ` : ''}
+
+                    <!-- 3. Products Table -->
+                    <div class="table-wrapper">
                         <table>
                             <thead>
                                 <tr>
-                                    <th style="padding-left: 0;">Артикул / Описание</th>
-                                    <th class="center" style="width: 80px;">К-во</th>
-                                    <th class="right" style="width: 100px;">Ед. Цена</th>
-                                    <th class="right" style="width: 100px; padding-right: 0;">Общо</th>
+                                    <th style="width: 35%">Продукт</th>
+                                    <th style="width: 25%">Вариант</th>
+                                    <th style="width: 15%">Размер</th>
+                                    <th style="width: 5%; text-align: center;">К-во</th>
+                                    <th style="width: 10%; text-align: right;">Ед. цена</th>
+                                    <th style="width: 10%; text-align: right;">Общо</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 ${itemsHtml}
                             </tbody>
                         </table>
+                    </div>
 
+                    <!-- 4. Summary Section -->
+                    <div class="summary-container">
                         <div class="summary-card">
                             <div class="summary-row">
-                                <span>Брой артикули:</span>
-                                <strong>${order.items.length}</strong>
+                                <span>Брой артикули</span>
+                                <span class="summary-val">${order.items.length}</span>
                             </div>
                             <div class="summary-row">
-                                <span>Доставка (Econt/Speedy):</span>
-                                <strong>по тарифа</strong>
+                                <span>Доставка</span>
+                                <span class="summary-val">По тарифа на куриера</span>
                             </div>
-                            <div class="summary-row" style="margin-top: 5px;">
-                                <span>Междинна сума:</span>
-                                <div style="text-align: right;">
-                                    <strong>${(order.total_amount).toFixed(2)} <span style="font-size: 10px; color: #888;">EUR</span></strong>
-                                    <div style="font-size: 10px; color: #888; margin-top: 2px;">${(order.total_amount * 1.95583).toFixed(2)} лв.</div>
+                            <div class="summary-row">
+                                <span>Междинна сума</span>
+                                <div class="summary-val">
+                                    ${rawSubtotal.toFixed(2)} EUR
+                                    <div style="font-size: 10px; color: var(--text-muted); font-weight: 500; margin-top:2px;">${(rawSubtotal * 1.95583).toFixed(2)} лв.</div>
                                 </div>
                             </div>
-                            <div class="summary-row total" style="align-items: flex-end;">
-                                <span>ОБЩО ЗА ПЛАЩАНЕ:</span>
-                                <div style="text-align: right;">
-                                    <span><span class="currency">EUR</span>${(order.total_amount).toFixed(2)}</span>
-                                    <div style="font-size: 14px; color: #888; font-weight: 600; margin-top: 4px;">${(order.total_amount * 1.95583).toFixed(2)} <span style="font-size: 12px;">BGN</span></div>
+                            ${hasDiscount ? `
+                            <div class="summary-row" style="color: #16a34a; border-top: 1px dashed var(--border-light); padding-top: 12px; margin-top: 4px;">
+                                <span style="font-weight: 700;">Отстъпка</span>
+                                <div class="summary-val" style="color: #16a34a;">
+                                    -${discountAmount.toFixed(2)} EUR
+                                    <div style="font-size: 10px; opacity: 0.8; font-weight: 500; margin-top:2px;">-${(discountAmount * 1.95583).toFixed(2)} лв.</div>
                                 </div>
                             </div>
-                        </div>
-
-                        <div class="footer">
-                            <div class="footer-note">
-                                <h4>Благодарим Ви за доверието!</h4>
-                                <p>Благодарение на Вас продължаваме да развиваме CarDecal. Вашето удовлетворение е най-важно за нас. До скоро!</p>
-                                <p style="margin-top: 15px;">
-                                    <a href="${window.location.origin}/terms" style="color: #888; text-decoration: none; border-bottom: 1px solid #eee;">Общи условия</a> • 
-                                    <a href="${window.location.origin}/privacy" style="color: #888; text-decoration: none; border-bottom: 1px solid #eee; margin-left: 10px;">Декларация за поверителност</a>
-                                </p>
-                                <p style="margin-top: 10px; font-weight: 900; color: #000;">CarDecal</p>
-                            </div>
-                            <div class="qr-block">
-                                <img src="${qrUrl}" alt="QR Code" class="qr-img">
-                                <div class="qr-text">Проследи поръчката</div>
+                            ` : ''}
+                            
+                            <div class="total-row">
+                                <span class="total-label">ОБЩО ЗА ПЛАЩАНЕ</span>
+                                <div class="total-amount">
+                                    <div class="total-eur">${(order.total_amount).toFixed(2)}<span class="total-eur-currency">EUR</span></div>
+                                    <div class="total-bgn">${(order.total_amount * 1.95583).toFixed(2)} BGN</div>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </body>
+
+                    <!-- 5. Trust & Legitimacy -->
+                    <div class="footer">
+                        <div class="footer-message">
+                            <h3 class="footer-thankyou">Благодарим Ви за доверието!</h3>
+                            <p class="footer-text">
+                                С Вашата поръчка помагате на CarDecal да продължи да създава висококачествени стикери и дизайни. 
+                                Вашето удовлетворение е наш основен приоритет.
+                            </p>
+                            <div class="footer-links">
+                                <a href="${window.location.origin}/terms">Общи условия</a>
+                                <a href="${window.location.origin}/privacy">Декларация за поверителност</a>
+                            </div>
+                        </div>
+                        <div class="qr-section">
+                            <img src="${qrUrl}" alt="QR code" />
+                            <p>Проследи поръчката</p>
+                        </div>
+                    </div>
+                </div>
+            </body>
             </html>
         `;
         printWindow.document.write(html);
