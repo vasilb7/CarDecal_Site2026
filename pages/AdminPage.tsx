@@ -1482,9 +1482,48 @@ const MaintenanceSettingsSection: React.FC = () => {
     const [sendingEmail, setSendingEmail] = useState(false);
     
     // Timer state for the Modal
-    const [modalAnnText, setModalAnnText] = useState('Сайтът ще влезе в профилактика след малко.');
-    const [customDuration, setCustomDuration] = useState('5');
+    const [modalAnnText, setModalAnnText] = useState('Сайтът ще влезе в профилактика след {timer}');
+    const [customDuration, setCustomDuration] = useState('3');
     const [durationUnit, setDurationUnit] = useState<'sec' | 'min'>('min');
+    
+    // Preview timer logic
+    const [previewTime, setPreviewTime] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!isActivationMenuOpen) return;
+        
+        const updatePreview = () => {
+            const val = parseInt(customDuration);
+            if (isNaN(val) || val <= 0) {
+                setPreviewTime(null);
+                return;
+            }
+            
+            if (durationUnit === 'min') {
+                setPreviewTime(`${val}:00`);
+            } else {
+                setPreviewTime(`${val} сек`);
+            }
+        };
+
+        updatePreview();
+    }, [customDuration, durationUnit, isActivationMenuOpen]);
+
+    const formatPreview = (text: string) => {
+        if (!text) return "";
+        if (!text.includes("{timer}")) return text;
+        
+        const parts = text.split("{timer}");
+        return (
+            <span className="flex items-center inline-flex">
+                {parts[0]}
+                <span className="inline-flex items-center justify-center px-1.5 py-0.5 bg-[#ff0000] text-white text-[9px] font-black rounded font-mono mx-1 shrink-0 shadow-[0_0_8px_rgba(255,0,0,0.4)]">
+                    {previewTime || "..."}
+                </span>
+                {parts[1]}
+            </span>
+        );
+    };
 
     useEffect(() => {
         if (!loading) {
@@ -1827,13 +1866,18 @@ const MaintenanceSettingsSection: React.FC = () => {
                             <div className="space-y-6">
                                 <div>
                                     <label className="block text-[10px] uppercase tracking-widest text-zinc-500 mb-2">Съобщение за клиенти</label>
-                                    <input 
-                                        type="text"
-                                        value={modalAnnText}
-                                        onChange={e => setModalAnnText(e.target.value)}
-                                        className="w-full bg-white/5 border border-white/10 p-4 text-white text-xs uppercase tracking-widest focus:outline-none focus:border-red-600 transition-colors"
-                                        placeholder="Сайтът ще влезе в профилактика след..."
-                                    />
+                                    <div className="flex flex-col gap-2">
+                                        <input 
+                                            type="text"
+                                            value={modalAnnText}
+                                            onChange={e => setModalAnnText(e.target.value)}
+                                            className="w-full bg-white/5 border border-white/10 p-4 text-white text-xs uppercase tracking-widest focus:outline-none focus:border-red-600 transition-colors"
+                                            placeholder="Сайтът ще влезе в профилактика след {timer}..."
+                                        />
+                                        <div className="px-4 py-3 bg-black/40 border border-white/5 rounded text-[10px] text-zinc-500 uppercase tracking-widest italic min-h-[44px] flex items-center">
+                                            Преглед: <span className="text-zinc-300 ml-2">{formatPreview(modalAnnText)}</span>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <div>

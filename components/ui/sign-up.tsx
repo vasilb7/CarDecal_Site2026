@@ -26,10 +26,22 @@ const FloatingInput = ({
     isPassword = false,
     showPassword,
     onTogglePassword,
+    storageKey,
     ...props 
 }: any) => {
     const [isFocused, setIsFocused] = useState(false);
-    const [value, setValue] = useState("");
+    const [value, setValue] = useState(() => {
+        if (typeof window !== 'undefined' && storageKey) {
+            return sessionStorage.getItem(`register_${storageKey}`) || "";
+        }
+        return "";
+    });
+
+    React.useEffect(() => {
+        if (storageKey) {
+            sessionStorage.setItem(`register_${storageKey}`, value);
+        }
+    }, [value, storageKey]);
 
     return (
         <div className="relative group w-full">
@@ -112,7 +124,7 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
   onSignUp,
   onGoogleSignUp,
 }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const [showPassword, setShowPassword] = useState(false);
@@ -191,6 +203,7 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
                     <FloatingInput 
                         label={t('auth.name_label', 'Име и Фамилия')}
                         name="name"
+                        storageKey="name"
                         required
                     />
 
@@ -198,6 +211,7 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
                     <FloatingInput 
                         label={t('auth.email', 'Имейл адрес')}
                         name="email"
+                        storageKey="email"
                         type="email"
                         required
                     />
@@ -206,6 +220,7 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
                     <FloatingInput 
                         label={t('auth.phone', 'Телефонен номер')}
                         name="phone"
+                        storageKey="phone"
                         type="tel"
                         required
                     />
@@ -219,6 +234,29 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
                         onTogglePassword={() => setShowPassword(!showPassword)}
                         required
                     />
+
+                    {/* Terms Agreement */}
+                    <div className="flex items-start gap-4 px-4 py-1">
+                        <div className="relative flex items-center h-5">
+                            <input
+                                id="terms"
+                                name="terms"
+                                type="checkbox"
+                                required
+                                className="w-5 h-5 rounded border-white/10 bg-white/5 text-red-600 focus:ring-red-600 focus:ring-offset-[#111] transition-all cursor-pointer accent-red-600"
+                            />
+                        </div>
+                        <label htmlFor="terms" className="text-sm text-white/60 leading-tight cursor-pointer select-none">
+                            {t('auth.agree_to_terms', 'Съгласявам се с')}
+                            <Link to="/terms" target="_blank" rel="noopener noreferrer" className="text-white hover:text-red-500 underline underline-offset-4 mx-1 transition-colors">
+                                {t('auth.terms_link', 'Общите условия')}
+                            </Link>
+                            {i18n.language === 'bg' ? 'и' : 'and'}
+                            <Link to="/privacy" target="_blank" rel="noopener noreferrer" className="text-white hover:text-red-500 underline underline-offset-4 ml-1 transition-colors">
+                                {t('auth.privacy_link', 'Политиката за поверителност')}
+                            </Link>
+                        </label>
+                    </div>
 
                     {/* Submit Button */}
                     <motion.button

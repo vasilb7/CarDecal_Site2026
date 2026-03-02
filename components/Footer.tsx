@@ -145,18 +145,7 @@ const Footer: React.FC = () => {
               </div>
             </div>
 
-            {/* ИНФОРМАЦИЯ */}
-            <div className="hidden md:flex flex-col items-start text-left">
-              <span className="text-[9px] sm:text-[9px] lg:text-[11px]
-                text-white/40 font-black tracking-[0.2em] mb-4 sm:mb-2 lg:mb-4">
-                ИНФОРМАЦИЯ
-              </span>
-              <div className="flex flex-col gap-3 sm:gap-[0.7vw] lg:gap-[0.8vw] items-start">
-                <RollingLink to="/privacy" className="text-[0.95rem] sm:text-[2.8vw] lg:text-[2vw] xl:text-[1.7vw] font-black uppercase text-white leading-none inline-block">ПОВЕРИТЕЛНОСТ</RollingLink>
-                <RollingLink to="/terms"   className="text-[0.95rem] sm:text-[2.8vw] lg:text-[2vw] xl:text-[1.7vw] font-black uppercase text-white leading-none inline-block">ОБЩИ УСЛОВИЯ</RollingLink>
-                <RollingLink to="/legal"   className="text-[0.95rem] sm:text-[2.8vw] lg:text-[2vw] xl:text-[1.7vw] font-black uppercase text-white leading-none inline-block">ДОСТАВКА</RollingLink>
-              </div>
-            </div>
+
 
             {/* Социални */}
             <div className="flex flex-col items-end text-right">
@@ -198,10 +187,32 @@ const Footer: React.FC = () => {
             </Link>
           </div>
 
-          <span className="text-[8px] sm:text-[9px] lg:text-[11px]
-            font-black tracking-widest uppercase text-black/80 text-center px-4 mt-1 sm:mt-0">
-            © {new Date().getFullYear()} CAR DECAL. ВСИЧКИ ПРАВА ЗАПАЗЕНИ
-          </span>
+          <div className="flex flex-col items-center gap-1 mt-1 sm:mt-0">
+            <span className="text-[7px] sm:text-[8px] lg:text-[10px]
+              font-black tracking-[0.2em] uppercase text-black/70 text-center px-4">
+              © {new Date().getFullYear()} CAR DECAL. ВСИЧКИ ПРАВА ЗАПАЗЕНИ
+            </span>
+            <div
+              className="
+                flex flex-col items-center justify-center gap-2 text-center
+                sm:flex-row sm:gap-4 sm:justify-center
+              "
+            >
+              <Link
+                to="/privacy"
+                className="text-[6px] sm:text-[7px] lg:text-[8px] font-bold uppercase tracking-[0.1em] text-black/80 hover:text-black transition-colors"
+              >
+                Политика за поверителност
+              </Link>
+
+              <Link
+                to="/terms"
+                className="text-[6px] sm:text-[7px] lg:text-[8px] font-bold uppercase tracking-[0.1em] text-black/80 hover:text-black transition-colors"
+              >
+                Общи условия
+              </Link>
+            </div>
+          </div>
 
         </div>
 

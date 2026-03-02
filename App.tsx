@@ -12,7 +12,6 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import PrivacyPage from './pages/PrivacyPage';
 import TermsPage from './pages/TermsPage';
-import LegalPage from './pages/LegalPage';
 import BookingPage from './pages/BookingPage';
 import ProfilePage from './pages/ProfilePage';
 import RecoveryPage from './pages/RecoveryPage';
@@ -134,7 +133,7 @@ function AppContent() {
                   <Route path="/pricing" element={<PageWrapper><PricingPage /></PageWrapper>} />
                   <Route path="/privacy" element={<PageWrapper><PrivacyPage /></PageWrapper>} />
                   <Route path="/terms" element={<PageWrapper><TermsPage /></PageWrapper>} />
-                  <Route path="/legal" element={<PageWrapper><LegalPage /></PageWrapper>} />
+
                   <Route path="/book-now" element={<PageWrapper><BookingPage /></PageWrapper>} />
                   <Route path="/cart" element={<PageWrapper><CartPage /></PageWrapper>} />
                   <Route path="/profile" element={<PageWrapper><ProfilePage /></PageWrapper>} />

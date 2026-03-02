@@ -1,15 +1,15 @@
 export const SITE_CONFIG = {
   company: {
-    name: "CarDecal",
-    headquarters: "София, България",
-    headquartersEn: "Sofia, Bulgaria",
-    address: "ул. Екзарх Йосиф 15, 1000 Център",
-    addressEn: "15 Ekzarh Yosif St, 1000 Center",
-    vat: "BG7773337890",
+    name: "„КАР ДЕКАЛ“ ЕООД",
+    headquarters: "гр. Варна (9000), р-н Приморски",
+    headquartersEn: "Varna (9000), Primorski dist.",
+    address: "ул. „Уста Генчо Кънев“ № 9",
+    addressEn: "9 Usta Gencho Kanev St",
+    vat: "206975040",
   },
   contact: {
-    email: "info@cardecal.com",
-    phone: "+359 89 777 7373",
+    email: "cardecal@abv.bg",
+    phone: "+359 8XX XXX XXX",
   },
   socials: {
     instagram: "https://instagram.com/vbvision",

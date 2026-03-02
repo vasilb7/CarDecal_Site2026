@@ -132,12 +132,12 @@ const CatalogPage: React.FC = () => {
     // Reset page on filter change
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchTerm, selectedSizes, selectedCategory, sortBy]);
+    }, [searchTerm, selectedSizes, selectedCategory, sortBy, priceRange]);
 
     // Scroll to top when page or filters change
     useEffect(() => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
-    }, [currentPage, searchTerm, selectedSizes, selectedCategory, sortBy]);
+    }, [currentPage, searchTerm, selectedSizes, selectedCategory, sortBy, priceRange]);
 
     // Sync initial price range once products load
     useEffect(() => {

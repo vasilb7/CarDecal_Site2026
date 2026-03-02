@@ -145,7 +145,6 @@ const Header: React.FC = () => {
                 return true;
             }
 
-            // Use Math.ceil to avoid appearing "behind" the actual time
             const totalSeconds = Math.ceil(diff / 1000);
             if (totalSeconds < 60) {
                 setTimeLeftToStart(`${totalSeconds} сек`);
@@ -157,15 +156,43 @@ const Header: React.FC = () => {
             return false;
         };
 
-        // Run immediately to eliminate the 1s delay
         if (tick()) return;
-
         const interval = setInterval(() => {
             if (tick()) clearInterval(interval);
         }, 1000);
 
         return () => clearInterval(interval);
     }, [settings.maintenance_auto_start_at]);
+
+    // Helper to replace {timer} in strings or append if missing for maintenance
+    const renderMessageWithTimer = (text: string, forceTimer: boolean = false) => {
+        if (!text) return null;
+        
+        const hasPlaceholder = text.includes("{timer}");
+        const timerElement = timeLeftToStart ? (
+            <span className="inline-flex items-center justify-center px-2 py-0.5 bg-[#ff0000] text-white text-[10px] font-black rounded font-mono ml-2 shrink-0 shadow-[0_0_12px_rgba(255,0,0,0.5)] border border-white/20 animate-pulse">
+                {timeLeftToStart}
+            </span>
+        ) : null;
+
+        if (!hasPlaceholder) {
+            return (
+                <span className="flex items-center">
+                    {text}
+                    {forceTimer && timerElement}
+                </span>
+            );
+        }
+
+        const parts = text.split("{timer}");
+        return (
+            <span className="flex items-center flex-wrap justify-center">
+                {parts[0]}
+                {timerElement}
+                {parts[1]}
+            </span>
+        );
+    };
 
     // Close menu on route change
     useEffect(() => {
@@ -250,10 +277,10 @@ const Header: React.FC = () => {
                                                 {isMaintenanceWarningActive ? (
                                                     <span className="flex items-center gap-3">
                                                         <span className="w-1.5 h-1.5 rounded-full bg-[#ff0000] animate-pulse shrink-0" />
-                                                        {settings.announcement_text || "Подръжка на сайта ще започне скоро"}
+                                                        {renderMessageWithTimer(settings.announcement_text || "Поддръжка на сайта ще започне скоро", true)}
                                                     </span>
                                                 ) : (
-                                                    annMessages[currentMsgIndex] || ""
+                                                    renderMessageWithTimer(annMessages[currentMsgIndex] || "")
                                                 )}
                                             </span>
                                         </motion.div>
@@ -271,11 +298,7 @@ const Header: React.FC = () => {
                                 )}
                             </div>
 
-                            {isMaintenanceWarningActive && timeLeftToStart && (
-                                <div className="absolute right-12 px-3 py-1 bg-[#ff0000] text-white text-[10px] font-black rounded font-mono hidden sm:block">
-                                    {timeLeftToStart}
-                                </div>
-                            )}
+
 
                             {isMaintenanceWarningActive && (
                                 <button 
