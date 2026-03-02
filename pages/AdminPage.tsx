@@ -859,6 +859,7 @@ const UsersTab: React.FC = () => {
     const [banModal, setBanModal] = useState<DBUser | null>(null);
     const [deleteModal, setDeleteModal] = useState<DBUser | null>(null);
     const [banReason, setBanReason] = useState('');
+    const [userProfileModal, setUserProfileModal] = useState<DBUser | null>(null);
     
     // Role change confirmation
     const [roleConfirmation, setRoleConfirmation] = useState<{ user: DBUser, targetRole: 'user' | 'editor' | 'admin' } | null>(null);
@@ -1020,7 +1021,7 @@ const UsersTab: React.FC = () => {
             ) : (
                 <div className="space-y-2">
                     {filtered.map(u => (
-                        <div key={u.id} className={`flex flex-col md:flex-row md:items-center justify-between gap-3 p-4 border ${u.is_banned ? 'border-red-900/40 bg-red-950/10' : 'border-white/5 bg-white/2'} hover:border-white/10 transition-colors`}>
+                        <div key={u.id} className={`flex flex-col md:flex-row md:items-center justify-between gap-3 p-4 border ${u.is_banned ? 'border-red-900/40 bg-red-950/10' : 'border-white/5 bg-white/2'} hover:border-white/10 transition-colors cursor-pointer group/row`} onClick={() => setUserProfileModal(u)}>
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 rounded-full overflow-hidden bg-zinc-900 flex-shrink-0">
                                     {u.avatar_url ? (
@@ -1033,7 +1034,7 @@ const UsersTab: React.FC = () => {
                                 </div>
                                 <div>
                                     <div className="flex items-center gap-2">
-                                        <p className="text-white font-medium text-sm">{u.full_name || 'Без Име'}</p>
+                                        <p className="text-white font-medium text-sm group-hover/row:text-red-500 transition-colors uppercase tracking-tight">{u.full_name || 'Без Име'}</p>
                                         {u.is_banned && <span className="text-[10px] bg-red-900/40 text-red-400 px-2 py-0.5 uppercase tracking-widest">Блокиран</span>}
                                         {u.id === currentUser?.id && <span className="text-[10px] bg-zinc-800 text-zinc-400 px-2 py-0.5 uppercase tracking-widest">Аз</span>}
                                     </div>
@@ -1057,7 +1058,7 @@ const UsersTab: React.FC = () => {
                             </div>
 
                             {/* Center Column: Admin Notes */}
-                            <div className="flex-1 max-w-sm mt-3 md:mt-0">
+                            <div className="flex-1 max-w-sm mt-3 md:mt-0" onClick={(e) => e.stopPropagation()}>
                                 <div className="space-y-1 group/note relative">
                                     <div className="flex items-center gap-2 mb-1 px-1">
                                         <FileText className="w-2.5 h-2.5 text-zinc-500" />
@@ -1075,7 +1076,16 @@ const UsersTab: React.FC = () => {
                                 </div>
                             </div>
 
-                            <div className="flex items-center gap-2 flex-wrap">
+                            <div className="flex items-center gap-2 flex-wrap" onClick={(e) => e.stopPropagation()}>
+                                {/* View Profile Button */}
+                                <button
+                                    onClick={() => setUserProfileModal(u)}
+                                    className="p-2.5 text-xs uppercase tracking-widest border border-white/10 text-white hover:bg-white/5 transition-all flex items-center gap-2"
+                                    title="Виж Профил"
+                                >
+                                    <Eye className="w-3.5 h-3.5" />
+                                </button>
+
                                 {/* Role Selector */}
                                 <div className="flex items-center gap-1 bg-black/40 border border-white/10 p-1">
                                     {(['user', 'editor', 'admin'] as const).map(role => (
@@ -1115,6 +1125,17 @@ const UsersTab: React.FC = () => {
                     <p className="text-zinc-600 text-xs mt-4">{filtered.length} от {users.length} потребители</p>
                 </div>
             )}
+
+            {/* User Profile Modal */}
+            <AnimatePresence>
+                {userProfileModal && (
+                    <UserProfileModal
+                        user={userProfileModal}
+                        onClose={() => setUserProfileModal(null)}
+                    />
+                )}
+            </AnimatePresence>
+
 
             {/* Ban Modal */}
             <AnimatePresence>
@@ -1172,7 +1193,275 @@ const UsersTab: React.FC = () => {
     );
 };
 
-// ─── Hero Media Section ───────────────────────────────────────────────────
+// ─── User Profile Modal ──────────────────────────────────────────────────
+const UserProfileModal: React.FC<{
+    user: DBUser;
+    onClose: () => void;
+}> = ({ user, onClose }) => {
+    const [orders, setOrders] = useState<RegularOrder[]>([]);
+    const [customOrders, setCustomOrders] = useState<CustomOrder[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState('');
+    const { showToast } = useToast();
+
+    useEffect(() => {
+        const fetchUserData = async () => {
+            setLoading(true);
+            try {
+                const [ordersRes, customOrdersRes] = await Promise.all([
+                    supabase.from('orders').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
+                    supabase.from('custom_orders').select('*').eq('user_id', user.id).order('created_at', { ascending: false })
+                ]);
+
+                if (ordersRes.error) throw ordersRes.error;
+                if (customOrdersRes.error) throw customOrdersRes.error;
+
+                setOrders(ordersRes.data || []);
+                setCustomOrders(customOrdersRes.data || []);
+            } catch (err: any) {
+                showToast("Грешка при зареждане на историята", "error");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchUserData();
+        document.body.style.overflow = 'hidden';
+        return () => { document.body.style.overflow = ''; };
+    }, [user.id]);
+
+    const filteredOrders = orders.filter(o => 
+        o.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        o.items.some((item: any) => (item.name_bg || item.name).toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+
+    const filteredCustom = customOrders.filter(o => 
+        o.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (o.description || '').toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    return (
+        <div className="fixed inset-0 z-[150] bg-black/90 backdrop-blur-xl flex items-center justify-center p-4">
+            <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 30 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 30 }}
+                className="bg-[#0a0a0a] border border-white/10 w-full max-w-5xl h-[90vh] flex flex-col shadow-3xl overflow-hidden"
+            >
+                {/* Header */}
+                <div className="p-8 border-b border-white/5 flex items-center justify-between bg-gradient-to-r from-red-600/5 to-transparent">
+                    <div className="flex items-center gap-6">
+                        <div className="w-20 h-20 rounded-2xl overflow-hidden border border-white/10 shadow-xl bg-zinc-900 flex-shrink-0">
+                            {user.avatar_url ? (
+                                <img src={user.avatar_url} alt={user.full_name || ''} className="w-full h-full object-cover" />
+                            ) : (
+                                <div className="w-full h-full flex items-center justify-center text-zinc-700 text-3xl font-black">
+                                    {user.email?.[0].toUpperCase()}
+                                </div>
+                            )}
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-3 mb-1">
+                                <h2 className="text-2xl font-black text-white uppercase tracking-tighter">{user.full_name || 'Без име'}</h2>
+                                <span className={`text-[10px] px-3 py-1 rounded font-black uppercase tracking-widest ${user.role === 'admin' ? 'bg-red-600 text-white' : user.role === 'editor' ? 'bg-yellow-600 text-black' : 'bg-zinc-800 text-zinc-400'}`}>
+                                    {user.role}
+                                </span>
+                            </div>
+                            <p className="text-zinc-500 font-mono text-xs">{user.email}</p>
+                            <div className="flex items-center gap-4 mt-2">
+                                <p className="text-[10px] text-zinc-600 uppercase tracking-widest flex items-center gap-2">
+                                    <UserCheck className="w-3 h-3" /> Регистриран: {new Date(user.created_at).toLocaleDateString('bg-BG')}
+                                </p>
+                                {user.phone && (
+                                    <p className="text-[10px] text-zinc-400 uppercase tracking-widest flex items-center gap-2">
+                                        📞 {user.phone}
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                    <button onClick={onClose} className="p-3 bg-white/5 hover:bg-white/10 text-zinc-500 hover:text-white transition-all rounded-xl">
+                        <X size={24} />
+                    </button>
+                </div>
+
+                <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
+                    {/* Left Side: Stats & Details */}
+                    <div className="w-full md:w-80 border-r border-white/5 p-8 space-y-8 bg-black/40">
+                        <div>
+                            <h3 className="text-[10px] text-zinc-500 uppercase tracking-widest mb-4 font-black">Статистика</h3>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="bg-zinc-900/50 p-4 border border-white/5 rounded-xl">
+                                    <p className="text-2xl font-black text-white">{orders.length}</p>
+                                    <p className="text-[9px] text-zinc-500 uppercase font-bold tracking-widest mt-1">Поръчки</p>
+                                </div>
+                                <div className="bg-zinc-900/50 p-4 border border-white/5 rounded-xl">
+                                    <p className="text-2xl font-black text-white">{customOrders.length}</p>
+                                    <p className="text-[9px] text-zinc-500 uppercase font-bold tracking-widest mt-1">Дизайни</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h3 className="text-[10px] text-zinc-500 uppercase tracking-widest mb-4 font-black">Инфромация за достъп</h3>
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-lg bg-zinc-900 flex items-center justify-center border border-white/5">
+                                        <RefreshCw size={14} className="text-zinc-500" />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="text-[9px] text-zinc-500 uppercase font-bold tracking-widest">Последен вход</p>
+                                        <p className="text-[11px] text-zinc-300 truncate tracking-tight">{user.last_login_at ? new Date(user.last_login_at).toLocaleString('bg-BG') : 'Няма данни'}</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-lg bg-zinc-900 flex items-center justify-center border border-white/5">
+                                        <LayoutDashboard size={14} className="text-zinc-500" />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="text-[9px] text-zinc-500 uppercase font-bold tracking-widest">Устройство</p>
+                                        <p className="text-[11px] text-zinc-300 truncate tracking-tight">{user.last_device_info || 'Няма данни'}</p>
+                                    </div>
+                                </div>
+                                {user.is_banned && (
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-lg bg-red-900/20 flex items-center justify-center border border-red-600/20 text-red-500">
+                                            <ShieldBan size={14} />
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="text-[9px] text-red-500 uppercase font-bold tracking-widest">Блокиран акаунт</p>
+                                            <p className="text-[11px] text-red-400 truncate tracking-tight">{user.banned_reason || 'Без посочена причина'}</p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {user.admin_notes && (
+                            <div>
+                                <h3 className="text-[10px] text-zinc-500 uppercase tracking-widest mb-3 font-black">Вътрешни бележки</h3>
+                                <div className="p-4 bg-red-600/5 border border-red-600/10 rounded-xl text-xs text-zinc-400 italic leading-relaxed">
+                                    {user.admin_notes}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Right Side: Tab History */}
+                    <div className="flex-1 flex flex-col bg-black/20">
+                        <div className="p-8 border-b border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <h3 className="text-sm font-black text-white uppercase tracking-[0.2em] flex items-center gap-3">
+                                <ClipboardCheck className="w-4 h-4 text-red-600" />
+                                История на активността
+                            </h3>
+                            <div className="relative w-full sm:w-64">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-600" />
+                                <input
+                                    type="text"
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    placeholder="Търси в историята..."
+                                    className="w-full bg-black/60 border border-white/10 rounded-lg py-2 pl-9 pr-4 text-xs text-white focus:outline-none focus:border-red-600/60"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
+                            {loading ? (
+                                <div className="flex items-center justify-center py-20">
+                                    <Loader2 className="w-8 h-8 animate-spin text-red-600" />
+                                </div>
+                            ) : (
+                                <>
+                                    {/* Regular Orders */}
+                                    <div className="space-y-4">
+                                        <h4 className="text-[10px] text-zinc-600 uppercase font-black tracking-widest flex items-center gap-2">
+                                            📦 Обикновени Поръчки ({filteredOrders.length})
+                                        </h4>
+                                        <div className="space-y-3">
+                                            {filteredOrders.map(order => (
+                                                <div key={order.id} className="bg-white/[0.02] border border-white/5 p-5 rounded-2xl hover:bg-white/[0.04] transition-all group">
+                                                    <div className="flex items-center justify-between mb-4">
+                                                        <div>
+                                                            <div className="flex items-center gap-3 mb-1">
+                                                                <p className="text-xs font-black text-white uppercase tracking-widest">№ {order.id.slice(0, 8)}</p>
+                                                                <span className={`text-[9px] px-2 py-0.5 rounded font-bold uppercase tracking-widest ${
+                                                                    order.status === 'completed' ? 'bg-green-600/20 text-green-400' :
+                                                                    order.status === 'pending' ? 'bg-blue-600/20 text-blue-400' : 'bg-zinc-800 text-zinc-500'
+                                                                }`}>
+                                                                    {order.status}
+                                                                </span>
+                                                            </div>
+                                                            <p className="text-[10px] text-zinc-600">{new Date(order.created_at).toLocaleString('bg-BG')}</p>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <p className="text-lg font-black text-red-600">{order.total_amount.toFixed(2)} €</p>
+                                                            <p className="text-[9px] text-zinc-600 uppercase font-bold">{order.payment_method === 'cash_on_delivery' ? 'Наложен Платеж' : order.payment_method}</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {order.items.map((item: any, iNum: number) => (
+                                                            <div key={iNum} className="flex items-center gap-2 bg-black/40 border border-white/5 py-1 px-2 rounded-lg">
+                                                                <img src={item.image} className="w-4 h-4 object-contain" alt="" />
+                                                                <span className="text-[10px] text-zinc-400">{item.name} x{item.quantity}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                            {filteredOrders.length === 0 && <p className="text-zinc-700 text-[10px] uppercase font-bold italic">Няма открити поръчки по този критерий.</p>}
+                                        </div>
+                                    </div>
+
+                                    {/* Custom Orders */}
+                                    <div className="space-y-4">
+                                        <h4 className="text-[10px] text-zinc-600 uppercase font-black tracking-widest flex items-center gap-2">
+                                            ✨ Индивидуални Дизайни ({filteredCustom.length})
+                                        </h4>
+                                        <div className="space-y-3">
+                                            {filteredCustom.map(order => (
+                                                <div key={order.id} className="bg-white/[0.02] border border-white/5 p-5 rounded-2xl hover:bg-white/[0.04] transition-all">
+                                                    <div className="flex items-center justify-between mb-4">
+                                                        <div>
+                                                            <div className="flex items-center gap-3 mb-1">
+                                                                <p className="text-xs font-black text-white uppercase tracking-widest">№ {order.id.slice(0, 8)}</p>
+                                                                <span className={`text-[9px] px-2 py-0.5 rounded font-bold uppercase tracking-widest ${
+                                                                    order.status === 'completed' ? 'bg-green-600/20 text-green-400' : 'bg-red-600/20 text-red-400'
+                                                                }`}>
+                                                                    {order.status}
+                                                                </span>
+                                                            </div>
+                                                            <p className="text-[10px] text-zinc-600">{new Date(order.created_at).toLocaleString('bg-BG')}</p>
+                                                        </div>
+                                                        <div className="bg-black/40 px-3 py-1.5 border border-white/5 rounded-lg">
+                                                            <p className="text-[10px] font-black text-red-500 uppercase tracking-widest">{order.width} x {order.height} cm</p>
+                                                        </div>
+                                                    </div>
+                                                    <p className="text-xs text-zinc-400 line-clamp-2 italic">"{order.description || 'Няма описание'}"</p>
+                                                    {order.images?.length > 0 && (
+                                                        <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+                                                            {order.images.map((img, idx) => {
+                                                                const { data } = supabase.storage.from('custom_orders').getPublicUrl(img);
+                                                                return <img key={idx} src={data.publicUrl} className="w-12 h-12 object-cover rounded border border-white/10" alt="" />;
+                                                            })}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                            {filteredCustom.length === 0 && <p className="text-zinc-700 text-[10px] uppercase font-bold italic">Няма открити запитвания по този критерий.</p>}
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </motion.div>
+        </div>
+    );
+};
+
+// ─── Hero Media Section ───
 const HeroMediaSection: React.FC = () => {
     const { showToast } = useToast();
     const { settings, loading: settingsLoading, updateSetting, refetch } = useSiteSettings();

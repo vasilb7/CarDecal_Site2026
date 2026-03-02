@@ -78,7 +78,8 @@ const CheckoutPage: React.FC = () => {
         phone: '',
         deliveryType: 'econt' as 'econt' | 'speedy',
         city: '',
-        officeName: '',
+        econtOffice: '',
+        speedyOffice: '',
         notes: ''
     });
     const [saveForFuture, setSaveForFuture] = useState(true);
@@ -93,7 +94,8 @@ const CheckoutPage: React.FC = () => {
                 phone: prev.phone || profile?.phone || (profile as any)?.preferred_phone || '',
                 city: prev.city || (profile as any)?.preferred_city || '',
                 deliveryType: (prev.deliveryType as any) === 'address' ? 'econt' : (prev.deliveryType || (profile as any)?.preferred_delivery_type || 'econt'),
-                officeName: prev.officeName || (profile as any)?.preferred_office_name || ''
+                econtOffice: prev.econtOffice || (profile?.preferred_delivery_type === 'econt' ? profile.preferred_office_name : ''),
+                speedyOffice: prev.speedyOffice || (profile?.preferred_delivery_type === 'speedy' ? profile.preferred_office_name : '')
             }));
         }
     }, [profile, user]);
@@ -117,7 +119,10 @@ const CheckoutPage: React.FC = () => {
         if (!formData.phone.trim() || formData.phone.length < 8) newErrors.phone = "Въведете валиден телефон";
         if (!formData.city.trim()) newErrors.city = "Въведете град";
         
-        if (!formData.officeName.trim()) newErrors.officeName = "Въведете име или номер на офис";
+        const activeOffice = formData.deliveryType === 'econt' ? formData.econtOffice : formData.speedyOffice;
+        const officeKey = formData.deliveryType === 'econt' ? 'econtOffice' : 'speedyOffice';
+
+        if (!activeOffice.trim()) newErrors[officeKey] = "Въведете име или номер на офис";
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -146,7 +151,10 @@ const CheckoutPage: React.FC = () => {
                 user_id: user?.id,
                 items: activeItems,
                 total_amount: total,
-                shipping_details: formData,
+                shipping_details: {
+                    ...formData,
+                    officeName: formData.deliveryType === 'econt' ? formData.econtOffice : formData.speedyOffice
+                },
                 status: 'pending',
                 payment_method: 'cash_on_delivery'
             }).select('id').single();
@@ -157,7 +165,7 @@ const CheckoutPage: React.FC = () => {
                 await supabase.from('profiles').update({
                     preferred_city: formData.city,
                     preferred_delivery_type: formData.deliveryType,
-                    preferred_office_name: formData.officeName,
+                    preferred_office_name: formData.deliveryType === 'econt' ? formData.econtOffice : formData.speedyOffice,
                     preferred_phone: formData.phone,
                     last_full_name: formData.fullName
                 }).eq('id', user.id);
@@ -184,8 +192,7 @@ const CheckoutPage: React.FC = () => {
     const inputStyle = (errorKey: string) => `
         w-full h-[52px] bg-[#0d0d0d] border ${errors[errorKey] ? 'border-red-600' : 'border-white/[0.08] hover:border-white/20'} 
         text-white text-base px-4 rounded-xl focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600/20 
-        transition-all placeholder:text-zinc-600 font-medium
-        autofill:shadow-[0_0_0_1000px_#0d0d0d_inset] autofill:text-white
+        transition-all placeholder:text-zinc-500 font-medium
     `;
 
     return (
@@ -300,10 +307,18 @@ const CheckoutPage: React.FC = () => {
                                                 <div>
                                                     <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500 mb-2 block ml-1">Офис на Куриер <span className="text-red-600">*</span></label>
                                                     <input 
-                                                        type="text" name="officeName" value={formData.officeName} onChange={handleInputChange}
-                                                        className={inputStyle('officeName')} placeholder="Напр. Офис Център"
+                                                        type="text" 
+                                                        name={formData.deliveryType === 'econt' ? 'econtOffice' : 'speedyOffice'}
+                                                        value={formData.deliveryType === 'econt' ? formData.econtOffice : formData.speedyOffice} 
+                                                        onChange={handleInputChange}
+                                                        className={inputStyle(formData.deliveryType === 'econt' ? 'econtOffice' : 'speedyOffice')} 
+                                                        placeholder="Напр. Офис Център"
                                                     />
-                                                    {errors.officeName && <p className="text-[10px] text-red-600 font-bold uppercase mt-1.5 ml-1">{errors.officeName}</p>}
+                                                    {(errors.econtOffice || errors.speedyOffice) && (
+                                                        <p className="text-[10px] text-red-600 font-bold uppercase mt-1.5 ml-1">
+                                                            {errors.econtOffice || errors.speedyOffice}
+                                                        </p>
+                                                    )}
                                                 </div>
                                             </div>
 
@@ -312,7 +327,7 @@ const CheckoutPage: React.FC = () => {
                                                 <textarea 
                                                     name="notes" value={formData.notes} onChange={handleInputChange} maxLength={300}
                                                     className="w-full h-24 bg-[#0d0d0d] border border-white/[0.08] text-white text-base px-4 py-3 rounded-xl focus:outline-none focus:border-red-600 transition-all placeholder:text-zinc-600 font-medium resize-none shadow-inner" 
-                                                    placeholder="Уточнения за цвят, размери или друго..."
+                                                    placeholder="Въпроси свързани с поръчката или друго..."
                                                 />
                                                 <div className="flex justify-between items-center mt-1.5 ml-1">
                                                     <span className="text-[9px] text-zinc-600 font-bold uppercase">Общи указания</span>
@@ -335,7 +350,7 @@ const CheckoutPage: React.FC = () => {
 
                                         <div className="mt-8 pt-6 border-t border-white/5 flex items-center gap-3 opacity-60">
                                             <ShieldCheck className="text-green-500" size={16} />
-                                            <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Преглед и тест преди плащане при всеки куриер</p>
+                                            <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Преглед преди плащане при всеки куриер</p>
                                         </div>
                                     </div>
                                     
@@ -386,7 +401,7 @@ const CheckoutPage: React.FC = () => {
                                                             {formData.deliveryType === 'econt' ? 'Еконт Офис' : 'Спиди Офис'}
                                                          </span>
                                                     </div>
-                                                    <p className="text-xs text-zinc-400 mt-1.5">{formData.city}, {formData.officeName}</p>
+                                                    <p className="text-xs text-zinc-400 mt-1.5">{formData.city}, {formData.deliveryType === 'econt' ? formData.econtOffice : formData.speedyOffice}</p>
                                                 </div>
                                             </div>
                                         </div>
@@ -569,6 +584,16 @@ const CheckoutPage: React.FC = () => {
                 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
                 .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
                 .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
+                
+                /* Robust Autofill Fix */
+                input:-webkit-autofill,
+                input:-webkit-autofill:hover, 
+                input:-webkit-autofill:focus, 
+                input:-webkit-autofill:active {
+                    -webkit-box-shadow: 0 0 0 1000px #0d0d0d inset !important;
+                    -webkit-text-fill-color: white !important;
+                    transition: background-color 5000s ease-in-out 0s;
+                }
             `}} />
         </div>
     );
