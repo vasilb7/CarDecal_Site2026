@@ -35,10 +35,21 @@ const Toast: React.FC<ToastProps> = ({ id, message, type, duration = 4000, onClo
   return (
     <motion.div
       layout
+      drag="y"
+      dragConstraints={{ top: 0, bottom: 0 }}
+      dragElastic={0.7}
+      onDragEnd={(_, info) => {
+        // Dismiss on swipe up or down (threshold 50px)
+        if (Math.abs(info.offset.y) > 50) {
+          onClose(id);
+        }
+      }}
       initial={{ opacity: 0, y: 15, scale: 0.95, height: 0, marginTop: 0 }}
       animate={{ opacity: 1, y: 0, scale: 1, height: 'auto', marginTop: 12 }}
       exit={{ opacity: 0, scale: 0.95, height: 0, marginTop: 0, transition: { duration: 0.2 } }}
       className="toast-wrapper"
+      style={{ cursor: 'grab' }}
+      whileTap={{ cursor: 'grabbing' }}
     >
       <div className={`toast-item ${type}`}>
         <div className="toast-content">
