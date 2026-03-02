@@ -248,8 +248,9 @@ const HomePage: React.FC = () => {
           <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-transparent to-black z-10" />
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.8)_100%)] z-10" />
           
-          {siteSettings?.hero_video_url ? (
+          {siteSettings?.hero_media_url && siteSettings.hero_media_type === 'video' ? (
             <video
+              key={siteSettings.hero_media_url}
               autoPlay
               muted
               loop
@@ -259,14 +260,19 @@ const HomePage: React.FC = () => {
                 mediaLoaded ? "opacity-30" : "opacity-0"
               }`}
             >
-              <source src={siteSettings.hero_video_url} type="video/mp4" />
+              <source src={siteSettings.hero_media_url} type="video/mp4" />
             </video>
           ) : (
             <img
-              src={getOptimizedUrl(
-                "https://res.cloudinary.com/die68h4oh/image/upload/v1772385587/Indvidual/Indvidual/Extreme_closeup_macro_photo_of_a_glossy_vinyl_stic_delpmaspu.jpg",
-                { width: 1920 }
-              )}
+              key={siteSettings?.hero_media_url || 'default'}
+              src={
+                siteSettings?.hero_media_url
+                  ? siteSettings.hero_media_url
+                  : getOptimizedUrl(
+                      "https://res.cloudinary.com/die68h4oh/image/upload/v1772385587/Indvidual/Indvidual/Extreme_closeup_macro_photo_of_a_glossy_vinyl_stic_delpmaspu.jpg",
+                      { width: 1920 }
+                    )
+              }
               alt="Hero Background"
               onLoad={() => setMediaLoaded(true)}
               className={`w-full h-full object-cover transition-opacity duration-1000 ${
