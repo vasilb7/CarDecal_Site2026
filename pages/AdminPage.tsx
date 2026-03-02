@@ -3732,8 +3732,12 @@ const OrdersTab: React.FC = () => {
                                                 <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
                                             </div>
                                             <div className="flex-1 min-w-0">
-                                                <p className="text-[10px] font-bold text-white uppercase truncate">{item.name}</p>
-                                                <p className="text-[9px] text-zinc-500">{item.variant} x{item.quantity}</p>
+                                                <p className="text-[10px] font-bold text-white uppercase truncate">{item.name_bg || item.name}</p>
+                                                <div className="flex items-center gap-1.5 mt-0.5">
+                                                    <span className="text-[9px] text-zinc-500 uppercase tracking-tighter">{item.variant}</span>
+                                                    {item.selectedSize && <span className="text-[9px] text-red-500/60 font-black uppercase tracking-widest">{item.selectedSize}</span>}
+                                                    <span className="text-[9px] text-zinc-400 font-black">x{item.quantity}</span>
+                                                </div>
                                             </div>
                                             <p className="text-[10px] font-black text-red-500">{(item.price * item.quantity).toFixed(2)} €</p>
                                         </div>
