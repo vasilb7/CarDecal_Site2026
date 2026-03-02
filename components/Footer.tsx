@@ -32,7 +32,32 @@ const Footer: React.FC = () => {
   const [isHovered, setIsHovered] = useState(false);
   const location = useLocation();
 
+  // Auto-scanning logic for mobile/touch devices (moves mask horizontally)
+  useEffect(() => {
+    let frameId: number;
+    let startTime = Date.now();
+    
+    const animateMask = () => {
+      // Only animate automatically if not hovered (always true on typical mobile interactions we want to ignore)
+      if (!isHovered && containerRef.current) {
+        const time = (Date.now() - startTime) / 1000;
+        const rect = containerRef.current.getBoundingClientRect();
+        // Smooth horizontal scan
+        const x = (Math.sin(time * 0.4) * 0.35 + 0.5) * rect.width;
+        const y = rect.height * 0.5;
+        containerRef.current.style.setProperty('--mouse-x', `${x}px`);
+        containerRef.current.style.setProperty('--mouse-y', `${y}px`);
+      }
+      frameId = requestAnimationFrame(animateMask);
+    };
+    
+    frameId = requestAnimationFrame(animateMask);
+    return () => cancelAnimationFrame(frameId);
+  }, [isHovered]);
+
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Block manual interaction on touch devices to match "блокирай интеракцията" request
+    if (window.matchMedia("(hover: none)").matches) return;
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -53,9 +78,6 @@ const Footer: React.FC = () => {
   } else if (path === '/book-now') {
     topBgClass = "bg-[#080808]";
   }
-
-  // Removed auto-scanning logic to match "Lando-style" direct interaction request
-  // The effect now only shows when the user is actively hovering or touching
 
   return (
     <footer className={`${topBgClass} pt-8 sm:pt-12 lg:pt-20 pb-0 w-full relative z-10`}>
@@ -107,68 +129,25 @@ const Footer: React.FC = () => {
             />
           </div>
 
-          {/* Ambient Particles / Glowing Orbs for extra style */}
-          <div className="absolute inset-0 z-10 pointer-events-none">
-            {[...Array(6)].map((_, i) => (
-              <motion.div
-                key={i}
-                className="absolute w-1 h-1 sm:w-2 sm:h-2 bg-red-500/20 rounded-full blur-sm"
-                animate={{
-                  x: [Math.random() * 100 + "%", Math.random() * 100 + "%"],
-                  y: [Math.random() * 100 + "%", Math.random() * 100 + "%"],
-                  opacity: [0, 0.5, 0],
-                  scale: [0, 1.5, 0]
-                }}
-                transition={{
-                  duration: Math.random() * 10 + 10,
-                  repeat: Infinity,
-                  ease: "linear"
-                }}
-                style={{
-                  left: Math.random() * 100 + "%",
-                  top: Math.random() * 100 + "%"
-                }}
-              />
-            ))}
-          </div>
-
-          {/* ── RED LIQUID MASK / SPOTLIGHT ── */}
+          {/* ── SPOTLIGHT MASK ── */}
           <div
             className="absolute inset-0 z-30 pointer-events-none transition-opacity duration-1000 ease-in-out"
             style={{
-              // On desktop (hovered), we use the mask coords. On mobile, we show a subtle global animation
+              // Always visible on mobile (auto-animated), reactive on desktop
               opacity: 1, 
-              WebkitMaskImage: isHovered 
-                ? 'radial-gradient(circle 350px at var(--mouse-x, 50%) var(--mouse-y, 50%), black 20%, transparent 100%)'
-                : 'radial-gradient(circle 600px at 50% 50%, black 5%, transparent 100%)',
-              maskImage: isHovered 
-                ? 'radial-gradient(circle 350px at var(--mouse-x, 50%) var(--mouse-y, 50%), black 20%, transparent 100%)'
-                : 'radial-gradient(circle 600px at 50% 50%, black 5%, transparent 100%)',
-              transition: 'mask-image 1s ease-in-out, -webkit-mask-image 1s ease-in-out'
+              WebkitMaskImage: 'radial-gradient(circle 280px at var(--mouse-x, 50%) var(--mouse-y, 50%), black 25%, transparent 100%)',
+              maskImage: 'radial-gradient(circle 280px at var(--mouse-x, 50%) var(--mouse-y, 50%), black 25%, transparent 100%)',
             }}
           >
-            {/* The color-shifting car inside the mask */}
+            {/* The RED car inside the mask */}
             <div className="absolute
               bottom-[32%] sm:bottom-[10%] lg:bottom-[-10%] xl:bottom-[-25%]
               left-1/2 -translate-x-1/2 pointer-events-none
-              w-[100%] sm:w-[95%] lg:w-[68%] xl:w-[88%] mix-blend-screen px-4">
-              <motion.img
-                animate={{ 
-                  filter: [
-                    'hue-rotate(0deg) brightness(1.2) contrast(1.1)',
-                    'hue-rotate(180deg) brightness(1.4) contrast(1.2)',
-                    'hue-rotate(360deg) brightness(1.2) contrast(1.1)'
-                  ],
-                  scale: isHovered ? [1, 1.02, 1] : [1, 1.01, 1]
-                }}
-                transition={{ 
-                  duration: 15, 
-                  repeat: Infinity, 
-                  ease: "easeInOut" 
-                }}
+              w-[100%] sm:w-[95%] lg:w-[68%] xl:w-[88%] mix-blend-screen">
+              <img
                 src="/Footer/2026red.png"
                 alt="Car Red"
-                className="w-full h-auto object-contain drop-shadow-[0_0_100px_rgba(255,0,0,0.5)] origin-bottom"
+                className="w-full h-auto object-contain drop-shadow-[0_0_100px_rgba(220,38,38,0.4)] origin-bottom"
               />
             </div>
           </div>
