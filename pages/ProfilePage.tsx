@@ -14,7 +14,7 @@ import {
     Tag, ChevronDown, Check, CreditCard, 
     ExternalLink, Trash2, ArrowLeft, Eye, 
     EyeOff, X, AlertTriangle, AlertCircle, KeyRound, 
-    PackageOpen, CheckCircle2, Truck
+    PackageOpen, CheckCircle2, Truck, Megaphone, ClipboardCheck
 } from 'lucide-react';
 
 // ─── Типове ─────────────────────────────────────────────────────────────────
@@ -232,7 +232,7 @@ const OrdersTab: React.FC<{ orders: any[]; loading: boolean; user: any }> = ({ o
                             </div>
 
                             {/* Info Footer */}
-                            <div className="mt-auto pt-6 border-t border-white/5 flex items-end justify-between">
+                            <div className="mt-auto pt-6 border-t border-white/5 flex items-end justify-between mb-4">
                                 <div className="space-y-1">
                                     <p className="text-[9px] text-zinc-600 uppercase tracking-widest font-black">Стойност</p>
                                     <div className="flex flex-col">
@@ -251,6 +251,19 @@ const OrdersTab: React.FC<{ orders: any[]; loading: boolean; user: any }> = ({ o
                                     <ArrowRight className="w-5 h-5" />
                                 </button>
                             </div>
+
+                            {/* Admin Notes */}
+                            {order.admin_notes && (
+                                <div className="p-4 bg-red-600/5 border border-red-600/10 rounded-2xl">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <ClipboardCheck className="w-3.5 h-3.5 text-red-500" />
+                                        <span className="text-[10px] text-red-500 font-black uppercase tracking-widest">Бележка от екипа</span>
+                                    </div>
+                                    <p className="text-xs text-zinc-400 leading-relaxed italic line-clamp-2">
+                                        "{order.admin_notes}"
+                                    </p>
+                                </div>
+                            )}
                         </div>
                     </motion.div>
                 );
@@ -320,6 +333,21 @@ const OrdersTab: React.FC<{ orders: any[]; loading: boolean; user: any }> = ({ o
                                         </p>
                                     </div>
                                 </div>
+
+                                {/* Admin Notes in Detail Modal */}
+                                {selectedOrder.admin_notes && (
+                                    <div className="bg-red-600/5 border border-red-600/10 p-5 rounded-2xl animate-in fade-in zoom-in-95 duration-500">
+                                        <div className="flex items-center gap-3 mb-3">
+                                            <div className="p-2 rounded-xl bg-red-600/10 border border-red-600/20 shadow-lg shadow-red-900/10">
+                                                <ClipboardCheck className="w-4 h-4 text-red-500" />
+                                            </div>
+                                            <span className="text-[10px] uppercase tracking-[0.2em] text-red-500 font-black">Коментар от екипа</span>
+                                        </div>
+                                        <p className="text-zinc-300 text-sm leading-relaxed border-l-2 border-red-600/20 pl-4 py-1 italic">
+                                            {selectedOrder.admin_notes}
+                                        </p>
+                                    </div>
+                                )}
 
                                 {/* Items List */}
                                 <div>
@@ -581,6 +609,23 @@ const SettingsTab: React.FC<{
 
     return (
         <div className="space-y-6">
+            {/* Admin Profile/Global Note */}
+            {profile?.admin_notes && (
+                <motion.div 
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-zinc-900/50 border border-red-600/20 p-6 rounded-3xl flex items-start gap-4 shadow-xl"
+                >
+                    <div className="p-3 rounded-2xl bg-red-600/10 border border-red-600/20 shrink-0">
+                        <Megaphone className="w-6 h-6 text-red-500" />
+                    </div>
+                    <div>
+                        <h4 className="text-sm font-black text-white uppercase tracking-wider mb-1">Важно съобщение за Вашия профил</h4>
+                        <p className="text-zinc-400 text-sm leading-relaxed">{profile.admin_notes}</p>
+                    </div>
+                </motion.div>
+            )}
+
             {/* General Settings Card */}
             <div className={cardWrapCls}>
                 

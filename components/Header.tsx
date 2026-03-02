@@ -243,7 +243,7 @@ const Header: React.FC = () => {
                         className="relative z-[101] border-b border-white/5"
                         style={{ backgroundColor: settings.announcement_bg_color }}
                     >
-                        <div className="max-w-[1440px] w-full mx-auto min-h-[40px] py-1.5 px-4 flex items-center justify-center relative">
+                        <div className="max-w-[1440px] w-full mx-auto min-h-[32px] sm:min-h-[40px] py-1 px-4 flex items-center justify-center relative">
                             <div className="flex items-center justify-center gap-3 sm:gap-6 max-w-full">
                                 {annMessages.length > 1 && !isMaintenanceWarningActive && (
                                     <button 
@@ -263,26 +263,21 @@ const Header: React.FC = () => {
                                             animate={{ opacity: 1, scale: 1 }}
                                             exit={{ opacity: 0, scale: 0.98 }}
                                             transition={{ duration: 0.2 }}
-                                            className="w-full flex items-center justify-center"
+                                            className="w-full flex items-center justify-center overflow-hidden"
                                         >
                                             <span 
                                                 className="uppercase select-none text-center inline-block"
-                                                style={{ 
-                                                    color: settings.announcement_text_color,
-                                                    fontSize: settings.announcement_font_size,
-                                                    fontWeight: settings.announcement_font_weight === 'black' ? 900 : (settings.announcement_font_weight === 'bold' ? 700 : (settings.announcement_font_weight === 'semibold' ? 600 : 400)),
-                                                    letterSpacing: settings.announcement_letter_spacing,
-                                                    lineHeight: 1.4,
-                                                    wordBreak: 'break-word',
-                                                }}
+                                                style={{ color: settings.announcement_text_color }}
                                             >
                                                 {isMaintenanceWarningActive ? (
-                                                    <span className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
+                                                    <span className="flex items-center justify-center gap-x-3 text-[10px] sm:text-[11px] font-bold">
                                                         <span className="w-1.5 h-1.5 rounded-full bg-[#ff0000] animate-pulse shrink-0 hidden sm:block" />
-                                                        {renderMessageWithTimer("Внимание! Предстои профилактика. Сайтът ще бъде временно недостъпен.", true)}
+                                                        {renderMessageWithTimer("Профилактика!", true)}
                                                     </span>
                                                 ) : (
-                                                    renderMessageWithTimer(annMessages[currentMsgIndex] || "")
+                                                    <span className="text-[10px] sm:text-[11px] uppercase tracking-wider line-clamp-1 font-medium">
+                                                        {renderMessageWithTimer(annMessages[currentMsgIndex] || "")}
+                                                    </span>
                                                 )}
                                             </span>
                                         </motion.div>
@@ -339,8 +334,8 @@ const Header: React.FC = () => {
                     </motion.div>
                 )}
             </AnimatePresence>
-            <header className="sticky top-0 z-[100] w-full bg-background/90 backdrop-blur-md border-b border-white/5 pt-[env(safe-area-inset-top)]">
-            <div className="container mx-auto px-6 py-4 flex items-center justify-between relative h-20">
+            <header className="sticky top-0 z-[100] w-full bg-background/95 backdrop-blur-md border-b border-white/5 pt-[env(safe-area-inset-top)]">
+            <div className="container mx-auto px-4 sm:px-6 flex items-center justify-between relative h-14 sm:h-20">
                 <Link 
                     to="/" 
                     onClick={(e) => { handleLogoClick(e); closeMenu(); }}
@@ -349,7 +344,7 @@ const Header: React.FC = () => {
                     <img 
                         src="/LOGO.png" 
                         alt="CarDecal Logo" 
-                        className={`${logoHeightClass} w-auto object-contain transition-transform duration-300 hover:scale-105`}
+                        className="h-6 sm:h-8 w-auto object-contain transition-transform duration-300 hover:scale-105"
                     />
                 </Link>
 

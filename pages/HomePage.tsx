@@ -7,7 +7,7 @@ import { useProducts } from "../hooks/useProducts";
 import ProductCard from "../components/ProductCard";
 import { useSiteSettings } from "../context/SiteSettingsContext";
 import { useAuth } from "../context/AuthContext";
-import ProductQuickView from "../components/ProductQuickView";
+import ProductQuickView from "../components/ProductQuickViewModal";
 import { getOptimizedUrl } from "../lib/cloudinary-utils";
 
 const fadeInUp = {
@@ -240,101 +240,100 @@ const HomePage: React.FC = () => {
   }, [displayProducts.length]);
 
   return (
-    <div>
-      {/* Static Hero Section */}
-      <div className="relative min-h-[100svh] flex items-center justify-center text-center overflow-hidden">
-        {/* Background Hero Media */}
+    <div className="bg-background">
+      {/* Hero Section */}
+      <div className="relative min-h-[100svh] flex flex-col items-center justify-center overflow-hidden bg-black pt-[calc(env(safe-area-inset-top)+theme(spacing.12))] md:pt-0">
+        {/* Background Overlay Layer */}
         <div className="absolute inset-0 z-0">
-          {/* Fallback Premium Background */}
-          <div
-            className={`absolute inset-0 transition-opacity duration-1000 ${mediaLoaded ? "opacity-0" : "opacity-100"} bg-gradient-to-br from-gray-900 via-black to-[#1a0000]`}
-          >
-          </div>
-
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: mediaLoaded ? 1 : 0 }}
-            transition={{ duration: 1.5 }}
-            className="w-full h-full"
-          >
-            {siteSettings.hero_media_type === "video" ? (
-              <video
-                key={siteSettings.hero_media_url}
-                src={siteSettings.hero_media_url}
-                autoPlay
-                loop
-                muted
-                playsInline
-                onLoadedData={() => setMediaLoaded(true)}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <img
-                src={getOptimizedUrl(siteSettings.hero_media_url, { width: 1920 })}
-                alt=""
-                onLoad={() => setMediaLoaded(true)}
-                className="w-full h-full object-cover"
-                decoding="async"
-                fetchPriority="high"
-              />
-            )}
-          </motion.div>
-
-          {/* Dark Overlay 1: Soft Black Gradient */}
-          <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/55 to-black/75 z-10" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-transparent to-black z-10" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.6)_100%)] z-10" />
           
-          {/* Dark Overlay 2: Vignette effect */}
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(0,0,0,0.6)_100%)] z-10" />
+          {siteSettings?.hero_video_url ? (
+            <video
+              autoPlay
+              muted
+              loop
+              playsInline
+              onLoadedData={() => setMediaLoaded(true)}
+              className={`w-full h-full object-cover transition-opacity duration-1000 ${
+                mediaLoaded ? "opacity-40" : "opacity-0"
+              }`}
+            >
+              <source src={siteSettings.hero_video_url} type="video/mp4" />
+            </video>
+          ) : (
+            <img
+              src={getOptimizedUrl(
+                "https://res.cloudinary.com/die68h4oh/image/upload/v1772385587/Indvidual/Indvidual/Extreme_closeup_macro_photo_of_a_glossy_vinyl_stic_delpmaspu.jpg",
+                { width: 1920 }
+              )}
+              alt="Hero Background"
+              onLoad={() => setMediaLoaded(true)}
+              className={`w-full h-full object-cover transition-opacity duration-1000 ${
+                mediaLoaded ? "opacity-40" : "opacity-0"
+              }`}
+            />
+          )}
+
+          {/* Scanline Effect */}
+          <div
+            className="absolute inset-0 opacity-20 pointer-events-none z-20"
+            style={{
+              backgroundImage:
+                "linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06))",
+              backgroundSize: "100% 2px, 3px 100%",
+            }}
+          />
         </div>
 
-        {/* Hero Content */}
-        <div className="container relative z-20 mx-auto px-4 sm:px-6 lg:px-10 max-w-[1100px] flex flex-col items-center justify-center w-full mt-16 sm:mt-0">
+        {/* Content Container */}
+        <div className="container relative z-30 mx-auto px-4 flex flex-col items-center justify-center text-center">
           <motion.div
             initial="hidden"
             animate="visible"
             variants={staggerContainer}
-            className="w-full flex flex-col items-center justify-center"
+            className="w-full max-w-4xl"
           >
-            {/* Title */}
+            {/* Main Title */}
             <motion.h1
               variants={fadeInUp}
-              className="w-full text-center font-black uppercase leading-none tracking-tight mb-8 drop-shadow-[0_4px_24px_rgba(0,0,0,0.8)]"
-              style={{ fontSize: "clamp(3.5rem, 12vw, 10rem)" }}
+              className="w-full text-center font-black uppercase leading-[0.85] tracking-tight mb-4 drop-shadow-2xl"
+              style={{ fontSize: "clamp(48px, 15vw, 160px)" }}
             >
-              <span className="text-white drop-shadow-md">CAR</span>
-              <span className="text-red-600 drop-shadow-[0_0_20px_rgba(220,38,38,0.5)]">
+              <span className="text-white">CAR</span>
+              <span className="text-red-600 drop-shadow-[0_0_30px_rgba(220,38,38,0.4)]">
                 DECAL
               </span>
             </motion.h1>
 
-            {/* Subtitle (Text only) */}
-<motion.div
-  variants={fadeInUp}
-  className="w-full max-w-[720px] mx-auto mb-12 flex flex-col items-center justify-center text-center"
->
-  <p className="text-gray-200 text-[11px] sm:text-sm uppercase tracking-[0.25em] sm:tracking-[0.3em] font-bold">
-    Високок клас стикери
-  </p>
-  <p className="mt-2 text-white/70 text-[12px] sm:text-base font-medium">
-  <span className="text-yellow-500 font-semibold">"Качество, което се лепи. Цени, които печелят."</span>
-  </p>
-</motion.div>
-
-            {/* CTA Buttons */}
+            {/* Subtitles */}
             <motion.div
               variants={fadeInUp}
-              className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center w-full max-w-[280px] sm:max-w-none mx-auto"
+              className="space-y-3 mb-10 sm:mb-12"
+            >
+              <p className="text-white/90 text-[10px] sm:text-sm uppercase tracking-[0.4em] font-black">
+                Висококласни Стикери
+              </p>
+              <p className="text-white/60 text-[12px] sm:text-base font-medium max-w-[280px] sm:max-w-none mx-auto leading-relaxed">
+                Качество, което се лепи. <span className="text-white font-bold">Цени, които печелят.</span>
+              </p>
+            </motion.div>
+
+            {/* Action Buttons */}
+            <motion.div
+              variants={fadeInUp}
+              className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center w-full max-w-[320px] sm:max-w-none mx-auto"
             >
               <Link
-                to={`/catalog`}
-                className="group relative flex items-center justify-center w-full sm:w-auto h-12 sm:h-14 px-8 sm:px-10 bg-red-600 text-white font-bold uppercase tracking-[0.15em] text-[11px] sm:text-sm rounded-xl shadow-[0_4px_20px_rgba(220,38,38,0.3)] hover:shadow-[0_4px_30px_rgba(220,38,38,0.5)] hover:bg-red-500 hover:text-white transition-all duration-200 hover:-translate-y-[1px] active:translate-y-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500"
+                to="/catalog"
+                className="group relative flex items-center justify-center w-full sm:min-w-[200px] h-12 sm:h-14 px-8 bg-black text-white font-black uppercase tracking-widest text-[11px] sm:text-xs rounded-lg border border-[#ff0000]/40 shadow-[0_0_20px_rgba(255,0,0,0.2)] hover:bg-[#ff0000] hover:border-[#ff0000] transition-all duration-300 active:scale-95 focus:outline-none focus:ring-2 focus:ring-red-500/50"
               >
                 Пазарувай сега
               </Link>
               {user && (
                 <Link
-                  to={`/book-now`}
-                  className="group relative flex items-center justify-center w-full sm:w-auto h-12 sm:h-14 px-8 sm:px-10 bg-black/20 backdrop-blur-sm border border-white/20 text-white font-bold uppercase tracking-[0.15em] text-[11px] sm:text-sm rounded-xl hover:bg-white/10 hover:border-white/40 hover:text-white transition-all duration-200 hover:-translate-y-[1px] active:translate-y-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/50"
+                  to="/book-now"
+                  className="group relative flex items-center justify-center w-full sm:min-w-[200px] h-12 sm:h-14 px-8 bg-white/5 backdrop-blur-md border border-white/10 text-white font-black uppercase tracking-widest text-[11px] sm:text-xs rounded-lg hover:bg-white/10 transition-all active:scale-95 shrink-0"
                 >
                   Индивидуални поръчки
                 </Link>
@@ -343,15 +342,8 @@ const HomePage: React.FC = () => {
           </motion.div>
         </div>
 
-        {/* Scanline Effect */}
-        <div
-          className="absolute inset-0 opacity-20 pointer-events-none"
-          style={{
-            backgroundImage:
-              "linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06))",
-            backgroundSize: "100% 2px, 3px 100%",
-          }}
-        ></div>
+        {/* Bottom Fade */}
+        <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-background to-transparent z-20" />
       </div>
 
       {/* Featured Products */}

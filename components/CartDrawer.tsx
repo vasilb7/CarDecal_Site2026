@@ -249,18 +249,17 @@ export const CartDrawer: React.FC = () => {
                             –
                           </button>
                           <input
-                            type="number"
-                            min="1"
-                            value={item.quantity === 0 ? '' : String(Number(item.quantity))}
+                            type="text"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            value={item.quantity === 0 ? '' : String(item.quantity)}
                             onChange={(e) => {
-                              let val = e.target.value;
-                              
+                              const val = e.target.value.replace(/[^0-9]/g, '');
                               if (val === '') {
                                 updateQuantity(item.id, 0); 
                               } else {
-                                // Remove leading zeros for the comparison/update
                                 const parsed = parseInt(val, 10);
-                                if (!isNaN(parsed) && parsed >= 0) {
+                                if (!isNaN(parsed)) {
                                   updateQuantity(item.id, parsed);
                                 }
                               }
@@ -268,7 +267,7 @@ export const CartDrawer: React.FC = () => {
                             onBlur={() => {
                               if (item.quantity < 1) updateQuantity(item.id, 1);
                             }}
-                            className="w-10 bg-transparent text-center text-[13px] font-black text-white focus:outline-none pointer-events-auto [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            className="w-10 bg-transparent text-center text-[13px] font-black text-white focus:outline-none pointer-events-auto"
                           />
                           <button
                             onClick={() => increase(item.id)}

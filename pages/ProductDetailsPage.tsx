@@ -276,17 +276,17 @@ const ProductDetailsPage: React.FC = () => {
                                         <Minus size={18} />
                                     </button>
                                     <input
-                                        type="number"
-                                        min="1"
-                                        value={quantity === 0 ? '' : String(Number(quantity))}
+                                        type="text"
+                                        inputMode="numeric"
+                                        pattern="[0-9]*"
+                                        value={quantity === 0 ? '' : String(quantity)}
                                         onChange={(e) => {
-                                            let val = e.target.value;
-
+                                            const val = e.target.value.replace(/[^0-9]/g, '');
                                             if (val === '') {
                                                 setQuantity(0);
                                             } else {
                                                 const parsed = parseInt(val, 10);
-                                                if (!isNaN(parsed) && parsed >= 0) {
+                                                if (!isNaN(parsed)) {
                                                     setQuantity(parsed);
                                                 }
                                             }
@@ -294,7 +294,7 @@ const ProductDetailsPage: React.FC = () => {
                                         onBlur={() => {
                                             if (quantity < 1) setQuantity(1);
                                         }}
-                                        className="w-14 h-full bg-transparent text-center text-xl font-mono font-black border-x border-white/5 text-white focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                        className="w-14 h-full bg-transparent text-center text-xl font-mono font-black border-x border-white/5 text-white focus:outline-none"
                                     />
                                     <button 
                                         onClick={() => setQuantity(q => q + 1)}
@@ -367,17 +367,17 @@ const ProductDetailsPage: React.FC = () => {
                             <div className="flex h-10 bg-white/5 rounded-xl border border-white/10 overflow-hidden">
                                 <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="w-8 h-full flex items-center justify-center text-zinc-400"><Minus size={12}/></button>
                                 <input
-                                    type="number"
-                                    min="1"
-                                    value={quantity === 0 ? '' : String(Number(quantity))}
+                                    type="text"
+                                    inputMode="numeric"
+                                    pattern="[0-9]*"
+                                    value={quantity === 0 ? '' : String(quantity)}
                                     onChange={(e) => {
-                                        let val = e.target.value;
-
+                                        const val = e.target.value.replace(/[^0-9]/g, '');
                                         if (val === '') {
                                             setQuantity(0);
                                         } else {
                                             const parsed = parseInt(val, 10);
-                                            if (!isNaN(parsed) && parsed >= 0) {
+                                            if (!isNaN(parsed)) {
                                                 setQuantity(parsed);
                                             }
                                         }
@@ -385,7 +385,7 @@ const ProductDetailsPage: React.FC = () => {
                                     onBlur={() => {
                                         if (quantity < 1) setQuantity(1);
                                     }}
-                                    className="w-8 h-full bg-transparent text-center font-mono font-bold text-xs focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                    className="w-8 h-full bg-transparent text-center font-mono font-bold text-xs focus:outline-none"
                                 />
                                 <button onClick={() => setQuantity(q => q + 1)} className="w-8 h-full flex items-center justify-center text-zinc-400"><Plus size={12}/></button>
                             </div>

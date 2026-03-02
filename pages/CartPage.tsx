@@ -258,26 +258,26 @@ const CartPage: React.FC = () => {
                                                                 –
                                                             </button>
                                                             <input 
-                                                                type="number"
-                                                                min="1"
-                                                                value={item.quantity === 0 ? '' : String(Number(item.quantity))}
-                                                                onChange={(e) => {
-                                                                    let val = e.target.value;
-                                                                    
-                                                                    if (val === '') {
-                                                                        updateQuantity(item.id, 0); 
-                                                                    } else {
-                                                                        const parsed = parseInt(val, 10);
-                                                                        if (!isNaN(parsed) && parsed >= 0) {
-                                                                            updateQuantity(item.id, parsed);
-                                                                        }
-                                                                    }
-                                                                }}
-                                                                onBlur={() => {
-                                                                    if (item.quantity < 1) updateQuantity(item.id, 1);
-                                                                }}
-                                                                className="w-8 bg-transparent text-center text-sm font-black text-white focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                                            />
+                                                                 type="text"
+                                                                 inputMode="numeric"
+                                                                 pattern="[0-9]*"
+                                                                 value={item.quantity === 0 ? '' : String(item.quantity)}
+                                                                 onChange={(e) => {
+                                                                     const val = e.target.value.replace(/[^0-9]/g, '');
+                                                                     if (val === '') {
+                                                                         updateQuantity(item.id, 0); 
+                                                                     } else {
+                                                                         const parsed = parseInt(val, 10);
+                                                                         if (!isNaN(parsed)) {
+                                                                             updateQuantity(item.id, parsed);
+                                                                         }
+                                                                     }
+                                                                 }}
+                                                                 onBlur={() => {
+                                                                     if (item.quantity < 1) updateQuantity(item.id, 1);
+                                                                 }}
+                                                                 className="w-8 bg-transparent text-center text-sm font-black text-white focus:outline-none"
+                                                             />
                                                             <button 
                                                                 onClick={() => increase(item.id)}
                                                                 className="w-8 h-8 flex items-center justify-center rounded-lg text-white hover:bg-white/10 hover:text-[#ff0000] transition-colors"

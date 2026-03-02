@@ -122,6 +122,7 @@ interface DBUser {
     created_at: string;
     last_login_at: string | null;
     last_device_info: string | null;
+    admin_notes?: string | null;
 }
 
 // ─── Product Edit Modal ────────────────────────────────────────────────────
@@ -850,6 +851,7 @@ const ProductsTab: React.FC = () => {
 // ─── Users Tab ────────────────────────────────────────────────────────────
 const UsersTab: React.FC = () => {
     const { user: currentUser } = useAuth();
+    const { showToast } = useToast();
     const [users, setUsers] = useState<DBUser[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
@@ -925,6 +927,19 @@ const UsersTab: React.FC = () => {
         setBanModal(null);
         setBanReason('');
         setUpdatingId(null);
+    };
+
+    const updateAdminNotes = async (userId: string, notes: string) => {
+        const { error } = await supabase
+            .from('profiles')
+            .update({ admin_notes: notes })
+            .eq('id', userId);
+        
+        if (error) {
+            showToast("Грешка при запазване на бележка", "error");
+        } else {
+            setUsers(prev => prev.map(u => u.id === userId ? { ...u, admin_notes: notes } : u));
+        }
     };
 
     const confirmDeleteEntirely = async () => {
@@ -1037,6 +1052,25 @@ const UsersTab: React.FC = () => {
                                                 💻 {u.last_device_info}
                                             </p>
                                         )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Center Column: Admin Notes */}
+                            <div className="flex-1 max-w-sm mt-3 md:mt-0">
+                                <div className="space-y-1 group/note relative">
+                                    <div className="flex items-center gap-2 mb-1 px-1">
+                                        <FileText className="w-2.5 h-2.5 text-zinc-500" />
+                                        <span className="text-[9px] text-zinc-500 uppercase font-black tracking-widest">Бележки за клиента</span>
+                                    </div>
+                                    <textarea
+                                        defaultValue={u.admin_notes || ''}
+                                        onBlur={(e) => updateAdminNotes(u.id, e.target.value)}
+                                        placeholder="Добави вътрешна бележка..."
+                                        className="w-full bg-black/40 border border-white/5 focus:border-red-600/40 rounded-lg p-3 text-[11px] text-white placeholder-zinc-800 focus:outline-none transition-all resize-none h-[70px] leading-tight"
+                                    />
+                                    <div className="absolute right-2 bottom-2 opacity-0 group-focus-within/note:opacity-100 transition-opacity pointer-events-none">
+                                        <span className="text-[8px] text-zinc-600 uppercase font-bold tracking-tighter">Auto-saves on blur</span>
                                     </div>
                                 </div>
                             </div>
@@ -2070,6 +2104,7 @@ interface RegularOrder {
     status: string;
     payment_method: string;
     created_at: string;
+    admin_notes?: string;
 }
 
 const OrdersTab: React.FC = () => {
@@ -2117,6 +2152,19 @@ const OrdersTab: React.FC = () => {
         } else {
             showToast("Статусът е обновен", "success");
             setOrders(prev => prev.map(o => o.id === id ? { ...o, status: newStatus } : o));
+        }
+    };
+
+    const updateAdminNotes = async (id: string, notes: string) => {
+        const { error } = await supabase
+            .from('orders')
+            .update({ admin_notes: notes })
+            .eq('id', id);
+        
+        if (error) {
+            showToast("Грешка при запазване на бележка", "error");
+        } else {
+            setOrders(prev => prev.map(o => o.id === id ? { ...o, admin_notes: notes } : o));
         }
     };
 
@@ -2733,9 +2781,14 @@ const OrdersTab: React.FC = () => {
 
                 <footer>
                     <div class="notes-area">
-                        <span class="box-label">Operator Notes / Checklist</span>
-                        <div style="color: #eee; margin-top: 10px;">____________________________________________________________________________________</div>
-                        <div style="color: #eee; margin-top: 20px;">____________________________________________________________________________________</div>
+                        <span class="box-label">Production & Admin Notes</span>
+                        <div style="font-size: 13px; color: #fff; margin-top: 10px; line-height: 1.5; font-weight: 600;">
+                            ${order.admin_notes || '<span style="color: #444; font-weight: normal;">No internal notes provided.</span>'}
+                        </div>
+                        <div style="color: #eee; margin-top: 15px; border-top: 1px dashed #333; pt: 10px;">
+                            <span class="box-label" style="font-size: 8px;">Checklist / Manual Notes</span>
+                            <div style="height: 40px;"></div>
+                        </div>
                     </div>
                     <div class="op-sig">
                         <div style="margin-bottom: 20px;">
@@ -2922,9 +2975,27 @@ const OrdersTab: React.FC = () => {
 
                                 {order.shipping_details.notes && (
                                     <div className="bg-white/5 p-3 rounded-lg border border-white/5 italic">
+                                        <p className="text-[10px] text-zinc-500 uppercase tracking-widest mb-1 font-bold">Бележка от клиент</p>
                                         <p className="text-xs text-zinc-400">"{order.shipping_details.notes}"</p>
                                     </div>
                                 )}
+
+                                <div className="space-y-2">
+                                    <h4 className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold flex items-center gap-2">
+                                        <FileText className="w-3 h-3" /> Административни Бележки
+                                    </h4>
+                                    <div className="relative group/note">
+                                        <textarea
+                                            defaultValue={order.admin_notes || ''}
+                                            onBlur={(e) => updateAdminNotes(order.id, e.target.value)}
+                                            placeholder="Добави вътрешна бележка за поръчката..."
+                                            className="w-full bg-black/40 border border-white/5 focus:border-red-600/40 rounded-lg p-3 text-xs text-white placeholder-zinc-700 focus:outline-none transition-all resize-none min-h-[80px]"
+                                        />
+                                        <div className="absolute right-2 bottom-2 opacity-0 group-focus-within/note:opacity-100 transition-opacity">
+                                            <span className="text-[9px] text-zinc-600 uppercase font-bold tracking-tighter">Auto-saves on blur</span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
 
                             {/* Middle Side: Items */}
@@ -3034,6 +3105,7 @@ interface CustomOrder {
     status: string;
     created_at: string;
     user_id: string | null;
+    admin_notes?: string;
 }
 
 const CustomOrdersTab: React.FC = () => {
@@ -3179,6 +3251,19 @@ const CustomOrdersTab: React.FC = () => {
         } else {
             showToast("Статусът е обновен", "success");
             setOrders(prev => prev.map(o => o.id === id ? { ...o, status: newStatus } : o));
+        }
+    };
+
+    const handleUpdateAdminNotes = async (id: string, notes: string) => {
+        const { error } = await supabase
+            .from('custom_orders')
+            .update({ admin_notes: notes })
+            .eq('id', id);
+        
+        if (error) {
+            showToast("Грешка при запазване на бележка", "error");
+        } else {
+            setOrders(prev => prev.map(o => o.id === id ? { ...o, admin_notes: notes } : o));
         }
     };
 
@@ -3534,8 +3619,28 @@ const CustomOrdersTab: React.FC = () => {
                             </div>
                         </div>
                         
-                        <div className="bg-white/5 p-3 text-sm text-zinc-300 min-h-[80px] mb-4">
-                            {order.description || <span className="text-zinc-600 italic">Няма описание</span>}
+                        <div className="bg-white/5 p-3 text-sm text-zinc-300 min-h-[80px] mb-4 rounded-lg relative">
+                            <span className="absolute top-2 left-3 text-[9px] uppercase tracking-widest text-zinc-600 font-bold">Описание от клиент</span>
+                            <div className="pt-4">
+                                {order.description || <span className="text-zinc-600 italic">Няма описание</span>}
+                            </div>
+                        </div>
+
+                        <div className="space-y-2 mb-4">
+                            <h4 className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold flex items-center gap-2">
+                                <FileText className="w-3 h-3" /> Административни Бележки
+                            </h4>
+                            <div className="relative group/note">
+                                <textarea
+                                    defaultValue={order.admin_notes || ''}
+                                    onBlur={(e) => handleUpdateAdminNotes(order.id, e.target.value)}
+                                    placeholder="Добави вътрешна бележка за това запитване..."
+                                    className="w-full bg-black/40 border border-white/5 focus:border-red-600/40 rounded-lg p-3 text-xs text-white placeholder-zinc-700 focus:outline-none transition-all resize-none min-h-[100px]"
+                                />
+                                <div className="absolute right-2 bottom-2 opacity-0 group-focus-within/note:opacity-100 transition-opacity">
+                                    <span className="text-[9px] text-zinc-600 uppercase font-bold tracking-tighter">Auto-saves on blur</span>
+                                </div>
+                            </div>
                         </div>
                         
                         {order.images && order.images.length > 0 && (
