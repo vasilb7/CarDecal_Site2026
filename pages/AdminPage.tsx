@@ -3217,7 +3217,7 @@ const OrdersTab: React.FC = () => {
                             <div class="summary-row">
                                 <span>Доставка</span>
                                 <span class="summary-val">
-                                    ${order.shipping_details.shippingCost === 0 
+                                    ${(order.shipping_details as any).shippingCost === 0 
                                         ? '<span style="color: #16a34a; font-weight: 800;">Безплатна</span>' 
                                         : 'По тарифа на куриера'}
                                 </span>
