@@ -250,7 +250,7 @@ const HomePage: React.FC = () => {
   return (
     <div>
       {/* Static Hero Section */}
-      <div className="relative h-screen min-h-[600px] flex items-center justify-center text-center overflow-hidden">
+      <div className="relative min-h-[100svh] flex items-center justify-center text-center overflow-hidden">
         {/* Background Hero Media */}
         <div className="absolute inset-0 z-0">
           {/* Fallback Premium Background */}
@@ -288,56 +288,65 @@ const HomePage: React.FC = () => {
             )}
           </motion.div>
 
-          {/* Dark Overlay for Text Readability */}
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-[1px]" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/40" />
+          {/* Dark Overlay 1: Soft Black Gradient */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/55 to-black/75 z-10" />
+          
+          {/* Dark Overlay 2: Vignette effect */}
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(0,0,0,0.6)_100%)] z-10" />
         </div>
 
         {/* Hero Content */}
-        <div className="container relative z-10 px-4">
+        <div className="container relative z-20 mx-auto px-4 sm:px-6 lg:px-10 max-w-[1100px] flex flex-col items-center justify-center w-full mt-16 sm:mt-0">
           <motion.div
             initial="hidden"
             animate="visible"
             variants={staggerContainer}
+            className="w-full flex flex-col items-center justify-center"
           >
+            {/* Title */}
             <motion.h1
               variants={fadeInUp}
-              className="text-5xl md:text-[10rem] font-black text-white uppercase tracking-tighter leading-none mb-6 drop-shadow-[0_15px_35px_rgba(0,0,0,0.9)] w-full text-center"
+              className="w-full text-center font-black uppercase leading-none tracking-tight mb-8 drop-shadow-[0_4px_24px_rgba(0,0,0,0.8)]"
+              style={{ fontSize: "clamp(3.5rem, 12vw, 10rem)" }}
             >
-              <span className="text-white">CAR</span>
-              <span className="text-shimmer text-red-600 drop-shadow-[0_0_20px_rgba(255,0,0,0.4)]">
+              <span className="text-white drop-shadow-md">CAR</span>
+              <span className="text-red-600 drop-shadow-[0_0_20px_rgba(220,38,38,0.5)]">
                 DECAL
               </span>
             </motion.h1>
-            <motion.p
-              variants={fadeInUp}
-              className="text-gray-200 text-xs md:text-xl uppercase tracking-[0.2em] md:tracking-[0.3em] max-w-2xl mx-auto mb-10 font-medium drop-shadow-md bg-white/5 py-3 px-4 md:px-8 backdrop-blur-xl border-x-2 border-red-600/50 rounded-sm inline-block w-[90%] md:w-auto"
-            >
-              Висококачествени стикери <br />
-              <span className="text-red-500 font-black tracking-widest text-base md:text-2xl mt-1 block italic lowercase">
-                Цени на едро
-              </span>
-            </motion.p>
+
+            {/* Subtitle Badge */}
             <motion.div
               variants={fadeInUp}
-              className="flex flex-col md:flex-row gap-4 md:gap-6 justify-center items-center w-full px-4 md:px-0"
+              className="w-full max-w-[720px] mx-auto mb-12 flex flex-col items-center justify-center"
+            >
+              <div className="backdrop-blur-md bg-black/25 border border-white/10 rounded-2xl py-3 px-6 sm:px-10 flex flex-col items-center justify-center shadow-2xl">
+                <span className="text-gray-200 text-[11px] sm:text-sm uppercase tracking-[0.25em] sm:tracking-[0.3em] font-bold mb-1.5 text-center">
+                  Висококачествени стикери
+                </span>
+                <span className="text-red-500 font-semibold italic text-sm sm:text-lg tracking-widest text-center lowercase">
+                  цени на едро
+                </span>
+              </div>
+            </motion.div>
+
+            {/* CTA Buttons */}
+            <motion.div
+              variants={fadeInUp}
+              className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center w-full max-w-[280px] sm:max-w-none mx-auto"
             >
               <Link
                 to={`/catalog`}
-                className="group relative overflow-hidden px-8 md:px-12 py-4 md:py-5 bg-red-600 text-white font-bold uppercase tracking-widest text-xs md:text-sm transition-all duration-300 shadow-[0_0_40px_rgba(220,0,0,0.3)] hover:shadow-[0_0_60px_rgba(220,0,0,0.5)] active:scale-95 w-full md:w-auto text-center"
+                className="group relative flex items-center justify-center w-full sm:w-auto h-12 sm:h-14 px-8 sm:px-10 bg-red-600 text-white font-bold uppercase tracking-[0.15em] text-[11px] sm:text-sm rounded-xl shadow-[0_4px_20px_rgba(220,38,38,0.3)] hover:shadow-[0_4px_30px_rgba(220,38,38,0.5)] hover:bg-red-500 hover:text-white transition-all duration-200 hover:-translate-y-[1px] active:translate-y-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500"
               >
-                <span className="relative z-10">ПАЗАРУВАЙ СЕГА</span>
-                <div className="absolute inset-0 bg-white translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
-                <span className="absolute inset-0 flex items-center justify-center text-black font-bold uppercase tracking-widest text-xs md:text-sm translate-y-full group-hover:translate-y-0 transition-transform duration-300 z-20">
-                  ПАЗАРУВАЙ СЕГА
-                </span>
+                Пазарувай сега
               </Link>
               {user && (
                 <Link
                   to={`/book-now`}
-                  className="px-8 md:px-12 py-4 md:py-5 border-2 border-white/30 text-white font-bold uppercase tracking-widest text-xs md:text-sm hover:border-red-600 hover:bg-black/40 hover:text-red-500 transition-all duration-300 backdrop-blur-md bg-white/5 active:scale-95 w-full md:w-auto text-center flex items-center justify-center gap-2"
+                  className="group relative flex items-center justify-center w-full sm:w-auto h-12 sm:h-14 px-8 sm:px-10 bg-black/20 backdrop-blur-sm border border-white/20 text-white font-bold uppercase tracking-[0.15em] text-[11px] sm:text-sm rounded-xl hover:bg-white/10 hover:border-white/40 hover:text-white transition-all duration-200 hover:-translate-y-[1px] active:translate-y-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/50"
                 >
-                  ИНДИВИДУАЛНИ ПОРЪЧКИ
+                  Индивидуални поръчки
                 </Link>
               )}
             </motion.div>
