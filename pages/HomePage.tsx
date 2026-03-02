@@ -242,11 +242,11 @@ const HomePage: React.FC = () => {
   return (
     <div className="bg-background">
       {/* Hero Section */}
-      <div className="relative min-h-[100svh] flex flex-col items-center justify-center overflow-hidden bg-black pt-[calc(env(safe-area-inset-top)+theme(spacing.12))] md:pt-0">
+      <div className="relative min-h-[100svh] flex flex-col items-center justify-center overflow-hidden bg-black pt-[calc(env(safe-area-inset-top)+theme(spacing.4))] md:pt-0">
         {/* Background Overlay Layer */}
         <div className="absolute inset-0 z-0">
           <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-transparent to-black z-10" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.6)_100%)] z-10" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.8)_100%)] z-10" />
           
           {siteSettings?.hero_video_url ? (
             <video
@@ -256,7 +256,7 @@ const HomePage: React.FC = () => {
               playsInline
               onLoadedData={() => setMediaLoaded(true)}
               className={`w-full h-full object-cover transition-opacity duration-1000 ${
-                mediaLoaded ? "opacity-40" : "opacity-0"
+                mediaLoaded ? "opacity-30" : "opacity-0"
               }`}
             >
               <source src={siteSettings.hero_video_url} type="video/mp4" />
@@ -270,7 +270,7 @@ const HomePage: React.FC = () => {
               alt="Hero Background"
               onLoad={() => setMediaLoaded(true)}
               className={`w-full h-full object-cover transition-opacity duration-1000 ${
-                mediaLoaded ? "opacity-40" : "opacity-0"
+                mediaLoaded ? "opacity-30" : "opacity-0"
               }`}
             />
           )}
@@ -297,47 +297,36 @@ const HomePage: React.FC = () => {
             {/* Main Title */}
             <motion.h1
               variants={fadeInUp}
-              className="w-full text-center font-black uppercase leading-[0.85] tracking-tight mb-4 drop-shadow-2xl"
-              style={{ fontSize: "clamp(48px, 15vw, 160px)" }}
+              className="w-full text-center font-black uppercase leading-[0.85] tracking-tighter mb-2 drop-shadow-2xl flex items-center justify-center"
+              style={{ fontSize: "clamp(56px, 18vw, 180px)" }}
             >
-              <span className="text-white">CAR</span>
-              <span className="text-red-600 drop-shadow-[0_0_30px_rgba(220,38,38,0.4)]">
-                DECAL
-              </span>
+              <span className="text-white">CAR</span><span className="text-red-600 drop-shadow-[0_0_40px_rgba(220,38,38,0.5)]">DECAL</span>
             </motion.h1>
 
             {/* Subtitles */}
             <motion.div
               variants={fadeInUp}
-              className="space-y-3 mb-10 sm:mb-12"
+              className="flex flex-col items-center mb-10 sm:mb-14"
             >
-              <p className="text-white/90 text-[10px] sm:text-sm uppercase tracking-[0.4em] font-black">
+              <p className="text-white/90 text-[8px] sm:text-[10px] uppercase tracking-[0.8em] font-black mb-4">
                 Висококласни Стикери
               </p>
-              <p className="text-white/60 text-[12px] sm:text-base font-medium max-w-[280px] sm:max-w-none mx-auto leading-relaxed">
-                Качество, което се лепи. <span className="text-white font-bold">Цени, които печелят.</span>
+              <p className="text-white/60 text-[11px] sm:text-sm font-medium max-w-[280px] sm:max-w-none mx-auto leading-relaxed">
+                Качество, което се лепи. <span className="text-white">Цени, които печелят.</span>
               </p>
             </motion.div>
 
             {/* Action Buttons */}
             <motion.div
               variants={fadeInUp}
-              className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center w-full max-w-[320px] sm:max-w-none mx-auto"
+              className="flex flex-col sm:flex-row gap-4 justify-center items-center w-full max-w-[320px] sm:max-w-none mx-auto"
             >
               <Link
                 to="/catalog"
-                className="group relative flex items-center justify-center w-full sm:min-w-[200px] h-12 sm:h-14 px-8 bg-black text-white font-black uppercase tracking-widest text-[11px] sm:text-xs rounded-lg border border-[#ff0000]/40 shadow-[0_0_20px_rgba(255,0,0,0.2)] hover:bg-[#ff0000] hover:border-[#ff0000] transition-all duration-300 active:scale-95 focus:outline-none focus:ring-2 focus:ring-red-500/50"
+                className="group relative flex items-center justify-center w-full sm:w-[400px] h-12 bg-black text-white font-black uppercase tracking-widest text-[10px] sm:text-[11px] rounded-sm border border-red-600/60 shadow-[0_0_25px_rgba(255,0,0,0.15)] hover:bg-red-600 hover:border-red-600 transition-all duration-300 active:scale-95 focus:outline-none"
               >
                 Пазарувай сега
               </Link>
-              {user && (
-                <Link
-                  to="/book-now"
-                  className="group relative flex items-center justify-center w-full sm:min-w-[200px] h-12 sm:h-14 px-8 bg-white/5 backdrop-blur-md border border-white/10 text-white font-black uppercase tracking-widest text-[11px] sm:text-xs rounded-lg hover:bg-white/10 transition-all active:scale-95 shrink-0"
-                >
-                  Индивидуални поръчки
-                </Link>
-              )}
             </motion.div>
           </motion.div>
         </div>
