@@ -150,7 +150,7 @@ export const SignInPage: React.FC<SignInPageProps> = ({
                     </motion.p>
                 </div>
 
-                <form className="space-y-6 pt-2" onSubmit={onSignIn}>
+                <form className="space-y-6 pt-8" onSubmit={onSignIn}>
                     {/* Email */}
                     <FloatingInput 
                         label={t('auth.email', 'Имейл адрес')}
