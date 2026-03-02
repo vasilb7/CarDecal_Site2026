@@ -450,8 +450,30 @@ const Header: React.FC = () => {
                     </div>
 
                     {/* Mobile & Tablet Controls */}
-                    <div className="flex lg:hidden items-center gap-4 z-[110]">
+                    <div className="flex lg:hidden items-center gap-2 sm:gap-4 z-[110]">
                         <CartIcon />
+                        
+                        <Link 
+                            to={user ? "/profile" : "/login"}
+                            className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/5 transition-colors"
+                        >
+                            {user ? (
+                                <div className="w-7 h-7 rounded-full bg-surface border border-white/20 flex items-center justify-center overflow-hidden">
+                                    {(profile?.avatar_url || user?.user_metadata?.avatar_url || user?.user_metadata?.picture) ? (
+                                        <img 
+                                            src={profile?.avatar_url || user?.user_metadata?.avatar_url || user?.user_metadata?.picture} 
+                                            alt="Profile" 
+                                            className="w-full h-full object-cover"
+                                        />
+                                    ) : (
+                                        <User size={16} className="text-white" />
+                                    )}
+                                </div>
+                            ) : (
+                                <User size={22} className="text-white/80" />
+                            )}
+                        </Link>
+
                         <button
                             onClick={() => setIsMenuOpen(true)}
                             className="text-white focus:outline-none w-12 h-12 flex flex-col justify-center items-center gap-1.5 rounded-full hover:bg-white/5 transition-colors"
