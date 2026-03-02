@@ -293,7 +293,7 @@ const OrderReceiptPage: React.FC = () => {
                       </span>
                     ) : (
                       <span className="text-[10px] font-bold text-zinc-300 uppercase tracking-widest italic">
-                        N/A
+                        Стандартен
                       </span>
                     )}
                   </td>
