@@ -2702,7 +2702,7 @@ const OrdersTab: React.FC = () => {
                 <td style="padding: 10px 8px; border-bottom: 1px solid #f0f0f0;">
                     <div style="font-weight: 700; color: #000; font-size: 14px; text-transform: uppercase;">${item.name_bg || item.name}</div>
                     <div style="font-size: 11px; color: #888; margin-top: 4px; font-weight: 400;">
-                        ${item.variant || ''} ${item.dimensions ? `| ${item.dimensions}` : ''} ${item.material ? `| ${item.material}` : ''}
+                        ${item.variant || ''}
                     </div>
                 </td>
                 <td style="padding: 10px 8px; border-bottom: 1px solid #f0f0f0; text-align: center; font-weight: 600;">${item.quantity}</td>
