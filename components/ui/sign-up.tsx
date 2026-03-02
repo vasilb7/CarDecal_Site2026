@@ -192,7 +192,7 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.2 }}
-                        className="text-white/60 text-lg font-light"
+                        className="text-white/60 text-base font-light"
                     >
                         {t('auth.register_subtitle', 'Регистрирайте се, за да поръчвате индивидуални дизайни и да следите историята на вашите поръчки.')}
                     </motion.p>
@@ -269,9 +269,9 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
                     </motion.button>
 
                     {/* Social Buttons */}
-                    <div className="flex gap-4 pt-4">
+                    <div className="flex flex-col gap-3 pt-4">
                         <motion.button
-                            whileHover={{ scale: 1.02 }}
+                            whileHover={{ scale: 1.01 }}
                             whileTap={{ scale: 0.98 }}
                             type="button"
                             onClick={onGoogleSignUp}
@@ -280,20 +280,20 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
                             <GoogleIcon />
                             <span className="text-sm font-medium text-white/80">Google</span>
                         </motion.button>
+
+                        {/* Bottom Links Moved Inside Form Flow */}
+                        <div className="flex justify-center items-center text-sm pt-4 px-2 text-white/60">
+                            {t('auth.already_have_account', 'Have an account?')}{' '}
+                            <Link 
+                                to="/login" 
+                                state={location.state}
+                                className="ml-2 text-white font-semibold underline underline-offset-4 hover:text-red-500 transition-colors"
+                            >
+                                {t('auth.sign_in_link', 'Sign in')}
+                            </Link>
+                        </div>
                     </div>
                 </form>
-            </div>
-
-            {/* Bottom Links */}
-            <div className="flex justify-center items-center text-sm mt-8 px-2">
-                    {t('auth.already_have_account', 'Have an account?')}{' '}
-                    <Link 
-                        to="/login" 
-                        state={location.state}
-                        className="text-white font-semibold underline underline-offset-4 hover:text-red-500 transition-colors"
-                    >
-                        {t('auth.sign_in_link', 'Sign in')}
-                    </Link>
             </div>
         </div>
 
