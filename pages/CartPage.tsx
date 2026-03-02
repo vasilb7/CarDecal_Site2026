@@ -260,13 +260,17 @@ const CartPage: React.FC = () => {
                                                             <input 
                                                                 type="number"
                                                                 min="1"
-                                                                value={item.quantity}
+                                                                value={item.quantity === 0 ? '' : String(Number(item.quantity))}
                                                                 onChange={(e) => {
-                                                                    const val = parseInt(e.target.value);
-                                                                    if (!isNaN(val)) {
-                                                                        updateQuantity(item.id, val);
+                                                                    let val = e.target.value;
+                                                                    
+                                                                    if (val === '') {
+                                                                        updateQuantity(item.id, 0); 
                                                                     } else {
-                                                                        updateQuantity(item.id, 0); // Handle temporary zero state
+                                                                        const parsed = parseInt(val, 10);
+                                                                        if (!isNaN(parsed) && parsed >= 0) {
+                                                                            updateQuantity(item.id, parsed);
+                                                                        }
                                                                     }
                                                                 }}
                                                                 onBlur={() => {
@@ -285,7 +289,7 @@ const CartPage: React.FC = () => {
                                                         {/* Total per item */}
                                                         <div className="text-right shrink-0">
                                                             <div className="text-xl font-black text-[#ff0000] tracking-wider drop-shadow-sm">
-                                                                {(item.price * item.quantity).toFixed(2)} <span className="text-sm">€</span>
+                                                                {(item.price * Math.max(1, item.quantity)).toFixed(2)} <span className="text-sm">€</span>
                                                             </div>
                                                         </div>
 

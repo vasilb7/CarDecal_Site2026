@@ -12,7 +12,8 @@ import {
     ChevronDown, ChevronUp, Save, X, CheckCircle, AlertTriangle,
     Eye, EyeOff, Tag, Image, ArrowLeft, Loader2, RefreshCw,
     UserCheck, UserX, Crown, Upload, Video, Film, AlertCircle, Mail,
-    Megaphone, Palette, Type, ShoppingBag, Receipt, Printer
+    Megaphone, Palette, Type, ShoppingBag, Receipt, Printer, Download,
+    FileText, BoxSelect, LayoutGrid, ClipboardCheck, Boxes
 } from 'lucide-react';
 import { useToast } from '../components/Toast/ToastProvider';
 import { uploadToCloudinary } from '../lib/cloudinary-utils';
@@ -2076,7 +2077,19 @@ const OrdersTab: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [statusFilter, setStatusFilter] = useState('all');
+    const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
+    const [bulkUpdating, setBulkUpdating] = useState(false);
     const { showToast } = useToast();
+
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const searchVal = params.get('search_id');
+        if (searchVal) {
+            setSearchTerm(searchVal);
+        }
+    }, []);
 
     const fetchOrders = async () => {
         setLoading(true);
@@ -2124,9 +2137,79 @@ const OrdersTab: React.FC = () => {
         }
     };
 
+    const handleBulkDelete = async () => {
+        if (selectedOrders.length === 0) return;
+        if (!window.confirm(`Сигурни ли сте, че искате да изтриете ${selectedOrders.length} поръчки?`)) return;
+
+        setBulkUpdating(true);
+        try {
+            const { error } = await supabase.from('orders').delete().in('id', selectedOrders);
+            if (error) throw error;
+            showToast(`${selectedOrders.length} поръчки бяха изтрити`, 'success');
+            setOrders(prev => prev.filter(o => !selectedOrders.includes(o.id)));
+            setSelectedOrders([]);
+        } catch (err: any) {
+            showToast('Грешка при масово изтриване: ' + err.message, 'error');
+        } finally {
+            setBulkUpdating(false);
+        }
+    };
+
+    const handleBulkStatusUpdate = async (newStatus: string) => {
+        if (selectedOrders.length === 0 || !newStatus) return;
+        
+        setBulkUpdating(true);
+        try {
+            const { error } = await supabase
+                .from('orders')
+                .update({ status: newStatus })
+                .in('id', selectedOrders);
+            
+            if (error) throw error;
+            
+            showToast(`Статусът на ${selectedOrders.length} поръчки е обновен`, 'success');
+            setOrders(prev => prev.map(o => selectedOrders.includes(o.id) ? { ...o, status: newStatus } : o));
+            setSelectedOrders([]);
+        } catch (err: any) {
+            showToast('Грешка при масово обновяване: ' + err.message, 'error');
+        } finally {
+            setBulkUpdating(false);
+        }
+    };
+
+    const toggleSelectAll = () => {
+        if (selectedOrders.length === filteredOrders.length) {
+            setSelectedOrders([]);
+        } else {
+            setSelectedOrders(filteredOrders.map(o => o.id));
+        }
+    };
+
+    const toggleSelectOrder = (id: string) => {
+        setSelectedOrders(prev => 
+            prev.includes(id) ? prev.filter(oid => oid !== id) : [...prev, id]
+        );
+    };
+
+    const filteredOrders = useMemo(() => {
+        return orders.filter(order => {
+            const matchesSearch = 
+                order.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                order.shipping_details.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                order.shipping_details.phone.includes(searchTerm);
+            
+            const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
+            
+            return matchesSearch && matchesStatus;
+        });
+    }, [orders, searchTerm, statusFilter]);
+
     const handleExport = () => {
         try {
-            const dataStr = JSON.stringify(orders, null, 2);
+            const dataToExport = selectedOrders.length > 0 
+                ? orders.filter(o => selectedOrders.includes(o.id))
+                : orders;
+            const dataStr = JSON.stringify(dataToExport, null, 2);
             const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
             const exportFileDefaultName = `orders_export_${new Date().toISOString().slice(0, 10)}.json`;
             const linkElement = document.createElement('a');
@@ -2143,111 +2226,541 @@ const OrdersTab: React.FC = () => {
         const printWindow = window.open('', '_blank');
         if (!printWindow) return;
 
-        const itemsHtml = order.items.map(item => `
-            <tr style="border-bottom: 1px solid #ddd;">
-                <td style="padding: 12px 8px; text-transform: uppercase;">${item.name} <br/><span style="color: #666; font-size: 12px;">${item.variant}</span></td>
-                <td style="padding: 12px 8px; text-align: center;">${item.quantity}</td>
-                <td style="padding: 12px 8px; text-align: right;">${item.price.toFixed(2)} &euro;</td>
-                <td style="padding: 12px 8px; text-align: right;">${(item.price * item.quantity).toFixed(2)} &euro;</td>
+        const dateFormatted = new Date(order.created_at).toLocaleString('bg-BG', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+
+        const statusMap: Record<string, string> = {
+            'pending': 'Очаква потвърждение',
+            'shipped': 'Изпратена',
+            'completed': 'Завършена',
+            'cancelled': 'Отказана'
+        };
+
+        const paymentMap: Record<string, string> = {
+            'cash_on_delivery': 'Наложен платеж',
+            'card': 'Карта',
+            'bank': 'Банков превод'
+        };
+
+        const itemsHtml = order.items.map((item, idx) => `
+            <tr style="background-color: ${idx % 2 === 0 ? '#ffffff' : '#fcfcfc'};">
+                <td style="padding: 16px 12px; border-bottom: 1px solid #f0f0f0;">
+                    <div style="font-weight: 700; color: #000; font-size: 14px; text-transform: uppercase;">${item.name_bg || item.name}</div>
+                    <div style="font-size: 11px; color: #888; margin-top: 4px; font-weight: 400;">
+                        ${item.variant || ''} ${item.dimensions ? `| ${item.dimensions}` : ''} ${item.material ? `| ${item.material}` : ''}
+                    </div>
+                </td>
+                <td style="padding: 16px 12px; border-bottom: 1px solid #f0f0f0; text-align: center; font-weight: 600;">${item.quantity}</td>
+                <td style="padding: 16px 12px; border-bottom: 1px solid #f0f0f0; text-align: right; font-weight: 500;">€${(Number(item.price)).toFixed(2)}</td>
+                <td style="padding: 16px 12px; border-bottom: 1px solid #f0f0f0; text-align: right; font-weight: 700; color: #000;">€${(Number(item.price) * item.quantity).toFixed(2)}</td>
             </tr>
         `).join('');
 
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${window.location.origin}/order/${order.id}`;
+        const logoUrl = `${window.location.origin}/LOGO.png`;
+
         const html = `
             <!DOCTYPE html>
-            <html>
+            <html lang="bg">
                 <head>
-                    <title>Поръчка #${order.id.slice(0, 8)}</title>
+                    <meta charset="UTF-8">
+                    <title>Поръчка #${order.id.slice(0, 8)} - CarDecal.bg</title>
+                    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
                     <style>
-                        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 40px; color: #333; }
-                        .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; border-bottom: 2px solid #dc2626; padding-bottom: 20px; }
-                        .logo { flex: 1; font-size: 24px; font-weight: 900; color: #dc2626; text-transform: uppercase; letter-spacing: 2px; }
-                        .order-info { text-align: right; }
-                        .order-info h1 { margin: 0 0 5px 0; font-size: 20px; text-transform: uppercase; }
-                        .order-info p { margin: 0; color: #666; font-size: 14px; }
+                        @page { size: A4; margin: 0; }
+                        * { box-sizing: border-box; -webkit-print-color-adjust: exact; }
+                        body { 
+                            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+                            margin: 0; padding: 40px; 
+                            color: #1a1a1a; background: #fff; line-height: 1.5;
+                        }
+                        .container { max-width: 800px; margin: 0 auto; }
                         
-                        .details { display: flex; justify-content: space-between; margin-bottom: 40px; }
-                        .col { flex: 1; }
-                        .col h3 { font-size: 12px; text-transform: uppercase; color: #999; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; display: inline-block; }
-                        .col p { margin: 4px 0; font-size: 14px; font-weight: 500; }
+                        /* Header */
+                        .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 50px; }
+                        .brand { flex: 1; }
+                        .logo-container { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+                        .logo-img { height: 45px; width: auto; }
+                        .brand-name { font-size: 24px; font-weight: 900; letter-spacing: 2px; color: #000; text-transform: uppercase; }
+                        .contact-info { font-size: 11px; color: #666; font-weight: 400; }
+                        .contact-info p { margin: 2px 0; }
                         
-                        table { border-collapse: collapse; margin-bottom: 40px; width: 100%; }
-                        th { text-align: left; padding: 12px 8px; background: #f9f9f9; font-size: 12px; text-transform: uppercase; color: #999; border-bottom: 2px solid #ddd; }
+                        .order-meta { text-align: right; }
+                        .order-label { display: inline-block; padding: 6px 12px; background: #FF0000; color: #fff; font-size: 10px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 12px; }
+                        .order-number { font-size: 20px; font-weight: 900; margin: 0; color: #3D0000; }
+                        .order-date { font-size: 13px; color: #888; margin-top: 4px; }
+
+                        /* Double Column Blocks */
+                        .blocks-wrapper { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 40px; }
+                        .block-title { font-size: 10px; font-weight: 900; color: #888; text-transform: uppercase; letter-spacing: 1.5px; border-bottom: 1px solid #eee; padding-bottom: 6px; margin-bottom: 12px; }
+                        .block-content p { margin: 4px 0; font-size: 13px; color: #333; }
+                        .block-content strong { color: #000; font-weight: 600; }
+
+                        .status-badge { display: inline-block; font-size: 11px; font-weight: 700; color: #000; margin-top: 4px; }
+                        
+                        /* Table */
+                        table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+                        thead th { text-align: left; padding: 12px; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; color: #888; border-top: 2px solid #000; border-bottom: 1px solid #000; }
                         th.center { text-align: center; }
                         th.right { text-align: right; }
-                        
-                        .totals { display: flex; justify-content: flex-end; }
-                        .totals-box { width: 300px; background: #f9f9f9; padding: 20px; border-radius: 8px; }
-                        .totals-row { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; }
-                        .totals-row.grand { font-size: 18px; font-weight: bold; color: #dc2626; border-top: 1px solid #ddd; padding-top: 10px; margin-top: 10px; }
+
+                        /* Summary Card */
+                        .summary-card { 
+                            margin-top: 20px;
+                            float: right;
+                            width: 320px;
+                            background: #fdfdfd;
+                            padding: 24px;
+                            border: 1px solid #eee;
+                            border-radius: 8px;
+                        }
+                        .summary-row { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 13px; color: #666; }
+                        .summary-row.total { 
+                            margin-top: 15px; padding-top: 15px; 
+                            border-top: 1px solid #eee; 
+                            color: #FF0000; font-weight: 900; font-size: 22px; 
+                        }
+                        .currency { font-size: 0.5em; vertical-align: middle; margin-right: 4px; color: #888; }
+
+                        /* Footer */
+                        .footer { clear: both; margin-top: 80px; padding-top: 40px; border-top: 1px solid #eee; display: flex; justify-content: space-between; align-items: flex-end; }
+                        .footer-note { font-size: 12px; color: #888; max-width: 450px; }
+                        .footer-note h4 { color: #000; font-size: 13px; margin: 0 0 8px 0; text-transform: uppercase; letter-spacing: 1px; }
+                        .qr-block { text-align: center; }
+                        .qr-img { width: 90px; height: 90px; margin-bottom: 8px; padding: 6px; border: 1px solid #eee; border-radius: 8px; background: #fff; }
+                        .qr-text { font-size: 9px; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; }
+
+                        @media print {
+                            body { padding: 40px; }
+                            .no-print { display: none; }
+                            .summary-card { break-inside: avoid; }
+                            .footer { break-inside: avoid; }
+                        }
                     </style>
                 </head>
                 <body>
-                    <div class="header">
-                        <div class="logo">CarDecal.BG</div>
-                        <div class="order-info">
-                            <h1>Бележка към Поръчка</h1>
-                            <p>#${order.id.slice(0, 8)} / ${new Date(order.created_at).toLocaleDateString('bg-BG')}</p>
-                        </div>
-                    </div>
-                    
-                    <div class="details">
-                        <div class="col">
-                            <h3>ДАННИ ЗА КЛИЕНТА</h3>
-                            <p>${order.shipping_details.fullName}</p>
-                            <p>${order.shipping_details.phone}</p>
-                            <p>${order.shipping_details.email || ''}</p>
-                        </div>
-                        <div class="col" style="text-align: right;">
-                            <h3>АДРЕС ЗА ДОСТАВКА</h3>
-                            <p>${order.shipping_details.deliveryType === 'econt' ? 'Еконт Офис' : 'Спиди Офис'}</p>
-                            <p>${order.shipping_details.city}</p>
-                            <p>${order.shipping_details.officeName}</p>
-                        </div>
-                    </div>
-
-                    ${order.shipping_details.notes ? `
-                    <div style="margin-bottom: 40px; padding: 15px; background: #fdfdfd; border-left: 3px solid #ccc;">
-                        <p style="margin: 0; font-size: 12px; color: #666; text-transform: uppercase; margin-bottom: 5px;">Бележка от клиента</p>
-                        <p style="margin: 0; font-style: italic;">"${order.shipping_details.notes}"</p>
-                    </div>
-                    ` : ''}
-
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Артикул</th>
-                                <th class="center" style="width: 100px;">К-во</th>
-                                <th class="right" style="width: 100px;">Ед. Цена</th>
-                                <th class="right" style="width: 100px;">Сума</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${itemsHtml}
-                        </tbody>
-                    </table>
-                    
-                    <div class="totals">
-                        <div class="totals-box">
-                            <div class="totals-row grand">
-                                <span>ОБЩО ЗА ПЛАЩАНЕ:</span>
-                                <span>${order.total_amount.toFixed(2)} &euro;</span>
+                    <div class="container">
+                        <div class="header">
+                            <div class="brand">
+                                <div class="logo-container">
+                                    <img src="${logoUrl}" alt="CarDecal" class="logo-img">
+                                    <span class="brand-name">CarDecal.bg</span>
+                                </div>
+                                <div class="contact-info">
+                                    <p>Телефон: +359 87 635 3444</p>
+                                    <p>Email: contact@cardecal.bg</p>
+                                    <p>Уебсайт: www.cardecal.bg</p>
+                                </div>
+                            </div>
+                            <div class="order-meta">
+                                <div class="order-label">Client Invoice</div>
+                                <h1 class="order-number">№ ${order.id.slice(0, 10).toUpperCase()}</h1>
+                                <div class="order-date">${dateFormatted} ч.</div>
                             </div>
                         </div>
-                    </div>
-                    
-                    <div style="margin-top: 60px; text-align: center; color: #999; font-size: 12px;">
-                        Благодарим Ви, че избрахте CarDecal.BG!<br/>
-                        Надяваме се стикерите да Ви харесат!
+
+                        <div class="blocks-wrapper">
+                            <div>
+                                <div class="block-title">Данни за клиента</div>
+                                <div class="block-content">
+                                    <p><strong>${order.shipping_details.fullName}</strong></p>
+                                    <p>${order.shipping_details.phone}</p>
+                                    <p>${order.shipping_details.email || '-'}</p>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="block-title">Детайли на поръчката</div>
+                                <div class="block-content" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                                    <div>
+                                        <div style="font-size: 9px; color: #aaa; text-transform: uppercase;">Статус</div>
+                                        <div class="status-badge">${statusMap[order.status] || order.status}</div>
+                                    </div>
+                                    <div>
+                                        <div style="font-size: 9px; color: #aaa; text-transform: uppercase;">Плащане</div>
+                                        <div class="status-badge">${paymentMap[order.payment_method] || order.payment_method}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="blocks-wrapper" style="margin-bottom: 30px;">
+                            <div style="grid-column: span 2;">
+                                <div class="block-title">Доставка</div>
+                                <div class="block-content">
+                                    <p><strong>Куриер:</strong> ${order.shipping_details.deliveryType === 'econt' ? 'Еконт' : order.shipping_details.deliveryType === 'speedy' ? 'Спиди' : 'Адрес'} - ${order.shipping_details.city}</p>
+                                    <p><strong>Офис/Адрес:</strong> ${order.shipping_details.officeName}</p>
+                                    ${order.shipping_details.notes ? `<p style="margin-top: 15px; font-style: italic; color: #666; font-size: 12px; padding: 10px; background: #f9f9f9; border-left: 2px solid #ddd;"><strong style="font-style: normal; color: #444;">Бележка:</strong> "${order.shipping_details.notes}"</p>` : ''}
+                                </div>
+                            </div>
+                        </div>
+
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="padding-left: 0;">Артикул / Описание</th>
+                                    <th class="center" style="width: 80px;">К-во</th>
+                                    <th class="right" style="width: 100px;">Ед. Цена</th>
+                                    <th class="right" style="width: 100px; padding-right: 0;">Общо</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${itemsHtml}
+                            </tbody>
+                        </table>
+
+                        <div class="summary-card">
+                            <div class="summary-row">
+                                <span>Брой артикули:</span>
+                                <strong>${order.items.length}</strong>
+                            </div>
+                            <div class="summary-row">
+                                <span>Доставка (Econt/Speedy):</span>
+                                <strong>0.00 <span style="font-size: 10px; color: #888;">EUR</span></strong>
+                            </div>
+                            <div class="summary-row" style="margin-top: 5px;">
+                                <span>Междинна сума:</span>
+                                <strong>${(order.total_amount).toFixed(2)} <span style="font-size: 10px; color: #888;">EUR</span></strong>
+                            </div>
+                            <div class="summary-row total">
+                                <span>ОБЩО ЗА ПЛАЩАНЕ:</span>
+                                <span><span class="currency">EUR</span>${(order.total_amount).toFixed(2)}</span>
+                            </div>
+                            <div style="font-size: 9px; color: #aaa; text-align: center; margin-top: 15px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;">
+                                Всички цени са крайни в EUR
+                            </div>
+                        </div>
+
+                        <div class="footer">
+                            <div class="footer-note">
+                                <h4>Благодарим Ви за доверието!</h4>
+                                <p>С Вашата поръчка помагате на CarDecal да продължи да създава уникални дизайни. Вашето удовлетворение е наш приоритет.</p>
+                                <p style="margin-top: 15px;">
+                                    <a href="${window.location.origin}/terms" style="color: #888; text-decoration: none; border-bottom: 1px solid #eee;">Общи условия</a> • 
+                                    <a href="${window.location.origin}/privacy" style="color: #888; text-decoration: none; border-bottom: 1px solid #eee; margin-left: 10px;">Декларация за поверителност</a>
+                                </p>
+                                <p style="margin-top: 10px; font-weight: 900; color: #000;">CarDecal.bg - Premium Vinyl Decals</p>
+                            </div>
+                            <div class="qr-block">
+                                <img src="${qrUrl}" alt="QR Code" class="qr-img">
+                                <div class="qr-text">Проследи поръчката</div>
+                            </div>
+                        </div>
                     </div>
                 </body>
             </html>
         `;
         printWindow.document.write(html);
         printWindow.document.close();
-        printWindow.focus();
+        
+        // Wait for images and fonts to load
         setTimeout(() => {
+            printWindow.focus();
             printWindow.print();
-        }, 500);
+        }, 1500);
+    };
+
+    const handlePrintProduction = (order: RegularOrder, sortMode: 'A' | 'B') => {
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) return;
+
+        const parseVariant = (v: string) => {
+            const val = (v || '').toLowerCase();
+            const parts = val.split('|').map(p => p.trim());
+            let size = '-';
+            let material = '-';
+            
+            if (parts.length >= 2) {
+                size = parts[0];
+                material = parts[1];
+            } else if (parts.length === 1 && parts[0]) {
+                if (parts[0].match(/\d/) && (parts[0].includes('cm') || parts[0].includes('см'))) {
+                    size = parts[0];
+                } else {
+                    material = parts[0];
+                }
+            }
+            return { 
+                size: size.toUpperCase(), 
+                material: material.charAt(0).toUpperCase() + material.slice(1) 
+            };
+        };
+
+        const sortedItems = [...order.items].sort((a, b) => {
+            const vA = parseVariant(a.variant);
+            const vB = parseVariant(b.variant);
+            if (sortMode === 'A') {
+                if (vA.material !== vB.material) return vA.material.localeCompare(vB.material);
+                if (vA.size !== vB.size) return vA.size.localeCompare(vB.size);
+                return a.name.localeCompare(b.name);
+            } else {
+                const catA = a.category || 'Без категория';
+                const catB = b.category || 'Без категория';
+                if (catA !== catB) return catA.localeCompare(catB);
+                return a.name.localeCompare(b.name);
+            }
+        });
+
+        // Calculate Totals for Summary boxes
+        const matCounts: Record<string, number> = {};
+        const sizeCounts: Record<string, number> = {};
+        let totalQty = 0;
+        
+        sortedItems.forEach(item => {
+            const { size, material } = parseVariant(item.variant);
+            matCounts[material] = (matCounts[material] || 0) + item.quantity;
+            sizeCounts[size] = (sizeCounts[size] || 0) + item.quantity;
+            totalQty += item.quantity;
+        });
+
+        const matSummaryHtml = Object.entries(matCounts).map(([k,v]) => `
+            <div class="summary-item">
+                <span class="label">${k}</span>
+                <span class="value">${v}</span>
+            </div>
+        `).join('');
+
+        const sizeSummaryHtml = Object.entries(sizeCounts).map(([k,v]) => `
+            <div class="summary-item">
+                <span class="label">${k}</span>
+                <span class="value">${v}</span>
+            </div>
+        `).join('');
+
+        const itemsHtml = sortedItems.map((item) => {
+            const { size, material } = parseVariant(item.variant);
+            const sku = item.id?.toString().slice(-6).toUpperCase() || 'STOCK';
+            return `
+                <tr>
+                    <td class="sku-cell">${sku}</td>
+                    <td>
+                        <div class="prod-name">${item.name}</div>
+                        <div class="prod-variant">${item.variant || '-'}</div>
+                        ${item.category ? `<div class="prod-category">${item.category}</div>` : ''}
+                    </td>
+                    <td class="center-cell">${material}</td>
+                    <td class="center-cell">${size}</td>
+                    <td class="qty-cell">${item.quantity}</td>
+                    <td class="design-ref">${item.design_id || item.print_ref || '-'}</td>
+                    <td>
+                        <div class="checklist">
+                            <div class="chk-box">☐ Print</div>
+                            <div class="chk-box">☐ Cut</div>
+                            <div class="chk-box">☐ Pack</div>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+        const qrUrlAdmin = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${window.location.origin}/admin?tab=orders&search_id=${order.id}`;
+        const logoUrl = `${window.location.origin}/LOGO.png`;
+
+        const html = `
+            <!DOCTYPE html>
+            <html lang="bg">
+            <head>
+                <meta charset="UTF-8">
+                <title>PRODUCTION - ${order.id.slice(0, 8)}</title>
+                <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&family=Roboto+Mono:wght@700&display=swap" rel="stylesheet">
+                <style>
+                    @page { size: A4; margin: 8mm; }
+                    body { font-family: 'Outfit', sans-serif; color: #000; margin: 0; padding: 0; line-height: 1.2; -webkit-print-color-adjust: exact; }
+                    * { box-sizing: border-box; }
+                    
+                    header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #000; padding-bottom: 10px; margin-bottom: 15px; }
+                    .header-left { display: flex; align-items: center; gap: 12px; }
+                    .header-left img { height: 35px; }
+                    .header-left h1 { margin: 0; font-size: 22px; font-weight: 900; letter-spacing: 1px; color: #000; border-left: 3px solid #ff0000; padding-left: 12px; }
+                    
+                    .header-right { display: flex; gap: 20px; align-items: center; }
+                    .qr-main { width: 75px; height: 75px; border: 1px solid #ddd; padding: 4px; background: #fff; }
+                    .order-header-info { text-align: right; }
+                    .order-no { font-size: 24px; font-weight: 900; color: #ff0000; margin: 0; line-height: 1; }
+                    .order-time { font-size: 11px; color: #666; font-weight: 700; margin-top: 4px; }
+                    
+                    .alert-strip { background: #ff0000; color: #fff; padding: 10px 20px; font-weight: 900; font-size: 16px; margin-bottom: 15px; border-radius: 4px; display: flex; align-items: center; gap: 15px; }
+                    
+                    .top-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 15px; margin-bottom: 15px; }
+                    .shipping-info-box { border: 1px solid #000; padding: 12px; border-radius: 4px; }
+                    .box-label { font-size: 9px; uppercase; font-weight: 900; color: #888; margin-bottom: 6px; display: block; }
+                    .shipping-dest { font-size: 14px; font-weight: 800; margin-bottom: 4px; }
+                    .shipping-addr { font-size: 13px; color: #444; }
+
+                    .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+                    .stat-box { background: #f8f8f8; border: 1px solid #ddd; padding: 10px; border-radius: 4px; }
+                    .stat-val { font-size: 18px; font-weight: 900; display: block; margin-top: 2px; }
+                    
+                    .summary-flex { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+                    .summary-item { background: #fff; border: 1px solid #eee; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: 700; }
+                    .summary-item .label { color: #888; margin-right: 4px; }
+                    .summary-item .value { color: #ff0000; }
+
+                    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+                    thead { display: table-header-group; }
+                    thead th { background: #000; color: #fff; padding: 8px; font-size: 10px; font-weight: 900; text-transform: uppercase; text-align: left; }
+                    
+                    tr { border-bottom: 1px dashed #ddd; break-inside: avoid; }
+                    tr:nth-child(even) { background-color: #fafafa; }
+                    td { padding: 8px; vertical-align: top; border: 1px solid #eee; }
+
+                    .sku-cell { font-family: 'Roboto Mono', monospace; font-weight: 700; font-size: 11px; background: #f0f0f0 !important; }
+                    .prod-name { font-weight: 900; font-size: 13px; margin-bottom: 2px; }
+                    .prod-variant { font-size: 10px; color: #555; font-weight: 600; }
+                    .prod-category { font-size: 9px; color: #999; margin-top: 2px; text-transform: uppercase; }
+                    .qty-cell { font-size: 28px; font-weight: 900; text-align: center; color: #000; vertical-align: middle; border: 2px solid #000; }
+                    .center-cell { text-align: center; vertical-align: middle; font-weight: 700; font-size: 11px; }
+                    .design-ref { font-family: 'Roboto Mono', monospace; font-size: 9px; vertical-align: middle; }
+                    
+                    .checklist { display: flex; flex-direction: column; gap: 3px; justify-content: center; height: 100%; }
+                    .chk-box { border: 1px solid #888; padding: 1px 4px; font-size: 8px; font-weight: 900; color: #444; background: #fff; }
+
+                    .label-section { margin-top: 40px; border: 3px dashed #000; padding: 25px; break-inside: avoid; border-radius: 10px; }
+                    .label-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; align-items: end; }
+                    .label-recipient h3 { font-size: 12px; text-transform: uppercase; border-bottom: 1px solid #000; display: inline-block; margin: 0 0 10px 0; }
+                    .label-name { font-size: 24px; font-weight: 900; line-height: 1; }
+                    .label-phone { font-size: 18px; font-weight: 800; margin-top: 8px; font-family: 'Roboto Mono', monospace; }
+                    .label-address { font-size: 16px; margin-top: 8px; font-weight: 500; }
+                    .qr-label { width: 100px; height: 100px; border: 1px solid #000; padding: 5px; }
+
+                    footer { margin-top: 30px; border-top: 1px solid #000; padding-top: 15px; display: grid; grid-template-columns: 1.5fr 1fr; gap: 40px; font-size: 11px; }
+                    .notes-area { min-height: 80px; border-bottom: 1px solid #eee; }
+                    .op-sig { text-align: right; }
+                    .sig-line { border-bottom: 1px solid #000; display: inline-block; width: 200px; margin-top: 10px; }
+
+                    @media print {
+                        .no-print { display: none; }
+                        body { padding: 0; }
+                    }
+                </style>
+            </head>
+            <body>
+                <header>
+                    <div class="header-left">
+                        <img src="${logoUrl}" alt="CarDecal">
+                        <h1>PRODUCTION SHEET [${sortMode === 'A' ? 'BATCH A' : 'BATCH B'}]</h1>
+                    </div>
+                    <div class="header-right">
+                        <img src="${qrUrlAdmin}" class="qr-main" alt="Admin QR">
+                        <div class="order-header-info">
+                            <h2 class="order-no">#${order.id.slice(0, 10).toUpperCase()}</h2>
+                            <p class="order-time">${new Date(order.created_at).toLocaleString('bg-BG')}</p>
+                            <p style="margin-top:5px;">PAYMENT: <span style="color:${order.payment_method === 'cash_on_delivery' ? '#000' : '#00a82d'}">${order.payment_method === 'cash_on_delivery' ? 'COD (НАЛОЖЕН)' : 'PAID (ПЛАТЕНО)'}</span></p>
+                        </div>
+                    </div>
+                </header>
+
+                ${order.shipping_details.notes ? `
+                    <div class="alert-strip">
+                        <span>⚠️ SPECIAL NOTE: "${order.shipping_details.notes}"</span>
+                    </div>
+                ` : ''}
+
+                <div class="top-grid">
+                    <div class="shipping-info-box">
+                        <span class="box-label">Shipping Details</span>
+                        <div class="shipping-dest">
+                            ${order.shipping_details.deliveryType.toUpperCase()} - ${order.shipping_details.city.toUpperCase()}
+                        </div>
+                        <div class="shipping-addr">${order.shipping_details.officeName}</div>
+                        <div style="font-size: 11px; margin-top: 8px; font-weight: 700;">${order.shipping_details.fullName} | ${order.shipping_details.phone}</div>
+                    </div>
+                    <div class="stats-grid">
+                        <div class="stat-box">
+                            <span class="box-label">Items</span>
+                            <span class="stat-val">${order.items.length} Lines</span>
+                        </div>
+                        <div class="stat-box">
+                            <span class="box-label">Total QTY</span>
+                            <span class="stat-val">${totalQty} PCS</span>
+                        </div>
+                        <div class="stat-box">
+                            <span class="box-label">Priority</span>
+                            <span class="stat-val" style="color: #000; opacity: 0.3;">NORMAL</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="stat-box" style="background: #fff; border: 1px dashed #000;">
+                        <span class="box-label">Material Groups</span>
+                        <div class="summary-flex">${matSummaryHtml}</div>
+                    </div>
+                    <div class="stat-box" style="background: #fff; border: 1px dashed #000;">
+                        <span class="box-label">Size Groups</span>
+                        <div class="summary-flex">${sizeSummaryHtml}</div>
+                    </div>
+                </div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 70px;">SKU ID</th>
+                            <th>Description</th>
+                            <th style="width: 85px;">Material</th>
+                            <th style="width: 65px;">Size</th>
+                            <th style="width: 65px; text-align: center;">QTY</th>
+                            <th style="width: 80px;">Design</th>
+                            <th style="width: 75px;">Check</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${itemsHtml}
+                    </tbody>
+                </table>
+
+                <div class="label-section">
+                    <div class="label-grid">
+                        <div class="label-recipient">
+                            <h3>Shipping Label (Recipient)</h3>
+                            <div class="label-name">${order.shipping_details.fullName.toUpperCase()}</div>
+                            <div class="label-phone">${order.shipping_details.phone}</div>
+                            <div class="label-address">
+                                <b>${order.shipping_details.deliveryType.toUpperCase()}</b> - ${order.shipping_details.city.toUpperCase()}<br/>
+                                <span style="font-size: 14px;">${order.shipping_details.officeName}</span>
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            <img src="${qrUrlAdmin}" class="qr-label" alt="QR">
+                            <div style="font-size: 10px; font-weight: 900; margin-top: 5px;">ORDER #${order.id.slice(0, 10).toUpperCase()}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <footer>
+                    <div class="notes-area">
+                        <span class="box-label">Operator Notes / Checklist</span>
+                        <div style="color: #eee; margin-top: 10px;">____________________________________________________________________________________</div>
+                        <div style="color: #eee; margin-top: 20px;">____________________________________________________________________________________</div>
+                    </div>
+                    <div class="op-sig">
+                        <div style="margin-bottom: 20px;">
+                            <span class="box-label">Prepared By</span>
+                            <div class="sig-line"></div>
+                        </div>
+                        <div>
+                            <span class="box-label">Checked By</span>
+                            <div class="sig-line"></div>
+                        </div>
+                        <p style="font-size: 8px; color: #aaa; margin-top: 15px;">System generated production sheet. Print time: ${new Date().toLocaleString('bg-BG')}</p>
+                    </div>
+                </footer>
+            </body>
+            </html>
+        `;
+
+        printWindow.document.write(html);
+        printWindow.document.close();
+
+        // Wait for images and fonts to load
+        setTimeout(() => {
+            printWindow.focus();
+            printWindow.print();
+        }, 1500);
     };
 
     useEffect(() => {
@@ -2279,20 +2792,103 @@ const OrdersTab: React.FC = () => {
                 isDanger={true}
             />
 
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                <h2 className="text-xl font-bold uppercase tracking-widest text-white">Всички Поръчки ({orders.length})</h2>
-                <button
-                    onClick={handleExport}
-                    className="flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-[10px] uppercase tracking-widest transition-colors border border-white/10"
-                >
-                    Експорт JSON
-                </button>
+            <div className="flex flex-col gap-6 mb-8">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                    <h2 className="text-xl font-bold uppercase tracking-widest text-white">Всички Поръчки ({filteredOrders.length})</h2>
+                    <div className="flex flex-wrap items-center gap-3">
+                        <div className="relative flex-1 min-w-[240px]">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                            <input 
+                                type="text"
+                                placeholder="Търси по номер на поръчка, име или телефон..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full bg-white/5 border border-white/10 rounded-lg py-2 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-red-600 transition-colors"
+                            />
+                        </div>
+                        <select 
+                            value={statusFilter}
+                            onChange={(e) => setStatusFilter(e.target.value)}
+                            className="bg-zinc-900 border border-white/10 rounded-lg px-4 py-2 text-xs font-bold uppercase tracking-widest text-white focus:outline-none focus:border-red-600 cursor-pointer"
+                        >
+                            <option value="all">Всички статуси</option>
+                            <option value="pending">Изчакващи</option>
+                            <option value="shipped">Изпратени</option>
+                            <option value="completed">Завършени</option>
+                            <option value="cancelled">Отказни</option>
+                        </select>
+                        <button
+                            onClick={handleExport}
+                            className="flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-[10px] uppercase tracking-widest transition-colors border border-white/10 rounded-lg"
+                        >
+                            <Download className="w-4 h-4" /> {selectedOrders.length > 0 ? 'Експорт Избрани' : 'Експорт'}
+                        </button>
+                    </div>
+                </div>
+
+                {/* Bulk Actions Bar */}
+                <AnimatePresence>
+                    {selectedOrders.length > 0 && (
+                        <motion.div 
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            className="bg-red-600/10 border border-red-600/20 p-4 rounded-xl flex flex-wrap items-center justify-between gap-4"
+                        >
+                            <div className="flex items-center gap-4">
+                                <label className="flex items-center gap-3 cursor-pointer">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={selectedOrders.length === filteredOrders.length}
+                                        onChange={toggleSelectAll}
+                                        className="w-4 h-4 rounded border-white/10 bg-black/40 text-red-600 focus:ring-red-600"
+                                    />
+                                    <span className="text-[10px] font-black text-white uppercase tracking-widest">
+                                        Избрани: {selectedOrders.length}
+                                    </span>
+                                </label>
+                            </div>
+                            
+                            <div className="flex items-center gap-3">
+                                <select 
+                                    className="bg-black/60 border border-white/10 text-white text-[10px] uppercase font-black p-2 rounded focus:outline-none focus:border-red-600"
+                                    onChange={(e) => handleBulkStatusUpdate(e.target.value)}
+                                    defaultValue=""
+                                >
+                                    <option value="" disabled>Промени статус на избраните</option>
+                                    <option value="pending">Изчакваща</option>
+                                    <option value="shipped">Изпратена</option>
+                                    <option value="completed">Завършена</option>
+                                    <option value="cancelled">Отказна</option>
+                                </select>
+                                <button
+                                    onClick={handleBulkDelete}
+                                    disabled={bulkUpdating}
+                                    className="p-2 bg-red-600/20 text-red-500 hover:bg-red-600 hover:text-white transition-all rounded-lg"
+                                    title="Изтрий избраните"
+                                >
+                                    {bulkUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                                </button>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
             
             <div className="space-y-4">
-                {orders.map(order => (
-                    <div key={order.id} className="bg-black/40 border border-white/5 p-6 rounded-xl hover:border-white/10 transition-colors">
+                {filteredOrders.map(order => (
+                    <div key={order.id} className={`bg-black/40 border transition-all p-6 rounded-xl hover:border-white/20 ${selectedOrders.includes(order.id) ? 'border-red-600/40 bg-red-600/5' : 'border-white/5'}`}>
                         <div className="flex flex-col lg:flex-row gap-8">
+                            {/* Checkbox Column */}
+                            <div className="lg:pt-2 flex items-start">
+                                <input 
+                                    type="checkbox"
+                                    checked={selectedOrders.includes(order.id)}
+                                    onChange={() => toggleSelectOrder(order.id)}
+                                    className="w-5 h-5 rounded border-white/10 bg-black/40 text-red-600 focus:ring-red-600 cursor-pointer"
+                                />
+                            </div>
+
                             {/* Left Side: Order Info */}
                             <div className="flex-1 space-y-4">
                                 <div className="flex items-center justify-between border-b border-white/5 pb-4">
@@ -2371,20 +2967,39 @@ const OrdersTab: React.FC = () => {
                                 </div>
                                 <div>
                                     <h4 className="text-[10px] text-zinc-500 uppercase tracking-widest mb-3 font-bold">Управление</h4>
-                                    <button
+                                    <div className="space-y-2">
+                                        <button
+                                            onClick={() => handlePrint(order)}
+                                            className="w-full flex items-center justify-center gap-2 py-3 bg-white/5 border border-white/10 text-white text-[10px] uppercase font-black tracking-widest hover:bg-white/10 transition-all shadow-sm"
+                                        >
+                                            <Printer className="w-4 h-4" />
+                                            ПЕЧАТ КЛИЕНТ
+                                        </button>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <button
+                                                onClick={() => handlePrintProduction(order, 'A')}
+                                                className="flex flex-col items-center justify-center gap-1 py-3 bg-red-600/5 border border-red-600/20 text-red-500 text-[9px] uppercase font-black tracking-widest hover:bg-red-600 hover:text-white transition-all rounded-sm group"
+                                                title="Сортиране по Материал -> Размер"
+                                            >
+                                                <BoxSelect className="w-4 h-4 mb-0.5 group-hover:scale-110 transition-transform" />
+                                                <span>ПРОИЗВ. A</span>
+                                            </button>
+                                            <button
+                                                onClick={() => handlePrintProduction(order, 'B')}
+                                                className="flex flex-col items-center justify-center gap-1 py-3 bg-zinc-800/40 border border-white/5 text-zinc-400 text-[9px] uppercase font-black tracking-widest hover:bg-zinc-700 hover:text-white transition-all rounded-sm group"
+                                                title="Сортиране по Категория"
+                                            >
+                                                <LayoutGrid className="w-4 h-4 mb-0.5 group-hover:scale-110 transition-transform" />
+                                                <span>ПРОИЗВ. B</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <button 
                                         onClick={() => setConfirmDelete(order.id)}
-                                        disabled={deletingId === order.id}
-                                        className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-red-900/10 border border-red-500/20 text-red-500 font-bold text-[10px] uppercase tracking-widest hover:bg-red-900/30 transition-colors disabled:opacity-50 mb-2"
+                                        className="w-full flex items-center justify-center gap-2 py-3 bg-red-600/10 border border-red-600/20 text-red-500 text-[10px] uppercase font-black tracking-widest hover:bg-red-600 hover:text-white transition-all"
                                     >
-                                        {deletingId === order.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                                        Изтрий
-                                    </button>
-                                    <button
-                                        onClick={() => handlePrint(order)}
-                                        className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-white/5 border border-white/10 text-white font-bold text-[10px] uppercase tracking-widest hover:bg-white/10 transition-colors"
-                                    >
-                                        <Printer className="w-4 h-4" />
-                                        Печат на бележка
+                                        <Trash2 className="w-4 h-4" />
+                                        ИЗТРИЙ
                                     </button>
                                 </div>
                             </div>
@@ -2392,9 +3007,11 @@ const OrdersTab: React.FC = () => {
                     </div>
                 ))}
 
-                {orders.length === 0 && (
-                    <div className="border border-dashed border-white/10 p-20 text-center">
-                        <p className="text-zinc-500 uppercase tracking-widest text-sm">Все още няма направени поръчки</p>
+                {filteredOrders.length === 0 && (
+                    <div className="border border-dashed border-white/10 p-20 text-center rounded-2xl">
+                        <p className="text-zinc-500 uppercase tracking-widest text-sm">
+                            {searchTerm || statusFilter !== 'all' ? 'Няма намерени поръчки по тези критерии' : 'Все още няма направени поръчки'}
+                        </p>
                     </div>
                 )}
             </div>
@@ -2424,6 +3041,10 @@ const CustomOrdersTab: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const { showToast } = useToast();
     const [deleteModal, setDeleteModal] = useState<CustomOrder | null>(null);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [statusFilter, setStatusFilter] = useState('all');
+    const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
+    const [bulkUpdating, setBulkUpdating] = useState(false);
 
     const fetchOrders = async () => {
         setLoading(true);
@@ -2470,9 +3091,283 @@ const CustomOrdersTab: React.FC = () => {
         }
     };
 
+    const handleBulkDelete = async () => {
+        if (selectedOrders.length === 0) return;
+        if (!window.confirm(`Сигурни ли сте, че искате да изтриете ${selectedOrders.length} запитвания?`)) return;
+
+        setBulkUpdating(true);
+        try {
+            // Collect images to delete from storage
+            const ordersToDelete = orders.filter(o => selectedOrders.includes(o.id));
+            const allImages = ordersToDelete.flatMap(o => o.images || []);
+            
+            if (allImages.length > 0) {
+                await supabase.storage.from('custom_orders').remove(allImages);
+            }
+
+            const { error } = await supabase.from('custom_orders').delete().in('id', selectedOrders);
+            if (error) throw error;
+            
+            showToast(`${selectedOrders.length} запитвания бяха изтрити`, 'success');
+            setOrders(prev => prev.filter(o => !selectedOrders.includes(o.id)));
+            setSelectedOrders([]);
+        } catch (err: any) {
+            showToast('Грешка при масово изтриване: ' + err.message, 'error');
+        } finally {
+            setBulkUpdating(false);
+        }
+    };
+
+    const handleBulkStatusUpdate = async (newStatus: string) => {
+        if (selectedOrders.length === 0 || !newStatus) return;
+        
+        setBulkUpdating(true);
+        try {
+            const { error } = await supabase
+                .from('custom_orders')
+                .update({ status: newStatus })
+                .in('id', selectedOrders);
+            
+            if (error) throw error;
+            
+            showToast(`Статусът на ${selectedOrders.length} запитвания е обновен`, 'success');
+            setOrders(prev => prev.map(o => selectedOrders.includes(o.id) ? { ...o, status: newStatus } : o));
+            setSelectedOrders([]);
+        } catch (err: any) {
+            showToast('Грешка при масово обновяване: ' + err.message, 'error');
+        } finally {
+            setBulkUpdating(false);
+        }
+    };
+
+    const toggleSelectAll = () => {
+        if (selectedOrders.length === filteredOrders.length) {
+            setSelectedOrders([]);
+        } else {
+            setSelectedOrders(filteredOrders.map(o => o.id));
+        }
+    };
+
+    const toggleSelectOrder = (id: string) => {
+        setSelectedOrders(prev => 
+            prev.includes(id) ? prev.filter(oid => oid !== id) : [...prev, id]
+        );
+    };
+
+    const filteredOrders = useMemo(() => {
+        return orders.filter(order => {
+            const fullName = `${order.first_name || ''} ${order.last_name || ''}`.toLowerCase();
+            const matchesSearch = 
+                fullName.includes(searchTerm.toLowerCase()) || 
+                (order.phone && order.phone.includes(searchTerm)) ||
+                (order.email && order.email.toLowerCase().includes(searchTerm.toLowerCase()));
+            
+            const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
+            
+            return matchesSearch && matchesStatus;
+        });
+    }, [orders, searchTerm, statusFilter]);
+
+    const handleUpdateStatus = async (id: string, newStatus: string) => {
+        const { error } = await supabase
+            .from('custom_orders')
+            .update({ status: newStatus })
+            .eq('id', id);
+
+        if (error) {
+            showToast("Грешка при обновяване на статуса", "error");
+        } else {
+            showToast("Статусът е обновен", "success");
+            setOrders(prev => prev.map(o => o.id === id ? { ...o, status: newStatus } : o));
+        }
+    };
+
+    const handlePrintCustom = (order: CustomOrder) => {
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) return;
+
+        const dateFormatted = new Date(order.created_at).toLocaleString('bg-BG', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+
+        const statusMap: Record<string, string> = {
+            'pending': 'Ново запитване',
+            'processed': 'В процес',
+            'completed': 'Завършено',
+            'cancelled': 'Отказано'
+        };
+
+        const imagesHtml = order.images && order.images.length > 0 
+            ? order.images.map(img => {
+                const { data } = supabase.storage.from('custom_orders').getPublicUrl(img);
+                return `<img src="${data.publicUrl}" style="width: 150px; height: 150px; object-fit: cover; border: 1px solid #eee; border-radius: 4px; margin-right: 10px; margin-bottom: 10px;">`;
+            }).join('')
+            : '<p style="color: #999; font-style: italic; font-size: 12px;">Няма прикачени файлове</p>';
+
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${window.location.origin}/order/${order.id}`;
+        const logoUrl = `${window.location.origin}/LOGO.png`;
+
+        const html = `
+            <!DOCTYPE html>
+            <html lang="bg">
+                <head>
+                    <meta charset="UTF-8">
+                    <title>Индивидуална Поръчка #${order.id.slice(0, 8)} - CarDecal.bg</title>
+                    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+                    <style>
+                        @page { size: A4; margin: 0; }
+                        * { box-sizing: border-box; -webkit-print-color-adjust: exact; }
+                        body { 
+                            font-family: 'Outfit', sans-serif; 
+                            margin: 0; padding: 40px; 
+                            color: #1a1a1a; background: #fff; line-height: 1.5;
+                        }
+                        .container { max-width: 800px; margin: 0 auto; }
+                        
+                        /* Header */
+                        .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 50px; }
+                        .brand { flex: 1; }
+                        .logo-container { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+                        .logo-img { height: 45px; width: auto; }
+                        .brand-name { font-size: 24px; font-weight: 900; letter-spacing: 2px; color: #000; text-transform: uppercase; }
+                        
+                        .order-meta { text-align: right; }
+                        .order-label { display: inline-block; padding: 6px 12px; background: #3D0000; color: #fff; font-size: 10px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 12px; }
+                        .order-number { font-size: 20px; font-weight: 900; margin: 0; color: #000; }
+                        .order-date { font-size: 13px; color: #888; margin-top: 4px; }
+
+                        /* Grid Layout */
+                        .blocks-wrapper { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 40px; }
+                        .block-title { font-size: 10px; font-weight: 900; color: #888; text-transform: uppercase; letter-spacing: 1.5px; border-bottom: 1px solid #eee; padding-bottom: 6px; margin-bottom: 12px; }
+                        .block-content p { margin: 4px 0; font-size: 13px; color: #333; }
+                        .block-content strong { color: #000; font-weight: 600; }
+
+                        /* Specs Grid */
+                        .specs-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 30px; }
+                        .spec-box { background: #fcfcfc; border: 1px solid #f0f0f0; padding: 15px; border-radius: 6px; text-align: center; }
+                        .spec-label { font-size: 10px; color: #aaa; text-transform: uppercase; font-weight: 900; display: block; margin-bottom: 5px; }
+                        .spec-value { font-size: 16px; font-weight: 700; color: #000; }
+
+                        /* Description Block */
+                        .desc-block { background: #f9f9f9; border-left: 4px solid #FF0000; padding: 25px; margin-bottom: 40px; }
+                        .desc-title { font-size: 11px; font-weight: 900; text-transform: uppercase; color: #000; margin-bottom: 10px; }
+                        .desc-text { font-size: 14px; color: #333; white-space: pre-wrap; font-style: italic; }
+
+                        /* Footer */
+                        .footer { margin-top: 60px; padding-top: 40px; border-top: 1px solid #eee; display: flex; justify-content: space-between; align-items: flex-end; }
+                        .footer-note { font-size: 12px; color: #888; max-width: 450px; }
+                        .footer-note h4 { color: #000; font-size: 13px; margin: 0 0 8px 0; text-transform: uppercase; letter-spacing: 1px; }
+                        .qr-block { text-align: center; }
+                        .qr-img { width: 85px; height: 85px; margin-bottom: 8px; padding: 6px; border: 1px solid #eee; border-radius: 8px; background: #fff; }
+                        .qr-text { font-size: 9px; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; }
+
+                        @media print {
+                            body { padding: 40px; }
+                            .no-print { display: none; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="header">
+                            <div class="brand">
+                                <div class="logo-container">
+                                    <img src="${logoUrl}" alt="CarDecal" class="logo-img">
+                                    <span class="brand-name">CarDecal.bg</span>
+                                </div>
+                                <div style="font-size: 11px; color: #666;">Индивидуален Дизайн и Проект</div>
+                            </div>
+                            <div class="order-meta">
+                                <div class="order-label">Custom Project</div>
+                                <h1 class="order-number">№ ${order.id.slice(0, 10).toUpperCase()}</h1>
+                                <div class="order-date">${dateFormatted} ч.</div>
+                            </div>
+                        </div>
+
+                        <div class="blocks-wrapper">
+                            <div>
+                                <div class="block-title">Данни за клиента</div>
+                                <div class="block-content">
+                                    <p><strong>${order.first_name} ${order.last_name}</strong></p>
+                                    <p>${order.phone}</p>
+                                    <p>${order.email || '-'}</p>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="block-title">Статус на проекта</div>
+                                <div class="block-content">
+                                    <div style="font-size: 14px; font-weight: 700; color: #FF0000; text-transform: uppercase;">
+                                        ${statusMap[order.status] || order.status}
+                                    </div>
+                                    <p style="margin-top: 10px; color: #888; font-size: 11px;">Срок за отговор: до 24 часа след поръчка.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="block-title">Характеристики</div>
+                        <div class="specs-grid">
+                            <div class="spec-box">
+                                <span class="spec-label">Ширина</span>
+                                <span class="spec-value">${order.width || '-'} cm</span>
+                            </div>
+                            <div class="spec-box">
+                                <span class="spec-label">Височина</span>
+                                <span class="spec-value">${order.height || '-'} cm</span>
+                            </div>
+                            <div class="spec-box">
+                                <span class="spec-label">Количество</span>
+                                <span class="spec-value">${order.quantity || '-'} бр</span>
+                            </div>
+                        </div>
+
+                        <div class="desc-block">
+                            <div class="desc-title">Описание на проекта</div>
+                            <div class="desc-text">"${order.description || 'Няма допълнително описание'}"</div>
+                        </div>
+
+                        <div class="block-title" style="margin-bottom: 20px;">Прикачени материали</div>
+                        <div style="display: flex; flex-wrap: wrap;">
+                            ${imagesHtml}
+                        </div>
+
+                        <div class="footer">
+                            <div class="footer-note">
+                                <h4>Благодарим Ви за проекта!</h4>
+                                <p>Нашият екип ще се свърже с Вас скоро. С Вас градим индивидуалния стил на Вашия автомобил.</p>
+                                <p style="margin-top: 15px;">
+                                    <a href="${window.location.origin}/terms" style="color: #888; text-decoration: none; border-bottom: 1px solid #eee;">Общи условия</a> • 
+                                    <a href="${window.location.origin}/privacy" style="color: #888; text-decoration: none; border-bottom: 1px solid #eee; margin-left: 10px;">Декларация за поверителност</a>
+                                </p>
+                                <p style="margin-top: 10px; font-weight: 900; color: #000;">CarDecal.bg - Premium Vinyl Decals</p>
+                            </div>
+                            <div class="qr-block">
+                                <img src="${qrUrl}" alt="QR Code" class="qr-img">
+                                <div class="qr-text">Проследи проекта</div>
+                            </div>
+                        </div>
+                    </div>
+                </body>
+            </html>
+        `;
+        printWindow.document.write(html);
+        printWindow.document.close();
+        
+        setTimeout(() => {
+            printWindow.focus();
+            printWindow.print();
+        }, 1500);
+    };
+
     const handleExport = () => {
         try {
-            const dataStr = JSON.stringify(orders, null, 2);
+            const dataToExport = selectedOrders.length > 0 
+                ? orders.filter(o => selectedOrders.includes(o.id))
+                : orders;
+            const dataStr = JSON.stringify(dataToExport, null, 2);
             const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
             const exportFileDefaultName = `custom_orders_export_${new Date().toISOString().slice(0, 10)}.json`;
             const linkElement = document.createElement('a');
@@ -2489,18 +3384,103 @@ const CustomOrdersTab: React.FC = () => {
 
     return (
         <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                <h2 className="text-xl font-bold uppercase tracking-widest text-white">Индивидуални дизайни ({orders.length})</h2>
-                <button
-                    onClick={handleExport}
-                    className="flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-[10px] uppercase tracking-widest transition-colors border border-white/10"
-                >
-                    Експорт JSON
-                </button>
+            <div className="flex flex-col gap-6 mb-8">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                    <h2 className="text-xl font-bold uppercase tracking-widest text-white">Индивидуални дизайни ({filteredOrders.length})</h2>
+                    <div className="flex flex-wrap items-center gap-3">
+                        <div className="relative flex-1 min-w-[240px]">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                            <input 
+                                type="text"
+                                placeholder="Търси по име, телефон или имейл..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full bg-white/5 border border-white/10 rounded-lg py-2 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-red-600 transition-colors"
+                            />
+                        </div>
+                        <select 
+                            value={statusFilter}
+                            onChange={(e) => setStatusFilter(e.target.value)}
+                            className="bg-zinc-900 border border-white/10 rounded-lg px-4 py-2 text-xs font-bold uppercase tracking-widest text-white focus:outline-none focus:border-red-600 cursor-pointer"
+                        >
+                            <option value="all">Всички статуси</option>
+                            <option value="pending">Нови</option>
+                            <option value="processed">В процес</option>
+                            <option value="completed">Завършени</option>
+                            <option value="cancelled">Отказни</option>
+                        </select>
+                        <button
+                            onClick={handleExport}
+                            className="flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-[10px] uppercase tracking-widest transition-colors border border-white/10 rounded-lg"
+                        >
+                            <Download className="w-4 h-4" /> {selectedOrders.length > 0 ? 'Експорт Избрани' : 'Експорт JSON'}
+                        </button>
+                    </div>
+                </div>
+
+                {/* Bulk Actions Bar */}
+                <AnimatePresence>
+                    {selectedOrders.length > 0 && (
+                        <motion.div 
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            className="bg-red-600/10 border border-red-600/20 p-4 rounded-xl flex flex-wrap items-center justify-between gap-4"
+                        >
+                            <div className="flex items-center gap-4">
+                                <label className="flex items-center gap-3 cursor-pointer">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={selectedOrders.length === filteredOrders.length}
+                                        onChange={toggleSelectAll}
+                                        className="w-4 h-4 rounded border-white/10 bg-black/40 text-red-600 focus:ring-red-600"
+                                    />
+                                    <span className="text-[10px] font-black text-white uppercase tracking-widest">
+                                        Избрани: {selectedOrders.length}
+                                    </span>
+                                </label>
+                            </div>
+                            
+                            <div className="flex items-center gap-3">
+                                <select 
+                                    className="bg-black/60 border border-white/10 text-white text-[10px] uppercase font-black p-2 rounded focus:outline-none focus:border-red-600"
+                                    onChange={(e) => handleBulkStatusUpdate(e.target.value)}
+                                    defaultValue=""
+                                >
+                                    <option value="" disabled>Промени статус на избраните</option>
+                                    <option value="pending">Нови</option>
+                                    <option value="processed">В процес</option>
+                                    <option value="completed">Завършени</option>
+                                    <option value="cancelled">Отказни</option>
+                                </select>
+                                <button
+                                    onClick={handleBulkDelete}
+                                    disabled={bulkUpdating}
+                                    className="p-2 bg-red-600/20 text-red-500 hover:bg-red-600 hover:text-white transition-all rounded-lg"
+                                    title="Изтрий избраните"
+                                >
+                                    {bulkUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                                </button>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {orders.map(order => (
-                    <div key={order.id} className="bg-black/40 border border-white/10 p-5 relative group">
+                {filteredOrders.map(order => (
+                    <div key={order.id} className={`bg-black/40 border transition-all p-5 relative group flex gap-4 ${selectedOrders.includes(order.id) ? 'border-red-600/40 bg-red-600/5' : 'border-white/10'}`}>
+                        {/* Checkbox */}
+                        <div className="pt-1 select-none">
+                            <input 
+                                type="checkbox"
+                                checked={selectedOrders.includes(order.id)}
+                                onChange={() => toggleSelectOrder(order.id)}
+                                className="w-5 h-5 rounded border-white/10 bg-black/40 text-red-600 focus:ring-red-600 cursor-pointer"
+                            />
+                        </div>
+
+                        <div className="flex-1 min-w-0">
                         <button 
                             onClick={() => setDeleteModal(order)}
                             className="absolute top-4 right-4 p-2 bg-red-600/20 text-red-500 hover:bg-red-600 hover:text-white transition-all rounded-sm opacity-0 group-hover:opacity-100 focus:opacity-100"
@@ -2518,9 +3498,25 @@ const CustomOrdersTab: React.FC = () => {
                                     </span>
                                 )}
                             </h3>
-                            <p className="text-xs text-zinc-400 mt-2">Телефон: <span className="text-white">{order.phone}</span></p>
-                            {order.email && <p className="text-xs text-zinc-400 mt-0.5">Имейл: <span className="text-white">{order.email}</span></p>}
-                            <p className="text-xs text-zinc-400 mt-0.5">Дата: <span className="text-white">{new Date(order.created_at).toLocaleString('bg-BG')}</span></p>
+                            <div className="flex flex-wrap gap-4 mt-2">
+                                <p className="text-xs text-zinc-400">Телефон: <span className="text-white">{order.phone}</span></p>
+                                {order.email && <p className="text-xs text-zinc-400">Имейл: <span className="text-white">{order.email}</span></p>}
+                                <p className="text-xs text-zinc-400">Дата: <span className="text-white">{new Date(order.created_at).toLocaleString('bg-BG')}</span></p>
+                            </div>
+                            
+                            <div className="mt-3 flex items-center gap-3">
+                                <span className="text-[10px] text-zinc-500 uppercase font-black">Статус:</span>
+                                <select 
+                                    value={order.status || 'pending'} 
+                                    onChange={(e) => handleUpdateStatus(order.id, e.target.value)}
+                                    className="bg-black/60 border border-white/5 text-white text-[10px] uppercase font-black px-2 py-1 focus:outline-none focus:border-red-600 transition-colors cursor-pointer rounded"
+                                >
+                                    <option value="pending">Нова</option>
+                                    <option value="processed">В процес</option>
+                                    <option value="completed">Завършена</option>
+                                    <option value="cancelled">Отказна</option>
+                                </select>
+                            </div>
                         </div>
                         
                         <div className="grid grid-cols-3 gap-3 mb-4 text-xs">
@@ -2543,7 +3539,7 @@ const CustomOrdersTab: React.FC = () => {
                         </div>
                         
                         {order.images && order.images.length > 0 && (
-                            <div>
+                            <div className="mb-4">
                                 <h4 className="text-[10px] uppercase tracking-widest text-zinc-500 mb-2">Снимки ({order.images.length})</h4>
                                 <div className="flex gap-2 overflow-x-auto pb-2 custom-scrollbar">
                                     {order.images.map((img, i) => {
@@ -2557,6 +3553,17 @@ const CustomOrdersTab: React.FC = () => {
                                 </div>
                             </div>
                         )}
+
+                        <div className="pt-4 border-t border-white/5">
+                            <button
+                                onClick={() => handlePrintCustom(order)}
+                                className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-white/5 border border-white/10 text-white font-bold text-[10px] uppercase tracking-widest hover:bg-white/10 transition-colors"
+                            >
+                                <Printer size={14} />
+                                Печат на запитване
+                            </button>
+                        </div>
+                        </div>
                     </div>
                 ))}
             </div>

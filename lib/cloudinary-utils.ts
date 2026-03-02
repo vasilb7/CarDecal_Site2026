@@ -53,7 +53,7 @@ export async function uploadToCloudinary(file: File, folder: string = 'general')
 /**
  * Optimizes a Cloudinary URL by adding auto-format, auto-quality, and optional resizing.
  */
-export function getOptimizedUrl(url: string, options: { width?: number; height?: number; crop?: string } = {}): string {
+export function getOptimizedUrl(url: string, options: { width?: number; height?: number; crop?: string; blur?: number } = {}): string {
   if (!url || !url.includes('cloudinary.com')) return url;
 
   // Split into base and public_id/version part
@@ -63,12 +63,13 @@ export function getOptimizedUrl(url: string, options: { width?: number; height?:
   const baseUrl = url.substring(0, uploadIndex + 8); // Includes /upload/
   const remainingUrl = url.substring(uploadIndex + 8);
 
-  const { width, height, crop = 'fill' } = options;
+  const { width, height, crop = 'fill', blur } = options;
   const transformations = ['f_auto', 'q_auto'];
 
   if (width) transformations.push(`w_${width}`);
   if (height) transformations.push(`h_${height}`);
   if (width || height) transformations.push(`c_${crop}`);
+  if (blur) transformations.push(`e_blur:${blur}`);
 
   // Construct optimized URL - ensure transformations are the first segment after /upload/
   return `${baseUrl}${transformations.join(',')}/${remainingUrl}`;

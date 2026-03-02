@@ -475,8 +475,8 @@ const CheckoutPage: React.FC = () => {
                                             <h3 className="text-xs font-black text-white uppercase tracking-wider truncate">{item.name}</h3>
                                             <p className="text-[10px] text-zinc-500 uppercase tracking-widest mt-0.5">{item.variant}</p>
                                             <div className="flex justify-between items-center mt-1">
-                                                <span className="text-[10px] text-zinc-400">x{item.quantity}</span>
-                                                <span className="text-sm font-black text-red-500">{(item.price * item.quantity).toFixed(2)} €</span>
+                                                <span className="text-[10px] text-zinc-400">x{Math.max(1, item.quantity)}</span>
+                                                <span className="text-sm font-black text-red-500">{(item.price * Math.max(1, item.quantity)).toFixed(2)} €</span>
                                             </div>
                                         </div>
                                     </div>

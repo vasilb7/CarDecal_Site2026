@@ -278,13 +278,17 @@ const ProductDetailsPage: React.FC = () => {
                                     <input
                                         type="number"
                                         min="1"
-                                        value={quantity}
+                                        value={quantity === 0 ? '' : String(Number(quantity))}
                                         onChange={(e) => {
-                                            const val = parseInt(e.target.value);
-                                            if (!isNaN(val)) {
-                                                setQuantity(val);
-                                            } else {
+                                            let val = e.target.value;
+
+                                            if (val === '') {
                                                 setQuantity(0);
+                                            } else {
+                                                const parsed = parseInt(val, 10);
+                                                if (!isNaN(parsed) && parsed >= 0) {
+                                                    setQuantity(parsed);
+                                                }
                                             }
                                         }}
                                         onBlur={() => {
@@ -365,13 +369,17 @@ const ProductDetailsPage: React.FC = () => {
                                 <input
                                     type="number"
                                     min="1"
-                                    value={quantity}
+                                    value={quantity === 0 ? '' : String(Number(quantity))}
                                     onChange={(e) => {
-                                        const val = parseInt(e.target.value);
-                                        if (!isNaN(val)) {
-                                            setQuantity(val);
-                                        } else {
+                                        let val = e.target.value;
+
+                                        if (val === '') {
                                             setQuantity(0);
+                                        } else {
+                                            const parsed = parseInt(val, 10);
+                                            if (!isNaN(parsed) && parsed >= 0) {
+                                                setQuantity(parsed);
+                                            }
                                         }
                                     }}
                                     onBlur={() => {

@@ -307,20 +307,18 @@ const HomePage: React.FC = () => {
               </span>
             </motion.h1>
 
-            {/* Subtitle Badge */}
-            <motion.div
-              variants={fadeInUp}
-              className="w-full max-w-[720px] mx-auto mb-12 flex flex-col items-center justify-center"
-            >
-              <div className="backdrop-blur-md bg-black/25 border border-white/10 rounded-2xl py-3 px-6 sm:px-10 flex flex-col items-center justify-center shadow-2xl">
-                <span className="text-gray-200 text-[11px] sm:text-sm uppercase tracking-[0.25em] sm:tracking-[0.3em] font-bold mb-1.5 text-center">
-                  Висококачествени стикери
-                </span>
-                <span className="text-red-500 font-semibold italic text-sm sm:text-lg tracking-widest text-center lowercase">
-                  цени на едро
-                </span>
-              </div>
-            </motion.div>
+            {/* Subtitle (Text only) */}
+<motion.div
+  variants={fadeInUp}
+  className="w-full max-w-[720px] mx-auto mb-12 flex flex-col items-center justify-center text-center"
+>
+  <p className="text-gray-200 text-[11px] sm:text-sm uppercase tracking-[0.25em] sm:tracking-[0.3em] font-bold">
+    Високок клас стикери
+  </p>
+  <p className="mt-2 text-white/70 text-[12px] sm:text-base font-medium">
+  <span className="text-yellow-500 font-semibold">"Качество, което се лепи. Цени, които печелят."</span>
+  </p>
+</motion.div>
 
             {/* CTA Buttons */}
             <motion.div

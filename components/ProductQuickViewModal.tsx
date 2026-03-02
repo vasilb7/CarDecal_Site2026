@@ -112,16 +112,17 @@ const ProductQuickViewModal: React.FC = () => {
 
     const handleAddToCart = () => {
         const itemName = product.nameBg || product.name;
+        const finalQuantity = Math.max(1, quantity);
         addToCart({
             id: `${product.slug}-${activeIdx}`,
             name: itemName,
             variant: `Вариант ${activeIdx + 1}`,
             price: priceValue,
-            quantity,
+            quantity: finalQuantity,
             image: mainSrc,
             slug: product.slug
         });
-        showToast(`Добавени ${quantity}бр. от ${itemName}`, "success");
+        showToast(`Добавени ${finalQuantity}бр. от ${itemName}`, "success");
         handleClose();
     };
 
@@ -167,14 +168,19 @@ const ProductQuickViewModal: React.FC = () => {
                             className="relative w-full h-full bg-[#0F0F0F] rounded-2xl border border-white/5 overflow-hidden flex items-center justify-center cursor-zoom-in"
                             onClick={() => setLightboxSrc(mainSrc)}
                         >
-                            {!imageLoaded && (
-                                <div className="absolute inset-0 m-auto w-8 h-8 border-2 border-white/10 border-t-red-600 rounded-full animate-spin" />
-                            )}
+                            {/* Background Placeholder / Blur (LQIP) */}
                             <img
-                                src={getOptimizedUrl(mainSrc, { width: 800 })}
+                                src={getOptimizedUrl(mainSrc, { width: 40, blur: 500 })}
+                                alt=""
+                                className="absolute inset-0 w-full h-full object-contain filter blur-2xl opacity-30 transform scale-110"
+                            />
+
+                            <img
+                                src={getOptimizedUrl(mainSrc, { width: window.innerWidth < 640 ? 500 : 800 })}
                                 alt={product.nameBg || product.name}
                                 onLoad={() => setImageLoaded(true)}
-                                className={`w-[85%] h-[85%] object-contain pointer-events-none select-none transition-all duration-700 group-hover:scale-105 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+                                decoding="async"
+                                className={`w-[85%] h-[85%] object-contain pointer-events-none select-none transition-all duration-700 group-hover:scale-105 relative z-10 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
                             />
                             
                             {/* Expand Icon */}
@@ -213,7 +219,13 @@ const ProductQuickViewModal: React.FC = () => {
                                         activeIdx === idx ? 'border-white/30 bg-white/5' : 'border-white/5 opacity-50 hover:opacity-100'
                                     }`}
                                 >
-                                    <img src={getOptimizedUrl(img, { width: 160 })} alt="" className="w-full h-full object-contain pointer-events-none select-none" />
+                                    <img 
+                                        src={getOptimizedUrl(img, { width: 160 })} 
+                                        alt="" 
+                                        className="w-full h-full object-contain pointer-events-none select-none" 
+                                        loading="lazy"
+                                        decoding="async"
+                                    />
                                 </button>
                             ))}
                         </div>
@@ -246,7 +258,7 @@ const ProductQuickViewModal: React.FC = () => {
                             <div>
                                 <span className="text-[10px] uppercase tracking-[0.25em] font-bold text-white/40 block mb-1">ОБЩА ЦЕНА</span>
                                 <div className="flex items-baseline gap-1.5 drop-shadow-sm">
-                                    <span className="text-4xl sm:text-5xl font-mono font-black text-white/95">{(priceValue * quantity).toFixed(2)}</span>
+                                    <span className="text-4xl sm:text-5xl font-mono font-black text-white/95">{(priceValue * Math.max(1, quantity)).toFixed(2)}</span>
                                     <span className="text-xl sm:text-2xl font-mono font-bold text-red-500">€</span>
                                 </div>
                             </div>
@@ -275,13 +287,17 @@ const ProductQuickViewModal: React.FC = () => {
                                 <input
                                     type="number"
                                     min="1"
-                                    value={quantity}
+                                    value={quantity === 0 ? '' : String(Number(quantity))}
                                     onChange={(e) => {
-                                        const val = parseInt(e.target.value);
-                                        if (!isNaN(val)) {
-                                            setQuantity(val);
-                                        } else {
+                                        let val = e.target.value;
+
+                                        if (val === '') {
                                             setQuantity(0);
+                                        } else {
+                                            const parsed = parseInt(val, 10);
+                                            if (!isNaN(parsed) && parsed >= 0) {
+                                                setQuantity(parsed);
+                                            }
                                         }
                                     }}
                                     onBlur={() => {

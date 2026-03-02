@@ -251,20 +251,22 @@ export const CartDrawer: React.FC = () => {
                           <input
                             type="number"
                             min="1"
-                            value={item.quantity}
+                            value={item.quantity === 0 ? '' : String(Number(item.quantity))}
                             onChange={(e) => {
-                              const val = parseInt(e.target.value);
-                              if (!isNaN(val)) {
-                                updateQuantity(item.id, val);
-                              } else {
+                              let val = e.target.value;
+                              
+                              if (val === '') {
                                 updateQuantity(item.id, 0); 
+                              } else {
+                                // Remove leading zeros for the comparison/update
+                                const parsed = parseInt(val, 10);
+                                if (!isNaN(parsed) && parsed >= 0) {
+                                  updateQuantity(item.id, parsed);
+                                }
                               }
                             }}
-                            onBlur={(e) => {
-                              const val = parseInt(e.target.value);
-                              if (isNaN(val) || val < 1) {
-                                updateQuantity(item.id, 1);
-                              }
+                            onBlur={() => {
+                              if (item.quantity < 1) updateQuantity(item.id, 1);
                             }}
                             className="w-10 bg-transparent text-center text-[13px] font-black text-white focus:outline-none pointer-events-auto [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                           />
@@ -277,7 +279,7 @@ export const CartDrawer: React.FC = () => {
                         </div>
 
                         <span className="text-sm text-[#ff0000] font-black whitespace-nowrap drop-shadow-sm tracking-wide">
-                            {(item.price * item.quantity).toFixed(2)} €
+                            {(item.price * Math.max(1, item.quantity)).toFixed(2)} €
                         </span>
                       </div>
                     </div>

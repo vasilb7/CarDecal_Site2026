@@ -243,19 +243,19 @@ const Header: React.FC = () => {
                         className="relative z-[101] border-b border-white/5"
                         style={{ backgroundColor: settings.announcement_bg_color }}
                     >
-                        <div className="max-w-[1440px] w-full mx-auto min-h-[40px] py-2 px-8 sm:px-12 flex items-center justify-center relative">
-                            <div className="flex items-center justify-center w-full gap-2 sm:gap-4">
+                        <div className="max-w-[1440px] w-full mx-auto min-h-[40px] py-1.5 px-4 flex items-center justify-center relative">
+                            <div className="flex items-center justify-center gap-3 sm:gap-6 max-w-full">
                                 {annMessages.length > 1 && !isMaintenanceWarningActive && (
                                     <button 
                                         onClick={handlePrevMsg}
-                                        className="absolute left-2 sm:left-4 p-1 hover:opacity-100 opacity-70 transition-all z-10 shrink-0"
+                                        className="p-1 hover:opacity-100 opacity-60 transition-all z-10 shrink-0"
                                         aria-label="Previous message"
                                     >
                                         <ChevronLeft className="w-4 h-4" strokeWidth={3} style={{ color: settings.announcement_text_color }} />
                                     </button>
                                 )}
 
-                                <div className="flex justify-center items-center flex-1 min-w-0">
+                                <div className="flex justify-center items-center min-w-0">
                                     <AnimatePresence mode="wait">
                                         <motion.div
                                             key={isMaintenanceWarningActive ? 'maint' : `msg-${currentMsgIndex}`}
@@ -292,7 +292,7 @@ const Header: React.FC = () => {
                                 {annMessages.length > 1 && !isMaintenanceWarningActive && (
                                     <button 
                                         onClick={handleNextMsg}
-                                        className="absolute right-2 sm:right-4 p-1 hover:opacity-100 opacity-70 transition-all z-10 shrink-0"
+                                        className="p-1 hover:opacity-100 opacity-60 transition-all z-10 shrink-0"
                                         aria-label="Next message"
                                     >
                                         <ChevronRight className="w-4 h-4" strokeWidth={3} style={{ color: settings.announcement_text_color }} />
