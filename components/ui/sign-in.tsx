@@ -110,7 +110,7 @@ export const SignInPage: React.FC<SignInPageProps> = ({
             {/* Mobile Close Button */}
             <button 
                 onClick={() => navigate('/')}
-                className="absolute top-4 right-6 lg:hidden w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-all z-10"
+                className="absolute top-6 right-6 lg:hidden w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-all z-20"
             >
                 <X size={20} />
             </button>
@@ -119,24 +119,24 @@ export const SignInPage: React.FC<SignInPageProps> = ({
             <motion.div 
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="mb-4 absolute top-4 left-6 sm:left-12 lg:left-20"
+                className="mb-4 absolute top-6 left-6 sm:left-12 lg:left-20 z-20"
             >
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-[0_0_15px_rgba(255,255,255,0.3)]">
-                        <span className="text-black font-black text-xl leading-none">CD</span>
+                <div className="flex items-center gap-2 sm:gap-3">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-white flex items-center justify-center shadow-[0_0_15px_rgba(255,255,255,0.3)]">
+                        <span className="text-black font-black text-lg sm:text-xl leading-none">CD</span>
                     </div>
-                    <span className="text-2xl font-bold tracking-tight text-white">CarDecal</span>
+                    <span className="text-xl sm:text-2xl font-bold tracking-tight text-white">CarDecal</span>
                 </div>
             </motion.div>
 
             {/* Form Container */}
-            <div className="max-w-md w-full mx-auto flex flex-col justify-center">
-                <div className="mb-0 text-center lg:text-left pt-2 sm:pt-0">
+            <div className="max-w-md w-full mx-auto flex flex-col justify-center pt-24 sm:pt-0">
+                <div className="mb-0 text-center lg:text-left">
                     <motion.h1 
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.1 }}
-                        className="text-[28px] sm:text-[36px] font-black text-white leading-tight mb-1 uppercase tracking-tighter"
+                        className="text-[24px] sm:text-[36px] font-black text-white leading-tight mb-1 uppercase tracking-tighter"
                     >
                         {t('auth.login_title', 'Добре Дошли')}
                     </motion.h1>
