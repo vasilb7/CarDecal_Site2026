@@ -2706,8 +2706,14 @@ const OrdersTab: React.FC = () => {
                     </div>
                 </td>
                 <td style="padding: 16px 12px; border-bottom: 1px solid #f0f0f0; text-align: center; font-weight: 600;">${item.quantity}</td>
-                <td style="padding: 16px 12px; border-bottom: 1px solid #f0f0f0; text-align: right; font-weight: 500;">€${(Number(item.price)).toFixed(2)}</td>
-                <td style="padding: 16px 12px; border-bottom: 1px solid #f0f0f0; text-align: right; font-weight: 700; color: #000;">€${(Number(item.price) * item.quantity).toFixed(2)}</td>
+                <td style="padding: 16px 12px; border-bottom: 1px solid #f0f0f0; text-align: right;">
+                    <div style="font-weight: 500;">€${(Number(item.price)).toFixed(2)}</div>
+                    <div style="font-size: 10px; color: #888; margin-top: 2px;">${(Number(item.price) * 1.95583).toFixed(2)} лв.</div>
+                </td>
+                <td style="padding: 16px 12px; border-bottom: 1px solid #f0f0f0; text-align: right;">
+                    <div style="font-weight: 700; color: #000;">€${(Number(item.price) * item.quantity).toFixed(2)}</div>
+                    <div style="font-size: 10px; color: #888; margin-top: 2px;">${(Number(item.price) * item.quantity * 1.95583).toFixed(2)} лв.</div>
+                </td>
             </tr>
         `).join('');
 
@@ -2799,16 +2805,15 @@ const OrdersTab: React.FC = () => {
                             <div class="brand">
                                 <div class="logo-container">
                                     <img src="${logoUrl}" alt="CarDecal" class="logo-img">
-                                    <span class="brand-name">CarDecal.bg</span>
                                 </div>
                                 <div class="contact-info">
-                                    <p>Телефон: +359 87 635 3444</p>
-                                    <p>Email: contact@cardecal.bg</p>
-                                    <p>Уебсайт: www.cardecal.bg</p>
+                                    <p>Телефон: +359 89 478 9942</p>
+                                    <p>Email: cardecal@abv.bg</p>
+                                    <p>Уебсайт: ${window.location.hostname}</p>
                                 </div>
                             </div>
                             <div class="order-meta">
-                                <div class="order-label">Client Invoice</div>
+                                <div class="order-label">Клиентска разписка</div>
                                 <h1 class="order-number">№ ${order.id.slice(0, 10).toUpperCase()}</h1>
                                 <div class="order-date">${dateFormatted} ч.</div>
                             </div>
@@ -2825,11 +2830,7 @@ const OrdersTab: React.FC = () => {
                             </div>
                             <div>
                                 <div class="block-title">Детайли на поръчката</div>
-                                <div class="block-content" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                                    <div>
-                                        <div style="font-size: 9px; color: #aaa; text-transform: uppercase;">Статус</div>
-                                        <div class="status-badge">${statusMap[order.status] || order.status}</div>
-                                    </div>
+                                <div class="block-content">
                                     <div>
                                         <div style="font-size: 9px; color: #aaa; text-transform: uppercase;">Плащане</div>
                                         <div class="status-badge">${paymentMap[order.payment_method] || order.payment_method}</div>
@@ -2874,26 +2875,29 @@ const OrdersTab: React.FC = () => {
                             </div>
                             <div class="summary-row" style="margin-top: 5px;">
                                 <span>Междинна сума:</span>
-                                <strong>${(order.total_amount).toFixed(2)} <span style="font-size: 10px; color: #888;">EUR</span></strong>
+                                <div style="text-align: right;">
+                                    <strong>${(order.total_amount).toFixed(2)} <span style="font-size: 10px; color: #888;">EUR</span></strong>
+                                    <div style="font-size: 10px; color: #888; margin-top: 2px;">${(order.total_amount * 1.95583).toFixed(2)} лв.</div>
+                                </div>
                             </div>
-                            <div class="summary-row total">
+                            <div class="summary-row total" style="align-items: flex-end;">
                                 <span>ОБЩО ЗА ПЛАЩАНЕ:</span>
-                                <span><span class="currency">EUR</span>${(order.total_amount).toFixed(2)}</span>
-                            </div>
-                            <div style="font-size: 9px; color: #aaa; text-align: center; margin-top: 15px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;">
-                                Всички цени са крайни в EUR
+                                <div style="text-align: right;">
+                                    <span><span class="currency">EUR</span>${(order.total_amount).toFixed(2)}</span>
+                                    <div style="font-size: 14px; color: #888; font-weight: 600; margin-top: 4px;">${(order.total_amount * 1.95583).toFixed(2)} <span style="font-size: 12px;">BGN</span></div>
+                                </div>
                             </div>
                         </div>
 
                         <div class="footer">
                             <div class="footer-note">
                                 <h4>Благодарим Ви за доверието!</h4>
-                                <p>С Вашата поръчка помагате на CarDecal да продължи да създава уникални дизайни. Вашето удовлетворение е наш приоритет.</p>
+                                <p>Благодарение на Вас продължаваме да развиваме CarDecal. Вашето удовлетворение е най-важно за нас. До скоро!</p>
                                 <p style="margin-top: 15px;">
                                     <a href="${window.location.origin}/terms" style="color: #888; text-decoration: none; border-bottom: 1px solid #eee;">Общи условия</a> • 
                                     <a href="${window.location.origin}/privacy" style="color: #888; text-decoration: none; border-bottom: 1px solid #eee; margin-left: 10px;">Декларация за поверителност</a>
                                 </p>
-                                <p style="margin-top: 10px; font-weight: 900; color: #000;">CarDecal.bg - Premium Vinyl Decals</p>
+                                <p style="margin-top: 10px; font-weight: 900; color: #000;">CarDecal</p>
                             </div>
                             <div class="qr-block">
                                 <img src="${qrUrl}" alt="QR Code" class="qr-img">
