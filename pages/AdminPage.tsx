@@ -2699,18 +2699,18 @@ const OrdersTab: React.FC = () => {
 
         const itemsHtml = order.items.map((item, idx) => `
             <tr style="background-color: ${idx % 2 === 0 ? '#ffffff' : '#fcfcfc'};">
-                <td style="padding: 16px 12px; border-bottom: 1px solid #f0f0f0;">
+                <td style="padding: 10px 8px; border-bottom: 1px solid #f0f0f0;">
                     <div style="font-weight: 700; color: #000; font-size: 14px; text-transform: uppercase;">${item.name_bg || item.name}</div>
                     <div style="font-size: 11px; color: #888; margin-top: 4px; font-weight: 400;">
                         ${item.variant || ''} ${item.dimensions ? `| ${item.dimensions}` : ''} ${item.material ? `| ${item.material}` : ''}
                     </div>
                 </td>
-                <td style="padding: 16px 12px; border-bottom: 1px solid #f0f0f0; text-align: center; font-weight: 600;">${item.quantity}</td>
-                <td style="padding: 16px 12px; border-bottom: 1px solid #f0f0f0; text-align: right;">
+                <td style="padding: 10px 8px; border-bottom: 1px solid #f0f0f0; text-align: center; font-weight: 600;">${item.quantity}</td>
+                <td style="padding: 10px 8px; border-bottom: 1px solid #f0f0f0; text-align: right;">
                     <div style="font-weight: 500;">€${(Number(item.price)).toFixed(2)}</div>
                     <div style="font-size: 10px; color: #888; margin-top: 2px;">${(Number(item.price) * 1.95583).toFixed(2)} лв.</div>
                 </td>
-                <td style="padding: 16px 12px; border-bottom: 1px solid #f0f0f0; text-align: right;">
+                <td style="padding: 10px 8px; border-bottom: 1px solid #f0f0f0; text-align: right;">
                     <div style="font-weight: 700; color: #000;">€${(Number(item.price) * item.quantity).toFixed(2)}</div>
                     <div style="font-size: 10px; color: #888; margin-top: 2px;">${(Number(item.price) * item.quantity * 1.95583).toFixed(2)} лв.</div>
                 </td>
@@ -2738,61 +2738,61 @@ const OrdersTab: React.FC = () => {
                         .container { max-width: 800px; margin: 0 auto; }
                         
                         /* Header */
-                        .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 50px; }
+                        .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px; }
                         .brand { flex: 1; }
-                        .logo-container { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+                        .logo-container { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
                         .logo-img { height: 45px; width: auto; }
                         .brand-name { font-size: 24px; font-weight: 900; letter-spacing: 2px; color: #000; text-transform: uppercase; }
                         .contact-info { font-size: 11px; color: #666; font-weight: 400; }
-                        .contact-info p { margin: 2px 0; }
+                        .contact-info p { margin: 1px 0; }
                         
                         .order-meta { text-align: right; }
-                        .order-label { display: inline-block; padding: 6px 12px; background: #FF0000; color: #fff; font-size: 10px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 12px; }
+                        .order-label { display: inline-block; padding: 6px 12px; background: #FF0000; color: #fff; font-size: 10px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; }
                         .order-number { font-size: 20px; font-weight: 900; margin: 0; color: #3D0000; }
-                        .order-date { font-size: 13px; color: #888; margin-top: 4px; }
+                        .order-date { font-size: 13px; color: #888; margin-top: 2px; }
 
                         /* Double Column Blocks */
-                        .blocks-wrapper { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 40px; }
-                        .block-title { font-size: 10px; font-weight: 900; color: #888; text-transform: uppercase; letter-spacing: 1.5px; border-bottom: 1px solid #eee; padding-bottom: 6px; margin-bottom: 12px; }
-                        .block-content p { margin: 4px 0; font-size: 13px; color: #333; }
+                        .blocks-wrapper { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+                        .block-title { font-size: 10px; font-weight: 900; color: #888; text-transform: uppercase; letter-spacing: 1.5px; border-bottom: 1px solid #eee; padding-bottom: 6px; margin-bottom: 8px; }
+                        .block-content p { margin: 3px 0; font-size: 13px; color: #333; }
                         .block-content strong { color: #000; font-weight: 600; }
 
                         .status-badge { display: inline-block; font-size: 11px; font-weight: 700; color: #000; margin-top: 4px; }
                         
                         /* Table */
-                        table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
-                        thead th { text-align: left; padding: 12px; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; color: #888; border-top: 2px solid #000; border-bottom: 1px solid #000; }
+                        table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+                        thead th { text-align: left; padding: 10px 8px; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; color: #888; border-top: 2px solid #000; border-bottom: 1px solid #000; }
                         th.center { text-align: center; }
                         th.right { text-align: right; }
 
                         /* Summary Card */
                         .summary-card { 
-                            margin-top: 20px;
+                            margin-top: 10px;
                             float: right;
-                            width: 320px;
+                            width: 300px;
                             background: #fdfdfd;
-                            padding: 24px;
+                            padding: 16px;
                             border: 1px solid #eee;
                             border-radius: 8px;
                         }
-                        .summary-row { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 13px; color: #666; }
+                        .summary-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px; color: #666; }
                         .summary-row.total { 
-                            margin-top: 15px; padding-top: 15px; 
+                            margin-top: 12px; padding-top: 12px; 
                             border-top: 1px solid #eee; 
-                            color: #FF0000; font-weight: 900; font-size: 22px; 
+                            color: #FF0000; font-weight: 900; font-size: 20px; 
                         }
                         .currency { font-size: 0.5em; vertical-align: middle; margin-right: 4px; color: #888; }
 
                         /* Footer */
-                        .footer { clear: both; margin-top: 80px; padding-top: 40px; border-top: 1px solid #eee; display: flex; justify-content: space-between; align-items: flex-end; }
+                        .footer { clear: both; margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; display: flex; justify-content: space-between; align-items: flex-end; }
                         .footer-note { font-size: 12px; color: #888; max-width: 450px; }
-                        .footer-note h4 { color: #000; font-size: 13px; margin: 0 0 8px 0; text-transform: uppercase; letter-spacing: 1px; }
+                        .footer-note h4 { color: #000; font-size: 13px; margin: 0 0 6px 0; text-transform: uppercase; letter-spacing: 1px; }
                         .qr-block { text-align: center; }
-                        .qr-img { width: 90px; height: 90px; margin-bottom: 8px; padding: 6px; border: 1px solid #eee; border-radius: 8px; background: #fff; }
+                        .qr-img { width: 80px; height: 80px; margin-bottom: 6px; padding: 6px; border: 1px solid #eee; border-radius: 8px; background: #fff; }
                         .qr-text { font-size: 9px; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; }
 
                         @media print {
-                            body { padding: 40px; }
+                            body { padding: 20px; }
                             .no-print { display: none; }
                             .summary-card { break-inside: avoid; }
                             .footer { break-inside: avoid; }
@@ -2839,7 +2839,7 @@ const OrdersTab: React.FC = () => {
                             </div>
                         </div>
 
-                        <div class="blocks-wrapper" style="margin-bottom: 30px;">
+                        <div class="blocks-wrapper" style="margin-bottom: 15px;">
                             <div style="grid-column: span 2;">
                                 <div class="block-title">Доставка</div>
                                 <div class="block-content">
