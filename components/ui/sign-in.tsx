@@ -214,6 +214,25 @@ export const SignInPage: React.FC<SignInPageProps> = ({
                         </div>
                     </div>
 
+                    {/* Remember Me */}
+                    <div className="flex items-center gap-2 pt-2 px-2">
+                        <div className="relative flex items-center justify-center">
+                            <input 
+                                type="checkbox" 
+                                id="rememberMe" 
+                                name="rememberMe" 
+                                defaultChecked
+                                className="peer appearance-none w-5 h-5 border border-white/20 rounded-md bg-white/5 checked:bg-red-600 checked:border-red-600 cursor-pointer transition-all hover:bg-white/10"
+                            />
+                            <svg className="absolute w-3.5 h-3.5 pointer-events-none opacity-0 peer-checked:opacity-100 peer-checked:text-white transition-opacity" viewBox="0 0 14 10" fill="none">
+                                <path d="M1 5L4.5 8.5L13 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                        </div>
+                        <label htmlFor="rememberMe" className="text-sm text-white/60 cursor-pointer select-none hover:text-white transition-colors">
+                            {t('auth.remember_me', 'Запомни ме за 30 дни')}
+                        </label>
+                    </div>
+
                     {/* Submit Button */}
                     <motion.button
                         whileHover={{ scale: 1.01 }}

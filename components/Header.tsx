@@ -243,19 +243,19 @@ const Header: React.FC = () => {
                         className="relative z-[101] border-b border-white/5"
                         style={{ backgroundColor: settings.announcement_bg_color }}
                     >
-                        <div className="max-w-[1440px] mx-auto px-4 min-h-[40px] flex items-center justify-center relative">
-                            <div className="flex items-center gap-4">
+                        <div className="max-w-[1440px] w-full mx-auto min-h-[40px] py-2 px-8 sm:px-12 flex items-center justify-center relative">
+                            <div className="flex items-center justify-center w-full gap-2 sm:gap-4">
                                 {annMessages.length > 1 && !isMaintenanceWarningActive && (
                                     <button 
                                         onClick={handlePrevMsg}
-                                        className="p-1 hover:opacity-100 opacity-70 transition-all z-10 shrink-0"
+                                        className="absolute left-2 sm:left-4 p-1 hover:opacity-100 opacity-70 transition-all z-10 shrink-0"
                                         aria-label="Previous message"
                                     >
                                         <ChevronLeft className="w-4 h-4" strokeWidth={3} style={{ color: settings.announcement_text_color }} />
                                     </button>
                                 )}
 
-                                <div className="flex justify-center items-center w-[320px] max-w-[calc(100vw-120px)] shrink-0 min-w-0 overflow-hidden px-4">
+                                <div className="flex justify-center items-center flex-1 min-w-0">
                                     <AnimatePresence mode="wait">
                                         <motion.div
                                             key={isMaintenanceWarningActive ? 'maint' : `msg-${currentMsgIndex}`}
@@ -266,17 +266,19 @@ const Header: React.FC = () => {
                                             className="w-full flex items-center justify-center"
                                         >
                                             <span 
-                                                className="uppercase select-none text-center whitespace-nowrap"
+                                                className="uppercase select-none text-center inline-block"
                                                 style={{ 
                                                     color: settings.announcement_text_color,
                                                     fontSize: settings.announcement_font_size,
                                                     fontWeight: settings.announcement_font_weight === 'black' ? 900 : (settings.announcement_font_weight === 'bold' ? 700 : (settings.announcement_font_weight === 'semibold' ? 600 : 400)),
-                                                    letterSpacing: settings.announcement_letter_spacing
+                                                    letterSpacing: settings.announcement_letter_spacing,
+                                                    lineHeight: 1.4,
+                                                    wordBreak: 'break-word',
                                                 }}
                                             >
                                                 {isMaintenanceWarningActive ? (
-                                                    <span className="flex items-center gap-3">
-                                                        <span className="w-1.5 h-1.5 rounded-full bg-[#ff0000] animate-pulse shrink-0" />
+                                                    <span className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-[#ff0000] animate-pulse shrink-0 hidden sm:block" />
                                                         {renderMessageWithTimer("Внимание! Предстои профилактика. Сайтът ще бъде временно недостъпен.", true)}
                                                     </span>
                                                 ) : (
@@ -290,7 +292,7 @@ const Header: React.FC = () => {
                                 {annMessages.length > 1 && !isMaintenanceWarningActive && (
                                     <button 
                                         onClick={handleNextMsg}
-                                        className="p-1 hover:opacity-100 opacity-70 transition-all z-10 shrink-0"
+                                        className="absolute right-2 sm:right-4 p-1 hover:opacity-100 opacity-70 transition-all z-10 shrink-0"
                                         aria-label="Next message"
                                     >
                                         <ChevronRight className="w-4 h-4" strokeWidth={3} style={{ color: settings.announcement_text_color }} />
@@ -306,7 +308,7 @@ const Header: React.FC = () => {
                                         setIsBannerDismissed(true);
                                         sessionStorage.setItem(sessionKey, 'true');
                                     }}
-                                    className="absolute right-4 p-1 hover:opacity-70 transition-colors"
+                                    className="absolute right-2 sm:right-4 p-1 hover:opacity-70 transition-colors z-10 shrink-0"
                                     style={{ color: settings.announcement_text_color }}
                                 >
                                     <X className="w-3.5 h-3.5" />

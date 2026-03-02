@@ -59,6 +59,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      const rememberMe = localStorage.getItem('remember_me');
+      const tempSession = sessionStorage.getItem('temp_session');
+
+      if (session && rememberMe === 'false' && !tempSession) {
+        // The user didn't want to be remembered and has closed the browser/tab
+        supabase.auth.signOut().then(() => {
+          setSession(null);
+          setUser(null);
+          setLoading(false);
+          localStorage.removeItem('remember_me');
+        });
+        return;
+      }
+
+      if (session && rememberMe === 'false' && tempSession) {
+          // Re-affirm temp session just in case
+          sessionStorage.setItem('temp_session', 'true');
+      }
+
       setSession(session);
       setUser(session?.user ?? null);
     // Sync Server Time on Mount
@@ -215,6 +234,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    localStorage.removeItem('remember_me');
+    sessionStorage.removeItem('temp_session');
     setProfile(null);
     setUser(null);
     setSession(null);

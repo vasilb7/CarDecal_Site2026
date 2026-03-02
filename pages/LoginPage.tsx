@@ -43,6 +43,7 @@ const LoginPage: React.FC = () => {
     const formData = new FormData(event.currentTarget);
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
+    const rememberMe = formData.get('rememberMe') === 'on';
 
     console.log("Attempting sign in:", email);
 
@@ -61,6 +62,12 @@ const LoginPage: React.FC = () => {
         }
       } else {
         console.log("Sign in success:", data);
+        if (rememberMe) {
+          localStorage.setItem('remember_me', 'true');
+        } else {
+          localStorage.setItem('remember_me', 'false');
+          sessionStorage.setItem('temp_session', 'true');
+        }
         const name = data.user?.user_metadata?.full_name || data.user?.email?.split('@')[0] || '';
         showToast(t('toast.login_success', { name }), "success");
         navigate(from, { replace: true });

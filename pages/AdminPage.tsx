@@ -12,7 +12,7 @@ import {
     ChevronDown, ChevronUp, Save, X, CheckCircle, AlertTriangle,
     Eye, EyeOff, Tag, Image, ArrowLeft, Loader2, RefreshCw,
     UserCheck, UserX, Crown, Upload, Video, Film, AlertCircle, Mail,
-    Megaphone, Palette, Type, ShoppingBag, Receipt
+    Megaphone, Palette, Type, ShoppingBag, Receipt, Printer
 } from 'lucide-react';
 import { useToast } from '../components/Toast/ToastProvider';
 import { uploadToCloudinary } from '../lib/cloudinary-utils';
@@ -2139,6 +2139,117 @@ const OrdersTab: React.FC = () => {
         }
     };
 
+    const handlePrint = (order: RegularOrder) => {
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) return;
+
+        const itemsHtml = order.items.map(item => `
+            <tr style="border-bottom: 1px solid #ddd;">
+                <td style="padding: 12px 8px; text-transform: uppercase;">${item.name} <br/><span style="color: #666; font-size: 12px;">${item.variant}</span></td>
+                <td style="padding: 12px 8px; text-align: center;">${item.quantity}</td>
+                <td style="padding: 12px 8px; text-align: right;">${item.price.toFixed(2)} &euro;</td>
+                <td style="padding: 12px 8px; text-align: right;">${(item.price * item.quantity).toFixed(2)} &euro;</td>
+            </tr>
+        `).join('');
+
+        const html = `
+            <!DOCTYPE html>
+            <html>
+                <head>
+                    <title>Поръчка #${order.id.slice(0, 8)}</title>
+                    <style>
+                        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 40px; color: #333; }
+                        .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; border-bottom: 2px solid #dc2626; padding-bottom: 20px; }
+                        .logo { flex: 1; font-size: 24px; font-weight: 900; color: #dc2626; text-transform: uppercase; letter-spacing: 2px; }
+                        .order-info { text-align: right; }
+                        .order-info h1 { margin: 0 0 5px 0; font-size: 20px; text-transform: uppercase; }
+                        .order-info p { margin: 0; color: #666; font-size: 14px; }
+                        
+                        .details { display: flex; justify-content: space-between; margin-bottom: 40px; }
+                        .col { flex: 1; }
+                        .col h3 { font-size: 12px; text-transform: uppercase; color: #999; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; display: inline-block; }
+                        .col p { margin: 4px 0; font-size: 14px; font-weight: 500; }
+                        
+                        table { border-collapse: collapse; margin-bottom: 40px; width: 100%; }
+                        th { text-align: left; padding: 12px 8px; background: #f9f9f9; font-size: 12px; text-transform: uppercase; color: #999; border-bottom: 2px solid #ddd; }
+                        th.center { text-align: center; }
+                        th.right { text-align: right; }
+                        
+                        .totals { display: flex; justify-content: flex-end; }
+                        .totals-box { width: 300px; background: #f9f9f9; padding: 20px; border-radius: 8px; }
+                        .totals-row { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; }
+                        .totals-row.grand { font-size: 18px; font-weight: bold; color: #dc2626; border-top: 1px solid #ddd; padding-top: 10px; margin-top: 10px; }
+                    </style>
+                </head>
+                <body>
+                    <div class="header">
+                        <div class="logo">CarDecal.BG</div>
+                        <div class="order-info">
+                            <h1>Бележка към Поръчка</h1>
+                            <p>#${order.id.slice(0, 8)} / ${new Date(order.created_at).toLocaleDateString('bg-BG')}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="details">
+                        <div class="col">
+                            <h3>ДАННИ ЗА КЛИЕНТА</h3>
+                            <p>${order.shipping_details.fullName}</p>
+                            <p>${order.shipping_details.phone}</p>
+                            <p>${order.shipping_details.email || ''}</p>
+                        </div>
+                        <div class="col" style="text-align: right;">
+                            <h3>АДРЕС ЗА ДОСТАВКА</h3>
+                            <p>${order.shipping_details.deliveryType === 'econt' ? 'Еконт Офис' : 'Спиди Офис'}</p>
+                            <p>${order.shipping_details.city}</p>
+                            <p>${order.shipping_details.officeName}</p>
+                        </div>
+                    </div>
+
+                    ${order.shipping_details.notes ? `
+                    <div style="margin-bottom: 40px; padding: 15px; background: #fdfdfd; border-left: 3px solid #ccc;">
+                        <p style="margin: 0; font-size: 12px; color: #666; text-transform: uppercase; margin-bottom: 5px;">Бележка от клиента</p>
+                        <p style="margin: 0; font-style: italic;">"${order.shipping_details.notes}"</p>
+                    </div>
+                    ` : ''}
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Артикул</th>
+                                <th class="center" style="width: 100px;">К-во</th>
+                                <th class="right" style="width: 100px;">Ед. Цена</th>
+                                <th class="right" style="width: 100px;">Сума</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${itemsHtml}
+                        </tbody>
+                    </table>
+                    
+                    <div class="totals">
+                        <div class="totals-box">
+                            <div class="totals-row grand">
+                                <span>ОБЩО ЗА ПЛАЩАНЕ:</span>
+                                <span>${order.total_amount.toFixed(2)} &euro;</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 60px; text-align: center; color: #999; font-size: 12px;">
+                        Благодарим Ви, че избрахте CarDecal.BG!<br/>
+                        Надяваме се стикерите да Ви харесат!
+                    </div>
+                </body>
+            </html>
+        `;
+        printWindow.document.write(html);
+        printWindow.document.close();
+        printWindow.focus();
+        setTimeout(() => {
+            printWindow.print();
+        }, 500);
+    };
+
     useEffect(() => {
         fetchOrders();
     }, []);
@@ -2263,10 +2374,17 @@ const OrdersTab: React.FC = () => {
                                     <button
                                         onClick={() => setConfirmDelete(order.id)}
                                         disabled={deletingId === order.id}
-                                        className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-red-900/10 border border-red-500/20 text-red-500 font-bold text-[10px] uppercase tracking-widest hover:bg-red-900/30 transition-colors disabled:opacity-50"
+                                        className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-red-900/10 border border-red-500/20 text-red-500 font-bold text-[10px] uppercase tracking-widest hover:bg-red-900/30 transition-colors disabled:opacity-50 mb-2"
                                     >
                                         {deletingId === order.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                                         Изтрий
+                                    </button>
+                                    <button
+                                        onClick={() => handlePrint(order)}
+                                        className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-white/5 border border-white/10 text-white font-bold text-[10px] uppercase tracking-widest hover:bg-white/10 transition-colors"
+                                    >
+                                        <Printer className="w-4 h-4" />
+                                        Печат на бележка
                                     </button>
                                 </div>
                             </div>
