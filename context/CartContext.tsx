@@ -7,7 +7,9 @@ export const FREE_SHIPPING_THRESHOLD_EUR = FREE_SHIPPING_THRESHOLD_BGN / EXCHANG
 export interface CartItem {
   id: string; // unique identifier (usually product slug + variant)
   name: string;
+  name_bg?: string;
   variant: string; // e.g. "20cm - Черен гланц"
+  selectedSize?: string;
   price: number;
   quantity: number;
   image: string;

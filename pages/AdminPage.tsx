@@ -1698,28 +1698,56 @@ const UserProfileModal: React.FC<{
                                                         <div>
                                                             <div className="flex items-center gap-3 mb-1">
                                                                 <p className="text-xs font-black text-white uppercase tracking-widest">№ {order.id.slice(0, 8)}</p>
-                                                                <span className={`text-[9px] px-2 py-0.5 rounded font-bold uppercase tracking-widest ${
-                                                                    order.status === 'completed' ? 'bg-green-600/20 text-green-400' :
-                                                                    order.status === 'pending' ? 'bg-blue-600/20 text-blue-400' : 'bg-zinc-800 text-zinc-500'
+                                                                <span className={`text-[9px] px-2 py-0.5 rounded font-bold uppercase tracking-widest border ${
+                                                                    order.status === 'completed' ? 'bg-zinc-800 text-zinc-100 border-black' :
+                                                                    order.status === 'pending' ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' : 
+                                                                    order.status === 'processing' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' : 
+                                                                    order.status === 'shipped' ? 'bg-purple-500/10 text-purple-500 border-purple-500/20' : 
+                                                                    order.status === 'delivered' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 
+                                                                    'bg-zinc-800 text-zinc-500 border-white/5'
                                                                 }`}>
-                                                                    {order.status}
+                                                                    {order.status === 'pending' ? 'Очаква' : 
+                                                                     order.status === 'processing' ? 'Обработва се' : 
+                                                                     order.status === 'shipped' ? 'Изпратена' : 
+                                                                     order.status === 'delivered' ? 'Доставена' : 
+                                                                     order.status === 'completed' ? 'Завършена' : 
+                                                                     order.status === 'cancelled' ? 'Отказна' : order.status}
                                                                 </span>
                                                             </div>
                                                             <p className="text-[10px] text-zinc-600">{new Date(order.created_at).toLocaleString('bg-BG')}</p>
                                                         </div>
                                                         <div className="text-right">
-                                                            <p className="text-lg font-black text-red-600">{order.total_amount.toFixed(2)} €</p>
-                                                            <p className="text-[9px] text-zinc-600 uppercase font-bold">{order.payment_method === 'cash_on_delivery' ? 'Наложен Платеж' : order.payment_method}</p>
+                                                            <p className="text-lg font-black text-red-600 italic">{order.total_amount.toFixed(2)} €</p>
+                                                            <div className="flex flex-col items-end gap-1">
+                                                                <p className="text-[9px] text-zinc-600 uppercase font-bold">{order.payment_method === 'cash_on_delivery' ? 'Наложен Платеж' : order.payment_method}</p>
+                                                                {order.total_amount >= (150 / 1.95583) && (
+                                                                    <span className="text-[7px] bg-green-500/10 text-green-500 px-1 rounded font-black tracking-widest border border-green-500/20">БЕЗПЛАТНА ДОСТАВКА</span>
+                                                                )}
+                                                            </div>
                                                         </div>
                                                     </div>
                                                     <div className="flex flex-wrap gap-2">
                                                         {order.items.map((item: any, iNum: number) => (
                                                             <div key={iNum} className="flex items-center gap-2 bg-black/40 border border-white/5 py-1 px-2 rounded-lg">
-                                                                <img src={item.image} className="w-4 h-4 object-contain" alt="" />
-                                                                <span className="text-[10px] text-zinc-400">{item.name} x{item.quantity}</span>
+                                                                <img src={item.image} className="w-4 h-4 object-contain opacity-50" alt="" />
+                                                                <div className="flex flex-col">
+                                                                    <span className="text-[10px] text-zinc-300 font-bold uppercase truncate max-w-[120px]">{item.name_bg || item.name}</span>
+                                                                    <div className="flex items-center gap-1.5">
+                                                                        <span className="text-[8px] text-zinc-500 uppercase tracking-tighter">{item.variant}</span>
+                                                                        {item.selectedSize && <span className="text-[8px] text-red-500/60 font-bold uppercase">{item.selectedSize}</span>}
+                                                                        <span className="text-[9px] text-zinc-400 font-black">x{item.quantity}</span>
+                                                                    </div>
+                                                                </div>
                                                             </div>
                                                         ))}
                                                     </div>
+
+                                                    {order.shipping_details?.notes && (
+                                                        <div className="mt-3 p-3 bg-red-600/5 border border-red-600/10 rounded-xl">
+                                                            <p className="text-[8px] text-red-500 uppercase font-black tracking-widest mb-1">Бележки към поръчката:</p>
+                                                            <p className="text-[10px] text-zinc-400 leading-relaxed italic">"{order.shipping_details.notes}"</p>
+                                                        </div>
+                                                    )}
                                                     
                                                     {/* Actions Row */}
                                                     <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -3510,309 +3538,7 @@ const OrdersTab: React.FC = () => {
         }, 1500);
     };
 
-    const handlePrintProduction = (order: RegularOrder, sortMode: 'A' | 'B') => {
-        const printWindow = window.open('', '_blank');
-        if (!printWindow) return;
 
-        const parseVariant = (v: string) => {
-            const val = (v || '').toLowerCase();
-            const parts = val.split('|').map(p => p.trim());
-            let size = '-';
-            let material = '-';
-            
-            if (parts.length >= 2) {
-                size = parts[0];
-                material = parts[1];
-            } else if (parts.length === 1 && parts[0]) {
-                if (parts[0].match(/\d/) && (parts[0].includes('cm') || parts[0].includes('см'))) {
-                    size = parts[0];
-                } else {
-                    material = parts[0];
-                }
-            }
-            return { 
-                size: size.toUpperCase(), 
-                material: material.charAt(0).toUpperCase() + material.slice(1) 
-            };
-        };
-
-        const sortedItems = [...order.items].sort((a, b) => {
-            const vA = parseVariant(a.variant);
-            const vB = parseVariant(b.variant);
-            if (sortMode === 'A') {
-                if (vA.material !== vB.material) return vA.material.localeCompare(vB.material);
-                if (vA.size !== vB.size) return vA.size.localeCompare(vB.size);
-                return a.name.localeCompare(b.name);
-            } else {
-                const catA = a.category || 'Без категория';
-                const catB = b.category || 'Без категория';
-                if (catA !== catB) return catA.localeCompare(catB);
-                return a.name.localeCompare(b.name);
-            }
-        });
-
-        // Calculate Totals for Summary boxes
-        const matCounts: Record<string, number> = {};
-        const sizeCounts: Record<string, number> = {};
-        let totalQty = 0;
-        
-        sortedItems.forEach(item => {
-            const { size, material } = parseVariant(item.variant);
-            matCounts[material] = (matCounts[material] || 0) + item.quantity;
-            sizeCounts[size] = (sizeCounts[size] || 0) + item.quantity;
-            totalQty += item.quantity;
-        });
-
-        const matSummaryHtml = Object.entries(matCounts).map(([k,v]) => `
-            <div class="summary-item">
-                <span class="label">${k}</span>
-                <span class="value">${v}</span>
-            </div>
-        `).join('');
-
-        const sizeSummaryHtml = Object.entries(sizeCounts).map(([k,v]) => `
-            <div class="summary-item">
-                <span class="label">${k}</span>
-                <span class="value">${v}</span>
-            </div>
-        `).join('');
-
-        const itemsHtml = sortedItems.map((item) => {
-            const { size, material } = parseVariant(item.variant);
-            const sku = item.id?.toString().slice(-6).toUpperCase() || 'STOCK';
-            return `
-                <tr>
-                    <td class="sku-cell">${sku}</td>
-                    <td>
-                        <div class="prod-name">${item.name}</div>
-                        <div class="prod-variant">${item.variant || '-'}</div>
-                        ${item.category ? `<div class="prod-category">${item.category}</div>` : ''}
-                    </td>
-                    <td class="center-cell">${material}</td>
-                    <td class="center-cell">${size}</td>
-                    <td class="qty-cell">${item.quantity}</td>
-                    <td class="design-ref">${item.design_id || item.print_ref || '-'}</td>
-                    <td>
-                        <div class="checklist">
-                            <div class="chk-box">☐ Print</div>
-                            <div class="chk-box">☐ Cut</div>
-                            <div class="chk-box">☐ Pack</div>
-                        </div>
-                    </td>
-                </tr>
-            `;
-        }).join('');
-
-        const qrUrlAdmin = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${window.location.origin}/admin?tab=orders&search_id=${order.id}`;
-        const logoUrl = `${window.location.origin}/LOGO.png`;
-
-        const html = `
-            <!DOCTYPE html>
-            <html lang="bg">
-            <head>
-                <meta charset="UTF-8">
-                <title>PRODUCTION - ${order.id.slice(0, 8)}</title>
-                <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&family=Roboto+Mono:wght@700&display=swap" rel="stylesheet">
-                <style>
-                    @page { size: A4; margin: 8mm; }
-                    body { font-family: 'Outfit', sans-serif; color: #000; margin: 0; padding: 0; line-height: 1.2; -webkit-print-color-adjust: exact; }
-                    * { box-sizing: border-box; }
-                    
-                    header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #000; padding-bottom: 10px; margin-bottom: 15px; }
-                    .header-left { display: flex; align-items: center; gap: 12px; }
-                    .header-left img { height: 35px; }
-                    .header-left h1 { margin: 0; font-size: 22px; font-weight: 900; letter-spacing: 1px; color: #000; border-left: 3px solid #ff0000; padding-left: 12px; }
-                    
-                    .header-right { display: flex; gap: 20px; align-items: center; }
-                    .qr-main { width: 75px; height: 75px; border: 1px solid #ddd; padding: 4px; background: #fff; }
-                    .order-header-info { text-align: right; }
-                    .order-no { font-size: 24px; font-weight: 900; color: #ff0000; margin: 0; line-height: 1; }
-                    .order-time { font-size: 11px; color: #666; font-weight: 700; margin-top: 4px; }
-                    
-                    .alert-strip { background: #ff0000; color: #fff; padding: 10px 20px; font-weight: 900; font-size: 16px; margin-bottom: 15px; border-radius: 4px; display: flex; align-items: center; gap: 15px; }
-                    
-                    .top-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 15px; margin-bottom: 15px; }
-                    .shipping-info-box { border: 1px solid #000; padding: 12px; border-radius: 4px; }
-                    .box-label { font-size: 9px; uppercase; font-weight: 900; color: #888; margin-bottom: 6px; display: block; }
-                    .shipping-dest { font-size: 14px; font-weight: 800; margin-bottom: 4px; }
-                    .shipping-addr { font-size: 13px; color: #444; }
-
-                    .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-                    .stat-box { background: #f8f8f8; border: 1px solid #ddd; padding: 10px; border-radius: 4px; }
-                    .stat-val { font-size: 18px; font-weight: 900; display: block; margin-top: 2px; }
-                    
-                    .summary-flex { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
-                    .summary-item { background: #fff; border: 1px solid #eee; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: 700; }
-                    .summary-item .label { color: #888; margin-right: 4px; }
-                    .summary-item .value { color: #ff0000; }
-
-                    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-                    thead { display: table-header-group; }
-                    thead th { background: #000; color: #fff; padding: 8px; font-size: 10px; font-weight: 900; text-transform: uppercase; text-align: left; }
-                    
-                    tr { border-bottom: 1px dashed #ddd; break-inside: avoid; }
-                    tr:nth-child(even) { background-color: #fafafa; }
-                    td { padding: 8px; vertical-align: top; border: 1px solid #eee; }
-
-                    .sku-cell { font-family: 'Roboto Mono', monospace; font-weight: 700; font-size: 11px; background: #f0f0f0 !important; }
-                    .prod-name { font-weight: 900; font-size: 13px; margin-bottom: 2px; }
-                    .prod-variant { font-size: 10px; color: #555; font-weight: 600; }
-                    .prod-category { font-size: 9px; color: #999; margin-top: 2px; text-transform: uppercase; }
-                    .qty-cell { font-size: 28px; font-weight: 900; text-align: center; color: #000; vertical-align: middle; border: 2px solid #000; }
-                    .center-cell { text-align: center; vertical-align: middle; font-weight: 700; font-size: 11px; }
-                    .design-ref { font-family: 'Roboto Mono', monospace; font-size: 9px; vertical-align: middle; }
-                    
-                    .checklist { display: flex; flex-direction: column; gap: 3px; justify-content: center; height: 100%; }
-                    .chk-box { border: 1px solid #888; padding: 1px 4px; font-size: 8px; font-weight: 900; color: #444; background: #fff; }
-
-                    .label-section { margin-top: 40px; border: 3px dashed #000; padding: 25px; break-inside: avoid; border-radius: 10px; }
-                    .label-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; align-items: end; }
-                    .label-recipient h3 { font-size: 12px; text-transform: uppercase; border-bottom: 1px solid #000; display: inline-block; margin: 0 0 10px 0; }
-                    .label-name { font-size: 24px; font-weight: 900; line-height: 1; }
-                    .label-phone { font-size: 18px; font-weight: 800; margin-top: 8px; font-family: 'Roboto Mono', monospace; }
-                    .label-address { font-size: 16px; margin-top: 8px; font-weight: 500; }
-                    .qr-label { width: 100px; height: 100px; border: 1px solid #000; padding: 5px; }
-
-                    footer { margin-top: 30px; border-top: 1px solid #000; padding-top: 15px; display: grid; grid-template-columns: 1.5fr 1fr; gap: 40px; font-size: 11px; }
-                    .notes-area { min-height: 80px; border-bottom: 1px solid #eee; }
-                    .op-sig { text-align: right; }
-                    .sig-line { border-bottom: 1px solid #000; display: inline-block; width: 200px; margin-top: 10px; }
-
-                    @media print {
-                        .no-print { display: none; }
-                        body { padding: 0; }
-                    }
-                </style>
-            </head>
-            <body>
-                <header>
-                    <div class="header-left">
-                        <img src="${logoUrl}" alt="CarDecal">
-                        <h1>PRODUCTION SHEET [${sortMode === 'A' ? 'BATCH A' : 'BATCH B'}]</h1>
-                    </div>
-                    <div class="header-right">
-                        <img src="${qrUrlAdmin}" class="qr-main" alt="Admin QR">
-                        <div class="order-header-info">
-                            <h2 class="order-no">#${order.id.slice(0, 10).toUpperCase()}</h2>
-                            <p class="order-time">${new Date(order.created_at).toLocaleString('bg-BG')}</p>
-                            <p style="margin-top:5px;">PAYMENT: <span style="color:${order.payment_method === 'cash_on_delivery' ? '#000' : '#00a82d'}">${order.payment_method === 'cash_on_delivery' ? 'COD (НАЛОЖЕН)' : 'PAID (ПЛАТЕНО)'}</span></p>
-                        </div>
-                    </div>
-                </header>
-
-                ${order.shipping_details.notes ? `
-                    <div class="alert-strip">
-                        <span>⚠️ SPECIAL NOTE: "${order.shipping_details.notes}"</span>
-                    </div>
-                ` : ''}
-
-                <div class="top-grid">
-                    <div class="shipping-info-box">
-                        <span class="box-label">Shipping Details</span>
-                        <div class="shipping-dest">
-                            ${order.shipping_details.deliveryType.toUpperCase()} - ${order.shipping_details.city.toUpperCase()}
-                        </div>
-                        <div class="shipping-addr">${order.shipping_details.officeName}</div>
-                        <div style="font-size: 11px; margin-top: 8px; font-weight: 700;">${order.shipping_details.fullName} | ${order.shipping_details.phone}</div>
-                    </div>
-                    <div class="stats-grid">
-                        <div class="stat-box">
-                            <span class="box-label">Items</span>
-                            <span class="stat-val">${order.items.length} Lines</span>
-                        </div>
-                        <div class="stat-box">
-                            <span class="box-label">Total QTY</span>
-                            <span class="stat-val">${totalQty} PCS</span>
-                        </div>
-                        <div class="stat-box">
-                            <span class="box-label">Priority</span>
-                            <span class="stat-val" style="color: #000; opacity: 0.3;">NORMAL</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div style="margin-bottom: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                    <div class="stat-box" style="background: #fff; border: 1px dashed #000;">
-                        <span class="box-label">Material Groups</span>
-                        <div class="summary-flex">${matSummaryHtml}</div>
-                    </div>
-                    <div class="stat-box" style="background: #fff; border: 1px dashed #000;">
-                        <span class="box-label">Size Groups</span>
-                        <div class="summary-flex">${sizeSummaryHtml}</div>
-                    </div>
-                </div>
-
-                <table>
-                    <thead>
-                        <tr>
-                            <th style="width: 70px;">SKU ID</th>
-                            <th>Description</th>
-                            <th style="width: 85px;">Material</th>
-                            <th style="width: 65px;">Size</th>
-                            <th style="width: 65px; text-align: center;">QTY</th>
-                            <th style="width: 80px;">Design</th>
-                            <th style="width: 75px;">Check</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${itemsHtml}
-                    </tbody>
-                </table>
-
-                <div class="label-section">
-                    <div class="label-grid">
-                        <div class="label-recipient">
-                            <h3>Shipping Label (Recipient)</h3>
-                            <div class="label-name">${order.shipping_details.fullName.toUpperCase()}</div>
-                            <div class="label-phone">${order.shipping_details.phone}</div>
-                            <div class="label-address">
-                                <b>${order.shipping_details.deliveryType.toUpperCase()}</b> - ${order.shipping_details.city.toUpperCase()}<br/>
-                                <span style="font-size: 14px;">${order.shipping_details.officeName}</span>
-                            </div>
-                        </div>
-                        <div style="text-align: right;">
-                            <img src="${qrUrlAdmin}" class="qr-label" alt="QR">
-                            <div style="font-size: 10px; font-weight: 900; margin-top: 5px;">ORDER #${order.id.slice(0, 10).toUpperCase()}</div>
-                        </div>
-                    </div>
-                </div>
-
-                <footer>
-                    <div class="notes-area">
-                        <span class="box-label">Production & Admin Notes</span>
-                        <div style="font-size: 13px; color: #fff; margin-top: 10px; line-height: 1.5; font-weight: 600;">
-                            ${order.admin_notes || '<span style="color: #444; font-weight: normal;">No internal notes provided.</span>'}
-                        </div>
-                        <div style="color: #eee; margin-top: 15px; border-top: 1px dashed #333; pt: 10px;">
-                            <span class="box-label" style="font-size: 8px;">Checklist / Manual Notes</span>
-                            <div style="height: 40px;"></div>
-                        </div>
-                    </div>
-                    <div class="op-sig">
-                        <div style="margin-bottom: 20px;">
-                            <span class="box-label">Prepared By</span>
-                            <div class="sig-line"></div>
-                        </div>
-                        <div>
-                            <span class="box-label">Checked By</span>
-                            <div class="sig-line"></div>
-                        </div>
-                        <p style="font-size: 8px; color: #aaa; margin-top: 15px;">System generated production sheet. Print time: ${new Date().toLocaleString('bg-BG')}</p>
-                    </div>
-                </footer>
-            </body>
-            </html>
-        `;
-
-        printWindow.document.write(html);
-        printWindow.document.close();
-
-        // Wait for images and fonts to load
-        setTimeout(() => {
-            printWindow.focus();
-            printWindow.print();
-        }, 1500);
-    };
 
     useEffect(() => {
         fetchOrders();
@@ -4044,24 +3770,7 @@ const OrdersTab: React.FC = () => {
                                             <Printer className="w-4 h-4" />
                                             ПЕЧАТ КЛИЕНТ
                                         </button>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <button
-                                                onClick={() => handlePrintProduction(order, 'A')}
-                                                className="flex flex-col items-center justify-center gap-1 py-3 bg-red-600/5 border border-red-600/20 text-red-500 text-[9px] uppercase font-black tracking-widest hover:bg-red-600 hover:text-white transition-all rounded-sm group"
-                                                title="Сортиране по Материал -> Размер"
-                                            >
-                                                <BoxSelect className="w-4 h-4 mb-0.5 group-hover:scale-110 transition-transform" />
-                                                <span>ПРОИЗВ. A</span>
-                                            </button>
-                                            <button
-                                                onClick={() => handlePrintProduction(order, 'B')}
-                                                className="flex flex-col items-center justify-center gap-1 py-3 bg-zinc-800/40 border border-white/5 text-zinc-400 text-[9px] uppercase font-black tracking-widest hover:bg-zinc-700 hover:text-white transition-all rounded-sm group"
-                                                title="Сортиране по Категория"
-                                            >
-                                                <LayoutGrid className="w-4 h-4 mb-0.5 group-hover:scale-110 transition-transform" />
-                                                <span>ПРОИЗВ. B</span>
-                                            </button>
-                                        </div>
+
                                     </div>
                                     <button 
                                         onClick={() => setConfirmDelete(order.id)}

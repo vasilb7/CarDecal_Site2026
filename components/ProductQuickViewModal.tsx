@@ -111,18 +111,19 @@ const ProductQuickViewModal: React.FC = () => {
     const mainSrc = images[activeIdx] || '';
 
     const handleAddToCart = () => {
-        const itemName = product.nameBg || product.name;
         const finalQuantity = Math.max(1, quantity);
         addToCart({
             id: `${product.slug}-${activeIdx}`,
-            name: itemName,
+            name: product.name,
+            name_bg: product.nameBg || product.name,
             variant: `Вариант ${activeIdx + 1}`,
+            selectedSize: product.size,
             price: priceValue,
             quantity: finalQuantity,
             image: mainSrc,
             slug: product.slug
         });
-        showToast(`Добавени ${finalQuantity}бр. от ${itemName}`, "success");
+        showToast(`Добавени ${finalQuantity}бр. от ${product.nameBg || product.name}`, "success");
         handleClose();
     };
 

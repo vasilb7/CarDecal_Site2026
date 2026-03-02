@@ -4,7 +4,11 @@ export interface OrderItem {
     id: string;
     product_id: string;
     name: string;
+    name_bg?: string;
+    slug?: string;
     variant: string;
+    selectedSize?: string;
+    material?: string;
     price: number;
     quantity: number;
     image: string;

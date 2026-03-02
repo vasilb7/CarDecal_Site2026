@@ -509,12 +509,21 @@ const CheckoutPage: React.FC = () => {
                                         <span>-{(subtotal - total).toFixed(2)} €</span>
                                     </div>
                                 )}
-                                <div className="flex justify-between text-zinc-500">
-                                    <span>Доставка</span>
+                                <div className="flex justify-between text-zinc-500 items-start">
+                                    <div className="flex flex-col">
+                                        <span>Доставка</span>
+                                        {!isFreeShipping && amountToFreeShipping > 0 && (
+                                            <span className="text-[8px] text-red-500/80 lowercase font-bold normal-case mt-0.5 animate-pulse">
+                                                Остават {(amountToFreeShipping * 1.95583).toFixed(2)} лв. до безплатна
+                                            </span>
+                                        )}
+                                    </div>
                                     {isFreeShipping ? (
-                                        <span className="text-green-500">БЕЗПЛАТНА</span>
+                                        <span className="text-green-500 font-black">БЕЗПЛАТНА</span>
                                     ) : (
-                                        <span className="italic text-[9px]">Калкулира се при изпращане</span>
+                                        <div className="text-right">
+                                            <span className="italic text-[9px] block">По тарифа на куриера</span>
+                                        </div>
                                     )}
                                 </div>
                                 

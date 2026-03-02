@@ -309,8 +309,10 @@ const ProductDetailsPage: React.FC = () => {
                                         const itemName = product.nameBg || product.name;
                                         addToCart({
                                             id: `${product.slug}-${activeIdx}`,
-                                            name: itemName,
+                                            name: product.name,
+                                            name_bg: product.nameBg || product.name,
                                             variant: `Вариант ${activeIdx + 1}`,
+                                            selectedSize: isSize ? displayCategory : undefined,
                                             price: parseFloat(price),
                                             quantity,
                                             image: mainSrc,
@@ -347,8 +349,10 @@ const ProductDetailsPage: React.FC = () => {
                             const itemName = product.nameBg || product.name;
                             addToCart({
                                 id: `${product.slug}-${activeIdx}`,
-                                name: itemName,
+                                name: product.name,
+                                name_bg: product.nameBg || product.name,
                                 variant: `Вариант ${activeIdx + 1}`,
+                                selectedSize: isSize ? displayCategory : undefined,
                                 price: parseFloat(price),
                                 quantity,
                                 image: mainSrc,

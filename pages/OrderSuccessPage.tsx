@@ -33,6 +33,8 @@ const OrderSuccessPage: React.FC = () => {
         fetchOrder();
     }, [orderId, showToast]);
 
+    const isFreeShipping = order ? order.total_amount >= (150 / 1.95583) : false;
+
     if (loading) {
         return (
             <div className="min-h-screen bg-black flex items-center justify-center">
@@ -128,6 +130,9 @@ const OrderSuccessPage: React.FC = () => {
                                 <div className="flex flex-col items-end">
                                     <span className="text-xl font-black text-red-600 italic">{order.total_amount.toFixed(2)} €</span>
                                     <span className="text-[9px] text-zinc-500 font-bold opacity-60">≈ {(order.total_amount * 1.95583).toFixed(2)} лв.</span>
+                                    {isFreeShipping && (
+                                        <span className="text-[8px] font-black text-green-500 uppercase tracking-widest mt-1">Доставка: Безплатна</span>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -140,13 +145,24 @@ const OrderSuccessPage: React.FC = () => {
                                 <Truck className="w-5 h-5 text-red-600" />
                                 <h2 className="text-xs uppercase tracking-[0.2em] text-white font-black">Доставка</h2>
                             </div>
-                            <div className="space-y-2">
+                            <div className="space-y-4">
                                 <p className="text-sm text-white font-semibold uppercase tracking-tight">{order.shipping_details.fullName}</p>
-                                <p className="text-zinc-400 text-xs">
-                                    {order.shipping_details.deliveryType === 'econt' ? 'Еконт' : 'Спиди'} - {order.shipping_details.officeName}
+                                <div className="flex flex-col gap-1">
+                                    <p className="text-zinc-400 text-xs flex items-center gap-2">
+                                        <span className="px-1.5 py-0.5 bg-red-600/20 text-red-500 rounded text-[9px] font-black uppercase">
+                                            {order.shipping_details.deliveryType === 'office' ? 'Еконт Офис' : 'До Адрес'}
+                                        </span>
+                                        {order.shipping_details.city}
+                                    </p>
+                                    <p className="text-zinc-500 text-[11px] italic font-medium">
+                                        {order.shipping_details.deliveryType === 'office' 
+                                            ? order.shipping_details.officeName 
+                                            : order.shipping_details.address}
+                                    </p>
+                                </div>
+                                <p className="text-zinc-400 text-xs pt-2">
+                                    {order.shipping_details.phone}
                                 </p>
-                                <p className="text-zinc-400 text-xs">{order.shipping_details.city}</p>
-                                <p className="text-zinc-400 text-xs">{order.shipping_details.phone}</p>
                             </div>
                         </motion.div>
 

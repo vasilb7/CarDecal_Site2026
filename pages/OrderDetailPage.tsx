@@ -61,8 +61,13 @@ const OrderDetailPage: React.FC = () => {
         'processing': 'bg-blue-500/10 text-blue-500 border-blue-500/20',
         'shipped': 'bg-purple-500/10 text-purple-500 border-purple-500/20',
         'delivered': 'bg-green-500/10 text-green-500 border-green-500/20',
+        'completed': 'bg-zinc-800 text-zinc-100 border-black',
         'cancelled': 'bg-red-500/10 text-red-500 border-red-500/20',
     };
+
+    const subtotal = order.items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+    const isFreeShipping = order.total_amount >= (150 / 1.95583);
+    const discount = subtotal - order.total_amount;
 
     const statusMap: Record<string, string> = {
         'pending': 'Очаква потвърждение',
@@ -127,14 +132,21 @@ const OrderDetailPage: React.FC = () => {
                                     Артикули
                                 </h3>
                                 <div className="space-y-3">
-                                    {order.items.map((item) => (
+                                    {order.items.map((item: any) => (
                                         <div key={item.id} className="flex items-center gap-4 bg-white/2 p-4 rounded-2xl border border-white/5">
                                             <div className="w-16 h-16 rounded-xl overflow-hidden border border-white/10 shrink-0">
                                                 <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
                                             </div>
                                             <div className="flex-1 min-w-0">
-                                                <h4 className="text-xs font-black text-white uppercase tracking-wider truncate">{item.name}</h4>
-                                                <p className="text-[10px] text-zinc-500 uppercase tracking-widest mt-0.5">{item.variant}</p>
+                                                <h4 className="text-xs font-black text-white uppercase tracking-wider truncate">
+                                                    {item.name_bg || item.name}
+                                                </h4>
+                                                <div className="flex flex-wrap gap-2 mt-1">
+                                                    <span className="text-[9px] px-2 py-0.5 bg-white/5 text-zinc-500 rounded font-bold uppercase tracking-widest">{item.variant}</span>
+                                                    {item.selectedSize && (
+                                                        <span className="text-[9px] px-2 py-0.5 bg-white/5 text-zinc-300 rounded font-bold uppercase tracking-widest">{item.selectedSize}</span>
+                                                    )}
+                                                </div>
                                             </div>
                                             <div className="text-right">
                                                 <p className="text-xs font-black text-white italic">{item.price.toFixed(2)} €</p>
@@ -200,11 +212,19 @@ const OrderDetailPage: React.FC = () => {
                                 <div className="pt-4 border-t border-white/5 space-y-3">
                                     <div className="flex justify-between text-xs font-bold text-zinc-400">
                                         <span>Подсума:</span>
-                                        <span>{(order.total_amount).toFixed(2)} €</span>
+                                        <span>{subtotal.toFixed(2)} €</span>
                                     </div>
+                                    {discount > 0.01 && (
+                                        <div className="flex justify-between text-xs font-bold text-green-500">
+                                            <span>Отстъпка:</span>
+                                            <span>-{discount.toFixed(2)} €</span>
+                                        </div>
+                                    )}
                                     <div className="flex justify-between text-xs font-bold text-zinc-400">
                                         <span>Доставка:</span>
-                                        <span className="italic">По тарифа</span>
+                                        <span className={isFreeShipping ? "text-green-500 font-black uppercase" : "italic"}>
+                                            {isFreeShipping ? "Безплатна" : "По тарифа"}
+                                        </span>
                                     </div>
                                     <div className="flex justify-between items-baseline pt-2">
                                         <span className="text-sm font-black text-white uppercase italic">Общо:</span>
