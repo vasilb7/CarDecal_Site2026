@@ -105,12 +105,12 @@ export const SignInPage: React.FC<SignInPageProps> = ({
   return (
     <div className="flex w-full min-h-screen bg-[#111] overflow-hidden font-sans selection:bg-red-500/30 text-white">
         {/* Left Side - Form Section */}
-        <div className="flex-1 flex flex-col justify-center px-6 sm:px-12 lg:px-20 py-12 relative overflow-y-auto">
+        <div className="flex-1 flex flex-col justify-center px-4 sm:px-12 lg:px-20 py-4 sm:py-12 relative overflow-y-auto">
             
             {/* Mobile Close Button */}
             <button 
                 onClick={() => navigate('/')}
-                className="absolute top-8 right-8 lg:hidden w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-all z-10"
+                className="absolute top-4 right-6 lg:hidden w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-all z-10"
             >
                 <X size={20} />
             </button>
@@ -119,7 +119,7 @@ export const SignInPage: React.FC<SignInPageProps> = ({
             <motion.div 
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="mb-6 absolute top-8 left-8 sm:left-12 lg:left-20"
+                className="mb-4 absolute top-4 left-6 sm:left-12 lg:left-20"
             >
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-[0_0_15px_rgba(255,255,255,0.3)]">
@@ -131,12 +131,12 @@ export const SignInPage: React.FC<SignInPageProps> = ({
 
             {/* Form Container */}
             <div className="max-w-md w-full mx-auto flex flex-col justify-center">
-                <div className="mb-0 text-center lg:text-left pt-6 sm:pt-0">
+                <div className="mb-0 text-center lg:text-left pt-2 sm:pt-0">
                     <motion.h1 
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.1 }}
-                        className="text-[32px] sm:text-[40px] font-black text-white leading-tight mb-2 uppercase tracking-tighter"
+                        className="text-[28px] sm:text-[36px] font-black text-white leading-tight mb-1 uppercase tracking-tighter"
                     >
                         {t('auth.login_title', 'Добре Дошли')}
                     </motion.h1>
@@ -144,13 +144,13 @@ export const SignInPage: React.FC<SignInPageProps> = ({
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.2 }}
-                        className="text-white/40 text-sm sm:text-base font-medium uppercase tracking-widest"
+                        className="text-white/40 text-[10px] sm:text-xs font-bold uppercase tracking-widest"
                     >
                         {t('auth.login_subtitle', 'Достъп до вашия профил и поръчки')}
                     </motion.p>
                 </div>
 
-                <form className="space-y-8 pt-4" onSubmit={onSignIn}>
+                <form className="space-y-4 pt-2" onSubmit={onSignIn}>
                     {/* Email */}
                     <FloatingInput 
                         label={t('auth.email', 'Имейл адрес')}
@@ -169,10 +169,10 @@ export const SignInPage: React.FC<SignInPageProps> = ({
                             onTogglePassword={() => setShowPassword(!showPassword)}
                             required
                         />
-                        <div className="absolute -top-7 right-4">
+                        <div className="flex justify-end mt-0.5 px-4">
                             <Link 
                                 to="/recovery"
-                                className="text-xs font-semibold text-white/40 hover:text-red-500 underline underline-offset-4 transition-colors"
+                                className="text-[10px] font-bold text-white/40 hover:text-red-500 uppercase tracking-widest transition-colors"
                             >
                                 {t('auth.forgot_password', 'Забравена парола?')}
                             </Link>
@@ -202,31 +202,38 @@ export const SignInPage: React.FC<SignInPageProps> = ({
                         whileHover={{ scale: 1.01 }}
                         whileTap={{ scale: 0.98 }}
                         type="submit"
-                        className="w-full bg-red-600 text-white font-black py-4 rounded-full mt-2 text-base uppercase tracking-[0.1em] shadow-xl shadow-red-600/20 transition-all hover:bg-red-500 active:scale-95"
+                        className="w-full bg-red-600 text-white font-black py-4 rounded-full mt-1 text-base uppercase tracking-[0.1em] shadow-xl shadow-red-600/20 transition-all hover:bg-red-500 active:scale-95"
                     >
                         {t('auth.sign_in', 'Вход')}
                     </motion.button>
 
-                    {/* Social Buttons */}
-                    <div className="flex flex-col gap-4 pt-2">
-                        <motion.button
-                            whileHover={{ scale: 1.01 }}
-                            whileTap={{ scale: 0.98 }}
-                            type="button"
-                            onClick={onGoogleSignIn}
-                            className="w-full flex items-center justify-center gap-3 rounded-full py-4 bg-white hover:bg-white/90 transition-all shadow-lg"
-                        >
-                            <GoogleIcon />
-                            <span className="text-xs font-black text-black uppercase tracking-widest">Google</span>
-                        </motion.button>
+                    {/* Social Buttons Section - Ultra Compact */}
+                    <div className="flex flex-col items-center pt-2">
+                        <span className="text-[9px] text-white/20 uppercase tracking-[0.2em] mb-2">
+                            {t('auth.or_sign_in_with', 'Или използвайте за вход')}
+                        </span>
+                        
+                        <div className="flex justify-center mb-4">
+                            <motion.button
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.9 }}
+                                type="button"
+                                onClick={onGoogleSignIn}
+                                className="w-12 h-12 flex items-center justify-center rounded-full bg-white shadow-lg transition-all"
+                            >
+                                <GoogleIcon />
+                            </motion.button>
+                        </div>
                         
                         {/* Bottom Links Grouped */}
-                        <div className="flex flex-col items-center gap-1 text-[11px] pt-2">
-                            <span className="text-white/40 uppercase tracking-widest">{t('auth.dont_have_account', "Нямате акаунт?")}</span>
+                        <div className="flex flex-col items-center gap-0.5">
+                            <span className="text-[10px] text-white/40 uppercase tracking-widest">
+                                {t('auth.dont_have_account', "Нямате акаунт?")}
+                            </span>
                             <Link 
                                 to="/register" 
                                 state={location.state}
-                                className="text-white font-black uppercase tracking-widest border-b border-red-600/50 hover:border-red-600 hover:text-red-500 transition-all pb-0.5"
+                                className="text-[11px] text-white font-black uppercase tracking-widest border-b border-red-600/50 hover:border-red-600 hover:text-red-500 transition-all pb-0.5"
                             >
                                 {t('auth.register_link', 'Регистрирайте се')}
                             </Link>
