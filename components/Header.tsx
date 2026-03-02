@@ -333,7 +333,7 @@ const Header: React.FC = () => {
             </AnimatePresence>
 
             <header className="sticky top-0 z-[100] w-full bg-background/95 backdrop-blur-md border-b border-white/5 pt-[env(safe-area-inset-top)]">
-                <div className="container mx-auto px-4 sm:px-6 flex items-center justify-between relative h-16 sm:h-20">
+                <div className="container mx-auto px-4 sm:px-6 flex items-center justify-between relative h-20 sm:h-24">
                     <Link 
                         to="/" 
                         onClick={(e) => { handleLogoClick(e); closeMenu(); }}
@@ -342,7 +342,7 @@ const Header: React.FC = () => {
                         <img 
                             src="/LOGO.png" 
                             alt="CarDecal Logo" 
-                            className="h-8 w-auto object-contain transition-transform duration-300 hover:scale-105"
+                            className="h-10 sm:h-12 w-auto object-contain transition-transform duration-300 hover:scale-105"
                         />
                     </Link>
 
@@ -450,16 +450,16 @@ const Header: React.FC = () => {
                     </div>
 
                     {/* Mobile & Tablet Controls */}
-                    <div className="flex lg:hidden items-center gap-3 z-[110]">
+                    <div className="flex lg:hidden items-center gap-4 z-[110]">
                         <CartIcon />
                         <button
                             onClick={() => setIsMenuOpen(true)}
-                            className="text-white focus:outline-none w-10 h-10 flex flex-col justify-center items-center gap-1.5 rounded-full hover:bg-white/5 transition-colors"
+                            className="text-white focus:outline-none w-12 h-12 flex flex-col justify-center items-center gap-1.5 rounded-full hover:bg-white/5 transition-colors"
                             aria-label="Open menu"
                         >
-                            <span className="w-6 h-[1.5px] bg-white block rounded-full" />
-                            <span className="w-6 h-[1.5px] bg-white block rounded-full" />
-                            <span className="w-6 h-[1.5px] bg-white block rounded-full" />
+                            <span className="w-8 h-[1.5px] bg-white block rounded-full" />
+                            <span className="w-8 h-[1.5px] bg-white block rounded-full" />
+                            <span className="w-8 h-[1.5px] bg-white block rounded-full" />
                         </button>
                     </div>
                 </div>
