@@ -1272,8 +1272,8 @@ const UserProfileModal: React.FC<{
                             <tr>
                                 <td><strong>${item.name_bg || item.name}</strong></td>
                                 <td>${item.quantity} бр.</td>
-                                <td>${(item.price_eur || 0).toFixed(2)} €</td>
-                                <td>${((item.price_eur || 0) * item.quantity).toFixed(2)} €</td>
+                                <td>${(item.price || 0).toFixed(2)} €</td>
+                                <td>${((item.price || 0) * item.quantity).toFixed(2)} €</td>
                             </tr>
                         `).join('')}
                     </tbody>

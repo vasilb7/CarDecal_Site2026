@@ -56,19 +56,6 @@ function AppContent() {
   const { t } = useTranslation();
   const [isTimeUp, setIsTimeUp] = useState(false);
 
-  // Welcome Toast Logic (handles OAuth and regular logins)
-  useEffect(() => {
-    if (user && profile && !authLoading) {
-      const storageKey = `welcome_shown_${user.id}`;
-      const shownInCurrentSession = sessionStorage.getItem(storageKey);
-      
-      if (!shownInCurrentSession) {
-        const name = profile.full_name || user.user_metadata?.full_name || user.email?.split('@')[0] || '';
-        showToast(t('toast.login_success', { name }), "success");
-        sessionStorage.setItem(storageKey, 'true');
-      }
-    }
-  }, [user, profile, authLoading, showToast, t]);
 
   useEffect(() => {
     if (!settings?.maintenance_auto_start_at) {
