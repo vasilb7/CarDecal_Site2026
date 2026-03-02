@@ -54,26 +54,8 @@ const Footer: React.FC = () => {
     topBgClass = "bg-[#080808]";
   }
 
-  // Auto-scanning logic for touch devices (moves mask horizontally)
-  useEffect(() => {
-    let frameId: number;
-    let startTime = Date.now();
-    
-    const animateMask = () => {
-      if (!isHovered && containerRef.current) {
-        const time = (Date.now() - startTime) / 1000;
-        const rect = containerRef.current.getBoundingClientRect();
-        const x = (Math.sin(time * 0.5) * 0.4 + 0.5) * rect.width;
-        const y = (Math.cos(time * 0.3) * 0.1 + 0.5) * rect.height;
-        containerRef.current.style.setProperty('--mouse-x', `${x}px`);
-        containerRef.current.style.setProperty('--mouse-y', `${y}px`);
-      }
-      frameId = requestAnimationFrame(animateMask);
-    };
-    
-    frameId = requestAnimationFrame(animateMask);
-    return () => cancelAnimationFrame(frameId);
-  }, [isHovered]);
+  // Removed auto-scanning logic to match "Lando-style" direct interaction request
+  // The effect now only shows when the user is actively hovering or touching
 
   return (
     <footer className={`${topBgClass} pt-8 sm:pt-12 lg:pt-20 pb-0 w-full relative z-10`}>
@@ -125,15 +107,16 @@ const Footer: React.FC = () => {
             />
           </div>
 
-          {/* ── RED LIQUID MASK — появява се под курсора или автоматично сканира ── */}
+          {/* ── RED LIQUID MASK — появява се САМО под курсора (Spotlight Effect) ── */}
           <div
-            className="absolute inset-0 z-30 pointer-events-none transition-opacity duration-1000 ease-in-out"
+            className="absolute inset-0 z-30 pointer-events-none transition-opacity duration-700 ease-in-out"
             style={{
-              opacity: 1, // Always visible scan on touch, but radial gradient handles area
-              WebkitMaskImage: 'radial-gradient(circle 350px at var(--mouse-x, 50%) var(--mouse-y, 50%), black 15%, transparent 100%)',
-              maskImage: 'radial-gradient(circle 350px at var(--mouse-x, 50%) var(--mouse-y, 50%), black 15%, transparent 100%)',
+              opacity: isHovered ? 1 : 0,
+              WebkitMaskImage: 'radial-gradient(circle 300px at var(--mouse-x, 50%) var(--mouse-y, 50%), black 20%, transparent 100%)',
+              maskImage: 'radial-gradient(circle 300px at var(--mouse-x, 50%) var(--mouse-y, 50%), black 20%, transparent 100%)',
             }}
           >
+            {/* The color-shifting car inside the mask */}
             <div className="absolute
               bottom-[32%] sm:bottom-[10%] lg:bottom-[-10%] xl:bottom-[-25%]
               left-1/2 -translate-x-1/2 pointer-events-none
@@ -159,17 +142,16 @@ const Footer: React.FC = () => {
               />
             </div>
             
-            {/* ── "Z" Scan Lines — as requested in image ── */}
-            <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-40 mix-blend-overlay" viewBox="0 0 100 100" preserveAspectRatio="none">
+            {/* ── "Z" Scan Lines — Visible only through the spotlight mask ── */}
+            <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-60 mix-blend-overlay" viewBox="0 0 100 100" preserveAspectRatio="none">
               <motion.path 
                 d="M 10,20 L 90,40 L 10,60 L 90,80" 
                 stroke="white" 
                 strokeWidth="0.2" 
                 fill="none"
-                initial={{ pathLength: 0, opacity: 0 }}
+                initial={{ pathLength: 0 }}
                 animate={{ 
-                  pathLength: [0, 1, 1, 0, 0],
-                  opacity: [0, 1, 1, 0, 0],
+                  pathLength: isHovered ? [0, 1, 1, 0, 0] : 0,
                   x: [0, 2, 0, -2, 0]
                 }}
                 transition={{ 
@@ -184,16 +166,15 @@ const Footer: React.FC = () => {
                 stroke="white" 
                 strokeWidth="0.1" 
                 fill="none"
-                initial={{ pathLength: 0, opacity: 0 }}
+                initial={{ pathLength: 0 }}
                 animate={{ 
-                  pathLength: [0, 1, 1, 0],
-                  opacity: [0, 0.5, 0.5, 0]
+                  pathLength: isHovered ? [0, 1, 1, 0] : 0
                 }}
                 transition={{ 
                   duration: 6, 
                   repeat: Infinity, 
                   ease: "easeInOut",
-                  delay: 2
+                  delay: 1
                 }}
               />
             </svg>
