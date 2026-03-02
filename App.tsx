@@ -27,6 +27,7 @@ import MaintenancePage from './pages/MaintenancePage';
 import { useLocation } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { CompleteRegistrationModal } from './components/ui/complete-registration';
+const ProductQuickViewModal = React.lazy(() => import('./components/ProductQuickViewModal'));
 
 function PageWrapper({ children }: { children: React.ReactNode }) {
   return (
@@ -106,10 +107,13 @@ function AppContent() {
 
   const isGlobalMaintenanceActive = settings.maintenance_mode || isTimeUp;
 
+  const state = location.state as { backgroundLocation?: Location };
+  const backgroundLocation = state?.backgroundLocation;
+
   return (
     <>
       <ScrollToTop />
-      <Routes location={location}>
+      <Routes location={backgroundLocation || location}>
         {/* Admin - No Layout */}
         <Route path="/admin/*" element={<AdminPage />} />
 
@@ -145,6 +149,14 @@ function AppContent() {
           </Layout>
         } />
       </Routes>
+
+      {backgroundLocation && (
+        <React.Suspense fallback={null}>
+          <Routes>
+            <Route path="/catalog/:slug" element={<ProductQuickViewModal />} />
+          </Routes>
+        </React.Suspense>
+      )}
     </>
   );
 }

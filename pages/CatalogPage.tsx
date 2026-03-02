@@ -8,7 +8,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useUI } from '../context/UIContext';
 import { Search, SlidersHorizontal, X, ChevronDown } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
-import ProductQuickView from '../components/ProductQuickView';
 import type { Product } from '../types';
 import { getOptimizedUrl } from '../lib/cloudinary-utils';
 
@@ -33,14 +32,6 @@ const CatalogPage: React.FC = () => {
     const [isSortOpen, setIsSortOpen] = useState(false);
     const [isAtBottom, setIsAtBottom] = useState(false);
     const itemsPerPage = 18;
-
-    const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
-    const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
-
-    const handleQuickView = (product: Product) => {
-        setQuickViewProduct(product);
-        setIsQuickViewOpen(true);
-    };
 
     // Dynamic Categories, Sizes & Tag counts
     const filterStats = useMemo(() => {
@@ -539,7 +530,7 @@ const CatalogPage: React.FC = () => {
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ duration: 0.3 }}
                                 >
-                                    <ProductCard product={product} onQuickView={handleQuickView} isPriority={index < 6} />
+                                    <ProductCard product={product} isPriority={index < 6} />
                                 </motion.div>
                             ))}
                         </div>
@@ -600,13 +591,6 @@ const CatalogPage: React.FC = () => {
                     </div>
                 </main>
             </div>
-            {quickViewProduct && (
-                <ProductQuickView 
-                    product={quickViewProduct} 
-                    isOpen={isQuickViewOpen} 
-                    onClose={() => setIsQuickViewOpen(false)} 
-                />
-            )}
         </div>
     );
 };

@@ -96,14 +96,6 @@ const HomePage: React.FC = () => {
   const [displayProducts, setDisplayProducts] = useState<any[]>([]);
   const carouselRef = useRef<HTMLDivElement>(null);
 
-  const [quickViewProduct, setQuickViewProduct] = useState<any | null>(null);
-  const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
-
-  const handleQuickView = (product: any) => {
-    setQuickViewProduct(product);
-    setIsQuickViewOpen(true);
-  };
-
   const updateDailyProducts = useCallback(() => {
     if (!products || products.length === 0) return;
 
@@ -443,7 +435,7 @@ const HomePage: React.FC = () => {
                     whileHover={{ y: -5 }}
                     transition={{ type: "spring", stiffness: 300, damping: 20 }}
                   >
-                    <ProductCard product={product} onQuickView={handleQuickView} isPriority={index < 4} />
+                    <ProductCard product={product} isPriority={index < 4} />
                   </motion.div>
                 ))
               ) : (
@@ -590,13 +582,6 @@ const HomePage: React.FC = () => {
           </Link>
         </div>
       </section>
-      {quickViewProduct && (
-        <ProductQuickView
-          product={quickViewProduct}
-          isOpen={isQuickViewOpen}
-          onClose={() => setIsQuickViewOpen(false)}
-        />
-      )}
     </div>
   );
 };

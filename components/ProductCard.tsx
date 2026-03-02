@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Product } from "../types";
@@ -7,11 +7,10 @@ import { getOptimizedUrl } from "../lib/cloudinary-utils";
 
 interface ProductCardProps {
   product: Product;
-  onQuickView?: (product: Product) => void;
   isPriority?: boolean;
 }
 
-const ProductCard: React.FC<ProductCardProps> = ({ product, onQuickView, isPriority = false }) => {
+const ProductCard: React.FC<ProductCardProps> = ({ product, isPriority = false }) => {
   const { i18n } = useTranslation();
   const [imageLoaded, setImageLoaded] = useState(false);
 
@@ -125,20 +124,23 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onQuickView, isPrior
     </motion.div>
   );
 
+  const location = useLocation();
+
   return (
-    <div className="group relative h-full">
-      {onQuickView ? (
-        <div
-          onClick={() => onQuickView(product)}
-          className="block h-full cursor-pointer"
+    <div 
+        className="group relative h-full"
+        onMouseEnter={() => {
+            // Prefetch the modal chunk on hover
+            import('./ProductQuickViewModal');
+        }}
+    >
+        <Link 
+            to={`/catalog/${product.slug}`} 
+            state={{ backgroundLocation: location }} 
+            className="block h-full cursor-pointer"
         >
           {CardContent}
-        </div>
-      ) : (
-        <Link to={`/catalog/${product.slug}`} className="block h-full">
-          {CardContent}
         </Link>
-      )}
     </div>
   );
 };
