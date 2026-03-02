@@ -2708,7 +2708,7 @@ const OrdersTab: React.FC = () => {
                     ${item.material ? `<br><span style="font-size:10px;color:#666666">${item.material}</span>` : ''}
                 </td>
                 <td style="padding: 14px 16px; font-size: 12px; font-weight: 600; color: #4A0000;">
-                    ${item.dimensions || '-'}
+                    ${(item as any).dimensions || (item as any).size || (item as any).selectedSize || '-'}
                 </td>
                 <td style="padding: 14px 16px; text-align: center; font-weight: 700; font-size: 13px; color: #000000;">
                     ${item.quantity}
@@ -3216,7 +3216,11 @@ const OrdersTab: React.FC = () => {
                             </div>
                             <div class="summary-row">
                                 <span>Доставка</span>
-                                <span class="summary-val">По тарифа на куриера</span>
+                                <span class="summary-val">
+                                    ${order.shipping_details.shippingCost === 0 
+                                        ? '<span style="color: #16a34a; font-weight: 800;">Безплатна</span>' 
+                                        : 'По тарифа на куриера'}
+                                </span>
                             </div>
                             <div class="summary-row">
                                 <span>Междинна сума</span>
