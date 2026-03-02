@@ -1218,68 +1218,291 @@ const UserProfileModal: React.FC<{
     const handlePrint = (order: RegularOrder) => {
         const printWindow = window.open('', '_blank');
         if (!printWindow) return;
-        
+
+        const dateFormatted = new Date(order.created_at).toLocaleString('bg-BG', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+
+        const paymentMap: Record<string, string> = {
+            'cash_on_delivery': 'Наложен платеж',
+            'card': 'Карта',
+            'bank': 'Банков превод'
+        };
+
+        const FREE_SHIPPING_THRESHOLD_EUR = 150 / 1.95583;
+        const isFreeShipping = order.total_amount >= FREE_SHIPPING_THRESHOLD_EUR;
+
+        const rawSubtotal = order.items.reduce((sum, item) => sum + (Number(item.price) * (item.quantity || 1)), 0);
+        const discountAmount = rawSubtotal - order.total_amount;
+        const hasDiscount = discountAmount > 0.01;
+
+        const statusStyles: Record<string, { label: string, color: string, bg: string, border: string }> = {
+            'pending': { label: 'Приета', color: '#15803d', bg: '#dcfce7', border: '#bbf7d0' },
+            'processing': { label: 'Обработва се', color: '#c2410c', bg: '#ffedd5', border: '#fed7aa' },
+            'shipped': { label: 'Изпратена', color: '#1d4ed8', bg: '#dbeafe', border: '#bfdbfe' },
+            'completed': { label: 'Завършена', color: '#f8fafc', bg: '#0f172a', border: '#000000' },
+            'cancelled': { label: 'Отказана', color: '#b91c1c', bg: '#fee2e2', border: '#fecaca' }
+        };
+        const st = statusStyles[order.status] || { label: order.status, color: '#333', bg: '#f5f5f5', border: '#ddd' };
+
+        const itemsHtml = order.items.map((item, idx) => `
+            <tr style="background-color: ${idx % 2 === 0 ? '#FFFFFF' : '#FAFAFA'};">
+                <td style="padding: 14px 16px;">
+                    <div style="font-weight: 800; color: #000000; font-size: 13px; text-transform: uppercase; margin-bottom: 2px;">${item.name_bg || item.name}</div>
+                    <div style="font-size: 10px; color: #666666; font-family: monospace; letter-spacing: 0.5px;">SKU: ${item.slug || 'N/A'}</div>
+                </td>
+                <td style="padding: 14px 16px; font-size: 12px; font-weight: 500; color: #4A0000;">
+                    ${item.variant || '-'}
+                    ${item.material ? `<br><span style="font-size:10px;color:#666666">${item.material}</span>` : ''}
+                </td>
+                <td style="padding: 14px 16px; font-size: 12px; font-weight: 600; color: #4A0000;">
+                    ${(item as any).dimensions || (item as any).size || (item as any).selectedSize || '-'}
+                </td>
+                <td style="padding: 14px 16px; text-align: center; font-weight: 700; font-size: 13px; color: #000000;">
+                    ${item.quantity}
+                </td>
+                <td style="padding: 14px 16px; text-align: right; white-space: nowrap;">
+                    <div style="font-weight: 600; font-size: 13px; color: #4A0000;">${Number(item.price).toFixed(2)} \u20ac</div>
+                    <div style="font-size: 10px; color: #666666; margin-top: 2px;">${(Number(item.price) * 1.95583).toFixed(2)} \u043b\u0432.</div>
+                </td>
+                <td style="padding: 14px 16px; text-align: right; white-space: nowrap;">
+                    <div style="font-weight: 800; color: #000000; font-size: 14px;">${(Number(item.price) * item.quantity).toFixed(2)} \u20ac</div>
+                    <div style="font-size: 10px; color: #666666; margin-top: 2px;">${(Number(item.price) * item.quantity * 1.95583).toFixed(2)} \u043b\u0432.</div>
+                </td>
+            </tr>
+        `).join('');
+
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${window.location.origin}/order/receipt/${order.id}`;
+        const logoUrl = `${window.location.origin}/LOGO.png`;
+
         const html = `
-            <html>
+            <!DOCTYPE html>
+            <html lang="bg">
             <head>
-                <title>Разписка - Поръчка №${order.id}</title>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>\u041a\u043b\u0438\u0435\u043d\u0442\u0441\u043a\u0430 \u0420\u0430\u0437\u043f\u0438\u0441\u043a\u0430 #${order.id.slice(0, 8)}</title>
+                <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
                 <style>
-                    @media print {
-                        @page { margin: 0; }
-                        body { padding: 40px !important; margin: 0 !important; }
+                    :root {
+                        --primary: #000000;
+                        --accent-red: #D32F2F;
+                        --bg-color: #F9F9F9;
+                        --surface: #FFFFFF;
+                        --text-main: #4A0000;
+                        --text-muted: #666666;
+                        --border-light: #EAEAEA;
                     }
-                    body { font-family: "Inter", sans-serif; padding: 40px; line-height: 1.6; color: #111; max-width: 800px; margin: 0 auto; }
-                    .header { text-align: center; margin-bottom: 40px; border-bottom: 2px solid #eee; padding-bottom: 20px; }
-                    .header h2 { margin: 0 0 10px 0; font-size: 24px; text-transform: uppercase; letter-spacing: 2px; }
-                    .header p { margin: 0; color: #666; font-size: 14px; }
-                    .details { margin-bottom: 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; background: #fafafa; padding: 20px; border-radius: 8px; }
-                    .details p { margin: 5px 0; font-size: 14px; }
-                    .details strong { color: #555; display: inline-block; width: 140px; }
-                    .items { width: 100%; border-collapse: collapse; margin-bottom: 40px; font-size: 14px; }
-                    .items th { border-bottom: 2px solid #eee; padding: 12px 8px; text-align: left; text-transform: uppercase; font-size: 11px; letter-spacing: 1px; color: #888; }
-                    .items td { border-bottom: 1px solid #eee; padding: 16px 8px; }
-                    .total-row { float: right; width: 300px; background: #fafafa; padding: 20px; border-radius: 8px; }
-                    .total { font-weight: bold; text-align: right; font-size: 20px; margin: 0; }
+                    @page { size: A4; margin: 0; }
+                    * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+                    body { font-family: 'Outfit', sans-serif; margin: 0; padding: 40px; color: var(--text-main); background: var(--bg-color); line-height: 1.5; }
+                    .invoice-wrapper { max-width: 900px; margin: 0 auto; background: var(--surface); padding: 40px 50px; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.04); }
+                    .header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 30px; border-bottom: 2px solid var(--border-light); margin-bottom: 40px; }
+                    .header-left .logo { height: 48px; margin-bottom: 16px; }
+                    .company-details { font-size: 12px; color: var(--text-muted); line-height: 1.6; }
+                    .company-details strong { color: var(--primary); font-size: 14px; display: block; margin-bottom: 4px; }
+                    .header-right { text-align: right; }
+                    .receipt-badge { font-size: 10px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: var(--accent-red); margin-bottom: 8px; display: block; }
+                    .order-number { font-size: 28px; font-weight: 900; color: var(--primary); margin: 0 0 4px 0; }
+                    .order-date { font-size: 13px; color: var(--text-muted); margin-bottom: 16px; }
+                    .status-pill { display: inline-block; padding: 6px 16px; border-radius: 50px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: ${st.color}; background: ${st.bg}; border: 1px solid ${st.border}; }
+                    .cards-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 40px; }
+                    .info-card { background: var(--surface); border: 1px solid var(--border-light); border-radius: 12px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
+                    .card-title { font-size: 13px; font-weight: 800; color: var(--primary); text-transform: uppercase; letter-spacing: 1px; margin: 0 0 16px 0; display: flex; align-items: center; gap: 10px; padding-bottom: 12px; border-bottom: 1px solid var(--border-light); }
+                    .card-title svg { width: 18px; height: 18px; color: var(--accent-red); }
+                    .info-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f5f5f5; font-size: 13px; }
+                    .info-row:last-child { border-bottom: none; }
+                    .info-label { color: var(--text-muted); font-weight: 500; }
+                    .info-value { color: var(--primary); font-weight: 700; text-align: right; }
+                    .table-wrapper { margin-bottom: 40px; border: 1px solid var(--border-light); border-radius: 12px; overflow: hidden; }
+                    table { width: 100%; border-collapse: collapse; }
+                    thead { background: #F4F4F4; }
+                    th { text-align: left; padding: 14px 16px; font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--border-light); }
+                    td { border-bottom: 1px solid var(--border-light); }
+                    tr:last-child td { border-bottom: none; }
+                    .summary-container { display: flex; justify-content: flex-end; margin-bottom: 50px; }
+                    .summary-card { width: 400px; background: var(--surface); border: 1px solid var(--border-light); border-radius: 12px; padding: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); }
+                    .summary-row { display: flex; justify-content: space-between; align-items: center; padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px solid var(--border-light); font-size: 13px; color: var(--text-muted); font-weight: 500; }
+                    .summary-row:last-of-type { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+                    .summary-val { color: var(--primary); font-weight: 700; text-align: right; }
+                    .total-row { margin-top: 16px; padding-top: 16px; border-top: 2px solid var(--primary); display: flex; justify-content: space-between; align-items: flex-start; }
+                    .total-label { font-size: 14px; font-weight: 900; color: var(--primary); text-transform: uppercase; letter-spacing: 1px; margin-top: 8px; }
+                    .total-amount { text-align: right; }
+                    .total-eur { font-size: 32px; font-weight: 900; color: var(--accent-red); line-height: 1; letter-spacing: -1px; }
+                    .total-eur-currency { font-size: 16px; font-weight: 700; margin-left: 4px; }
+                    .total-bgn { font-size: 15px; font-weight: 700; color: var(--text-muted); margin-top: 6px; }
+                    .footer { display: flex; justify-content: space-between; align-items: flex-end; padding-top: 30px; border-top: 2px solid var(--border-light); }
+                    .footer-message { max-width: 400px; }
+                    .footer-thankyou { font-size: 16px; font-weight: 800; color: var(--primary); margin: 0 0 8px 0; }
+                    .footer-text { font-size: 12px; color: var(--text-muted); margin: 0 0 16px 0; line-height: 1.6; }
+                    .footer-links a { font-size: 11px; font-weight: 600; color: var(--text-muted); text-decoration: none; text-transform: uppercase; letter-spacing: 0.5px; margin-right: 16px; }
+                    .qr-section { text-align: center; }
+                    .qr-section img { width: 70px; height: 70px; margin-bottom: 8px; border-radius: 8px; padding: 4px; background: #fff; border: 1px solid var(--border-light); }
+                    .qr-section p { margin: 0; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); }
+                    .free-shipping-badge { display: inline-block; padding: 8px 16px; background: #dcfce7; border: 1px solid #bbf7d0; border-radius: 8px; font-size: 11px; font-weight: 800; color: #15803d; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 30px; }
+                    @media (max-width: 768px) {
+                        .cards-grid { grid-template-columns: 1fr; }
+                        .header { flex-direction: column; gap: 24px; }
+                        .header-right { text-align: left; }
+                        .summary-container { justify-content: flex-start; }
+                        .summary-card { width: 100%; }
+                        .footer { flex-direction: column; gap: 30px; align-items: flex-start; }
+                    }
+                    @media print {
+                        body { background: #fff; padding: 0; }
+                        .invoice-wrapper { box-shadow: none; padding: 0; max-width: 100%; border-radius: 0; }
+                    }
                 </style>
             </head>
             <body>
-                <div class="header">
-                    <h2>Разписка</h2>
-                    <p>ИД №${order.id}</p>
-                </div>
-                <div class="details">
-                    <div>
-                        <p><strong>Дата на създаване:</strong> ${new Date(order.created_at).toLocaleString('bg-BG')}</p>
-                        <p><strong>Клиент:</strong> ${order.shipping_details?.fullName || ''}</p>
-                        <p><strong>Телефон:</strong> ${order.shipping_details?.phone || ''}</p>
+                <div class="invoice-wrapper">
+                    <div class="header">
+                        <div class="header-left">
+                            <img src="${logoUrl}" alt="CarDecal" class="logo">
+                            <div class="company-details">
+                                <strong>CarDecal.bg</strong>
+                                \u0415\u0418\u041a/\u0411\u0423\u041b\u0421\u0422\u0410\u0422: 207399120<br>
+                                \u0411\u044a\u043b\u0433\u0430\u0440\u0438\u044f, \u0433\u0440. \u0421\u043e\u0444\u0438\u044f<br>
+                                \u0422\u0435\u043b\u0435\u0444\u043e\u043d: +359 89 478 9942<br>
+                                Email: cardecal@abv.bg
+                            </div>
+                        </div>
+                        <div class="header-right">
+                            <span class="receipt-badge">\u041a\u041b\u0418\u0415\u041d\u0422\u0421\u041a\u0410 \u0420\u0410\u0417\u041f\u0418\u0421\u041a\u0410</span>
+                            <h1 class="order-number">\u2116 ${order.id.slice(0, 10).toUpperCase()}</h1>
+                            <div class="order-date">${dateFormatted} \u0447.</div>
+                            <div class="status-pill">${st.label}</div>
+                        </div>
                     </div>
-                    <div>
-                        <p><strong>Метод на плащане:</strong> ${order.payment_method === 'cash_on_delivery' ? 'Наложен Платеж' : order.payment_method}</p>
-                        <p><strong>Статус:</strong> <span style="text-transform:uppercase; font-size: 12px; font-weight: bold; padding: 4px 8px; background: #eee; border-radius: 4px;">${order.status}</span></p>
+
+                    ${isFreeShipping ? '<div class="free-shipping-badge">\u2714 \u041f\u043e\u0440\u044a\u0447\u043a\u0430\u0442\u0430 \u0435 \u0441 \u0411\u0415\u0417\u041f\u041b\u0410\u0422\u041d\u0410 \u0434\u043e\u0441\u0442\u0430\u0432\u043a\u0430 (\u043d\u0430\u0434 150 \u043b\u0432.)</div>' : ''}
+
+                    <div class="cards-grid">
+                        <div class="info-card">
+                            <h2 class="card-title">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                \u0414\u0430\u043d\u043d\u0438 \u0437\u0430 \u043a\u043b\u0438\u0435\u043d\u0442\u0430
+                            </h2>
+                            <div class="info-row">
+                                <span class="info-label">\u0418\u043c\u0435 \u0438 \u0424\u0430\u043c\u0438\u043b\u0438\u044f</span>
+                                <span class="info-value">${order.shipping_details.fullName}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">\u0422\u0435\u043b\u0435\u0444\u043e\u043d</span>
+                                <span class="info-value">${order.shipping_details.phone}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">\u0418\u043c\u0435\u0439\u043b \u0430\u0434\u0440\u0435\u0441</span>
+                                <span class="info-value">${order.shipping_details.email || '-'}</span>
+                            </div>
+                        </div>
+                        <div class="info-card">
+                            <h2 class="card-title">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>
+                                \u0414\u043e\u0441\u0442\u0430\u0432\u043a\u0430 \u0438 \u041f\u043b\u0430\u0449\u0430\u043d\u0435
+                            </h2>
+                            <div class="info-row">
+                                <span class="info-label">\u041a\u0443\u0440\u0438\u0435\u0440 \u0438 \u041d\u0430\u0441\u0435\u043b\u0435\u043d\u043e \u043c\u044f\u0441\u0442\u043e</span>
+                                <span class="info-value">${order.shipping_details.deliveryType === 'econt' ? '\u0415\u043a\u043e\u043d\u0442' : order.shipping_details.deliveryType === 'speedy' ? '\u0421\u043f\u0438\u0434\u0438' : '\u0410\u0434\u0440\u0435\u0441'} - \u0433. ${order.shipping_details.city}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">\u041e\u0444\u0438\u0441 / \u0410\u0434\u0440\u0435\u0441</span>
+                                <span class="info-value">${order.shipping_details.officeName}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">\u041f\u043b\u0430\u0449\u0430\u043d\u0435</span>
+                                <span class="info-value">${paymentMap[order.payment_method] || order.payment_method}</span>
+                            </div>
+                        </div>
                     </div>
-                </div>
-                <table class="items">
-                    <thead>
-                        <tr>
-                            <th>Артикул</th>
-                            <th>Количество</th>
-                            <th>Единична Цена</th>
-                            <th>Общо</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${order.items.map((item: any) => `
-                            <tr>
-                                <td><strong>${item.name_bg || item.name}</strong></td>
-                                <td>${item.quantity} бр.</td>
-                                <td>${(item.price || 0).toFixed(2)} €</td>
-                                <td>${((item.price || 0) * item.quantity).toFixed(2)} €</td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-                <div class="total-row">
-                    <p class="total">Обща сума: ${order.total_amount.toFixed(2)} €</p>
+
+                    ${order.shipping_details.notes ? `
+                    <div style="background: #FFF9C4; border-left: 4px solid #FBC02D; padding: 16px; margin-bottom: 40px; border-radius: 8px;">
+                        <strong style="color: #F57F17; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 4px;">\u0411\u0435\u043b\u0435\u0436\u043a\u0430 \u043e\u0442 \u043a\u043b\u0438\u0435\u043d\u0442\u0430:</strong>
+                        <span style="color: #333; font-size: 13px; font-weight: 500;">${order.shipping_details.notes}</span>
+                    </div>
+                    ` : ''}
+
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width: 35%">\u041f\u0440\u043e\u0434\u0443\u043a\u0442</th>
+                                    <th style="width: 25%">\u0412\u0430\u0440\u0438\u0430\u043d\u0442</th>
+                                    <th style="width: 15%">\u0420\u0430\u0437\u043c\u0435\u0440</th>
+                                    <th style="width: 5%; text-align: center;">\u041a-\u0432\u043e</th>
+                                    <th style="width: 10%; text-align: right;">\u0415\u0434. \u0446\u0435\u043d\u0430</th>
+                                    <th style="width: 10%; text-align: right;">\u041e\u0431\u0449\u043e</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${itemsHtml}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="summary-container">
+                        <div class="summary-card">
+                            <div class="summary-row">
+                                <span>\u0411\u0440\u043e\u0439 \u0430\u0440\u0442\u0438\u043a\u0443\u043b\u0438</span>
+                                <span class="summary-val">${order.items.length}</span>
+                            </div>
+                            <div class="summary-row">
+                                <span>\u0414\u043e\u0441\u0442\u0430\u0432\u043a\u0430</span>
+                                <span class="summary-val">
+                                    ${isFreeShipping 
+                                        ? '<span style="color: #16a34a; font-weight: 800;">\u0411\u0435\u0437\u043f\u043b\u0430\u0442\u043d\u0430 (\u043d\u0430\u0434 150 \u043b\u0432.)</span>' 
+                                        : '\u041f\u043e \u0442\u0430\u0440\u0438\u0444\u0430 \u043d\u0430 \u043a\u0443\u0440\u0438\u0435\u0440\u0430'}
+                                </span>
+                            </div>
+                            <div class="summary-row">
+                                <span>\u041c\u0435\u0436\u0434\u0438\u043d\u043d\u0430 \u0441\u0443\u043c\u0430</span>
+                                <div class="summary-val">
+                                    ${rawSubtotal.toFixed(2)} EUR
+                                    <div style="font-size: 10px; color: var(--text-muted); font-weight: 500; margin-top:2px;">${(rawSubtotal * 1.95583).toFixed(2)} \u043b\u0432.</div>
+                                </div>
+                            </div>
+                            ${hasDiscount ? `
+                            <div class="summary-row" style="color: #16a34a; border-top: 1px dashed var(--border-light); padding-top: 12px; margin-top: 4px;">
+                                <span style="font-weight: 700;">\u041e\u0442\u0441\u0442\u044a\u043f\u043a\u0430</span>
+                                <div class="summary-val" style="color: #16a34a;">
+                                    -${discountAmount.toFixed(2)} EUR
+                                    <div style="font-size: 10px; opacity: 0.8; font-weight: 500; margin-top:2px;">-${(discountAmount * 1.95583).toFixed(2)} \u043b\u0432.</div>
+                                </div>
+                            </div>
+                            ` : ''}
+                            
+                            <div class="total-row">
+                                <span class="total-label">\u041e\u0411\u0429\u041e \u0417\u0410 \u041f\u041b\u0410\u0429\u0410\u041d\u0415</span>
+                                <div class="total-amount">
+                                    <div class="total-eur">${(order.total_amount).toFixed(2)}<span class="total-eur-currency">EUR</span></div>
+                                    <div class="total-bgn">${(order.total_amount * 1.95583).toFixed(2)} BGN</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="footer">
+                        <div class="footer-message">
+                            <h3 class="footer-thankyou">\u0411\u043b\u0430\u0433\u043e\u0434\u0430\u0440\u0438\u043c \u0412\u0438 \u0437\u0430 \u0434\u043e\u0432\u0435\u0440\u0438\u0435\u0442\u043e!</h3>
+                            <p class="footer-text">
+                                \u0421 \u0412\u0430\u0448\u0430\u0442\u0430 \u043f\u043e\u0440\u044a\u0447\u043a\u0430 \u043f\u043e\u043c\u0430\u0433\u0430\u0442\u0435 \u043d\u0430 CarDecal \u0434\u0430 \u043f\u0440\u043e\u0434\u044a\u043b\u0436\u0438 \u0434\u0430 \u0441\u044a\u0437\u0434\u0430\u0432\u0430 \u0432\u0438\u0441\u043e\u043a\u043e\u043a\u0430\u0447\u0435\u0441\u0442\u0432\u0435\u043d\u0438 \u0441\u0442\u0438\u043a\u0435\u0440\u0438 \u0438 \u0434\u0438\u0437\u0430\u0439\u043d\u0438. 
+                                \u0412\u0430\u0448\u0435\u0442\u043e \u0443\u0434\u043e\u0432\u043b\u0435\u0442\u0432\u043e\u0440\u0435\u043d\u0438\u0435 \u0435 \u043d\u0430\u0448 \u043e\u0441\u043d\u043e\u0432\u0435\u043d \u043f\u0440\u0438\u043e\u0440\u0438\u0442\u0435\u0442.
+                            </p>
+                            <div class="footer-links">
+                                <a href="${window.location.origin}/terms">\u041e\u0431\u0449\u0438 \u0443\u0441\u043b\u043e\u0432\u0438\u044f</a>
+                                <a href="${window.location.origin}/privacy">\u0414\u0435\u043a\u043b\u0430\u0440\u0430\u0446\u0438\u044f \u0437\u0430 \u043f\u043e\u0432\u0435\u0440\u0438\u0442\u0435\u043b\u043d\u043e\u0441\u0442</a>
+                            </div>
+                        </div>
+                        <div class="qr-section">
+                            <img src="${qrUrl}" alt="QR code" />
+                            <p>\u041f\u0440\u043e\u0441\u043b\u0435\u0434\u0438 \u043f\u043e\u0440\u044a\u0447\u043a\u0430\u0442\u0430</p>
+                        </div>
+                    </div>
                 </div>
             </body>
             </html>
@@ -1287,11 +1510,12 @@ const UserProfileModal: React.FC<{
 
         printWindow.document.write(html);
         printWindow.document.close();
-        printWindow.focus();
         setTimeout(() => {
+            printWindow.focus();
             printWindow.print();
-        }, 250);
+        }, 1500);
     };
+
 
     useEffect(() => {
         const fetchUserData = async () => {
@@ -2731,6 +2955,9 @@ const OrdersTab: React.FC = () => {
         const discountAmount = rawSubtotal - order.total_amount;
         const hasDiscount = discountAmount > 0.01;
 
+        const FREE_SHIPPING_THRESHOLD_EUR = 150 / 1.95583;
+        const isFreeShipping = order.total_amount >= FREE_SHIPPING_THRESHOLD_EUR;
+
         const statusStyles: Record<string, { label: string, color: string, bg: string, border: string }> = {
             'pending': { label: 'Приета', color: '#15803d', bg: '#dcfce7', border: '#bbf7d0' },
             'processing': { label: 'Обработва се', color: '#c2410c', bg: '#ffedd5', border: '#fed7aa' },
@@ -3141,6 +3368,8 @@ const OrdersTab: React.FC = () => {
                         </div>
                     </div>
 
+                    ${isFreeShipping ? '<div style="display: inline-block; padding: 8px 16px; background: #dcfce7; border: 1px solid #bbf7d0; border-radius: 8px; font-size: 11px; font-weight: 800; color: #15803d; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 30px;">✔ Поръчката е с БЕЗПЛАТНА доставка (над 150 лв.)</div>' : ''}
+
                     <!-- 2. Customer & Delivery -->
                     <div class="cards-grid">
                         <div class="info-card">
@@ -3217,8 +3446,8 @@ const OrdersTab: React.FC = () => {
                             <div class="summary-row">
                                 <span>Доставка</span>
                                 <span class="summary-val">
-                                    ${(order.shipping_details as any).shippingCost === 0 
-                                        ? '<span style="color: #16a34a; font-weight: 800;">Безплатна</span>' 
+                                    ${isFreeShipping 
+                                        ? '<span style="color: #16a34a; font-weight: 800;">Безплатна (над 150 лв.)</span>' 
                                         : 'По тарифа на куриера'}
                                 </span>
                             </div>
