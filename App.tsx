@@ -127,8 +127,8 @@ function AppContent() {
         <Route path="*" element={
           <Layout>
             <AnimatePresence mode="wait" initial={false}>
-              <motion.div key={location.pathname} className="w-full">
-                <Routes location={location}>
+              <motion.div key={(backgroundLocation || location).pathname} className="w-full">
+                <Routes location={backgroundLocation || location}>
                   <Route path="/" element={<PageWrapper><HomePage /></PageWrapper>} />
                   <Route path="/catalog" element={<PageWrapper><CatalogPage /></PageWrapper>} />
                   <Route path="/catalog/category/:category" element={<PageWrapper><CatalogPage /></PageWrapper>} />
