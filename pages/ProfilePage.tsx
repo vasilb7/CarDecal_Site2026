@@ -383,15 +383,21 @@ const SettingsTab: React.FC<{
 
         setPwdSaving(true);
         try {
-            // If user has a password, we should technically use secure password change if enabled in Supabase
-            // or re-authenticate if we want maximum security. 
-            // For now, we use the updateUser with password.
-            const updateParams: any = { password: newPwd };
-            
-            // If secure password change is ON in Supabase, this is where old_password goes:
-            // if (isPasswordUser) updateParams.old_password = oldPwd;
+            // Security: Re-authenticate with old password before allowing change
+            if (isPasswordUser) {
+                const { error: signInError } = await supabase.auth.signInWithPassword({
+                    email: user.email,
+                    password: oldPwd,
+                });
+                if (signInError) {
+                    showToast('Старата парола е грешна!', 'error');
+                    setPwdSaving(false);
+                    return;
+                }
+            }
 
-            const { error } = await supabase.auth.updateUser(updateParams);
+            // Now safe to update password
+            const { error } = await supabase.auth.updateUser({ password: newPwd });
             if (error) throw error;
             
             showToast(isPasswordUser ? 'Паролата е сменена успешно!' : 'Паролата е създадена успешно!', 'success');
