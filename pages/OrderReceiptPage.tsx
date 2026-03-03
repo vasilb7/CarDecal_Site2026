@@ -120,7 +120,7 @@ const OrderReceiptPage: React.FC = () => {
                         <img src="/LOGO.png" alt="CarDecal" className="h-12 w-auto object-contain" />
                         <div>
                             <h2 style={{ fontSize: '18px', fontWeight: 900, letterSpacing: '2px', color: '#000', textTransform: 'uppercase', margin: 0 }}>
-                                CARDECAL OOD
+                                КАР ДЕКАЛ ООД
                             </h2>
                             <div style={{ fontSize: '12px', color: '#555', marginTop: '6px', lineHeight: '1.8' }}>
                                 <p style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
