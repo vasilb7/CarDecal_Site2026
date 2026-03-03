@@ -869,6 +869,7 @@ const UsersTab: React.FC = () => {
         const { data, error } = await supabase
             .from('profiles')
             .select('id,email,full_name,avatar_url,role,is_banned,banned_reason,created_at')
+            .is('deletion_scheduled_at', null)
             .order('created_at', { ascending: false });
         if (!error && data) setUsers(data as DBUser[]);
         setLoading(false);
@@ -4423,6 +4424,9 @@ const ArchivedUsersTab: React.FC = () => {
     const [scheduled, setScheduled] = useState<ScheduledUser[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedOrders, setSelectedOrders] = useState<any[] | null>(null);
+    const [viewingUser, setViewingUser] = useState<ScheduledUser | null>(null);
+    const [viewingUserOrders, setViewingUserOrders] = useState<any[]>([]);
+    const [ordersLoading, setOrdersLoading] = useState(false);
     const { showToast } = useToast();
 
     const fetchData = async () => {
@@ -4469,6 +4473,22 @@ const ArchivedUsersTab: React.FC = () => {
         return Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
     };
 
+    const openUserProfile = async (u: ScheduledUser) => {
+        setViewingUser(u);
+        setOrdersLoading(true);
+        try {
+            const { data } = await supabase
+                .from('orders')
+                .select('*')
+                .eq('user_id', u.id)
+                .order('created_at', { ascending: false });
+            setViewingUserOrders(data || []);
+        } catch (err) {
+            setViewingUserOrders([]);
+        }
+        setOrdersLoading(false);
+    };
+
     useEffect(() => {
         fetchData();
     }, []);
@@ -4498,7 +4518,7 @@ const ArchivedUsersTab: React.FC = () => {
                             const daysLeft = getDaysRemaining(u.deletion_scheduled_at);
                             const isExpired = daysLeft <= 0;
                             return (
-                                <div key={u.id} className="bg-[#0a0a0a] border border-yellow-600/20 rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                                <div key={u.id} className="bg-[#0a0a0a] border border-yellow-600/20 rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 cursor-pointer hover:border-yellow-500/40 transition-colors" onClick={() => openUserProfile(u)}>
                                     <div className="flex-1 min-w-0">
                                         <p className="text-white font-bold text-sm uppercase truncate">{u.full_name || 'Без име'}</p>
                                         <p className="text-zinc-500 text-xs">{u.email}</p>
@@ -4520,10 +4540,16 @@ const ArchivedUsersTab: React.FC = () => {
                                             </p>
                                         </div>
                                         <button
-                                            onClick={() => cancelDeletion(u.id)}
+                                            onClick={(e) => { e.stopPropagation(); cancelDeletion(u.id); }}
                                             className="px-4 py-2 bg-green-600/10 border border-green-600/20 text-green-500 text-[10px] uppercase font-black tracking-widest hover:bg-green-600 hover:text-white transition-all rounded-xl"
                                         >
                                             Отмени
+                                        </button>
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); openUserProfile(u); }}
+                                            className="px-4 py-2 bg-white/5 border border-white/10 text-zinc-400 text-[10px] uppercase font-black tracking-widest hover:text-white hover:border-white/30 transition-all rounded-xl"
+                                        >
+                                            Профил
                                         </button>
                                     </div>
                                 </div>
@@ -4631,6 +4657,111 @@ const ArchivedUsersTab: React.FC = () => {
                     </div>
                 )}
             </AnimatePresence>
+
+            {/* ─── User Profile Detail Modal ─── */}
+            <AnimatePresence>
+                {viewingUser && (
+                    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            className="bg-[#111] border border-white/10 w-full max-w-2xl overflow-hidden shadow-2xl rounded-2xl flex flex-col max-h-[85vh]"
+                        >
+                            {/* Header */}
+                            <div className="p-6 border-b border-white/5 flex items-center justify-between">
+                                <h3 className="text-white font-black text-sm uppercase tracking-[0.2em] flex items-center gap-3">
+                                    <User className="w-4 h-4 text-yellow-500" />
+                                    Профил на потребител
+                                </h3>
+                                <button onClick={() => setViewingUser(null)} className="text-zinc-500 hover:text-white transition-colors"><X size={20}/></button>
+                            </div>
+
+                            <div className="p-6 overflow-y-auto custom-scrollbar space-y-6">
+                                {/* User Info Card */}
+                                <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-4">
+                                    <div className="flex items-start justify-between">
+                                        <div>
+                                            <p className="text-white font-black text-lg uppercase">{viewingUser.full_name || 'Без име'}</p>
+                                            <p className="text-zinc-400 text-sm mt-1">{viewingUser.email}</p>
+                                            {viewingUser.phone && <p className="text-zinc-500 text-xs font-mono mt-1">{viewingUser.phone}</p>}
+                                        </div>
+                                        <div className="text-center px-4 py-2 rounded-xl border" style={{
+                                            background: getDaysRemaining(viewingUser.deletion_scheduled_at) <= 0 ? 'rgba(239, 68, 68, 0.1)' : 'rgba(234, 179, 8, 0.1)',
+                                            borderColor: getDaysRemaining(viewingUser.deletion_scheduled_at) <= 0 ? 'rgba(239, 68, 68, 0.3)' : 'rgba(234, 179, 8, 0.2)',
+                                        }}>
+                                            <p className={`text-2xl font-black ${getDaysRemaining(viewingUser.deletion_scheduled_at) <= 0 ? 'text-red-500' : 'text-yellow-500'}`}>
+                                                {getDaysRemaining(viewingUser.deletion_scheduled_at)}
+                                            </p>
+                                            <p className="text-[8px] uppercase tracking-widest font-bold text-yellow-500">дни остават</p>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/5">
+                                        <div>
+                                            <p className="text-[9px] uppercase tracking-widest text-zinc-600 font-bold">Насрочено изтриване:</p>
+                                            <p className="text-zinc-300 text-xs font-bold mt-1">{new Date(viewingUser.deletion_scheduled_at).toLocaleString('bg-BG')}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-[9px] uppercase tracking-widest text-zinc-600 font-bold">Причина:</p>
+                                            <p className="text-zinc-300 text-xs font-bold mt-1 italic">{viewingUser.deletion_reason || 'Няма посочена'}</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Orders */}
+                                <div>
+                                    <h4 className="text-white font-black text-xs uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                                        <ShoppingBag size={14} className="text-red-600" />
+                                        Поръчки ({viewingUserOrders.length})
+                                    </h4>
+                                    {ordersLoading ? (
+                                        <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-red-600" /></div>
+                                    ) : viewingUserOrders.length === 0 ? (
+                                        <p className="text-zinc-600 text-center py-8 uppercase tracking-widest text-xs">Няма поръчки</p>
+                                    ) : (
+                                        <div className="space-y-3">
+                                            {viewingUserOrders.map((order: any) => (
+                                                <div key={order.id} className="bg-white/3 border border-white/5 p-4 rounded-xl">
+                                                    <div className="flex justify-between items-start mb-3 pb-2 border-b border-white/5">
+                                                        <div>
+                                                            <p className="text-white text-xs font-bold uppercase">Поръчка #{order.order_number || order.id.slice(0, 8)}</p>
+                                                            <p className="text-[10px] text-zinc-500 mt-0.5">{new Date(order.created_at).toLocaleString('bg-BG')}</p>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <p className="text-red-500 font-black">{order.total_amount?.toFixed(2)} &euro;</p>
+                                                            <span className="text-[9px] uppercase tracking-widest text-zinc-600">{order.status}</span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        {order.items?.map((item: any, i: number) => (
+                                                            <div key={i} className="flex justify-between text-[11px]">
+                                                                <span className="text-zinc-400">{item.name_bg || item.name} x{item.quantity}</span>
+                                                                <span className="text-white">{(item.price * item.quantity).toFixed(2)} &euro;</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Footer Actions */}
+                            <div className="p-4 border-t border-white/5 flex items-center justify-between">
+                                <button onClick={() => { cancelDeletion(viewingUser.id); setViewingUser(null); }}
+                                    className="px-6 py-2.5 bg-green-600/10 border border-green-600/20 text-green-500 text-[10px] uppercase font-black tracking-widest hover:bg-green-600 hover:text-white transition-all rounded-xl">
+                                    Отмени изтриването
+                                </button>
+                                <button onClick={() => setViewingUser(null)}
+                                    className="px-6 py-2.5 bg-white/5 border border-white/10 text-zinc-400 text-[10px] uppercase font-black tracking-widest hover:text-white transition-all rounded-xl">
+                                    Затвори
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };
@@ -4640,6 +4771,18 @@ const AdminPage: React.FC = () => {
     const { user, profile, loading, isAdmin, isEditor, userRole } = useAuth();
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
+    const [scheduledCount, setScheduledCount] = useState(0);
+
+    useEffect(() => {
+        const fetchScheduledCount = async () => {
+            const { count } = await supabase
+                .from('profiles')
+                .select('id', { count: 'exact', head: true })
+                .not('deletion_scheduled_at', 'is', null);
+            setScheduledCount(count || 0);
+        };
+        fetchScheduledCount();
+    }, [activeTab]);
 
     useEffect(() => {
         console.log('🚔 Admin Access Check:', { userEmail: user?.email, isAdmin, isEditor, loading });
@@ -4668,7 +4811,7 @@ const AdminPage: React.FC = () => {
         { id: 'custom_orders' as AdminTab, label: 'Индивидуални', icon: Edit3 },
         ...(isAdmin ? [
             { id: 'users' as AdminTab, label: 'Потребители', icon: Users },
-            { id: 'archived_users' as AdminTab, label: 'Архив Изтрити', icon: Trash2 }
+            { id: 'archived_users' as AdminTab, label: 'Архив Изтрити', icon: Trash2, badge: scheduledCount }
         ] : []),
         { id: 'maintenance' as AdminTab, label: 'Поддръжка', icon: Settings },
     ];
@@ -4695,6 +4838,11 @@ const AdminPage: React.FC = () => {
                             >
                                 <item.icon className="w-4 h-4" />
                                 {item.label}
+                                {(item as any).badge > 0 && (
+                                    <span className="ml-auto bg-red-600 text-white text-[9px] font-black w-5 h-5 flex items-center justify-center rounded-full">
+                                        {(item as any).badge}
+                                    </span>
+                                )}
                             </button>
                         ))}
                     </nav>
