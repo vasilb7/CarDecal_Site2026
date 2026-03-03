@@ -13,7 +13,7 @@ import {
     Eye, EyeOff, Tag, Image, ArrowLeft, Loader2, RefreshCw,
     UserCheck, UserX, Crown, Upload, Video, Film, AlertCircle, Mail,
     Megaphone, Palette, Type, ShoppingBag, Receipt, Printer, Download,
-    FileText, BoxSelect, LayoutGrid, ClipboardCheck, Boxes, FileJson
+    FileText, BoxSelect, LayoutGrid, ClipboardCheck, Boxes, FileJson, Clock
 } from 'lucide-react';
 import { useToast } from '../components/Toast/ToastProvider';
 import { uploadToCloudinary } from '../lib/cloudinary-utils';
@@ -4409,42 +4409,135 @@ interface ArchivedUser {
     deleted_at: string;
 }
 
+interface ScheduledUser {
+    id: string;
+    full_name: string | null;
+    email: string | null;
+    phone: string | null;
+    deletion_scheduled_at: string;
+    deletion_reason: string | null;
+}
+
 const ArchivedUsersTab: React.FC = () => {
     const [archived, setArchived] = useState<ArchivedUser[]>([]);
+    const [scheduled, setScheduled] = useState<ScheduledUser[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedOrders, setSelectedOrders] = useState<any[] | null>(null);
     const { showToast } = useToast();
 
-    const fetchArchived = async () => {
+    const fetchData = async () => {
         setLoading(true);
         try {
-            const { data, error } = await supabase
+            const { data: archiveData, error: archiveError } = await supabase
                 .from('deleted_users_archive')
                 .select('*')
                 .order('deleted_at', { ascending: false });
-            
-            if (error) throw error;
-            setArchived(data || []);
+            if (archiveError) throw archiveError;
+            setArchived(archiveData || []);
+
+            const { data: scheduledData, error: scheduledError } = await supabase
+                .from('profiles')
+                .select('id, full_name, email, phone, deletion_scheduled_at, deletion_reason')
+                .not('deletion_scheduled_at', 'is', null)
+                .order('deletion_scheduled_at', { ascending: true });
+            if (scheduledError) throw scheduledError;
+            setScheduled(scheduledData || []);
         } catch (err: any) {
             showToast("Грешка при зареждане на архива", "error");
         }
         setLoading(false);
     };
 
+    const cancelDeletion = async (userId: string) => {
+        try {
+            const { error } = await supabase
+                .from('profiles')
+                .update({ deletion_scheduled_at: null, deletion_reason: null })
+                .eq('id', userId);
+            if (error) throw error;
+            showToast('Изтриването е отменено.', 'success');
+            fetchData();
+        } catch (err: any) {
+            showToast('Грешка при отмяна: ' + err.message, 'error');
+        }
+    };
+
+    const getDaysRemaining = (scheduledAt: string) => {
+        const now = new Date();
+        const target = new Date(scheduledAt);
+        const diffMs = target.getTime() - now.getTime();
+        return Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+    };
+
     useEffect(() => {
-        fetchArchived();
+        fetchData();
     }, []);
 
     if (loading) return <div className="flex items-center justify-center p-20"><Loader2 className="w-10 h-10 animate-spin text-red-600" /></div>;
 
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between mb-8">
-                <h2 className="text-xl font-bold uppercase tracking-widest text-white">Архив на изтрити акаунти ({archived.length})</h2>
-                <button onClick={() => fetchArchived()} className="p-2 border border-white/10 text-zinc-500 hover:text-white transition-colors">
-                    <RefreshCw className="w-4 h-4" />
-                </button>
+        <div className="space-y-10">
+            {/* ─── Section: Scheduled for Deletion ─── */}
+            <div>
+                <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-xl font-bold uppercase tracking-widest text-white flex items-center gap-3">
+                        <Clock className="w-5 h-5 text-yellow-500" />
+                        Чакащи изтриване ({scheduled.length})
+                    </h2>
+                    <button onClick={() => fetchData()} className="p-2 border border-white/10 text-zinc-500 hover:text-white transition-colors rounded-lg">
+                        <RefreshCw className="w-4 h-4" />
+                    </button>
+                </div>
+                {scheduled.length === 0 ? (
+                    <div className="border border-dashed border-white/10 p-12 text-center rounded-2xl">
+                        <p className="text-zinc-600 uppercase tracking-widest text-xs">Няма потребители, насрочени за изтриване</p>
+                    </div>
+                ) : (
+                    <div className="space-y-3">
+                        {scheduled.map(u => {
+                            const daysLeft = getDaysRemaining(u.deletion_scheduled_at);
+                            const isExpired = daysLeft <= 0;
+                            return (
+                                <div key={u.id} className="bg-[#0a0a0a] border border-yellow-600/20 rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-white font-bold text-sm uppercase truncate">{u.full_name || 'Без име'}</p>
+                                        <p className="text-zinc-500 text-xs">{u.email}</p>
+                                        {u.phone && <p className="text-zinc-600 text-[10px] font-mono mt-0.5">{u.phone}</p>}
+                                        {u.deletion_reason && (
+                                            <p className="text-zinc-500 text-[10px] mt-1 italic">"{u.deletion_reason}"</p>
+                                        )}
+                                    </div>
+                                    <div className="flex items-center gap-4">
+                                        <div className="text-center px-4 py-2 rounded-xl border" style={{
+                                            background: isExpired ? 'rgba(239, 68, 68, 0.1)' : 'rgba(234, 179, 8, 0.1)',
+                                            borderColor: isExpired ? 'rgba(239, 68, 68, 0.3)' : 'rgba(234, 179, 8, 0.2)',
+                                        }}>
+                                            <p className={`text-2xl font-black ${isExpired ? 'text-red-500' : 'text-yellow-500'}`}>
+                                                {daysLeft}
+                                            </p>
+                                            <p className="text-[9px] uppercase tracking-widest font-bold" style={{ color: isExpired ? '#ef4444' : '#eab308' }}>
+                                                {isExpired ? 'Изтекъл срок' : daysLeft === 1 ? 'ден остава' : 'дни остават'}
+                                            </p>
+                                        </div>
+                                        <button
+                                            onClick={() => cancelDeletion(u.id)}
+                                            className="px-4 py-2 bg-green-600/10 border border-green-600/20 text-green-500 text-[10px] uppercase font-black tracking-widest hover:bg-green-600 hover:text-white transition-all rounded-xl"
+                                        >
+                                            Отмени
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
             </div>
+
+            {/* ─── Section: Archive ─── */}
+            <div>
+                <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-xl font-bold uppercase tracking-widest text-white">Архив на изтрити акаунти ({archived.length})</h2>
+                </div>
 
             <div className="overflow-x-auto border border-white/5 rounded-xl">
                 <table className="w-full text-sm text-left">
@@ -4486,6 +4579,7 @@ const ArchivedUsersTab: React.FC = () => {
                 {archived.length === 0 && (
                     <div className="p-20 text-center text-zinc-600 uppercase tracking-widest text-xs">Все още няма изтрити акаунти</div>
                 )}
+            </div>
             </div>
 
             {/* Orders Snapshot Modal */}
