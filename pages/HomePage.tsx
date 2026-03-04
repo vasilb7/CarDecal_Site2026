@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import { Lock } from "lucide-react";
 import { useProducts } from "../hooks/useProducts";
+import { supabase } from "../lib/supabase";
 import ProductCard from "../components/ProductCard";
 import { useSiteSettings } from "../context/SiteSettingsContext";
 import { useAuth } from "../context/AuthContext";
@@ -29,59 +30,6 @@ const staggerContainer = {
   },
 };
 
-const individualProjects = [
-  {
-    slug: "ind1",
-    nameBg: "Индивидуален Дизайн",
-    avatar: "https://res.cloudinary.com/die68h4oh/image/upload/v1772385577/Indvidual/Indvidual/1_1.jpg",
-  },
-  {
-    slug: "ind2",
-    nameBg: "Индивидуален Дизайн",
-    avatar: "https://res.cloudinary.com/die68h4oh/image/upload/v1772385583/Indvidual/Indvidual/1_2.jpg",
-  },
-  {
-    slug: "ind3",
-    nameBg: "Индивидуален Дизайн",
-    avatar: "https://res.cloudinary.com/die68h4oh/image/upload/v1772385587/Indvidual/Indvidual/Extreme_closeup_macro_photo_of_a_glossy_vinyl_stic_delpmaspu.jpg",
-  },
-  {
-    slug: "ind4",
-    nameBg: "Индивидуален Дизайн",
-    avatar: "https://res.cloudinary.com/die68h4oh/image/upload/v1772385604/Indvidual/Indvidual/Large_bold_3d_text_in_the_center_written_in_bulgar_delpmaspu.jpg",
-  },
-  {
-    slug: "ind5",
-    nameBg: "Индивидуален Дизайн",
-    avatar: "https://res.cloudinary.com/die68h4oh/image/upload/v1772385644/Indvidual/Indvidual/Modern_cartoon_illustration_of_a_stylish_girl_in_s_delpmaspu_1.jpg",
-  },
-  {
-    slug: "ind6",
-    nameBg: "Индивидуален Дизайн",
-    avatar: "https://res.cloudinary.com/die68h4oh/image/upload/v1772385692/Indvidual/Indvidual/Modern_cartoon_illustration_of_a_stylish_girl_in_s_delpmaspu.jpg",
-  },
-  {
-    slug: "ind7",
-    nameBg: "Индивидуален Дизайн",
-    avatar: "https://res.cloudinary.com/die68h4oh/image/upload/v1772385726/Indvidual/Indvidual/Ultra_realistic_photo_of_a_silver_laptop_on_a_clea_delpmaspu.jpg",
-  },
-  {
-    slug: "ind8",
-    nameBg: "Индивидуален Дизайн",
-    avatar: "https://res.cloudinary.com/die68h4oh/image/upload/v1772385757/Indvidual/Indvidual/Ultra_realistic_photo_of_a_single_car_decal_sticke_delpmaspu_1.jpg",
-  },
-  {
-    slug: "ind9",
-    nameBg: "Индивидуален Дизайн",
-    avatar: "https://res.cloudinary.com/die68h4oh/image/upload/v1772385783/Indvidual/Indvidual/Ultra_realistic_photo_of_a_single_car_decal_sticke_delpmaspu.jpg",
-  },
-  {
-    slug: "ind10",
-    nameBg: "Индивидуален Дизайн",
-    avatar: "https://res.cloudinary.com/die68h4oh/image/upload/v1772385789/Indvidual/Indvidual/Whisk_396f4f54e4ca271baed4c6be1a59430cdr.jpg",
-  },
-];
-
 const HomePage: React.FC = () => {
   const { i18n } = useTranslation();
   const {
@@ -94,7 +42,26 @@ const HomePage: React.FC = () => {
   const { user } = useAuth();
 
   const [displayProducts, setDisplayProducts] = useState<any[]>([]);
+  const [individualProjects, setIndividualProjects] = useState<any[]>([]);
   const carouselRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const fetchShowcase = async () => {
+      const { data, error } = await supabase
+        .from('showcase_projects')
+        .select('*')
+        .order('order_index', { ascending: true });
+      if (!error && data) {
+        setIndividualProjects(data.map(item => ({
+          slug: item.id,
+          nameBg: item.title_bg || "Индивидуален Дизайн",
+          avatar: item.image_url
+        })));
+      }
+    };
+    fetchShowcase();
+  }, []);
+
 
   const updateDailyProducts = useCallback(() => {
     if (!products || products.length === 0) return;

@@ -1948,6 +1948,254 @@ const HeroMediaSection: React.FC = () => {
     );
 };
 
+// ─── Individual Projects Section ───
+interface ShowcaseProject {
+    id: string;
+    image_url: string;
+    title_bg: string;
+    order_index: number;
+}
+
+const IndividualProjectsSection: React.FC = () => {
+    const [projects, setProjects] = useState<ShowcaseProject[]>([]);
+    const [loading, setLoading] = useState(true);
+    const { showToast } = useToast();
+    const [uploadingId, setUploadingId] = useState<string | null>(null);
+
+    const fetchProjects = useCallback(async () => {
+        try {
+            const { data, error } = await supabase
+                .from('showcase_projects')
+                .select('*')
+                .order('order_index', { ascending: true });
+            if (error) throw error;
+            setProjects(data || []);
+        } catch (err) {
+            console.error('Fetch error:', err);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchProjects();
+    }, [fetchProjects]);
+
+    const handleAdd = async () => {
+        const maxOrder = projects.length > 0 ? Math.max(...projects.map(p => p.order_index)) : 0;
+        const { data, error } = await supabase
+            .from('showcase_projects')
+            .insert([{ 
+                image_url: 'https://via.placeholder.com/1200x800?text=New+Project', 
+                title_bg: 'Индивидуален Дизайн',
+                order_index: maxOrder + 1 
+            }])
+            .select();
+        
+        if (error) {
+            showToast('Грешка при добавяне', 'error');
+        } else {
+            setProjects([...projects, data[0]]);
+            showToast('Добавен нов проект!', 'success');
+        }
+    };
+
+    const handleDelete = async (id: string) => {
+        if (!confirm('Сигурни ли сте, че искате да изтриете този проект?')) return;
+        
+        const { error } = await supabase.from('showcase_projects').delete().eq('id', id);
+        if (error) {
+            showToast('Грешка при изтриване', 'error');
+        } else {
+            setProjects(projects.filter(p => p.id !== id));
+            showToast('Проектът беше изтрит.', 'info');
+        }
+    };
+
+    const handleMove = async (index: number, direction: 'up' | 'down') => {
+        if ((direction === 'up' && index === 0) || (direction === 'down' && index === projects.length - 1)) return;
+        
+        const targetIndex = direction === 'up' ? index - 1 : index + 1;
+        const newProjects = [...projects];
+        
+        const temp = newProjects[index];
+        newProjects[index] = newProjects[targetIndex];
+        newProjects[targetIndex] = temp;
+
+        setProjects(newProjects);
+
+        try {
+            const updates = newProjects.map((p, i) => ({
+                id: p.id,
+                order_index: i + 1
+            }));
+
+            for (const item of updates) {
+                await supabase.from('showcase_projects')
+                    .update({ order_index: item.order_index })
+                    .eq('id', item.id);
+            }
+        } catch (err) {
+            showToast('Грешка при пренареждане.', 'error');
+            fetchProjects();
+        }
+    };
+
+    const handleUpdateField = async (id: string, field: string, value: string) => {
+        const { error } = await supabase.from('showcase_projects')
+            .update({ [field]: value })
+            .eq('id', id);
+        
+        if (error) {
+            showToast('Грешка при запазване.', 'error');
+        }
+    };
+
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, id: string) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setUploadingId(id);
+        try {
+            const ext = file.name.split('.').pop() || 'jpg';
+            const fileName = `showcase_${id}_${Date.now()}.${ext}`;
+            const storagePath = `showcase/${fileName}`;
+
+            const { error: upErr } = await supabase.storage
+                .from('site-media')
+                .upload(storagePath, file, { contentType: file.type });
+
+            if (upErr) throw upErr;
+
+            const { data: urlData } = supabase.storage
+                .from('site-media')
+                .getPublicUrl(storagePath);
+
+            const publicUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+
+            await supabase.from('showcase_projects')
+                .update({ image_url: publicUrl })
+                .eq('id', id);
+            
+            setProjects(prev => prev.map(p => p.id === id ? { ...p, image_url: publicUrl } : p));
+            showToast('Снимката е качена успешно!', 'success');
+        } catch (err: any) {
+            showToast(err.message || 'Грешка при качване.', 'error');
+        } finally {
+            setUploadingId(null);
+            if (e.target) e.target.value = '';
+        }
+    };
+
+    return (
+        <div className="mt-12">
+            <div className="flex items-center justify-between mb-8 border-b border-white/5 pb-6">
+                <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-red-600/20 flex items-center justify-center border border-red-500/30">
+                        <LayoutGrid className="w-6 h-6 text-red-500" />
+                    </div>
+                    <div>
+                        <h3 className="text-xl font-black text-white uppercase tracking-wider">Индивидуални Проекти</h3>
+                        <p className="text-zinc-500 text-xs text-left">Управлявайте слайдера със завършени обекти на началната страница</p>
+                    </div>
+                </div>
+                
+                <button
+                    onClick={handleAdd}
+                    className="flex items-center gap-2 px-6 py-3 bg-red-600 text-white text-xs font-black uppercase tracking-widest rounded-lg hover:bg-red-700 transition-all shadow-[0_0_20px_rgba(220,38,38,0.3)] active:scale-[0.98]"
+                >
+                    <Plus className="w-4 h-4" /> Добави Нов Проект
+                </button>
+            </div>
+
+            {loading ? (
+                <div className="flex items-center justify-center py-20">
+                    <Loader2 className="w-8 h-8 animate-spin text-zinc-700" />
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    {projects.map((project, idx) => (
+                        <div key={project.id} className="bg-zinc-900/40 border border-white/10 rounded-xl overflow-hidden group flex flex-col hover:border-red-600/30 transition-all duration-300">
+                            <div className="relative aspect-video bg-black flex items-center justify-center overflow-hidden">
+                                <img src={project.image_url} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                                
+                                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
+                                    <label className="w-10 h-10 bg-white/10 hover:bg-white text-white hover:text-black rounded-full flex items-center justify-center cursor-pointer transition-all active:scale-90 border border-white/20">
+                                        {uploadingId === project.id ? <Loader2 className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5" />}
+                                        <input type="file" className="hidden" accept="image/*" onChange={e => handleFileUpload(e, project.id)} disabled={!!uploadingId} />
+                                    </label>
+                                    <button
+                                        onClick={() => handleDelete(project.id)}
+                                        className="w-10 h-10 bg-red-600/20 hover:bg-red-600 text-red-500 hover:text-white rounded-full flex items-center justify-center transition-all active:scale-90 border border-red-600/30"
+                                    >
+                                        <Trash2 className="w-5 h-5" />
+                                    </button>
+                                </div>
+
+                                <div className="absolute top-3 left-3 flex items-center gap-2">
+                                    <span className="bg-black/80 text-white text-[10px] font-black px-2 py-1 rounded border border-white/10">#{idx + 1}</span>
+                                </div>
+
+                                <div className="absolute bottom-3 right-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button
+                                        onClick={() => handleMove(idx, 'up')}
+                                        disabled={idx === 0}
+                                        className="w-8 h-8 bg-black/80 hover:bg-red-600 text-white rounded flex items-center justify-center border border-white/10 transition-all disabled:opacity-20 disabled:pointer-events-none"
+                                    >
+                                        <ChevronUp className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                        onClick={() => handleMove(idx, 'down')}
+                                        disabled={idx === projects.length - 1}
+                                        className="w-8 h-8 bg-black/80 hover:bg-red-600 text-white rounded flex items-center justify-center border border-white/10 transition-all disabled:opacity-20 disabled:pointer-events-none"
+                                    >
+                                        <ChevronDown className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="p-5 flex-1 flex flex-col gap-4">
+                                <div>
+                                    <label className="block text-[9px] uppercase tracking-widest text-zinc-500 mb-1.5 font-bold">Заглавие (BG)</label>
+                                    <input
+                                        type="text"
+                                        value={project.title_bg}
+                                        onChange={e => {
+                                            const val = e.target.value;
+                                            setProjects(prev => prev.map(p => p.id === project.id ? { ...p, title_bg: val } : p));
+                                        }}
+                                        onBlur={e => handleUpdateField(project.id, 'title_bg', e.target.value)}
+                                        className="w-full bg-black/40 border border-white/5 text-white text-[11px] px-3 py-2.5 focus:border-red-600/50 outline-none uppercase font-bold tracking-wider"
+                                        placeholder="Напр. Индивидуален Дизайн"
+                                    />
+                                </div>
+                                <div className="opacity-50">
+                                    <label className="block text-[9px] uppercase tracking-widest text-zinc-600 mb-1 font-bold">IMAGE URL</label>
+                                    <input
+                                        type="text"
+                                        readOnly
+                                        value={project.image_url}
+                                        className="w-full bg-transparent text-zinc-600 text-[9px] outline-none truncate"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                    
+                    {projects.length === 0 && (
+                        <div className="col-span-full py-32 border border-dashed border-white/5 bg-zinc-900/20 rounded-2xl flex flex-col items-center justify-center">
+                            <BoxSelect className="w-12 h-12 text-zinc-800 mb-4" />
+                            <p className="text-zinc-600 text-xs uppercase tracking-widest font-black">Няма открити проекти</p>
+                            <button onClick={handleAdd} className="mt-6 text-red-500 text-[10px] font-black uppercase tracking-widest hover:underline">Добави нов от тук</button>
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};
+
+
 
 // ─── Messages Tab (Announcement Bar) ──────────────────────────────────────
 const MessagesTab: React.FC = () => {
@@ -5114,7 +5362,12 @@ const AdminPage: React.FC = () => {
                     </header>
 
                     {activeTab === 'dashboard' && <DashboardTab />}
-                    {activeTab === 'homepage' && <HeroMediaSection />}
+                    {activeTab === 'homepage' && (
+                        <div className="space-y-12 animate-in fade-in duration-700">
+                             <HeroMediaSection />
+                             <IndividualProjectsSection />
+                        </div>
+                    )}
                     {activeTab === 'messages' && <MessagesTab />}
                     {activeTab === 'maintenance' && <MaintenanceSettingsSection />}
                     {activeTab === 'products' && <ProductsTab />}
