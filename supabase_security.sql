@@ -9,120 +9,130 @@ ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.custom_orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 
--- 2. Drop existing overly open policies if they exist (optional cleanup)
--- DROP POLICY IF EXISTS "Public profiles are viewable by everyone" ON profiles;
--- DROP POLICY IF EXISTS "Enable read access for all users" ON products;
+-- 2. CREATE A SECURITY DEFINER FUNCTION AVOID INFINITE RECURSION
+-- This is critical! If an RLS policy queries the same table it protects, 
+-- Postgres throws a 500 Internal Server Error due to infinite recursion.
+CREATE OR REPLACE FUNCTION public.get_user_role()
+RETURNS text
+LANGUAGE sql
+SECURITY DEFINER -- This bypasses RLS when checking the role
+SET search_path = public
+AS $$
+  SELECT role FROM public.profiles WHERE id = auth.uid();
+$$;
 
 -- ==========================================
 -- PROFILES POLICIES
 -- ==========================================
--- Users can read only their own profile
+DROP POLICY IF EXISTS "Users can view own profile" ON public.profiles;
 CREATE POLICY "Users can view own profile" 
 ON public.profiles FOR SELECT 
 USING (auth.uid() = id);
 
--- Users can update only their own profile
+DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
 CREATE POLICY "Users can update own profile" 
 ON public.profiles FOR UPDATE 
 USING (auth.uid() = id);
 
--- Admins and Editors can view all profiles
+DROP POLICY IF EXISTS "Admins/Editors can view all profiles" ON public.profiles;
 CREATE POLICY "Admins/Editors can view all profiles" 
 ON public.profiles FOR SELECT 
 USING (
-  (SELECT role FROM public.profiles WHERE id = auth.uid()) IN ('admin', 'editor')
+  public.get_user_role() IN ('admin', 'editor')
 );
 
--- Only Admins can update/delete other profiles
+DROP POLICY IF EXISTS "Admins can update all profiles" ON public.profiles;
 CREATE POLICY "Admins can update all profiles" 
 ON public.profiles FOR UPDATE 
 USING (
-  (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'admin'
+  public.get_user_role() = 'admin'
 );
 
+DROP POLICY IF EXISTS "Admins can delete profiles" ON public.profiles;
 CREATE POLICY "Admins can delete profiles" 
 ON public.profiles FOR DELETE 
 USING (
-  (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'admin'
+  public.get_user_role() = 'admin'
 );
 
 -- ==========================================
 -- ORDERS POLICIES
 -- ==========================================
--- Users can view their own orders
+DROP POLICY IF EXISTS "Users can view own orders" ON public.orders;
 CREATE POLICY "Users can view own orders" 
 ON public.orders FOR SELECT 
 USING (auth.uid() = user_id);
 
--- Admins/Editors can view all orders
+DROP POLICY IF EXISTS "Admins/Editors can view all orders" ON public.orders;
 CREATE POLICY "Admins/Editors can view all orders" 
 ON public.orders FOR SELECT 
 USING (
-  (SELECT role FROM public.profiles WHERE id = auth.uid()) IN ('admin', 'editor')
+  public.get_user_role() IN ('admin', 'editor')
 );
 
--- Users can insert their own orders
+DROP POLICY IF EXISTS "Users can create own orders" ON public.orders;
 CREATE POLICY "Users can create own orders" 
 ON public.orders FOR INSERT 
 WITH CHECK (auth.uid() = user_id);
 
--- Only Admins/Editors can update orders (e.g., status changes)
+DROP POLICY IF EXISTS "Admins/Editors can update orders" ON public.orders;
 CREATE POLICY "Admins/Editors can update orders" 
 ON public.orders FOR UPDATE 
 USING (
-  (SELECT role FROM public.profiles WHERE id = auth.uid()) IN ('admin', 'editor')
+  public.get_user_role() IN ('admin', 'editor')
 );
 
 -- ==========================================
 -- CUSTOM ORDERS POLICIES
 -- ==========================================
+DROP POLICY IF EXISTS "Users can view own custom orders" ON public.custom_orders;
 CREATE POLICY "Users can view own custom orders" 
 ON public.custom_orders FOR SELECT 
 USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Admins/Editors can view all custom orders" ON public.custom_orders;
 CREATE POLICY "Admins/Editors can view all custom orders" 
 ON public.custom_orders FOR SELECT 
 USING (
-  (SELECT role FROM public.profiles WHERE id = auth.uid()) IN ('admin', 'editor')
+  public.get_user_role() IN ('admin', 'editor')
 );
 
+DROP POLICY IF EXISTS "Users can create own custom orders" ON public.custom_orders;
 CREATE POLICY "Users can create own custom orders" 
 ON public.custom_orders FOR INSERT 
 WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Admins/Editors can update custom orders" ON public.custom_orders;
 CREATE POLICY "Admins/Editors can update custom orders" 
 ON public.custom_orders FOR UPDATE 
 USING (
-  (SELECT role FROM public.profiles WHERE id = auth.uid()) IN ('admin', 'editor')
+  public.get_user_role() IN ('admin', 'editor')
 );
 
 -- ==========================================
 -- PRODUCTS POLICIES
 -- ==========================================
--- Everyone can view products (safe fields restricted in frontend)
+DROP POLICY IF EXISTS "Public can view products" ON public.products;
 CREATE POLICY "Public can view products" 
 ON public.products FOR SELECT 
 USING (true);
 
--- Only Admins/Editors can insert/update/delete products
+DROP POLICY IF EXISTS "Admins/Editors can manage products" ON public.products;
 CREATE POLICY "Admins/Editors can manage products" 
 ON public.products FOR ALL 
 USING (
-  (SELECT role FROM public.profiles WHERE id = auth.uid()) IN ('admin', 'editor')
+  public.get_user_role() IN ('admin', 'editor')
 );
 
 -- ==========================================
 -- SECUREMENT OF USER ROLE
 -- ==========================================
--- Prevent users from elevating their own role during profile updates
--- In Supabase, you can enforce this with a trigger or RLS check.
--- RLS check is easier:
 CREATE OR REPLACE FUNCTION check_role_update() RETURNS trigger AS $$
 BEGIN
   -- If non-admin is trying to change their role
   IF (
     NEW.role IS DISTINCT FROM OLD.role
-    AND (SELECT role FROM public.profiles WHERE id = auth.uid()) IS DISTINCT FROM 'admin'
+    AND public.get_user_role() IS DISTINCT FROM 'admin'
   ) THEN
     RAISE EXCEPTION 'Not authorized to change role';
   END IF;

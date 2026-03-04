@@ -102,9 +102,6 @@ interface DBProduct {
     is_best_seller: boolean;
     categories: string[];
     dimensions: string | null;
-    finish: string | null;
-    material: string | null;
-    description: string | null;
     cover_image: string | null;
     card_images?: string[] | null;
     is_hidden: boolean;
@@ -149,9 +146,6 @@ const ProductEditModal: React.FC<{
         cover_image: product?.cover_image || '',
         is_best_seller: product?.is_best_seller || false,
         dimensions: product?.dimensions || '',
-        finish: product?.finish || '',
-        material: product?.material || '',
-        description: product?.description || '',
         categories: (product?.categories || []).join(', '),
         card_images: product?.card_images || [],
         is_hidden: product?.is_hidden || false,
@@ -207,9 +201,6 @@ const ProductEditModal: React.FC<{
                 cover_image: form.cover_image || null,
                 is_best_seller: form.is_best_seller,
                 dimensions: form.dimensions || null,
-                finish: form.finish || null,
-                material: form.material || null,
-                description: form.description || null,
                 categories: form.categories.split(',').map(c => c.trim()).filter(Boolean),
                 card_images: form.card_images.filter(Boolean),
                 is_hidden: form.is_hidden,
@@ -446,7 +437,7 @@ const ProductsTab: React.FC = () => {
         while (true) {
             const { data, error } = await supabase
                 .from('products')
-                .select('id,slug,name,name_bg,avatar,price,price_eur,wholesale_price,wholesale_price_eur,is_best_seller,categories,dimensions,finish,material,description,cover_image,is_hidden,updated_at')
+                .select('id,slug,name,name_bg,avatar,price,price_eur,wholesale_price,wholesale_price_eur,is_best_seller,categories,dimensions,cover_image,is_hidden,updated_at')
                 .order('id', { ascending: false })
                 .range(rFrom, rFrom + rSize - 1);
                 
@@ -2328,7 +2319,7 @@ const MessagesTab: React.FC = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 relative z-10">
                     <div className="space-y-6">
                         <div className="text-left">
-                            <label className="block text-xs uppercase tracking-[0.2em] text-zinc-500 mb-3 font-black flex items-center gap-2">
+                            <label className="text-xs uppercase tracking-[0.2em] text-zinc-500 mb-3 font-black flex items-center gap-2">
                                 <Edit3 className="w-3.5 h-3.5" /> Списък със съобщения
                             </label>
                             <textarea
@@ -2400,7 +2391,7 @@ const MessagesTab: React.FC = () => {
 
                         <div className="grid grid-cols-3 gap-4">
                             <div>
-                                <label className="block text-[10px] uppercase tracking-[0.2em] text-zinc-500 mb-2 font-bold flex items-center gap-2">
+                                <label className="text-[10px] uppercase tracking-[0.2em] text-zinc-500 mb-2 font-bold flex items-center gap-2">
                                     <Type className="w-3 h-3" /> Размер
                                 </label>
                                 <select 
@@ -2508,7 +2499,7 @@ const MaintenanceSettingsSection: React.FC = () => {
         
         const parts = text.split("{timer}");
         return (
-            <span className="flex items-center inline-flex">
+            <span className="items-center inline-flex">
                 {parts[0]}
                 <span className="inline-flex items-center justify-center px-1.5 py-0.5 bg-[#ff0000] text-white text-[9px] font-black rounded font-mono mx-1 shrink-0 shadow-[0_0_8px_rgba(255,0,0,0.4)]">
                     {previewTime || "..."}

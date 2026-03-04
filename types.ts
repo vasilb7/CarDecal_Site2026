@@ -26,9 +26,6 @@ export interface Product {
    location: string; // Origin / Brand
    dimensions: string;
    size: string;
-   finish: string;
-   material: string;
-   description: string;
    stockStatus?: string;
 
    highlights: Highlight[];

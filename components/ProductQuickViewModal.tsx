@@ -147,8 +147,8 @@ const ProductQuickViewModal: React.FC = () => {
                 initial={{ opacity: 0, y: 50, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 20, scale: 0.95 }}
-                transition={{ duration: 0.3, ease: [0.2, 0.8, 0.2, 1] }}
-                className="relative w-full max-w-5xl bg-[#080808] sm:rounded-3xl lg:rounded-[32px] sm:border border-white/10 shadow-2xl overflow-hidden max-h-[90svh] sm:max-h-[85vh] flex flex-col lg:flex-row shadow-[0_30px_60px_rgba(0,0,0,0.8)]"
+                transition={{ duration: 0.15, ease: "easeOut" }}
+                className="relative w-full max-w-5xl bg-[#080808] sm:rounded-3xl lg:rounded-[32px] sm:border border-white/10 overflow-hidden max-h-[90svh] sm:max-h-[85vh] flex flex-col lg:flex-row shadow-[0_30px_60px_rgba(0,0,0,0.8)]"
             >
                 {/* Internal gradient BG */}
                 <div className="absolute inset-0 bg-gradient-to-tr from-[#110000] via-transparent to-transparent opacity-80 pointer-events-none" />
@@ -177,11 +177,11 @@ const ProductQuickViewModal: React.FC = () => {
                             />
 
                             <img
-                                src={getOptimizedUrl(mainSrc, { width: window.innerWidth < 640 ? 500 : 800 })}
+                                src={getOptimizedUrl(mainSrc, { width: 400 })}
                                 alt={product.nameBg || product.name}
                                 onLoad={() => setImageLoaded(true)}
                                 decoding="async"
-                                className={`w-[85%] h-[85%] object-contain pointer-events-none select-none transition-all duration-700 group-hover:scale-105 relative z-10 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+                                className={`w-[85%] h-[85%] object-contain pointer-events-none select-none transition-opacity duration-200 group-hover:scale-105 relative z-10 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
                             />
                             
                             {/* Expand Icon */}

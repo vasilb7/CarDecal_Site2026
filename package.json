@@ -9,6 +9,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@cloudinary/react": "^1.14.4",
+    "@cloudinary/url-gen": "^1.22.0",
     "@internationalized/date": "^3.10.1",
     "@origin-space/image-cropper": "^0.1.9",
     "@playwright/test": "^1.58.2",

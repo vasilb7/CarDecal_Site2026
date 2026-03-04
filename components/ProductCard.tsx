@@ -66,17 +66,17 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, isPriority = false }
               <motion.div
                 initial={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.5 }}
+                transition={{ duration: 0.2 }}
                 className="absolute inset-0 m-auto w-10 h-10 border-2 border-white/5 border-t-red-600 rounded-full animate-spin"
               />
             )}
           </AnimatePresence>
 
           <img
-            src={getOptimizedUrl(product.avatar, { width: 801, crop: 'fit' })}
+            src={getOptimizedUrl(product.avatar, { width: 400, crop: 'fit' })}
             alt={name}
             onLoad={() => setImageLoaded(true)}
-            className={`max-w-full max-h-full object-contain drop-shadow-[0_15px_30px_rgba(0,0,0,0.6)] pointer-events-none select-none transition-opacity duration-700 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+            className={`max-w-full max-h-full object-contain drop-shadow-[0_15px_30px_rgba(0,0,0,0.6)] pointer-events-none select-none transition-opacity duration-200 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
             draggable={false}
             loading={isPriority ? "eager" : "lazy"}
             decoding="async"

@@ -63,8 +63,11 @@ export function getOptimizedUrl(url: string, options: { width?: number; height?:
   const baseUrl = url.substring(0, uploadIndex + 8); // Includes /upload/
   const remainingUrl = url.substring(uploadIndex + 8);
 
-  const { width, height, crop = 'fill', blur } = options;
-  const transformations = ['f_auto', 'q_auto'];
+  const { width, height, crop = 'fit', blur } = options;
+  // f_auto sets WebP/AVIF format automatically
+  // q_auto:eco reduces file size significantly (often 30-50% smaller than default) with minimal visual loss
+  // fl_progressive makes JPEGs load progressively instead of top-to-bottom
+  const transformations = ['f_auto', 'q_auto:eco', 'fl_progressive'];
 
   if (width) transformations.push(`w_${width}`);
   if (height) transformations.push(`h_${height}`);

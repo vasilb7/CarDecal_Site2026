@@ -6,6 +6,7 @@ import { Lock, Truck } from "lucide-react";
 import { useProducts } from "../hooks/useProducts";
 import { supabase } from "../lib/supabase";
 import ProductCard from "../components/ProductCard";
+import FeaturedProductCard from "../components/FeaturedProductCard";
 import { useSiteSettings } from "../context/SiteSettingsContext";
 import { useAuth } from "../context/AuthContext";
 import ProductQuickView from "../components/ProductQuickViewModal";
@@ -44,19 +45,31 @@ const HomePage: React.FC = () => {
   const [displayProducts, setDisplayProducts] = useState<any[]>([]);
   const [individualProjects, setIndividualProjects] = useState<any[]>([]);
   const carouselRef = useRef<HTMLDivElement>(null);
+  const [hideScrollArrow, setHideScrollArrow] = useState(false);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const target = e.currentTarget;
+    if (target.scrollLeft + target.clientWidth >= target.scrollWidth - 10) {
+      setHideScrollArrow(true);
+    } else {
+      setHideScrollArrow(false);
+    }
+  };
 
   useEffect(() => {
     const fetchShowcase = async () => {
       const { data, error } = await supabase
-        .from('showcase_projects')
+        .from("showcase_projects")
         .select("*")
-        .order('order_index', { ascending: true });
+        .order("order_index", { ascending: true });
       if (!error && data) {
-        setIndividualProjects(data.map(item => ({
-          slug: item.id,
-          nameBg: item.title_bg || "Индивидуален Дизайн",
-          avatar: item.image_url
-        })));
+        setIndividualProjects(
+          data.map((item) => ({
+            slug: item.id,
+            nameBg: item.title_bg || "Индивидуален Дизайн",
+            avatar: item.image_url,
+          })),
+        );
       }
     };
 
@@ -65,18 +78,18 @@ const HomePage: React.FC = () => {
     // Realtime subscription
     let debounceTimer: any;
     const channel = supabase
-      .channel('schema-db-changes')
+      .channel("schema-db-changes")
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: '*',
-          schema: 'public',
-          table: 'showcase_projects'
+          event: "*",
+          schema: "public",
+          table: "showcase_projects",
         },
         () => {
           clearTimeout(debounceTimer);
           debounceTimer = setTimeout(fetchShowcase, 300);
-        }
+        },
       )
       .subscribe();
 
@@ -84,10 +97,7 @@ const HomePage: React.FC = () => {
       clearTimeout(debounceTimer);
       supabase.removeChannel(channel);
     };
-
   }, []);
-
-
 
   const updateDailyProducts = useCallback(() => {
     if (!products || products.length === 0) return;
@@ -115,7 +125,7 @@ const HomePage: React.FC = () => {
     if (shouldPickNew) {
       const shuffled = [...products].sort(() => 0.5 - Math.random());
       const selected = shuffled.slice(0, 4);
-      pickedIds = selected.map((p) => p.slug || p.id);
+      pickedIds = selected.map((p) => p.slug);
       localStorage.setItem(
         "carDecalDailyPicks",
         JSON.stringify({
@@ -126,13 +136,13 @@ const HomePage: React.FC = () => {
       setDisplayProducts(selected);
     } else {
       const selected = pickedIds
-        .map((id) => products.find((p) => (p.slug || p.id) === id))
+        .map((id) => products.find((p) => p.slug === id))
         .filter(Boolean);
       if (selected.length > 0) {
         // Prevent state update if nothing actually changed to avoid unnecessary re-renders
         setDisplayProducts((prev) => {
-          const prevIds = prev.map((p) => p.slug || p.id).join(",");
-          const newIds = selected.map((p) => p.slug || p.id).join(",");
+          const prevIds = prev.map((p) => p.slug).join(",");
+          const newIds = selected.map((p) => p.slug).join(",");
           return prevIds === newIds ? prev : selected;
         });
       } else {
@@ -204,7 +214,7 @@ const HomePage: React.FC = () => {
         setTimeout(() => setIsSlideAnimating(false), 1000);
         return (prev + 1) % individualProjects.length;
       });
-    }, 4500); 
+    }, 4500);
   }, [individualProjects.length]);
 
   useEffect(() => {
@@ -217,19 +227,21 @@ const HomePage: React.FC = () => {
   }, [startSlideTimer, individualProjects.length]);
 
   useEffect(() => {
-    if (individualProjects.length > 0 && currentPremiumIndex >= individualProjects.length) {
+    if (
+      individualProjects.length > 0 &&
+      currentPremiumIndex >= individualProjects.length
+    ) {
       setCurrentPremiumIndex(0);
     }
   }, [individualProjects.length, currentPremiumIndex]);
 
-
   const handleManualSlide = (index: number) => {
     if (isSlideAnimating || index === currentPremiumIndex) return;
-    
+
     setCurrentPremiumIndex(index);
     setIsSlideAnimating(true);
     setTimeout(() => setIsSlideAnimating(false), 1000);
-    
+
     // Reset timer so it doesn't immediately slide right after click
     startSlideTimer();
   };
@@ -250,8 +262,9 @@ const HomePage: React.FC = () => {
         <div className="absolute inset-0 z-0">
           <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-transparent to-black z-10" />
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.8)_100%)] z-10" />
-          
-          {siteSettings?.hero_media_url && siteSettings.hero_media_type === 'video' ? (
+
+          {siteSettings?.hero_media_url &&
+          siteSettings.hero_media_type === "video" ? (
             <video
               key={siteSettings.hero_media_url}
               autoPlay
@@ -267,14 +280,14 @@ const HomePage: React.FC = () => {
             </video>
           ) : (
             <img
-              key={siteSettings?.hero_media_url || 'default'}
+              key={siteSettings?.hero_media_url || "default"}
               src={
-                siteSettings?.hero_media_url
-                  ? siteSettings.hero_media_url
-                  : getOptimizedUrl(
+                siteSettings?.hero_media_url && siteSettings.hero_media_url.includes('cloudinary.com')
+                  ? getOptimizedUrl(siteSettings.hero_media_url, { width: 1920 })
+                  : (siteSettings?.hero_media_url || getOptimizedUrl(
                       "https://res.cloudinary.com/die68h4oh/image/upload/v1772385587/Indvidual/Indvidual/Extreme_closeup_macro_photo_of_a_glossy_vinyl_stic_delpmaspu.jpg",
-                      { width: 1920 }
-                    )
+                      { width: 1920 },
+                    ))
               }
               alt="Hero Background"
               onLoad={() => setMediaLoaded(true)}
@@ -308,8 +321,12 @@ const HomePage: React.FC = () => {
               className="w-full text-center font-black uppercase tracking-[-0.03em] mb-4 drop-shadow-[0_20px_50px_rgba(0,0,0,0.9)] flex flex-row items-center justify-center leading-none"
               style={{ fontSize: "clamp(42px, 13vw, 140px)" }}
             >
-              <span className="text-white drop-shadow-[0_0_30px_rgba(255,255,255,0.1)]">CAR</span>
-              <span className="text-red-600 drop-shadow-[0_0_50px_rgba(220,38,38,0.6)]">DECAL</span>
+              <span className="text-white drop-shadow-[0_0_30px_rgba(255,255,255,0.1)]">
+                CAR
+              </span>
+              <span className="text-red-600 drop-shadow-[0_0_50px_rgba(220,38,38,0.6)]">
+                DECAL
+              </span>
             </motion.h1>
 
             {/* Subtitles */}
@@ -318,30 +335,59 @@ const HomePage: React.FC = () => {
               className="flex flex-col items-center mb-10 sm:mb-12 px-2 w-full"
             >
               <p className="text-white/80 text-sm md:text-xl font-medium tracking-[0.2em] md:tracking-[0.3em] uppercase max-w-2xl mx-auto leading-relaxed drop-shadow-lg text-center font-sans">
-                Безкомпромисно качество. <span className="text-white font-bold opacity-100">Уникален стил.</span>
+                Произведено от{" "}
+                <span className="text-white font-bold opacity-100">
+                  CarDecal
+                </span>
               </p>
             </motion.div>
 
             {/* Minimal Quality Icons */}
-            <motion.div 
+            <motion.div
               variants={fadeInUp}
               className="flex items-center justify-center gap-x-5 md:gap-x-8 mb-8 md:mb-12 opacity-80"
             >
               <div className="flex items-center gap-2 md:gap-2.5">
-                <svg className="w-4 h-4 md:w-5 md:h-5 text-red-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707m12.728 12.728L5.657 5.657" />
+                <svg
+                  className="w-4 h-4 md:w-5 md:h-5 text-red-600 shrink-0"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707m12.728 12.728L5.657 5.657"
+                  />
                 </svg>
-                <span className="text-[10px] md:text-[11px] text-white font-bold uppercase tracking-[0.1em] whitespace-nowrap">UV Защита</span>
+                <span className="text-[10px] md:text-[11px] text-white font-bold uppercase tracking-[0.1em] whitespace-nowrap">
+                  UV Защита
+                </span>
               </div>
               <div className="flex items-center gap-2 md:gap-2.5">
-                <svg className="w-4 h-4 md:w-5 md:h-5 text-red-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                <svg
+                  className="w-4 h-4 md:w-5 md:h-5 text-red-600 shrink-0"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                  />
                 </svg>
-                <span className="text-[10px] md:text-[11px] text-white font-bold uppercase tracking-[0.1em] whitespace-nowrap">Премиум</span>
+                <span className="text-[10px] md:text-[11px] text-white font-bold uppercase tracking-[0.1em] whitespace-nowrap">
+                  Произведено от нас
+                </span>
               </div>
               <div className="flex items-center gap-2 md:gap-2.5">
                 <Truck className="w-4 h-4 md:w-5 md:h-5 text-red-600 shrink-0" />
-                <span className="text-[10px] md:text-[11px] text-white font-bold uppercase tracking-[0.1em] whitespace-nowrap">Бърза Доставка</span>
+                <span className="text-[10px] md:text-[11px] text-white font-bold uppercase tracking-[0.1em] whitespace-nowrap">
+                  Бърза Доставка
+                </span>
               </div>
             </motion.div>
 
@@ -369,12 +415,9 @@ const HomePage: React.FC = () => {
           </motion.div>
         </div>
 
-
         {/* Bottom Fade */}
         <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-background to-transparent z-20" />
       </div>
-
-
 
       {/* Featured Products */}
       <section className="py-24 bg-background">
@@ -397,7 +440,7 @@ const HomePage: React.FC = () => {
                 <div className="relative p-[1.5px] rounded-full overflow-hidden group shadow-[0_0_20px_rgba(220,38,38,0.15)] flex shrink-0 bg-white/5">
                   {/* Rotating Border Gradient (Beam Effect) */}
                   <div className="absolute inset-[-1000%] animate-[spin_3s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,transparent_0%,rgba(239,68,68,0.2)_50%,#ef4444_90%,#ffffff_99.5%,transparent_100%)] opacity-100" />
-                  
+
                   {/* Inner Dark Background */}
                   <div className="relative z-10 flex items-center gap-2 px-4 py-1.5 md:px-6 md:py-2.5 bg-[#050505] rounded-full w-max shadow-[inset_0_4px_10px_rgba(0,0,0,0.5)]">
                     <svg
@@ -416,7 +459,10 @@ const HomePage: React.FC = () => {
                     <span className="text-red-500 text-[9px] md:text-[11px] font-black uppercase tracking-[0.2em] mt-0.5 whitespace-nowrap">
                       Оставащо Време:
                     </span>
-                    <span className="text-white text-xs md:text-sm font-mono font-black tracking-[0.25em] mt-0.5" style={{ textShadow: "0 0 10px rgba(255,255,255,0.2)" }}>
+                    <span
+                      className="text-white text-xs md:text-sm font-mono font-black tracking-[0.25em] mt-0.5"
+                      style={{ textShadow: "0 0 10px rgba(255,255,255,0.2)" }}
+                    >
                       {String(timeLeft.hours).padStart(2, "0")}:
                       {String(timeLeft.minutes).padStart(2, "0")}:
                       {String(timeLeft.seconds).padStart(2, "0")}
@@ -425,41 +471,46 @@ const HomePage: React.FC = () => {
                 </div>
               </div>
             </motion.div>
-
-
           </div>
 
-          <div className="relative">
+          <div className="relative w-full">
             <div
               ref={carouselRef}
-              className="flex overflow-x-auto snap-x snap-mandatory gap-5 md:gap-8 pb-12 pt-4 no-scrollbar scroll-smooth"
+              onScroll={handleScroll}
+              className="flex md:grid md:grid-cols-2 lg:grid-cols-4 overflow-x-auto md:overflow-visible snap-x snap-mandatory gap-5 md:gap-6 lg:gap-8 pb-12 pt-4 no-scrollbar scroll-smooth w-full"
             >
-
               {productsLoading ||
               (products.length > 0 && displayProducts.length === 0) ? (
-                <div className="min-w-full text-center py-20 text-text-muted uppercase tracking-[0.2em] text-sm">
+                <div className="min-w-full md:col-span-full text-center py-20 text-text-muted uppercase tracking-[0.2em] text-sm">
                   Зареждане...
                 </div>
               ) : displayProducts.length > 0 ? (
                 displayProducts.map((product, index) => (
                   <motion.div
                     key={product.slug}
-                    className="flex-shrink-0 w-[85%] sm:w-[45%] md:w-[30%] lg:w-[23%] snap-center"
+                    className="flex-shrink-0 w-[85%] sm:w-[55%] md:w-auto snap-center"
                     whileHover={{ y: -5 }}
                     transition={{ type: "spring", stiffness: 300, damping: 20 }}
                   >
-                    <ProductCard product={product} isPriority={index < 4} />
+                    <FeaturedProductCard product={product} isPriority={index < 4} />
                   </motion.div>
                 ))
               ) : (
-                <div className="min-w-full text-center py-20 text-text-muted uppercase tracking-[0.2em] text-sm">
+                <div className="min-w-full md:col-span-full text-center py-20 text-text-muted uppercase tracking-[0.2em] text-sm">
                   Няма налични продукти.
                 </div>
               )}
             </div>
 
-            {/* Mobile right swipe indicator */}
-            <div className="absolute right-0 top-[40%] -translate-y-1/2 flex items-center justify-end z-20 w-16 h-full pointer-events-none pr-2">
+            {/* Mobile right swipe indicator - Automatically hides when scrolled to the end relative to scroll position */}
+            <AnimatePresence>
+              {!hideScrollArrow && displayProducts.length > 0 && (
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute right-0 top-[40%] -translate-y-1/2 flex items-center justify-end z-20 w-16 h-full pointer-events-none pr-2 md:hidden"
+                >
               <button
                 onClick={() =>
                   carouselRef.current?.scrollBy({
@@ -492,8 +543,10 @@ const HomePage: React.FC = () => {
                   </svg>
                 </motion.div>
               </button>
-            </div>
-          </div>
+            </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
 
           <div className="mt-8 flex justify-center w-full">
             <Link
@@ -508,7 +561,6 @@ const HomePage: React.FC = () => {
 
       {/* Sticker Showcase Player */}
       <section className="pt-20 pb-4 md:pt-24 md:pb-8 bg-surface relative overflow-hidden">
-
         <div className="container mx-auto px-6 relative z-10 text-center">
           <h2 className="text-3xl md:text-5xl font-black text-white uppercase tracking-tighter mb-4">
             Индивидуални <span className="text-red-600">Проекти</span>
@@ -534,7 +586,7 @@ const HomePage: React.FC = () => {
                         className="absolute inset-0 flex items-center justify-center z-30"
                       >
                         <img
-                          src={getOptimizedUrl(product.avatar, { width: 1200 })}
+                          src={getOptimizedUrl(product.avatar, { width: 600 })}
                           alt={product.nameBg}
                           className="w-full h-full object-cover block"
                           loading="lazy"
@@ -554,13 +606,22 @@ const HomePage: React.FC = () => {
 
             {/* Manual Navigation Controls - Invisible touch zones */}
             <div className="absolute inset-x-0 inset-y-10 z-30 flex">
-              <button 
-                onClick={() => handleManualSlide((currentPremiumIndex - 1 + individualProjects.length) % individualProjects.length)}
+              <button
+                onClick={() =>
+                  handleManualSlide(
+                    (currentPremiumIndex - 1 + individualProjects.length) %
+                      individualProjects.length,
+                  )
+                }
                 className="w-1/4 h-full cursor-w-resize"
                 aria-label="Previous project"
               />
-              <button 
-                onClick={() => handleManualSlide((currentPremiumIndex + 1) % individualProjects.length)}
+              <button
+                onClick={() =>
+                  handleManualSlide(
+                    (currentPremiumIndex + 1) % individualProjects.length,
+                  )
+                }
                 className="w-3/4 h-full cursor-e-resize"
                 aria-label="Next project"
               />
@@ -579,8 +640,6 @@ const HomePage: React.FC = () => {
               ))}
             </div>
           </div>
-
-
         </div>
       </section>
       {/* CTA Banner */}

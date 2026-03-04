@@ -26,6 +26,7 @@ import { useAuth } from './context/AuthContext';
 import { useSiteSettings, SiteSettingsProvider } from './context/SiteSettingsContext';
 import { UIProvider } from './context/UIContext';
 import { CartProvider } from './context/CartContext';
+import { ProductsProvider } from './context/ProductsContext';
 import MaintenancePage from './pages/MaintenancePage';
 import { Loader2 } from 'lucide-react';
 import { CompleteRegistrationModal } from './components/ui/complete-registration';
@@ -159,11 +160,13 @@ function App() {
     <BrowserRouter>
       <SiteSettingsProvider>
         <UIProvider>
-          <CartProvider>
-            <ToastProvider>
-              <AppContent />
-            </ToastProvider>
-          </CartProvider>
+          <ProductsProvider>
+            <CartProvider>
+              <ToastProvider>
+                <AppContent />
+              </ToastProvider>
+            </CartProvider>
+          </ProductsProvider>
         </UIProvider>
       </SiteSettingsProvider>
     </BrowserRouter>

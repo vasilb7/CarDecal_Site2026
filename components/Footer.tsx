@@ -218,7 +218,7 @@ const Footer: React.FC = () => {
           <div className="flex flex-col items-center gap-1 mt-1 sm:mt-0">
             <span className="text-[10px] sm:text-[10px] lg:text-[12px]
               font-black tracking-[0.2em] uppercase text-black/70 text-center px-4">
-              © {new Date().getFullYear()} CAR DECAL. ВСИЧКИ ПРАВА ЗАПАЗЕНИ
+              © {new Date().getFullYear()} CARDECAL HQ. ВСИЧКИ ПРАВА ЗАПАЗЕНИ
             </span>
             <div
               className="
