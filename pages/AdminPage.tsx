@@ -1965,10 +1965,12 @@ const IndividualProjectsSection: React.FC = () => {
     const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
     const bgPattern = {
-        backgroundImage: 'repeating-linear-gradient(45deg, #1c1c1c 25%, transparent 25%, transparent 75%, #1c1c1c 75%, #1c1c1c), repeating-linear-gradient(45deg, #1c1c1c 25%, #141414 25%, #141414 75%, #1c1c1c 75%, #1c1c1c)',
-        backgroundPosition: '0 0, 10px 10px',
-        backgroundSize: '20px 20px'
+        backgroundImage: 'linear-gradient(45deg, #2a2a2a 25%, transparent 25%), linear-gradient(-45deg, #2a2a2a 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #2a2a2a 75%), linear-gradient(-45deg, transparent 75%, #2a2a2a 75%)',
+        backgroundSize: '20px 20px',
+        backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px',
+        backgroundColor: '#1a1a1a'
     };
+
 
     const fetchProjects = useCallback(async () => {
         try {
@@ -2528,7 +2530,8 @@ const MaintenanceSettingsSection: React.FC = () => {
         setSaving(true);
         try {
             await updateSetting('maintenance_auto_start_at', null as any);
-            await updateSetting('announcement_mode', 'false');
+            // await updateSetting('announcement_mode', 'false'); // Do not disable announcement bar
+
             showToast('Таймерът е спрян.', 'info');
         } catch (err) {
             showToast('Грешка при спиране на таймера.', 'error');
@@ -2599,7 +2602,7 @@ const MaintenanceSettingsSection: React.FC = () => {
         try {
             await updateSetting('maintenance_mode', 'false');
             await updateSetting('maintenance_auto_start_at', null as any);
-            await updateSetting('announcement_mode', 'false');
+
             showToast('Поддръжката и таймерите са изключени!', 'success');
         } catch (err) {
             showToast('Грешка при превключване.', 'error');
@@ -2611,7 +2614,7 @@ const MaintenanceSettingsSection: React.FC = () => {
         try {
             await updateSetting('maintenance_mode', 'true');
             await updateSetting('maintenance_auto_start_at', null as any);
-            await updateSetting('announcement_mode', 'false');
+
             await updateSetting('maintenance_features', JSON.stringify(features));
             showToast('Режимът е ВКЛЮЧЕН мигновено!', 'success');
         } catch (err) {
