@@ -108,22 +108,87 @@ const CatalogPage: React.FC = () => {
         }
     }, [urlCategory, filterStats.categories, filterStats.sizes]);
 
-    // Sync state to URL params
-    useEffect(() => {
-        const params: Record<string, string> = {};
-        if (searchTerm) params.q = searchTerm;
-        if (selectedCategory !== 'All' && !urlCategory) params.cat = selectedCategory;
-        if (selectedSizes.length > 0) params.sizes = selectedSizes.join(',');
-        if (sortBy !== 'default') params.sort = sortBy;
-        if (currentPage > 1) params.page = currentPage.toString();
-        
-        setSearchParams(params, { replace: true });
-    }, [searchTerm, selectedCategory, selectedSizes, sortBy, currentPage, urlCategory, setSearchParams]);
+    // Determine current state based on URL, if param is absent, fall back to default
+    const currentSearchTerm = searchParams.get('q') || '';
+    const currentSizes = searchParams.get('sizes')?.split(',').filter(Boolean) || [];
+    const currentCategory = urlCategory || searchParams.get('cat') || 'All';
+    const currentSortBy = searchParams.get('sort') || 'default';
+    const currentPageNum = parseInt(searchParams.get('page') || '1');
 
-    // Reset page on filter change
-    useEffect(() => {
+    // We only update local state if it differs from URL. This runs during render so it acts synchronously
+    if (searchTerm !== currentSearchTerm) setSearchTerm(currentSearchTerm);
+    if (selectedSizes.join(',') !== currentSizes.join(',')) setSelectedSizes(currentSizes);
+    if (selectedCategory !== currentCategory) setSelectedCategory(currentCategory);
+    if (sortBy !== currentSortBy) setSortBy(currentSortBy);
+    if (currentPage !== currentPageNum) setCurrentPage(currentPageNum);
+
+    // Provide setter functions that update BOTH local state and URL params at once
+    const handleSetSearchTerm = (val: string) => {
+        setSearchTerm(val);
+        const params = new URLSearchParams(searchParams);
+        if (val) params.set('q', val); else params.delete('q');
+        params.delete('page'); // Reset to page 1
         setCurrentPage(1);
-    }, [searchTerm, selectedSizes, selectedCategory, sortBy, priceRange]);
+        setSearchParams(params, { replace: true });
+    };
+
+    const handleSetSelectedCategory = (val: string) => {
+        setSelectedCategory(val);
+        const params = new URLSearchParams(searchParams);
+        if (val !== 'All') params.set('cat', val); else params.delete('cat');
+        params.delete('page');
+        setCurrentPage(1);
+        setSearchParams(params, { replace: false }); // Push history for category change
+    };
+
+    const handleSetSelectedSizes = (updater: string[] | ((prev: string[]) => string[])) => {
+        const newSizes = typeof updater === 'function' ? updater(selectedSizes) : updater;
+        setSelectedSizes(newSizes);
+        const params = new URLSearchParams(searchParams);
+        if (newSizes.length > 0) params.set('sizes', newSizes.join(',')); else params.delete('sizes');
+        params.delete('page');
+        setCurrentPage(1);
+        setSearchParams(params, { replace: false }); // Push history for size change
+    };
+
+    const handleSetSortBy = (val: string) => {
+        setSortBy(val);
+        const params = new URLSearchParams(searchParams);
+        if (val !== 'default') params.set('sort', val); else params.delete('sort');
+        params.delete('page');
+        setCurrentPage(1);
+        setSearchParams(params, { replace: true }); 
+    };
+
+    const handleSetCurrentPage = (updater: number | ((prev: number) => number)) => {
+        const newPage = typeof updater === 'function' ? updater(currentPage) : updater;
+        setCurrentPage(newPage);
+        const params = new URLSearchParams(searchParams);
+        if (newPage > 1) params.set('page', newPage.toString()); else params.delete('page');
+        setSearchParams(params, { replace: false }); // Push history for page change
+    };
+
+    const clearFilters = () => {
+        setSelectedCategory('All');
+        setSelectedSizes([]);
+        setSearchTerm('');
+        setCurrentPage(1);
+        setSearchParams({}, { replace: false });
+    };
+
+
+    // Disable browser scroll restoration while on this page so our scroll-to-top works reliably on Back/Forward
+    useEffect(() => {
+        const originalScrollBehavior = 'scrollRestoration' in window.history ? window.history.scrollRestoration : 'auto';
+        if ('scrollRestoration' in window.history) {
+            window.history.scrollRestoration = 'manual';
+        }
+        return () => {
+            if ('scrollRestoration' in window.history) {
+                window.history.scrollRestoration = originalScrollBehavior;
+            }
+        };
+    }, []);
 
     // Scroll to top when page or filters change
     useEffect(() => {
@@ -282,7 +347,7 @@ const CatalogPage: React.FC = () => {
                     type="text"
                     placeholder="Search..."
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onChange={(e) => handleSetSearchTerm(e.target.value)}
                     onKeyDown={(e) => {
                         if (e.key === 'Enter') {
                             e.currentTarget.blur();
@@ -300,7 +365,7 @@ const CatalogPage: React.FC = () => {
                 <h3 className="text-[11px] font-bold text-[#525252] uppercase tracking-[0.2em] mb-6">{t('catalog.all_categories')}</h3>
                 <ul className="space-y-4">
                     <li 
-                        onClick={() => setSelectedCategory('All')}
+                        onClick={() => handleSetSelectedCategory('All')}
                         className="group cursor-pointer flex items-center justify-between transition-colors"
                     >
                         <div className="flex items-center gap-3">
@@ -314,7 +379,7 @@ const CatalogPage: React.FC = () => {
                     {filterStats.categories.map((cat) => (
                         <li 
                             key={cat.name} 
-                            onClick={() => setSelectedCategory(cat.name)}
+                            onClick={() => handleSetSelectedCategory(cat.name)}
                             className="group cursor-pointer flex items-center justify-between transition-colors"
                         >
                             <div className="flex items-center gap-3">
@@ -336,7 +401,7 @@ const CatalogPage: React.FC = () => {
                     {filterStats.sizes.map(size => (
                         <button
                             key={size}
-                            onClick={() => setSelectedSizes(prev => prev.includes(size) ? prev.filter(s => s !== size) : [...prev, size])}
+                            onClick={() => handleSetSelectedSizes(prev => prev.includes(size) ? prev.filter(s => s !== size) : [...prev, size])}
                             className={`h-11 md:h-10 px-3 rounded-xl flex items-center justify-center text-xs md:text-[10px] font-bold transition-all border ${
                                 selectedSizes.includes(size) 
                                 ? 'bg-white text-black border-white shadow-[0_4px_12px_rgba(255,255,255,0.2)]' 
@@ -351,11 +416,7 @@ const CatalogPage: React.FC = () => {
 
             { (selectedCategory !== 'All' || selectedSizes.length > 0 || searchTerm) && (
                 <button
-                    onClick={() => {
-                        setSelectedCategory('All');
-                        setSelectedSizes([]);
-                        setSearchTerm('');
-                    }}
+                    onClick={clearFilters}
                     className="w-full py-4 rounded-xl border border-[#262626] text-[#A3A3A3] text-xs font-bold uppercase tracking-wider hover:bg-white hover:text-black transition-all mb-10"
                 >
                     Изчисти филтрите
@@ -461,7 +522,7 @@ const CatalogPage: React.FC = () => {
                                     {selectedCategory !== 'All' && (
                                         <div className="bg-[#1A1A1A] border border-[#262626] rounded-full px-3 py-1.5 md:px-4 md:py-2.5 flex items-center gap-2 text-[12px] md:text-sm text-[#A3A3A3]">
                                             <span>{selectedCategory}</span>
-                                            <button onClick={() => setSelectedCategory('All')} className="hover:text-white transition-colors">
+                                            <button onClick={() => handleSetSelectedCategory('All')} className="hover:text-white transition-colors">
                                                 <X size={14} />
                                             </button>
                                         </div>
@@ -469,7 +530,7 @@ const CatalogPage: React.FC = () => {
                                     { (priceRange[0] > 0 || priceRange[1] < filterStats.maxPrice) && (
                                         <div className="bg-[#1A1A1A] border border-[#262626] rounded-full px-3 py-1.5 md:px-4 md:py-2.5 flex items-center gap-2 text-[12px] md:text-sm text-[#A3A3A3]">
                                             <span>€{priceRange[0].toFixed(0)}-{priceRange[1].toFixed(0)}</span>
-                                            <button onClick={() => setPriceRange([0, filterStats.maxPrice])} className="hover:text-white transition-colors">
+                                            <button onClick={() => { setPriceRange([0, filterStats.maxPrice]); handleSetCurrentPage(1); }} className="hover:text-white transition-colors">
                                                 <X size={14} />
                                             </button>
                                         </div>
@@ -477,7 +538,7 @@ const CatalogPage: React.FC = () => {
                                     {selectedSizes.map((size) => (
                                         <div key={size} className="bg-[#1A1A1A] border border-[#262626] rounded-full px-3 py-1.5 md:px-4 md:py-2.5 flex items-center gap-2 text-[12px] md:text-sm text-[#A3A3A3]">
                                             <span>{size}</span>
-                                            <button onClick={() => setSelectedSizes(prev => prev.filter(s => s !== size))} className="hover:text-white transition-colors">
+                                            <button onClick={() => handleSetSelectedSizes(prev => prev.filter(s => s !== size))} className="hover:text-white transition-colors">
                                                 <X size={14} />
                                             </button>
                                         </div>
@@ -521,7 +582,7 @@ const CatalogPage: React.FC = () => {
                                                     ].map((opt) => (
                                                         <button 
                                                             key={opt.id}
-                                                            onClick={() => { setSortBy(opt.id); setIsSortOpen(false); }} 
+                                                            onClick={() => { handleSetSortBy(opt.id); setIsSortOpen(false); }} 
                                                             className={`w-full text-left px-5 py-3.5 text-xs transition-colors hover:bg-white/5 flex items-center justify-between ${sortBy === opt.id ? 'text-white font-bold bg-white/5' : 'text-[#737373]'}`}
                                                         >
                                                             {opt.label}
@@ -557,7 +618,7 @@ const CatalogPage: React.FC = () => {
                         {totalPages > 1 && (
                             <div className="mt-16 md:mt-24 flex flex-wrap items-center justify-center gap-2 px-2">
                                 <button 
-                                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                    onClick={() => handleSetCurrentPage(prev => Math.max(1, prev - 1))}
                                     disabled={currentPage === 1}
                                     className="w-12 h-12 rounded-xl md:rounded-2xl bg-[#1A1A1A] border border-[#262626] flex items-center justify-center text-[#A3A3A3] hover:text-white hover:border-[#404040] disabled:opacity-20 disabled:cursor-not-allowed transition-all active:scale-90 shrink-0"
                                 >
@@ -577,7 +638,7 @@ const CatalogPage: React.FC = () => {
                                             return (
                                                 <button
                                                     key={page}
-                                                    onClick={() => setCurrentPage(page)}
+                                                    onClick={() => handleSetCurrentPage(page)}
                                                     className={`w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-xl md:rounded-2xl text-[15px] font-black transition-all border ${
                                                         currentPage === page 
                                                         ? 'bg-white text-black border-white shadow-[0_4px_15px_rgba(255,255,255,0.3)] scale-110 z-10' 
@@ -598,7 +659,7 @@ const CatalogPage: React.FC = () => {
                                 </div>
 
                                 <button 
-                                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                    onClick={() => handleSetCurrentPage(prev => Math.min(totalPages, prev + 1))}
                                     disabled={currentPage === totalPages}
                                     className="w-12 h-12 rounded-xl md:rounded-2xl bg-[#1A1A1A] border border-[#262626] flex items-center justify-center text-[#A3A3A3] hover:text-white hover:border-[#404040] disabled:opacity-20 disabled:cursor-not-allowed transition-all active:scale-90 shrink-0"
                                 >
