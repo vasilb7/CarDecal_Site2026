@@ -2,28 +2,36 @@ const sharp = require('sharp');
 const path = require('path');
 
 async function optimize() {
-  const footerDir = path.join(__dirname, 'public', 'Footer');
-  
-  // 2026.png -> 2026.webp (5.34 MB -> ~100KB)
-  await sharp(path.join(footerDir, '2026.png'))
-    .resize(1200, null, { withoutEnlargement: true })
-    .webp({ quality: 80 })
-    .toFile(path.join(footerDir, '2026.webp'));
-  console.log('Done: 2026.webp');
+  const publicDir = path.join(__dirname, 'public');
+  const heroPath = path.join(publicDir, 'hero_image.jpg');
 
-  // 2026red.png -> 2026red.webp (6.15 MB -> ~100KB)
-  await sharp(path.join(footerDir, '2026red.png'))
-    .resize(1200, null, { withoutEnlargement: true })
-    .webp({ quality: 80 })
-    .toFile(path.join(footerDir, '2026red.webp'));
-  console.log('Done: 2026red.webp');
+  // Hero for mobile (800px width)
+  await sharp(heroPath)
+    .resize(800, null, { withoutEnlargement: true })
+    .webp({ quality: 75 })
+    .toFile(path.join(publicDir, 'hero_mobile.webp'));
+  console.log('Done: hero_mobile.webp');
 
-  // LOGO.png -> LOGO.webp
-  await sharp(path.join(__dirname, 'public', 'LOGO.png'))
-    .resize(400, null, { withoutEnlargement: true })
-    .webp({ quality: 85 })
-    .toFile(path.join(__dirname, 'public', 'LOGO.webp'));
-  console.log('Done: LOGO.webp');
+  // Hero for desktop (1400px width)
+  await sharp(heroPath)
+    .resize(1400, null, { withoutEnlargement: true })
+    .webp({ quality: 80 })
+    .toFile(path.join(publicDir, 'hero_desktop.webp'));
+  console.log('Done: hero_desktop.webp');
+
+  // Also make footer images even smaller for mobile
+  const footerDir = path.join(publicDir, 'Footer');
+  await sharp(path.join(footerDir, '2026.webp'))
+    .resize(600, null, { withoutEnlargement: true })
+    .webp({ quality: 75 })
+    .toFile(path.join(footerDir, '2026_mobile.webp'));
+  console.log('Done: 2026_mobile.webp');
+
+  await sharp(path.join(footerDir, '2026red.webp'))
+    .resize(600, null, { withoutEnlargement: true })
+    .webp({ quality: 75 })
+    .toFile(path.join(footerDir, '2026red_mobile.webp'));
+  console.log('Done: 2026red_mobile.webp');
 }
 
 optimize().catch(console.error);

@@ -281,14 +281,18 @@ const HomePage: React.FC = () => {
           ) : (
             <img
               key={siteSettings?.hero_media_url || "default"}
-              src={
-                siteSettings?.hero_media_url && siteSettings.hero_media_url.includes('cloudinary.com')
-                  ? getOptimizedUrl(siteSettings.hero_media_url, { width: window.innerWidth <= 768 ? 800 : 1400 })
-                  : (siteSettings?.hero_media_url || getOptimizedUrl(
-                      "https://res.cloudinary.com/die68h4oh/image/upload/v1772385587/Indvidual/Indvidual/Extreme_closeup_macro_photo_of_a_glossy_vinyl_stic_delpmaspu.jpg",
-                      { width: window.innerWidth <= 768 ? 800 : 1400 },
-                    ))
-              }
+              src={(() => {
+                const heroUrl = siteSettings?.hero_media_url;
+                // Use local optimized WebP by default, or if the URL points to our known hero_image
+                if (!heroUrl || heroUrl.includes('hero_image')) {
+                  return window.innerWidth <= 768 ? '/hero_mobile.webp' : '/hero_desktop.webp';
+                }
+                // Custom hero from admin - use Cloudinary optimization if possible
+                if (heroUrl.includes('cloudinary.com')) {
+                  return getOptimizedUrl(heroUrl, { width: window.innerWidth <= 768 ? 800 : 1400 });
+                }
+                return heroUrl;
+              })()}
               alt="Hero Background"
               onLoad={() => setMediaLoaded(true)}
               loading="eager"
