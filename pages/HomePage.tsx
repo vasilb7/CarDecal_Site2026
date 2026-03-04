@@ -265,7 +265,6 @@ const HomePage: React.FC = () => {
     link.as = 'image';
     link.href = window.innerWidth <= 768 ? mobileHero : desktopHero;
     
-    // Use setAttribute to avoid TS errors on newer attributes
     const srcsetString = window.innerWidth <= 768 
       ? getSrcSet(mobileHero, [640, 768]) 
       : getSrcSet(desktopHero, [1024, 1280, 1536, 1920]);
@@ -278,6 +277,20 @@ const HomePage: React.FC = () => {
       document.head.removeChild(link);
     };
   }, [siteSettings?.hero_media_url, siteSettings?.hero_media_type]);
+
+  // Proactively preload next projects in showcase
+  useEffect(() => {
+    if (individualProjects.length === 0) return;
+    
+    // Preload next 2 images
+    const nextIdx = (currentPremiumIndex + 1) % individualProjects.length;
+    const nextNextIdx = (currentPremiumIndex + 2) % individualProjects.length;
+    
+    [nextIdx, nextNextIdx].forEach(idx => {
+      const img = new Image();
+      img.src = getOptimizedUrl(individualProjects[idx].avatar, { width: 900 });
+    });
+  }, [currentPremiumIndex, individualProjects]);
 
   return (
     <div className="bg-background">
@@ -618,8 +631,8 @@ const HomePage: React.FC = () => {
                           className="w-full h-full"
                           aspectRatio="16/9"
                           objectFit="cover"
-                          priority={false}
-                          widths={[400, 800, 1200]}
+                          priority={true} // Active slide should always load immediately
+                          widths={[600, 900, 1200]}
                           sizes="(max-width: 768px) 100vw, 1200px"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />

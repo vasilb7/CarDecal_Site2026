@@ -6,6 +6,7 @@ import { useCart } from '../context/CartContext';
 import { useToast } from '../hooks/useToast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getOptimizedUrl } from '../lib/cloudinary-utils';
+import OptimizedImage from './ui/OptimizedImage';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { 
     ShoppingBag, 
@@ -176,12 +177,15 @@ const ProductQuickViewModal: React.FC = () => {
                                 className="absolute inset-0 w-full h-full object-contain filter blur-2xl opacity-30 transform scale-110"
                             />
 
-                            <img
-                                src={getOptimizedUrl(mainSrc, { width: 400 })}
+                            <OptimizedImage
+                                src={mainSrc}
                                 alt={product.nameBg || product.name}
                                 onLoad={() => setImageLoaded(true)}
-                                decoding="async"
-                                className={`w-[85%] h-[85%] object-contain pointer-events-none select-none transition-opacity duration-200 group-hover:scale-105 relative z-10 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+                                className={`w-[85%] h-[85%] transition-opacity duration-200 group-hover:scale-105 relative z-10 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+                                priority={true} // Instant loading for popup
+                                widths={[400, 600, 800]}
+                                sizes="(max-width: 640px) 300px, 400px"
+                                objectFit="contain"
                             />
                             
                             {/* Expand Icon */}
@@ -220,12 +224,14 @@ const ProductQuickViewModal: React.FC = () => {
                                         activeIdx === idx ? 'border-white/30 bg-white/5' : 'border-white/5 opacity-50 hover:opacity-100'
                                     }`}
                                 >
-                                    <img 
-                                        src={getOptimizedUrl(img, { width: 160 })} 
+                                    <OptimizedImage 
+                                        src={img} 
                                         alt="" 
-                                        className="w-full h-full object-contain pointer-events-none select-none" 
-                                        loading="lazy"
-                                        decoding="async"
+                                        className="w-full h-full pointer-events-none select-none"
+                                        priority={false}
+                                        widths={[100, 160]}
+                                        sizes="80px"
+                                        objectFit="contain"
                                     />
                                 </button>
                             ))}
