@@ -123,8 +123,10 @@ const Footer: React.FC = () => {
             left-1/2 -translate-x-1/2 z-20 pointer-events-none
             w-[100%] sm:w-[95%] lg:w-[68%] xl:w-[88%]">
             <img
-              src="/Footer/2026.png"
+              src="/Footer/2026.webp"
               alt="Car"
+              loading="lazy"
+              decoding="async"
               className="w-full h-auto object-contain drop-shadow-[0_-5px_60px_rgba(0,0,0,0.9)] origin-bottom"
             />
           </div>
@@ -145,8 +147,10 @@ const Footer: React.FC = () => {
               left-1/2 -translate-x-1/2 pointer-events-none
               w-[100%] sm:w-[95%] lg:w-[68%] xl:w-[88%] mix-blend-screen">
               <img
-                src="/Footer/2026red.png"
+                src="/Footer/2026red.webp"
                 alt="Car Red"
+                loading="lazy"
+                decoding="async"
                 className="w-full h-auto object-contain drop-shadow-[0_0_100px_rgba(220,38,38,0.4)] origin-bottom"
               />
             </div>

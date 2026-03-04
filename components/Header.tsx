@@ -340,8 +340,9 @@ const Header: React.FC = () => {
                         className="hover:opacity-80 transition-all shrink-0 z-[110]"
                     >
                         <img 
-                            src="/LOGO.png" 
+                            src="/LOGO.webp" 
                             alt="CarDecal Logo" 
+                            fetchPriority="high"
                             className="h-10 sm:h-12 w-auto object-contain transition-transform duration-300 hover:scale-105"
                         />
                     </Link>
@@ -508,7 +509,7 @@ const Header: React.FC = () => {
                             className="fixed inset-y-0 right-0 w-[85%] max-w-sm bg-[#0a0a0a] z-[120] shadow-2xl flex flex-col lg:hidden border-l border-white/5"
                         >
                             <div className="flex items-center justify-between px-6 h-20 border-b border-white/5 bg-background/60 backdrop-blur-md shrink-0 shadow-sm">
-                                <img src="/LOGO.png" alt="CarDecal Logo" className="h-6 w-auto object-contain" />
+                                <img src="/LOGO.webp" alt="CarDecal Logo" className="h-6 w-auto object-contain" />
                                 <button 
                                     onClick={handleManualClose}
                                     className="w-12 h-12 -mr-3 flex items-center justify-center text-white/60 hover:text-white transition-colors focus:outline-none"
