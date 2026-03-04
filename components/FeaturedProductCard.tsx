@@ -43,10 +43,10 @@ const FeaturedProductCard: React.FC<FeaturedProductCardProps> = ({ product, isPr
         borderColor: "rgba(220, 38, 38, 0.3)"
       }}
       transition={{ duration: 0.4, ease: "easeOut" }}
-      className="bg-gradient-to-b from-[#141414] to-[#0A0A0A] rounded-[24px] md:rounded-[32px] p-5 md:p-6 flex flex-col justify-between relative shadow-2xl border border-white/5 transition-colors h-full overflow-hidden group/card"
+      className="bg-gradient-to-b from-[#141414] to-[#0A0A0A] rounded-[24px] md:rounded-[32px] p-5 md:p-6 flex flex-col aspect-[4/5] relative shadow-2xl border border-white/5 transition-colors overflow-hidden group/card"
     >
       {/* Product Image Area */}
-      <div className="relative w-full aspect-square flex-shrink-0 flex items-center justify-center mb-5 md:mb-6">
+      <div className="relative w-full flex-1 flex items-center justify-center mb-4">
         <div className="relative w-full h-full flex items-center justify-center transition-transform duration-700 ease-out group-hover/card:scale-110">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(220,38,38,0.15)_0%,transparent_60%)] blur-2xl pointer-events-none opacity-0 group-hover/card:opacity-100 transition-opacity duration-500" />
           
@@ -98,7 +98,7 @@ const FeaturedProductCard: React.FC<FeaturedProductCardProps> = ({ product, isPr
       </div>
 
       {/* Footer Content */}
-      <div className="w-full mt-auto pt-4 border-t border-white/10 flex flex-col gap-2">
+      <div className="w-full pt-3 border-t border-white/10 flex flex-col gap-1.5 shrink-0">
         <h3 className="text-xs md:text-sm lg:text-base font-black text-white leading-snug line-clamp-2 uppercase tracking-tight group-hover/card:text-red-500 transition-colors w-full" title={name}>
           {name}
         </h3>
