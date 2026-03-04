@@ -3,6 +3,8 @@ import { Eye, EyeOff, X } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
+import PasswordStrengthMeter from './PasswordStrengthMeter';
+import { validatePassword } from '../../lib/passwordUtils';
 
 const GoogleIcon = () => (
      <svg viewBox="0 0 24 24" className="h-5 w-5">
@@ -16,6 +18,7 @@ const GoogleIcon = () => (
 interface SignUpPageProps {
   onSignUp?: (event: React.FormEvent<HTMLFormElement>) => void;
   onGoogleSignUp?: () => void;
+  loading?: boolean;
 }
 
 const FloatingInput = ({ 
@@ -123,11 +126,19 @@ const FloatingInput = ({
 export const SignUpPage: React.FC<SignUpPageProps> = ({
   onSignUp,
   onGoogleSignUp,
+  loading = false,
 }) => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+
+  const passwordValidation = validatePassword(password);
+  const passwordsMatch = password === confirmPassword;
+  const canSubmit = passwordValidation.isValid && passwordsMatch && confirmPassword.length > 0 && !loading;
 
   // Detect mobile keyboard close effect properly
   React.useEffect(() => {
@@ -234,6 +245,28 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
                             showPassword={showPassword}
                             onTogglePassword={() => setShowPassword(!showPassword)}
                             required
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+                        />
+                        <AnimatePresence>
+                            {password && (
+                                <PasswordStrengthMeter
+                                    password={password}
+                                    confirmPassword={confirmPassword || undefined}
+                                />
+                            )}
+                        </AnimatePresence>
+                    </div>
+
+                    {/* Confirm Password */}
+                    <div>
+                        <FloatingInput 
+                            label={t('auth.confirm_password', 'Потвърди Парола')}
+                            name="confirmPassword"
+                            isPassword
+                            showPassword={showConfirm}
+                            onTogglePassword={() => setShowConfirm(!showConfirm)}
+                            required
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setConfirmPassword(e.target.value)}
                         />
                     </div>
 
@@ -267,12 +300,22 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
 
                     {/* Submit Button */}
                     <motion.button
-                        whileHover={{ scale: 1.01 }}
-                        whileTap={{ scale: 0.98 }}
+                        whileHover={canSubmit ? { scale: 1.01 } : {}}
+                        whileTap={canSubmit ? { scale: 0.98 } : {}}
                         type="submit"
-                        className="w-full bg-red-600 text-white font-black py-4 rounded-full mt-1 text-base uppercase tracking-[0.1em] shadow-xl shadow-red-600/20 transition-all hover:bg-red-500 active:scale-95"
+                        disabled={!canSubmit}
+                        className={`w-full font-black py-4 rounded-full mt-1 text-base uppercase tracking-[0.1em] shadow-xl transition-all ${
+                            canSubmit 
+                                ? 'bg-red-600 text-white shadow-red-600/20 hover:bg-red-500 active:scale-95 cursor-pointer' 
+                                : 'bg-zinc-800 text-zinc-500 shadow-none cursor-not-allowed'
+                        }`}
                     >
-                        {t('auth.create_account', 'Регистрация')}
+                        {loading ? (
+                            <span className="flex items-center justify-center gap-2">
+                                <svg className="animate-spin w-5 h-5" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+                                Регистриране...
+                            </span>
+                        ) : t('auth.create_account', 'Регистрация')}
                     </motion.button>
 
                     {/* Social Buttons Section - Ultra Compact */}

@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { hasProfanity } from '../lib/profanity';
 import { useToast } from '../hooks/useToast';
+import { validatePassword, translateAuthError } from '../lib/passwordUtils';
 
 
 const RegisterPage: React.FC = () => {
@@ -51,6 +52,22 @@ const RegisterPage: React.FC = () => {
     }
 
     try {
+      // Frontend password validation
+      const pwdValidation = validatePassword(password);
+      if (!pwdValidation.isValid) {
+          showToast('Паролата не отговаря на изискванията. Минимум 10 символа с главна буква, малка буква, цифра и специален символ.', 'error');
+          setLoading(false);
+          return;
+      }
+
+      // Confirm password check
+      const confirmPassword = formData.get('confirmPassword') as string;
+      if (password !== confirmPassword) {
+          showToast('Паролите не съвпадат.', 'error');
+          setLoading(false);
+          return;
+      }
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -64,18 +81,13 @@ const RegisterPage: React.FC = () => {
       });
 
       if (error) {
-        console.error("Sign up error:", error.message);
-        if (error.message.includes("User already registered")) {
-            showToast(t('toast.register_error_exists'), "error");
-        } else {
-            showToast(error.message, "error");
-        }
+        showToast(translateAuthError(error), 'error');
       } else {
-        showToast(t('toast.register_success'), "success");
+        showToast(t('toast.register_success'), 'success');
         navigate(from, { replace: true });
       }
-    } catch (err) {
-      showToast(t('toast.register_error_generic'), "error");
+    } catch (err: any) {
+      showToast(translateAuthError(err), 'error');
     } finally {
       setLoading(false);
     }
@@ -99,6 +111,7 @@ const RegisterPage: React.FC = () => {
     <SignUpPage
       onSignUp={handleSignUp}
       onGoogleSignUp={handleGoogleSignUp}
+      loading={loading}
     />
   );
 };

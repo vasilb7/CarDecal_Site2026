@@ -5,6 +5,8 @@ import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../components/Toast/ToastProvider';
 import { AvatarCropModal } from '../components/AvatarCropModal';
+import { validatePassword, translateAuthError } from '../lib/passwordUtils';
+import PasswordStrengthMeter from '../components/ui/PasswordStrengthMeter';
 import {
     User, Camera, LogOut, Settings, ShoppingBag,
     ChevronRight, Save, Loader2, Lock,
@@ -376,8 +378,9 @@ const SettingsTab: React.FC<{
             showToast('Паролите не съвпадат.', 'error');
             return;
         }
-        if (newPwd.length < 8) {
-            showToast('Паролата трябва да е поне 8 символа.', 'error');
+        const pwdValidation = validatePassword(newPwd);
+        if (!pwdValidation.isValid) {
+            showToast('Паролата не отговаря на изискванията. Минимум 10 символа с главна буква, малка буква, цифра и специален символ.', 'error');
             return;
         }
 
@@ -406,7 +409,7 @@ const SettingsTab: React.FC<{
             setNewPwd('');
             setConfirmPwd('');
         } catch (e: any) {
-            showToast(e.message || 'Грешка при смяна/създаване на парола.', 'error');
+            showToast(translateAuthError(e), 'error');
         } finally {
             setPwdSaving(false);
         }
@@ -650,7 +653,7 @@ const SettingsTab: React.FC<{
                                                 value={newPwd}
                                                 onChange={e => setNewPwd(e.target.value)}
                                                 className={`${inputCls} pr-11`}
-                                                placeholder="Минимум 8 символа"
+                                                placeholder="Минимум 10 символа"
                                             />
                                             <button
                                                 type="button"
@@ -660,6 +663,14 @@ const SettingsTab: React.FC<{
                                                 {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                             </button>
                                         </div>
+                                        <AnimatePresence>
+                                            {newPwd && (
+                                                <PasswordStrengthMeter
+                                                    password={newPwd}
+                                                    confirmPassword={confirmPwd || undefined}
+                                                />
+                                            )}
+                                        </AnimatePresence>
                                     </div>
                                     <div>
                                         <label className="block text-xs font-bold text-zinc-400 mb-2 uppercase tracking-wide">Потвърди Новата Парола</label>
@@ -682,7 +693,7 @@ const SettingsTab: React.FC<{
                                     <div className="pt-2">
                                         <button
                                             onClick={changePassword}
-                                            disabled={pwdSaving || !newPwd || !confirmPwd || newPwd !== confirmPwd || (isPasswordUser && !oldPwd)}
+                                            disabled={pwdSaving || !newPwd || !confirmPwd || newPwd !== confirmPwd || !validatePassword(newPwd).isValid || (isPasswordUser && !oldPwd)}
                                             className="w-full py-4 bg-gradient-to-r from-red-600 to-red-800 text-white font-black text-[13px] uppercase tracking-widest hover:from-red-500 hover:to-red-700 rounded-xl transition-all shadow-lg shadow-red-900/20 disabled:opacity-40 flex items-center justify-center gap-2"
                                         >
                                             {pwdSaving

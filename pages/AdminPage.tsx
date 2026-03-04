@@ -2771,6 +2771,9 @@ const OrdersTab: React.FC = () => {
     const [statusFilter, setStatusFilter] = useState('all');
     const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
     const [bulkUpdating, setBulkUpdating] = useState(false);
+    const [showArchived, setShowArchived] = useState(false);
+    const [archivedData, setArchivedData] = useState<{user: any, orders: any[]}[]>([]);
+    const [archivedLoading, setArchivedLoading] = useState(false);
     const { showToast } = useToast();
 
     useEffect(() => {
@@ -3541,6 +3544,25 @@ const OrdersTab: React.FC = () => {
 
 
 
+    const fetchArchivedOrders = async () => {
+        setArchivedLoading(true);
+        try {
+            const { data, error } = await supabase
+                .from('deleted_users_archive')
+                .select('id, user_id, email, full_name, phone, reason, orders_snapshot, deleted_at')
+                .order('deleted_at', { ascending: false });
+            if (error) throw error;
+            const result = (data || []).filter((u: any) => u.orders_snapshot && u.orders_snapshot.length > 0).map((u: any) => ({
+                user: { id: u.id, user_id: u.user_id, email: u.email, full_name: u.full_name, phone: u.phone, reason: u.reason, deleted_at: u.deleted_at },
+                orders: u.orders_snapshot || []
+            }));
+            setArchivedData(result);
+        } catch (err: any) {
+            showToast('Грешка при зареждане на архивирани поръчки', 'error');
+        }
+        setArchivedLoading(false);
+    };
+
     useEffect(() => {
         fetchOrders();
     }, []);
@@ -3571,6 +3593,25 @@ const OrdersTab: React.FC = () => {
             />
 
             <div className="flex flex-col gap-6 mb-8">
+                {/* Tab switcher */}
+                <div className="flex items-center gap-2 border-b border-white/10 pb-4">
+                    <button
+                        onClick={() => setShowArchived(false)}
+                        className={`px-5 py-2.5 text-[11px] uppercase font-black tracking-widest transition-all rounded-lg ${!showArchived ? 'bg-red-600 text-white shadow-[0_0_20px_rgba(220,38,38,0.3)]' : 'bg-white/5 text-zinc-500 hover:text-white border border-white/10'}`}
+                    >
+                        Активни ({orders.length})
+                    </button>
+                    <button
+                        onClick={() => { setShowArchived(true); if (archivedData.length === 0) fetchArchivedOrders(); }}
+                        className={`px-5 py-2.5 text-[11px] uppercase font-black tracking-widest transition-all rounded-lg flex items-center gap-2 ${showArchived ? 'bg-red-600 text-white shadow-[0_0_20px_rgba(220,38,38,0.3)]' : 'bg-white/5 text-zinc-500 hover:text-white border border-white/10'}`}
+                    >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        Изтрити
+                    </button>
+                </div>
+
+                {!showArchived ? (
+                <>
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                     <h2 className="text-xl font-bold uppercase tracking-widest text-white">Всички Поръчки ({filteredOrders.length})</h2>
                     <div className="flex flex-wrap items-center gap-3">
@@ -3651,7 +3692,6 @@ const OrdersTab: React.FC = () => {
                         </motion.div>
                     )}
                 </AnimatePresence>
-            </div>
             
             <div className="space-y-4">
                 {filteredOrders.map(order => (
@@ -3798,6 +3838,93 @@ const OrdersTab: React.FC = () => {
                     </div>
                 )}
             </div>
+            </>
+            ) : (
+
+                /* ─── Archived Orders View ─── */
+                <div>
+                    <div className="flex items-center justify-between mb-6">
+                        <h2 className="text-xl font-bold uppercase tracking-widest text-white flex items-center gap-3">
+                            <Trash2 className="w-5 h-5 text-red-500" />
+                            Поръчки от изтрити потребители
+                        </h2>
+                        <button onClick={fetchArchivedOrders} className="p-2 border border-white/10 text-zinc-500 hover:text-white transition-colors rounded-lg">
+                            <RefreshCw className="w-4 h-4" />
+                        </button>
+                    </div>
+                    {archivedLoading ? (
+                        <div className="flex items-center justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-red-600" /></div>
+                    ) : archivedData.length === 0 ? (
+                        <div className="border border-dashed border-white/10 p-20 text-center rounded-2xl">
+                            <p className="text-zinc-600 uppercase tracking-widest text-xs">Няма архивирани поръчки от изтрити потребители</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-8">
+                            {archivedData.map((entry) => (
+                                <div key={entry.user.id} className="border border-red-900/20 rounded-2xl overflow-hidden">
+                                    {/* User Header */}
+                                    <div className="bg-red-950/20 border-b border-red-900/20 p-5 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                                        <div>
+                                            <p className="text-white font-black uppercase tracking-tight">{entry.user.full_name || 'Без име'}</p>
+                                            <p className="text-zinc-500 text-xs">{entry.user.email}</p>
+                                            {entry.user.phone && <p className="text-zinc-600 text-[10px] font-mono mt-0.5">{entry.user.phone}</p>}
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-[9px] uppercase tracking-widest text-red-500 font-black">Изтрит на:</p>
+                                            <p className="text-zinc-400 text-xs">{new Date(entry.user.deleted_at).toLocaleString('bg-BG')}</p>
+                                            {entry.user.reason && <p className="text-zinc-600 text-[10px] italic mt-0.5">"{entry.user.reason}"</p>}
+                                        </div>
+                                    </div>
+                                    {/* Orders */}
+                                    <div className="p-5 space-y-4">
+                                        <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-black">{entry.orders.length} поръчки</p>
+                                        {entry.orders.map((order: any, idx: number) => {
+                                            const statusLabel: Record<string, string> = { pending: 'Приета', processing: 'Обработва се', shipped: 'Изпратена', completed: 'Завършена', cancelled: 'Отказана' };
+                                            const statusColor: Record<string, string> = { pending: 'text-yellow-500', processing: 'text-orange-500', shipped: 'text-blue-500', completed: 'text-green-500', cancelled: 'text-red-500' };
+                                            return (
+                                                <div key={idx} className="bg-white/3 border border-white/5 rounded-xl p-4">
+                                                    <div className="flex flex-col md:flex-row justify-between items-start mb-3 pb-3 border-b border-white/5 gap-2">
+                                                        <div>
+                                                            <p className="text-white text-xs font-bold uppercase">Поръчка #{(order.id || '').slice(0, 8)}</p>
+                                                            <p className="text-[10px] text-zinc-500 mt-0.5">{order.created_at ? new Date(order.created_at).toLocaleString('bg-BG') : '—'}</p>
+                                                            <p className="text-[10px] text-zinc-600 mt-0.5">Клиент: {order.shipping_details?.fullName || entry.user.full_name || '—'}</p>
+                                                        </div>
+                                                        <div className="text-right flex items-center gap-3">
+                                                            <div>
+                                                                <p className="text-red-500 font-black">{order.total_amount?.toFixed(2)} &euro;</p>
+                                                                <span className={`text-[9px] uppercase tracking-widest font-bold ${statusColor[order.status] || 'text-zinc-500'}`}>{statusLabel[order.status] || order.status}</span>
+                                                            </div>
+                                                            <button
+                                                                onClick={() => {
+                                                                    const fakeOrder = { ...order, items: order.items || [] } as RegularOrder;
+                                                                    handlePrint(fakeOrder);
+                                                                }}
+                                                                className="p-2 bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all rounded-lg"
+                                                                title="Печат"
+                                                            >
+                                                                <Printer className="w-4 h-4" />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        {order.items?.map((item: any, i: number) => (
+                                                            <div key={i} className="flex justify-between text-[11px]">
+                                                                <span className="text-zinc-400">{item.name_bg || item.name} x{item.quantity}</span>
+                                                                <span className="text-white">{(Number(item.price) * item.quantity).toFixed(2)} &euro;</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
         </div>
     );
 };
@@ -3829,6 +3956,9 @@ const CustomOrdersTab: React.FC = () => {
     const [statusFilter, setStatusFilter] = useState('all');
     const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
     const [bulkUpdating, setBulkUpdating] = useState(false);
+    const [showArchived, setShowArchived] = useState(false);
+    const [archivedData, setArchivedData] = useState<{user: any, orders: any[]}[]>([]);
+    const [archivedLoading, setArchivedLoading] = useState(false);
 
     const fetchOrders = async () => {
         setLoading(true);
@@ -4177,11 +4307,49 @@ const CustomOrdersTab: React.FC = () => {
         }
     };
 
+    const fetchArchivedCustomOrders = async () => {
+        setArchivedLoading(true);
+        try {
+            const { data, error } = await supabase
+                .from('deleted_users_archive')
+                .select('id, user_id, email, full_name, phone, reason, custom_orders_snapshot, deleted_at')
+                .order('deleted_at', { ascending: false });
+            if (error) throw error;
+            const result = (data || []).filter((u: any) => u.custom_orders_snapshot && u.custom_orders_snapshot.length > 0).map((u: any) => ({
+                user: { id: u.id, user_id: u.user_id, email: u.email, full_name: u.full_name, phone: u.phone, reason: u.reason, deleted_at: u.deleted_at },
+                orders: u.custom_orders_snapshot || []
+            }));
+            setArchivedData(result);
+        } catch (err: any) {
+            showToast('Грешка при зареждане на архивирани индивидуални', 'error');
+        }
+        setArchivedLoading(false);
+    };
+
     if (loading) return <div className="flex items-center justify-center p-10"><Loader2 className="w-8 h-8 animate-spin text-red-600" /></div>;
 
     return (
         <div className="space-y-6">
             <div className="flex flex-col gap-6 mb-8">
+                {/* Tab switcher */}
+                <div className="flex items-center gap-2 border-b border-white/10 pb-4">
+                    <button
+                        onClick={() => setShowArchived(false)}
+                        className={`px-5 py-2.5 text-[11px] uppercase font-black tracking-widest transition-all rounded-lg ${!showArchived ? 'bg-red-600 text-white shadow-[0_0_20px_rgba(220,38,38,0.3)]' : 'bg-white/5 text-zinc-500 hover:text-white border border-white/10'}`}
+                    >
+                        Активни ({orders.length})
+                    </button>
+                    <button
+                        onClick={() => { setShowArchived(true); if (archivedData.length === 0) fetchArchivedCustomOrders(); }}
+                        className={`px-5 py-2.5 text-[11px] uppercase font-black tracking-widest transition-all rounded-lg flex items-center gap-2 ${showArchived ? 'bg-red-600 text-white shadow-[0_0_20px_rgba(220,38,38,0.3)]' : 'bg-white/5 text-zinc-500 hover:text-white border border-white/10'}`}
+                    >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        Изтрити
+                    </button>
+                </div>
+
+                {!showArchived ? (
+                <>
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                     <h2 className="text-xl font-bold uppercase tracking-widest text-white">Индивидуални дизайни ({filteredOrders.length})</h2>
                     <div className="flex flex-wrap items-center gap-3">
@@ -4262,7 +4430,6 @@ const CustomOrdersTab: React.FC = () => {
                         </motion.div>
                     )}
                 </AnimatePresence>
-            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {filteredOrders.map(order => (
@@ -4383,6 +4550,82 @@ const CustomOrdersTab: React.FC = () => {
                         </div>
                     </div>
                 ))}
+            </div>
+            </>
+            ) : (
+                /* ─── Archived Custom Orders View ─── */
+                <div>
+                    <div className="flex items-center justify-between mb-6">
+                        <h2 className="text-xl font-bold uppercase tracking-widest text-white flex items-center gap-3">
+                            <Trash2 className="w-5 h-5 text-red-500" />
+                            Индивидуални от изтрити потребители
+                        </h2>
+                        <button onClick={fetchArchivedCustomOrders} className="p-2 border border-white/10 text-zinc-500 hover:text-white transition-colors rounded-lg">
+                            <RefreshCw className="w-4 h-4" />
+                        </button>
+                    </div>
+                    {archivedLoading ? (
+                        <div className="flex items-center justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-red-600" /></div>
+                    ) : archivedData.length === 0 ? (
+                        <div className="border border-dashed border-white/10 p-20 text-center rounded-2xl">
+                            <p className="text-zinc-600 uppercase tracking-widest text-xs">Няма архивирани индивидуални от изтрити потребители</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-8">
+                            {archivedData.map((entry) => (
+                                <div key={entry.user.id} className="border border-red-900/20 rounded-2xl overflow-hidden">
+                                    <div className="bg-red-950/20 border-b border-red-900/20 p-5 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                                        <div>
+                                            <p className="text-white font-black uppercase tracking-tight">{entry.user.full_name || 'Без име'}</p>
+                                            <p className="text-zinc-500 text-xs">{entry.user.email}</p>
+                                            {entry.user.phone && <p className="text-zinc-600 text-[10px] font-mono mt-0.5">{entry.user.phone}</p>}
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-[9px] uppercase tracking-widest text-red-500 font-black">Изтрит на:</p>
+                                            <p className="text-zinc-400 text-xs">{new Date(entry.user.deleted_at).toLocaleString('bg-BG')}</p>
+                                            {entry.user.reason && <p className="text-zinc-600 text-[10px] italic mt-0.5">"{entry.user.reason}"</p>}
+                                        </div>
+                                    </div>
+                                    <div className="p-5 space-y-4">
+                                        <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-black">{entry.orders.length} запитвания</p>
+                                        {entry.orders.map((order: any, idx: number) => {
+                                            const statusMap: Record<string, string> = { pending: 'Ново', processed: 'В процес', completed: 'Завършено', cancelled: 'Отказано' };
+                                            const statusColor: Record<string, string> = { pending: 'text-yellow-500', processed: 'text-orange-500', completed: 'text-green-500', cancelled: 'text-red-500' };
+                                            return (
+                                                <div key={idx} className="bg-white/3 border border-white/5 rounded-xl p-4">
+                                                    <div className="flex flex-col md:flex-row justify-between items-start mb-3 pb-3 border-b border-white/5 gap-2">
+                                                        <div>
+                                                            <p className="text-white text-xs font-bold uppercase">{order.first_name} {order.last_name}</p>
+                                                            <p className="text-[10px] text-zinc-500 mt-0.5">{order.created_at ? new Date(order.created_at).toLocaleString('bg-BG') : '—'}</p>
+                                                            <p className="text-[10px] text-zinc-600">Тел: {order.phone || '—'}</p>
+                                                        </div>
+                                                        <div className="text-right flex items-center gap-3">
+                                                            <span className={`text-[9px] uppercase tracking-widest font-bold ${statusColor[order.status] || 'text-zinc-500'}`}>{statusMap[order.status] || order.status}</span>
+                                                            <button
+                                                                onClick={() => handlePrintCustom(order as CustomOrder)}
+                                                                className="p-2 bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all rounded-lg"
+                                                                title="Печат"
+                                                            >
+                                                                <Printer className="w-4 h-4" />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                    <div className="grid grid-cols-3 gap-2 text-[10px] mb-2">
+                                                        <div className="bg-black/30 p-2 rounded"><span className="text-zinc-600 block">Ширина</span><span className="text-white font-bold">{order.width || '-'} cm</span></div>
+                                                        <div className="bg-black/30 p-2 rounded"><span className="text-zinc-600 block">Височина</span><span className="text-white font-bold">{order.height || '-'} cm</span></div>
+                                                        <div className="bg-black/30 p-2 rounded"><span className="text-zinc-600 block">Бройки</span><span className="text-white font-bold">{order.quantity || '-'} бр</span></div>
+                                                    </div>
+                                                    {order.description && <p className="text-zinc-500 text-[11px] italic">"{order.description}"</p>}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
             </div>
 
             <ConfirmDialog 
