@@ -1963,14 +1963,7 @@ const IndividualProjectsSection: React.FC = () => {
     const [uploadingId, setUploadingId] = useState<string | null>(null);
     const [uploadingNew, setUploadingNew] = useState(false);
     const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
-
-    const bgPattern = {
-        backgroundImage: 'linear-gradient(45deg, #2a2a2a 25%, transparent 25%), linear-gradient(-45deg, #2a2a2a 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #2a2a2a 75%), linear-gradient(-45deg, transparent 75%, #2a2a2a 75%)',
-        backgroundSize: '20px 20px',
-        backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px',
-        backgroundColor: '#1a1a1a'
-    };
-
+    const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
     const fetchProjects = useCallback(async () => {
         try {
@@ -1989,6 +1982,26 @@ const IndividualProjectsSection: React.FC = () => {
 
     useEffect(() => {
         fetchProjects();
+
+        let timeoutId: NodeJS.Timeout;
+        const channel = supabase
+            .channel('admin_showcase_sync')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'showcase_projects' },
+                () => {
+                    clearTimeout(timeoutId);
+                    timeoutId = setTimeout(() => {
+                        fetchProjects();
+                    }, 500);
+                }
+            )
+            .subscribe();
+
+        return () => {
+            clearTimeout(timeoutId);
+            supabase.removeChannel(channel);
+        };
     }, [fetchProjects]);
 
     const handleNewFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -2026,7 +2039,7 @@ const IndividualProjectsSection: React.FC = () => {
             
             if (error) throw error;
 
-            setProjects([...projects, data[0]]);
+            setProjects(prev => [...prev, data[0]]);
             showToast('Добавен нов проект!', 'success');
         } catch (err: any) {
             showToast(err.message || 'Грешка при качване.', 'error');
@@ -2044,7 +2057,21 @@ const IndividualProjectsSection: React.FC = () => {
             showToast('Грешка при изтриване', 'error');
         } else {
             setProjects(projects.filter(p => p.id !== id));
+            setSelectedIds(prev => prev.filter(i => i !== id));
             showToast('Проектът беше изтрит.', 'info');
+        }
+    };
+
+    const handleBulkDelete = async () => {
+        if (!confirm(`Сигурни ли сте, че искате да изтриете всички ${selectedIds.length} избрани проекта?`)) return;
+        
+        const { error } = await supabase.from('showcase_projects').delete().in('id', selectedIds);
+        if (error) {
+            showToast('Грешка при масовото изтриване', 'error');
+        } else {
+            setProjects(projects.filter(p => !selectedIds.includes(p.id)));
+            setSelectedIds([]);
+            showToast('Избраните проекти бяха изтрити.', 'info');
         }
     };
 
@@ -2140,11 +2167,22 @@ const IndividualProjectsSection: React.FC = () => {
                     </div>
                 </div>
                 
-                <label className={`flex items-center gap-2 px-6 py-3 bg-red-600 text-white text-xs font-black uppercase tracking-widest rounded-lg hover:bg-red-700 transition-all shadow-[0_0_20px_rgba(220,38,38,0.3)] cursor-pointer active:scale-[0.98] ${uploadingNew ? 'opacity-50 pointer-events-none' : ''}`}>
-                    {uploadingNew ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                    <span>Добави Снимка</span>
-                    <input type="file" className="hidden" accept="image/*" onChange={handleNewFileUpload} />
-                </label>
+                <div className="flex flex-col sm:flex-row items-end sm:items-center gap-3">
+                    {selectedIds.length > 0 && (
+                        <button
+                            onClick={handleBulkDelete}
+                            className="flex items-center gap-2 px-5 py-3 border border-red-600/30 text-red-500 text-xs font-black uppercase tracking-widest rounded-lg hover:bg-red-600 hover:text-white transition-all shadow-[0_0_15px_rgba(220,38,38,0.2)]"
+                        >
+                            <Trash2 className="w-4 h-4" />
+                            <span>Изтрий избраните ({selectedIds.length})</span>
+                        </button>
+                    )}
+                    <label className={`flex items-center gap-2 px-6 py-3 bg-red-600 text-white text-xs font-black uppercase tracking-widest rounded-lg hover:bg-red-700 transition-all shadow-[0_0_20px_rgba(220,38,38,0.3)] cursor-pointer active:scale-[0.98] ${uploadingNew ? 'opacity-50 pointer-events-none' : ''}`}>
+                        {uploadingNew ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                        <span>Добави Снимка</span>
+                        <input type="file" className="hidden" accept="image/*" onChange={handleNewFileUpload} />
+                    </label>
+                </div>
             </div>
 
             {loading ? (
@@ -2161,15 +2199,16 @@ const IndividualProjectsSection: React.FC = () => {
                             onDragOver={handleDragOver}
                             onDrop={(e) => handleDrop(e, idx)}
                             onDragEnd={handleDragEnd}
-                            className={`bg-zinc-900 border ${draggedIndex === idx ? 'border-red-600 opacity-50 scale-95' : 'border-white/10'} rounded-xl overflow-hidden group flex flex-col hover:border-red-600/30 transition-all duration-300 cursor-grab active:cursor-grabbing`}
+                            className={`bg-[#050505] border ${draggedIndex === idx ? 'border-red-600 opacity-50 scale-95' : selectedIds.includes(project.id) ? 'border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.2)]' : 'border-white/10'} rounded-xl overflow-hidden group flex flex-col hover:border-red-600/30 transition-all duration-300 cursor-grab active:cursor-grabbing relative`}
+                            onClick={() => setSelectedIds(prev => prev.includes(project.id) ? prev.filter(i => i !== project.id) : [...prev, project.id])}
                         >
-                            <div className="relative aspect-video flex items-center justify-center overflow-hidden" style={bgPattern}>
-                                <img src={project.image_url} alt="" className="max-w-full max-h-full object-contain pointer-events-none" />
+                            <div className="relative aspect-video flex items-center justify-center overflow-hidden p-2 pointer-events-none">
+                                <img src={project.image_url} alt="" className="max-w-full max-h-full object-contain pointer-events-none drop-shadow-[0_10px_20px_rgba(0,0,0,0.8)]" />
                                 
-                                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
+                                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 pointer-events-auto">
                                     <label className="w-10 h-10 bg-white/10 hover:bg-white text-white hover:text-black rounded-full flex items-center justify-center cursor-pointer transition-all active:scale-90 border border-white/20">
                                         {uploadingId === project.id ? <Loader2 className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5" />}
-                                        <input type="file" className="hidden" accept="image/*" onChange={e => handleFileUpload(e, project.id)} disabled={!!uploadingId} />
+                                        <input type="file" className="hidden" accept="image/*" onChange={e => { e.stopPropagation(); handleFileUpload(e, project.id); }} disabled={!!uploadingId} />
                                     </label>
                                     <button
                                         onClick={(e) => { e.stopPropagation(); handleDelete(project.id); }}
@@ -2181,6 +2220,19 @@ const IndividualProjectsSection: React.FC = () => {
 
                                 <div className="absolute top-2 left-2 flex items-center gap-2 pointer-events-none">
                                     <span className="bg-black/90 text-white text-[10px] font-black px-2 py-1 rounded shadow-md border border-white/20">#{idx + 1}</span>
+                                </div>
+                                
+                                <div className="absolute top-2 right-2 z-10 pointer-events-auto">
+                                    <button
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setSelectedIds(prev => prev.includes(project.id) ? prev.filter(i => i !== project.id) : [...prev, project.id]);
+                                        }}
+                                        className={`w-6 h-6 flex items-center justify-center rounded border transition-colors ${selectedIds.includes(project.id) ? 'bg-red-600 border-red-500 text-white' : 'bg-black/50 border-white/30 text-transparent hover:border-red-500 hover:text-white/50'}`}
+                                    >
+                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                                    </button>
                                 </div>
                             </div>
                         </div>

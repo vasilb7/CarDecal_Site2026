@@ -52,7 +52,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, isPriority = false }
         borderColor: "rgba(212, 175, 55, 0.2)"
       }}
       transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
-      className="bg-[#141414] rounded-[32px] md:rounded-[48px] p-6 md:p-10 flex flex-col justify-between relative shadow-2xl border border-white/[0.03] transition-colors h-full overflow-hidden"
+      className="bg-[#141414] rounded-[32px] md:rounded-[48px] p-6 md:p-10 flex flex-col justify-between relative shadow-2xl border border-white/[0.03] transition-colors h-full"
     >
       {/* Product Image Area */}
       <div className="relative w-full h-[180px] sm:h-[220px] md:h-[280px] flex-shrink-0 flex items-center justify-center mb-6 md:mb-8 p-4">
@@ -73,7 +73,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, isPriority = false }
           </AnimatePresence>
 
           <img
-            src={getOptimizedUrl(product.avatar, { width: 600, crop: 'fit' })}
+            src={getOptimizedUrl(product.avatar, { width: 801, crop: 'fit' })}
             alt={name}
             onLoad={() => setImageLoaded(true)}
             className={`max-w-full max-h-full object-contain drop-shadow-[0_15px_30px_rgba(0,0,0,0.6)] pointer-events-none select-none transition-opacity duration-700 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
@@ -99,7 +99,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, isPriority = false }
                 className="h-9 min-w-[36px] max-w-[72px] px-2 rounded-xl overflow-hidden border border-white/10 bg-white/[0.03] backdrop-blur-2xl shrink-0 shadow-[0_8px_16px_rgba(0,0,0,0.4)] flex items-center justify-center transition-all cursor-pointer"
               >
                 <img
-                  src={getOptimizedUrl(img, { width: 120 })}
+                  src={getOptimizedUrl(img, { width: 120, crop: 'limit' })}
                   className="max-h-full max-w-full object-contain filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.4)] pointer-events-none select-none"
                   alt={`Variation ${i}`}
                   draggable={false}

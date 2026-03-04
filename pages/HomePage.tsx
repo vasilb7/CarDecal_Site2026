@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
-import { Lock } from "lucide-react";
+import { Lock, Truck } from "lucide-react";
 import { useProducts } from "../hooks/useProducts";
 import { supabase } from "../lib/supabase";
 import ProductCard from "../components/ProductCard";
@@ -295,57 +295,74 @@ const HomePage: React.FC = () => {
           />
         </div>
 
-        <div className="container relative z-30 mx-auto px-6 h-full flex flex-col items-center justify-center text-center pt-20">
+        <div className="container relative z-30 mx-auto px-6 h-full flex flex-col items-center justify-center text-center pt-8 md:pt-24 mt-[-20vh] sm:mt-[-15vh] md:mt-[-10vh] lg:mt-[-15vh]">
           <motion.div
             initial="hidden"
             animate="visible"
             variants={staggerContainer}
-            className="w-full max-w-4xl flex flex-col items-center"
+            className="w-full max-w-5xl flex flex-col items-center"
           >
-            {/* Main Title */}
+            {/* Main Title - Single Line */}
             <motion.h1
               variants={fadeInUp}
-              className="w-full text-center font-black uppercase leading-[0.8] tracking-[-0.03em] mb-4 sm:mb-2 drop-shadow-[0_20px_50px_rgba(0,0,0,0.9)]"
-              style={{ fontSize: "clamp(64px, 20vw, 180px)" }}
+              className="w-full text-center font-black uppercase tracking-[-0.03em] mb-4 drop-shadow-[0_20px_50px_rgba(0,0,0,0.9)] flex flex-row items-center justify-center leading-none"
+              style={{ fontSize: "clamp(42px, 13vw, 140px)" }}
             >
-              <div className="flex flex-col sm:flex-row items-center justify-center -space-y-1 sm:space-y-0 sm:gap-2">
-                <span className="text-white drop-shadow-[0_0_30px_rgba(255,255,255,0.1)]">CAR</span>
-                <span className="relative inline-block text-red-600 drop-shadow-[0_0_50px_rgba(220,38,38,0.6)]">DECAL</span>
-              </div>
+              <span className="text-white drop-shadow-[0_0_30px_rgba(255,255,255,0.1)]">CAR</span>
+              <span className="text-red-600 drop-shadow-[0_0_50px_rgba(220,38,38,0.6)]">DECAL</span>
             </motion.h1>
 
             {/* Subtitles */}
             <motion.div
               variants={fadeInUp}
-              className="flex flex-col items-center mb-12 sm:mb-14 px-4"
+              className="flex flex-col items-center mb-10 sm:mb-12 px-2 w-full"
             >
-              <p className="text-white text-[10px] sm:text-xs uppercase tracking-[1em] font-black mb-6 sm:mb-4 bg-red-600/10 px-4 py-1.5 rounded-full border border-red-600/20 shadow-[0_0_20px_rgba(220,38,38,0.1)]">
-                Висококласни Стикери
+              <p className="text-white/80 text-sm md:text-xl font-medium tracking-[0.2em] md:tracking-[0.3em] uppercase max-w-2xl mx-auto leading-relaxed drop-shadow-lg text-center font-sans">
+                Безкомпромисно качество. <span className="text-white font-bold opacity-100">Уникален стил.</span>
               </p>
-              <p className="text-white/80 text-xs sm:text-base font-bold max-w-[300px] sm:max-w-none mx-auto leading-relaxed drop-shadow-lg">
-                Качество, което се лепи. <span className="text-white font-black underline decoration-red-600/50 decoration-2 underline-offset-4">Цени, които печелят.</span>
-              </p>
+            </motion.div>
+
+            {/* Minimal Quality Icons */}
+            <motion.div 
+              variants={fadeInUp}
+              className="flex items-center justify-center gap-x-5 md:gap-x-8 mb-8 md:mb-12 opacity-80"
+            >
+              <div className="flex items-center gap-2 md:gap-2.5">
+                <svg className="w-4 h-4 md:w-5 md:h-5 text-red-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707m12.728 12.728L5.657 5.657" />
+                </svg>
+                <span className="text-[10px] md:text-[11px] text-white font-bold uppercase tracking-[0.1em] whitespace-nowrap">UV Защита</span>
+              </div>
+              <div className="flex items-center gap-2 md:gap-2.5">
+                <svg className="w-4 h-4 md:w-5 md:h-5 text-red-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+                <span className="text-[10px] md:text-[11px] text-white font-bold uppercase tracking-[0.1em] whitespace-nowrap">Премиум</span>
+              </div>
+              <div className="flex items-center gap-2 md:gap-2.5">
+                <Truck className="w-4 h-4 md:w-5 md:h-5 text-red-600 shrink-0" />
+                <span className="text-[10px] md:text-[11px] text-white font-bold uppercase tracking-[0.1em] whitespace-nowrap">Бърза Доставка</span>
+              </div>
             </motion.div>
 
             {/* Action Buttons */}
             <motion.div
               variants={fadeInUp}
-              className="flex flex-col gap-4 justify-center items-center w-full max-w-[85vw] sm:max-w-none mx-auto"
+              className="flex flex-col md:flex-row gap-4 md:gap-6 justify-center items-center w-full max-w-[280px] md:max-w-none mx-auto"
             >
               <Link
                 to="/catalog"
-                className="group relative flex items-center justify-center w-full sm:w-[420px] h-14 bg-black text-white font-black uppercase tracking-[0.2em] text-[11px] sm:text-[13px] rounded-lg border border-red-600 shadow-[0_15px_35px_rgba(220,38,38,0.2)] hover:bg-red-600 hover:scale-[1.02] transform transition-all duration-300 active:scale-95 overflow-hidden"
+                className="group relative flex items-center justify-center w-full md:w-[280px] h-14 bg-red-600 text-white font-black uppercase tracking-[0.2em] text-[12px] md:text-[14px] rounded-lg border border-red-500 shadow-[0_0_20px_rgba(220,38,38,0.4)] hover:bg-red-500 hover:shadow-[0_0_30px_rgba(220,38,38,0.6)] transition-all duration-300 active:scale-95"
               >
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                Пазарувай сега
+                Разгледай Каталога
               </Link>
 
               {user && (
                 <Link
                   to="/book-now"
-                  className="group relative flex items-center justify-center w-full sm:w-[420px] h-14 bg-white/[0.03] backdrop-blur-xl text-white font-black uppercase tracking-[0.2em] text-[11px] sm:text-[13px] rounded-lg border border-white/20 shadow-[0_15px_35px_rgba(0,0,0,0.3)] hover:bg-white hover:text-black hover:scale-[1.02] transform transition-all duration-300 active:scale-95"
+                  className="group relative flex items-center justify-center w-full md:w-[280px] h-14 bg-black/40 backdrop-blur-md text-white/90 font-black uppercase tracking-[0.2em] text-[12px] md:text-[14px] rounded-lg border border-white/20 shadow-[0_5px_20px_rgba(0,0,0,0.5)] hover:bg-white/10 hover:text-white hover:border-white/40 transition-all duration-300 active:scale-95"
                 >
-                  Индивидуални поръчки
+                  Индивидуални Поръчки
                 </Link>
               )}
             </motion.div>
@@ -356,6 +373,8 @@ const HomePage: React.FC = () => {
         {/* Bottom Fade */}
         <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-background to-transparent z-20" />
       </div>
+
+
 
       {/* Featured Products */}
       <section className="py-24 bg-background">
@@ -375,13 +394,14 @@ const HomePage: React.FC = () => {
                 <p className="text-text-muted text-xs md:text-sm uppercase tracking-widest leading-relaxed max-w-sm md:max-w-none">
                   Специално подбрани стикери за теб днес
                 </p>
-                <div className="relative p-[1.5px] rounded-full overflow-hidden group shadow-[0_0_20px_rgba(220,38,38,0.2)]">
-                  {/* Rotating Border Gradient */}
-                  <div className="absolute inset-[-100%] bg-[conic-gradient(from_0deg,transparent_0_40%,#ef4444_50%,transparent_60%_100%)] animate-[spin_3s_linear_infinite]" />
+                <div className="relative p-[1.5px] rounded-full overflow-hidden group shadow-[0_0_20px_rgba(220,38,38,0.15)] flex shrink-0 bg-white/5">
+                  {/* Rotating Border Gradient (Beam Effect) */}
+                  <div className="absolute inset-[-1000%] animate-[spin_3s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,transparent_0%,rgba(239,68,68,0.2)_50%,#ef4444_90%,#ffffff_99.5%,transparent_100%)] opacity-100" />
                   
-                  <div className="relative flex items-center gap-2 px-3.5 py-1.5 md:px-5 md:py-2.5 bg-[#0a0a0a] rounded-full w-max">
+                  {/* Inner Dark Background */}
+                  <div className="relative z-10 flex items-center gap-2 px-4 py-1.5 md:px-6 md:py-2.5 bg-[#050505] rounded-full w-max shadow-[inset_0_4px_10px_rgba(0,0,0,0.5)]">
                     <svg
-                      className="w-3.5 h-3.5 md:w-4 md:h-4 text-red-500 animate-pulse"
+                      className="w-3.5 h-3.5 md:w-4 md:h-4 text-red-500 animate-[pulse_2s_cubic-bezier(0.4,0,0.6,1)_infinite]"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -396,7 +416,7 @@ const HomePage: React.FC = () => {
                     <span className="text-red-500 text-[9px] md:text-[11px] font-black uppercase tracking-[0.2em] mt-0.5 whitespace-nowrap">
                       Оставащо Време:
                     </span>
-                    <span className="text-white text-xs md:text-sm font-mono font-black tracking-[0.25em] mt-0.5">
+                    <span className="text-white text-xs md:text-sm font-mono font-black tracking-[0.25em] mt-0.5" style={{ textShadow: "0 0 10px rgba(255,255,255,0.2)" }}>
                       {String(timeLeft.hours).padStart(2, "0")}:
                       {String(timeLeft.minutes).padStart(2, "0")}:
                       {String(timeLeft.seconds).padStart(2, "0")}
@@ -406,38 +426,25 @@ const HomePage: React.FC = () => {
               </div>
             </motion.div>
 
-            <Link
-              to={`/catalog`}
-              className="hidden md:flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-red-600 hover:text-white transition-colors shrink-0 whitespace-nowrap"
-            >
-              Виж Всички Продукти <span className="text-lg mb-0.5">→</span>
-            </Link>
+
           </div>
 
           <div className="relative">
             <div
               ref={carouselRef}
-              className="flex md:grid md:grid-cols-4 gap-4 md:gap-6 overflow-x-auto snap-x snap-mandatory pb-8 pt-2 -mx-6 px-6 md:mx-0 md:px-0"
-              style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+              className="flex overflow-x-auto snap-x snap-mandatory gap-5 md:gap-8 pb-12 pt-4 no-scrollbar scroll-smooth"
             >
-              <style
-                dangerouslySetInnerHTML={{
-                  __html: `
-                                .flex::-webkit-scrollbar { display: none; }
-                            `,
-                }}
-              />
 
               {productsLoading ||
               (products.length > 0 && displayProducts.length === 0) ? (
-                <div className="col-span-full text-center py-20 text-text-muted uppercase tracking-[0.2em] text-sm w-full">
+                <div className="min-w-full text-center py-20 text-text-muted uppercase tracking-[0.2em] text-sm">
                   Зареждане...
                 </div>
               ) : displayProducts.length > 0 ? (
                 displayProducts.map((product, index) => (
                   <motion.div
                     key={product.slug}
-                    className="min-w-[75vw] sm:min-w-[300px] md:min-w-0 w-full flex-shrink-0 snap-center md:snap-align-none"
+                    className="flex-shrink-0 w-[85%] sm:w-[45%] md:w-[30%] lg:w-[23%] snap-center"
                     whileHover={{ y: -5 }}
                     transition={{ type: "spring", stiffness: 300, damping: 20 }}
                   >
@@ -445,22 +452,22 @@ const HomePage: React.FC = () => {
                   </motion.div>
                 ))
               ) : (
-                <div className="col-span-full text-center py-20 text-text-muted uppercase tracking-[0.2em] text-sm w-full">
+                <div className="min-w-full text-center py-20 text-text-muted uppercase tracking-[0.2em] text-sm">
                   Няма налични продукти.
                 </div>
               )}
             </div>
 
             {/* Mobile right swipe indicator */}
-            <div className="absolute right-0 sm:right-[-1.5rem] top-[40%] -translate-y-1/2 md:hidden flex items-center justify-end z-10 w-20 h-full pointer-events-none">
+            <div className="absolute right-0 top-[40%] -translate-y-1/2 flex items-center justify-end z-20 w-16 h-full pointer-events-none pr-2">
               <button
                 onClick={() =>
                   carouselRef.current?.scrollBy({
-                    left: window.innerWidth * 0.75,
+                    left: 320,
                     behavior: "smooth",
                   })
                 }
-                className="w-12 h-12 rounded-full bg-black/80 backdrop-blur-md border border-red-600/30 flex items-center justify-center shadow-[0_0_20px_rgba(0,0,0,0.8)] focus:outline-none pointer-events-auto active:scale-95 transition-all hover:bg-black"
+                className="w-12 h-12 rounded-full bg-black/60 backdrop-blur-md border border-red-600/40 flex items-center justify-center shadow-[0_0_30px_rgba(0,0,0,0.9)] focus:outline-none pointer-events-auto active:scale-90 transition-all hover:bg-black group/arrow"
               >
                 <motion.div
                   animate={{ x: [-2, 5, -2] }}
@@ -488,10 +495,10 @@ const HomePage: React.FC = () => {
             </div>
           </div>
 
-          <div className="mt-12 text-center md:hidden">
+          <div className="mt-8 flex justify-center w-full">
             <Link
               to={`/catalog`}
-              className="btn-mobile-full inline-block px-8 py-3 border border-white/20 text-white text-xs uppercase tracking-widest"
+              className="inline-block px-12 py-4 border border-white/20 text-white font-bold text-[13px] uppercase tracking-[0.2em] hover:bg-white/5 hover:border-white/40 transition-all active:scale-95"
             >
               Виж Всички Продукти
             </Link>
@@ -500,7 +507,7 @@ const HomePage: React.FC = () => {
       </section>
 
       {/* Sticker Showcase Player */}
-      <section className="py-24 bg-surface relative overflow-hidden">
+      <section className="pt-20 pb-4 md:pt-24 md:pb-8 bg-surface relative overflow-hidden">
 
         <div className="container mx-auto px-6 relative z-10 text-center">
           <h2 className="text-3xl md:text-5xl font-black text-white uppercase tracking-tighter mb-4">
@@ -511,13 +518,8 @@ const HomePage: React.FC = () => {
           </p>
 
           <div className="relative w-full max-w-6xl mx-auto aspect-video md:aspect-auto md:h-[550px] border border-white/10 rounded-xl shadow-[0_0_50px_rgba(0,0,0,0.8),0_0_20px_rgba(212,175,55,0.1)] flex items-center justify-center overflow-hidden group">
-            <div className="flex w-full h-full items-center justify-center relative" style={{ 
-              backgroundImage: 'linear-gradient(45deg, #181818 25%, transparent 25%), linear-gradient(-45deg, #181818 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #181818 75%), linear-gradient(-45deg, transparent 75%, #181818 75%)',
-              backgroundSize: '24px 24px',
-              backgroundPosition: '0 0, 0 12px, 12px -12px, -12px 0px',
-              backgroundColor: '#0a0a0a'
-            }}>
-              <AnimatePresence mode="wait">
+            <div className="flex w-full h-full items-center justify-center relative bg-black/20">
+              <AnimatePresence>
                 {individualProjects.length > 0 ? (
                   individualProjects.map((product, idx) => {
                     const isCenter = idx === currentPremiumIndex;
@@ -525,16 +527,16 @@ const HomePage: React.FC = () => {
                     return (
                       <motion.div
                         key={product.slug}
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 1.05 }}
-                        transition={{ duration: 0.8 }}
-                        className="absolute inset-0 flex items-center justify-center p-4 md:p-8 z-30"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.8, ease: "easeInOut" }}
+                        className="absolute inset-0 flex items-center justify-center z-30"
                       >
                         <img
                           src={getOptimizedUrl(product.avatar, { width: 1200 })}
                           alt={product.nameBg}
-                          className="max-w-full max-h-full object-contain block drop-shadow-[0_20px_60px_rgba(0,0,0,0.8)]"
+                          className="w-full h-full object-cover block"
                           loading="lazy"
                           decoding="async"
                         />
@@ -577,6 +579,8 @@ const HomePage: React.FC = () => {
               ))}
             </div>
           </div>
+
+
         </div>
       </section>
       {/* CTA Banner */}
