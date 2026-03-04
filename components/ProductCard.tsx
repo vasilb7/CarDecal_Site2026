@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Product } from "../types";
 import { getOptimizedUrl } from "../lib/cloudinary-utils";
+import OptimizedImage from "./ui/OptimizedImage";
 
 interface ProductCardProps {
   product: Product;
@@ -72,15 +73,15 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, isPriority = false }
             )}
           </AnimatePresence>
 
-          <img
-            src={getOptimizedUrl(product.avatar, { width: window.innerWidth <= 768 ? 500 : 800, crop: 'fit' })}
+          <OptimizedImage
+            src={product.avatar}
             alt={name}
             onLoad={() => setImageLoaded(true)}
-            className={`max-w-full max-h-full object-contain drop-shadow-[0_15px_30px_rgba(0,0,0,0.6)] pointer-events-none select-none transition-opacity duration-200 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
-            draggable={false}
-            loading={isPriority ? "eager" : "lazy"}
-            decoding="async"
-            fetchPriority={isPriority ? "high" : "auto"}
+            className={`max-w-full max-h-full transition-opacity duration-200 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+            priority={isPriority}
+            widths={[300, 500, 800]}
+            sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+            objectFit="contain"
           />
         </div>
 
@@ -98,13 +99,14 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, isPriority = false }
                 }}
                 className="h-9 min-w-[36px] max-w-[72px] px-2 rounded-xl overflow-hidden border border-white/10 bg-white/[0.03] backdrop-blur-2xl shrink-0 shadow-[0_8px_16px_rgba(0,0,0,0.4)] flex items-center justify-center transition-all cursor-pointer"
               >
-                <img
-                  src={getOptimizedUrl(img, { width: 120, crop: 'limit' })}
-                  className="max-h-full max-w-full object-contain filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.4)] pointer-events-none select-none"
+                <OptimizedImage
+                  src={img}
+                  className="max-h-full max-w-full"
                   alt={`Variation ${i}`}
-                  draggable={false}
-                  loading="lazy"
-                  decoding="async"
+                  priority={false}
+                  widths={[100, 200]}
+                  sizes="100px"
+                  objectFit="contain"
                 />
               </motion.div>
             ))}

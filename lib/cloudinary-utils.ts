@@ -77,3 +77,14 @@ export function getOptimizedUrl(url: string, options: { width?: number; height?:
   // Construct optimized URL - ensure transformations are the first segment after /upload/
   return `${baseUrl}${transformations.join(',')}/${remainingUrl}`;
 }
+
+/**
+ * Generates a srcset string for Cloudinary images.
+ */
+export function getSrcSet(url: string, widths: number[], options: { height?: number; crop?: string } = {}): string {
+  if (!url || !url.includes('cloudinary.com')) return '';
+  
+  return widths
+    .map(width => `${getOptimizedUrl(url, { ...options, width })} ${width}w`)
+    .join(', ');
+}

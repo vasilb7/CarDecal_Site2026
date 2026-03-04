@@ -7,7 +7,8 @@ import { useProducts } from "../hooks/useProducts";
 import { supabase } from "../lib/supabase";
 import FeaturedProductCard from "../components/FeaturedProductCard";
 import { useSiteSettings } from "../context/SiteSettingsContext";
-import { getOptimizedUrl } from "../lib/cloudinary-utils";
+import { getOptimizedUrl, getSrcSet } from "../lib/cloudinary-utils";
+import OptimizedImage from "../components/ui/OptimizedImage";
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 60 },
@@ -250,6 +251,34 @@ const HomePage: React.FC = () => {
     return () => clearInterval(timer);
   }, [displayProducts.length]);
 
+  // Preload Hero Image for LCP
+  useEffect(() => {
+    const heroUrl = siteSettings?.hero_media_url;
+    if (siteSettings?.hero_media_type === "video") return;
+
+    const isDefaultHero = !heroUrl || heroUrl.includes('hero_image');
+    const mobileHero = isDefaultHero ? '/hero_mobile.webp' : heroUrl;
+    const desktopHero = isDefaultHero ? '/hero_desktop.webp' : heroUrl;
+
+    const link = document.createElement('link');
+    link.rel = 'preload';
+    link.as = 'image';
+    link.href = window.innerWidth <= 768 ? mobileHero : desktopHero;
+    
+    // Use setAttribute to avoid TS errors on newer attributes
+    const srcsetString = window.innerWidth <= 768 
+      ? getSrcSet(mobileHero, [640, 768]) 
+      : getSrcSet(desktopHero, [1024, 1280, 1536, 1920]);
+    
+    link.setAttribute('imagesrcset', srcsetString);
+    link.setAttribute('imagesizes', '100vw');
+    
+    document.head.appendChild(link);
+    return () => {
+      document.head.removeChild(link);
+    };
+  }, [siteSettings?.hero_media_url, siteSettings?.hero_media_type]);
+
   return (
     <div className="bg-background">
       {/* Hero Section */}
@@ -275,29 +304,27 @@ const HomePage: React.FC = () => {
               <source src={siteSettings.hero_media_url} type="video/mp4" />
             </video>
           ) : (
-            <img
-              key={siteSettings?.hero_media_url || "default"}
-              src={(() => {
-                const heroUrl = siteSettings?.hero_media_url;
-                // Use local optimized WebP by default, or if the URL points to our known hero_image
-                if (!heroUrl || heroUrl.includes('hero_image')) {
-                  return window.innerWidth <= 768 ? '/hero_mobile.webp' : '/hero_desktop.webp';
-                }
-                // Custom hero from admin - use Cloudinary optimization if possible
-                if (heroUrl.includes('cloudinary.com')) {
-                  return getOptimizedUrl(heroUrl, { width: window.innerWidth <= 768 ? 800 : 1400 });
-                }
-                return heroUrl;
-              })()}
-              alt="Hero Background"
-              onLoad={() => setMediaLoaded(true)}
-              loading="eager"
-              fetchPriority="high"
-              decoding="sync"
-              className={`w-full h-full object-cover transition-opacity duration-1000 ${
-                mediaLoaded ? "opacity-30" : "opacity-0"
-              }`}
-            />
+            <div className={`w-full h-full transition-opacity duration-1000 ${mediaLoaded ? "opacity-30" : "opacity-0"}`}>
+              <OptimizedImage
+                key={siteSettings?.hero_media_url || "default"}
+                src={(() => {
+                  const heroUrl = siteSettings?.hero_media_url;
+                  if (!heroUrl || heroUrl.includes('hero_image')) return '/hero_desktop.webp';
+                  return heroUrl;
+                })()}
+                mobileSrc={(() => {
+                  const heroUrl = siteSettings?.hero_media_url;
+                  if (!heroUrl || heroUrl.includes('hero_image')) return '/hero_mobile.webp';
+                  return heroUrl;
+                })()}
+                alt="Hero Background"
+                priority={true}
+                onLoad={() => setMediaLoaded(true)}
+                className="w-full h-full"
+                widths={[640, 768, 1024, 1280, 1536, 1920, 2560]}
+                sizes="100vw"
+              />
+            </div>
           )}
 
           {/* Scanline Effect */}
@@ -585,12 +612,15 @@ const HomePage: React.FC = () => {
                         transition={{ duration: 0.8, ease: "easeInOut" }}
                         className="absolute inset-0 flex items-center justify-center z-30"
                       >
-                        <img
-                          src={getOptimizedUrl(product.avatar, { width: 600 })}
+                        <OptimizedImage
+                          src={product.avatar}
                           alt={product.nameBg}
-                          className="w-full h-full object-cover block"
-                          loading="lazy"
-                          decoding="async"
+                          className="w-full h-full"
+                          aspectRatio="16/9"
+                          objectFit="cover"
+                          priority={false}
+                          widths={[400, 800, 1200]}
+                          sizes="(max-width: 768px) 100vw, 1200px"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
                       </motion.div>

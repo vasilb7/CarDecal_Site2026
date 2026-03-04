@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Product } from "../types";
 import { getOptimizedUrl } from "../lib/cloudinary-utils";
+import OptimizedImage from "./ui/OptimizedImage";
 
 interface FeaturedProductCardProps {
   product: Product;
@@ -61,15 +62,15 @@ const FeaturedProductCard: React.FC<FeaturedProductCardProps> = ({ product, isPr
           </AnimatePresence>
 
           {/* Using 75% max-width instead of 100% so images have breathing room and are never cut off by the border radius */}
-          <img
-            src={getOptimizedUrl(product.avatar, { width: window.innerWidth <= 768 ? 500 : 800, crop: 'fit' })}
+          <OptimizedImage
+            src={product.avatar}
             alt={name}
             onLoad={() => setImageLoaded(true)}
-            className={`max-w-[80%] max-h-[80%] object-contain drop-shadow-[0_15px_30px_rgba(0,0,0,0.6)] pointer-events-none select-none transition-opacity duration-200 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
-            draggable={false}
-            loading={isPriority ? "eager" : "lazy"}
-            decoding="async"
-            fetchPriority={isPriority ? "high" : "auto"}
+            className={`max-w-[80%] max-h-[80%] transition-opacity duration-200 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+            priority={isPriority}
+            widths={[300, 500, 800]}
+            sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+            objectFit="contain"
           />
         </div>
 
@@ -81,7 +82,15 @@ const FeaturedProductCard: React.FC<FeaturedProductCardProps> = ({ product, isPr
                 whileHover={{ scale: 1.2, y: -4, borderColor: "rgba(220, 38, 38, 0.4)", backgroundColor: "rgba(220, 38, 38, 0.1)" }}
                 className="h-8 md:h-10 min-w-[32px] md:min-w-[40px] px-1.5 md:px-2 rounded-lg md:rounded-xl overflow-hidden border border-white/10 bg-black/40 backdrop-blur-xl shrink-0 shadow-lg flex items-center justify-center cursor-pointer"
               >
-                <img src={getOptimizedUrl(img, { width: 100, crop: 'limit' })} className="max-h-full max-w-full object-contain pointer-events-none select-none" alt="" />
+                <OptimizedImage
+                  src={img}
+                  className="max-h-full max-w-full"
+                  alt={`Variation ${i}`}
+                  priority={false}
+                  widths={[100, 200]}
+                  sizes="80px"
+                  objectFit="contain"
+                />
               </motion.div>
             ))}
           </div>
