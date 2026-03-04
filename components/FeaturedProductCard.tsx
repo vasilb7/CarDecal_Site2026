@@ -62,7 +62,7 @@ const FeaturedProductCard: React.FC<FeaturedProductCardProps> = ({ product, isPr
 
           {/* Using 75% max-width instead of 100% so images have breathing room and are never cut off by the border radius */}
           <img
-            src={getOptimizedUrl(product.avatar, { width: 400, crop: 'fit' })}
+            src={getOptimizedUrl(product.avatar, { width: window.innerWidth <= 768 ? 250 : 400, crop: 'fit' })}
             alt={name}
             onLoad={() => setImageLoaded(true)}
             className={`max-w-[80%] max-h-[80%] object-contain drop-shadow-[0_15px_30px_rgba(0,0,0,0.6)] pointer-events-none select-none transition-opacity duration-200 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}

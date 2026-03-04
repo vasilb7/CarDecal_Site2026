@@ -283,14 +283,17 @@ const HomePage: React.FC = () => {
               key={siteSettings?.hero_media_url || "default"}
               src={
                 siteSettings?.hero_media_url && siteSettings.hero_media_url.includes('cloudinary.com')
-                  ? getOptimizedUrl(siteSettings.hero_media_url, { width: 1920 })
+                  ? getOptimizedUrl(siteSettings.hero_media_url, { width: window.innerWidth <= 768 ? 800 : 1400 })
                   : (siteSettings?.hero_media_url || getOptimizedUrl(
                       "https://res.cloudinary.com/die68h4oh/image/upload/v1772385587/Indvidual/Indvidual/Extreme_closeup_macro_photo_of_a_glossy_vinyl_stic_delpmaspu.jpg",
-                      { width: 1920 },
+                      { width: window.innerWidth <= 768 ? 800 : 1400 },
                     ))
               }
               alt="Hero Background"
               onLoad={() => setMediaLoaded(true)}
+              loading="eager"
+              fetchPriority="high"
+              decoding="sync"
               className={`w-full h-full object-cover transition-opacity duration-1000 ${
                 mediaLoaded ? "opacity-30" : "opacity-0"
               }`}

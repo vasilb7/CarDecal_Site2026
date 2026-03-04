@@ -73,7 +73,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, isPriority = false }
           </AnimatePresence>
 
           <img
-            src={getOptimizedUrl(product.avatar, { width: 400, crop: 'fit' })}
+            src={getOptimizedUrl(product.avatar, { width: window.innerWidth <= 768 ? 250 : 400, crop: 'fit' })}
             alt={name}
             onLoad={() => setImageLoaded(true)}
             className={`max-w-full max-h-full object-contain drop-shadow-[0_15px_30px_rgba(0,0,0,0.6)] pointer-events-none select-none transition-opacity duration-200 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
