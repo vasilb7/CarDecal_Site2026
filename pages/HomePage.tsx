@@ -49,7 +49,7 @@ const HomePage: React.FC = () => {
     const fetchShowcase = async () => {
       const { data, error } = await supabase
         .from('showcase_projects')
-        .select('*')
+        .select('id, title_bg, image_url, order_index')
         .order('order_index', { ascending: true });
       if (!error && data) {
         setIndividualProjects(data.map(item => ({

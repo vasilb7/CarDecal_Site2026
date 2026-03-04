@@ -13,76 +13,12 @@
     <link rel="manifest" href="/site.webmanifest" />
     <link rel="preconnect" href="https://res.cloudinary.com" />
     <link rel="dns-prefetch" href="https://res.cloudinary.com" />
-    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <script>
-      tailwind.config = {
-        future: {
-          hoverOnlyWhenSupported: true,
-        },
-        theme: {
-          extend: {
-            colors: {
-              background: "#0B0B0C",
-              surface: "#121214",
-              border: "#1C1C20",
-              "text-primary": "#F2F2F2",
-              "text-muted": "#A0A0A8",
-              "red-accent": "#e60000",
-              "red-glow": "rgba(230,0,0,0.15)",
-              primary: {
-                DEFAULT: "#e60000",
-                foreground: "#0B0B0C",
-              },
-              secondary: {
-                DEFAULT: "#121214",
-                foreground: "#F2F2F2",
-              },
-              destructive: {
-                DEFAULT: "#ef4444",
-                foreground: "#f8fafc",
-              },
-              muted: {
-                DEFAULT: "#1C1C20",
-                foreground: "#A0A0A8",
-              },
-              accent: {
-                DEFAULT: "#1C1C20",
-                foreground: "#F2F2F2",
-              },
-              popover: {
-                DEFAULT: "#121214",
-                foreground: "#F2F2F2",
-              },
-              input: "#1C1C20",
-              ring: "#C9A227",
-            },
-            fontFamily: {
-              sans: ["Inter", "sans-serif"],
-              serif: ["Playfair Display", "serif"],
-            },
-            boxShadow: {
-              gold: "0 0 15px 0 rgba(201, 162, 39, 0.3)",
-            },
-          },
-        },
-      };
-    </script>
-    <script type="importmap">
-      {
-        "imports": {
-          "react/": "https://esm.sh/react@^19.2.4/",
-          "react": "https://esm.sh/react@^19.2.4",
-          "react-router-dom": "https://esm.sh/react-router-dom@^7.13.0",
-          "react-dom/": "https://esm.sh/react-dom@^19.2.4/"
-        }
-      }
-    </script>
     <link rel="stylesheet" href="/index.css" />
   </head>
   <body class="bg-background text-text-primary">

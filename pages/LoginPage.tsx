@@ -45,7 +45,7 @@ const LoginPage: React.FC = () => {
     const password = formData.get('password') as string;
     const rememberMe = formData.get('rememberMe') === 'on';
 
-    console.log("Attempting sign in:", email);
+
 
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -61,7 +61,7 @@ const LoginPage: React.FC = () => {
             showToast(error.message, "error");
         }
       } else {
-        console.log("Sign in success:", data);
+
         
         // Extract a friendly name
         const md = data?.user?.user_metadata || {};

@@ -5332,9 +5332,9 @@ const AdminPage: React.FC = () => {
     }, [activeTab]);
 
     useEffect(() => {
-        console.log('🚔 Admin Access Check:', { userEmail: user?.email, isAdmin, isEditor, loading });
+
         if (!loading && (!user || (!isAdmin && !isEditor))) {
-            console.warn('🚫 Non-admin access attempt. Redirecting to home.');
+
             navigate('/', { replace: true });
         }
     }, [user, loading, isAdmin, isEditor, navigate]);

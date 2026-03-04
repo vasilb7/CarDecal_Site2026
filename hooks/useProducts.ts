@@ -56,7 +56,7 @@ export const useProducts = () => {
       while (true) {
         const { data, error } = await supabase
           .from('products')
-          .select('*')
+          .select('slug, name, name_bg, avatar, cover_image, categories, location, dimensions, size, finish, material, description, is_best_seller, is_verified, price, price_eur, wholesale_price, wholesale_price_eur, card_images, is_hidden, posts, highlights')
           .order('id', { ascending: false })
           .range(rFrom, rFrom + rSize - 1);
           
@@ -69,7 +69,7 @@ export const useProducts = () => {
       const mapped = allData.map(mapRow);
       mapped.sort(naturalSort);
       setProducts(mapped);
-      console.log('✅ Products loaded:', mapped.length);
+
     } catch (err) {
       console.error('❌ Error in useProducts:', err);
     } finally {
@@ -90,12 +90,12 @@ export const useProducts = () => {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'products' },
         (payload) => {
-          console.log('🔄 Product changed:', payload.eventType, payload);
+
           fetchAll();
         }
       )
       .subscribe((status) => {
-        console.log('📡 Realtime status:', status);
+
       });
 
     return () => {

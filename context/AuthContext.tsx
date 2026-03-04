@@ -91,7 +91,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             
             startRef.current = end;
             setTimeOffset(serverTime + latency);
-            console.log('⏰ Secure time synced with server.');
+
         }
     };
     syncTime();
@@ -124,7 +124,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     if (!user) return;
 
-    console.log('🔌 Connecting to Realtime Profile updates...');
+
     const channel = supabase
       .channel(`profile:${user.id}`)
       .on(
@@ -136,11 +136,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           filter: `id=eq.${user.id}`,
         },
         async (payload) => {
-          console.log('⚡ Realtime Update Received:', payload);
+
           
           // If profile is deleted, force logout
           if (payload.eventType === 'DELETE') {
-              console.warn('🚨 Profile deleted! Logging out...');
+
               signOut();
               return;
           }
@@ -151,7 +151,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       )
       .subscribe((status) => {
-         if (status === 'SUBSCRIBED') console.log('✅ Realtime Subscribed!');
+
       });
 
     return () => {
@@ -190,14 +190,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, full_name, avatar_url, email, role, phone, is_verified, verified_until, is_banned, banned_reason, admin_notes, created_at, deletion_scheduled_at, deletion_reason, updated_at')
         .eq('id', userId)
         .single();
       
       if (!error && data) {
         // If account was scheduled for deletion, cancel it upon login/fetch
         if (data.deletion_scheduled_at) {
-            console.log('🔄 Account restoration triggered: User logged in during the 7-day grace period.');
+
             const { error: restoreError } = await supabase
                 .from('profiles')
                 .update({ 
@@ -214,7 +214,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
         }
 
-        console.log('👤 Profile fetched successfully:', data);
+
         setProfile(data);
       } else if (error) {
         console.error('❌ Error fetching profile:', error);
@@ -258,7 +258,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       });
 
-      console.log('✅ Logout complete and state cleared.');
+
     } catch (error) {
       console.error('❌ Error during logout:', error);
     }
@@ -268,7 +268,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const isEditor = profile?.role === 'editor' || profile?.role === 'admin';
   const userRole = profile?.role;
 
-  console.log('🔐 Auth Context State:', { userId: user?.id, email: user?.email, role: userRole, isAdmin, isEditor, loading });
+
 
   return (
     <AuthContext.Provider value={{ user, session, profile, loading, signOut, isAdmin, isEditor, userRole, refreshProfile, getSecureNow }}>

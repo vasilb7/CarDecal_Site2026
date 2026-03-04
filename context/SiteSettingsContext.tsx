@@ -113,7 +113,7 @@ export const SiteSettingsProvider: React.FC<{ children: React.ReactNode }> = ({ 
                     const newData = payload.new as { key: string; value: any };
                     if (!newData || !newData.key) return;
 
-                    console.log(`🔔 Global Settings Update: ${newData.key} =`, newData.value);
+
                     
                     setSettings(prev => {
                         const next = { ...prev };
