@@ -40,7 +40,7 @@ export interface Order {
 export const getOrderById = async (orderId: string): Promise<Order> => {
     const { data, error } = await supabase
         .from('orders')
-        .select('id, items, total_amount, shipping_details, status, payment_method, order_number, created_at, updated_at, user_id')
+        .select('id,items,total_amount,shipping_details,status,payment_method,order_number,created_at,updated_at,user_id')
         .eq('id', orderId)
         .single();
 
@@ -57,7 +57,7 @@ export const getOrderById = async (orderId: string): Promise<Order> => {
 export const getUserOrders = async (userId: string): Promise<Order[]> => {
     const { data, error } = await supabase
         .from('orders')
-        .select('id, items, total_amount, shipping_details, status, payment_method, order_number, created_at, updated_at, user_id')
+        .select('id,items,total_amount,shipping_details,status,payment_method,order_number,created_at,updated_at,user_id')
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
 

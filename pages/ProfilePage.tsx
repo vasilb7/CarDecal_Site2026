@@ -846,7 +846,7 @@ const ProfilePage: React.FC = () => {
         try {
             const { data, error } = await supabase
                 .from('orders')
-                .select('id, items, total_amount, shipping_details, status, payment_method, order_number, created_at, updated_at')
+                .select('id,items,total_amount,shipping_details,status,payment_method,order_number,created_at,updated_at')
                 .eq('user_id', user.id)
                 .order('created_at', { ascending: false });
 

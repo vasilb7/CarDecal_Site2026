@@ -56,7 +56,7 @@ export const useProducts = () => {
       while (true) {
         const { data, error } = await supabase
           .from('products')
-          .select('slug, name, name_bg, avatar, cover_image, categories, location, dimensions, size, finish, material, description, is_best_seller, is_verified, price, price_eur, wholesale_price, wholesale_price_eur, card_images, is_hidden, posts, highlights')
+          .select('slug,name,name_bg,avatar,cover_image,categories,location,dimensions,size,finish,material,description,is_best_seller,is_verified,price,price_eur,wholesale_price,wholesale_price_eur,card_images,is_hidden')
           .order('id', { ascending: false })
           .range(rFrom, rFrom + rSize - 1);
           
