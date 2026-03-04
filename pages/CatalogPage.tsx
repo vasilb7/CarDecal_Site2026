@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { normalizeSearch } from '../lib/search-utils';
 import { useTranslation } from 'react-i18next';
-import { useParams } from 'react-router-dom';
+import { useParams, useLocation } from 'react-router-dom';
 import { useProducts } from '../hooks/useProducts';
 import ProductCard from '../components/ProductCard';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -19,6 +19,8 @@ const CatalogPage: React.FC = () => {
     const allProducts = getAllProducts();
 
     const [searchParams, setSearchParams] = useSearchParams();
+    const location = useLocation();
+    const isModalOpen = !!location.state?.backgroundLocation;
     
     // Initial state from URL params
     const [searchTerm, setSearchTerm] = useState(searchParams.get('q') || '');
@@ -115,12 +117,15 @@ const CatalogPage: React.FC = () => {
     const currentSortBy = searchParams.get('sort') || 'default';
     const currentPageNum = parseInt(searchParams.get('page') || '1');
 
-    // We only update local state if it differs from URL. This runs during render so it acts synchronously
-    if (searchTerm !== currentSearchTerm) setSearchTerm(currentSearchTerm);
-    if (selectedSizes.join(',') !== currentSizes.join(',')) setSelectedSizes(currentSizes);
-    if (selectedCategory !== currentCategory) setSelectedCategory(currentCategory);
-    if (sortBy !== currentSortBy) setSortBy(currentSortBy);
-    if (currentPage !== currentPageNum) setCurrentPage(currentPageNum);
+    // We only update local state if it differs from URL. This runs during render so it acts synchronously.
+    // IMPORTANT: Skip sync if a modal is open to prevent resetting page/filters while user is viewing a product.
+    if (!isModalOpen) {
+        if (searchTerm !== currentSearchTerm) setSearchTerm(currentSearchTerm);
+        if (selectedSizes.join(',') !== currentSizes.join(',')) setSelectedSizes(currentSizes);
+        if (selectedCategory !== currentCategory) setSelectedCategory(currentCategory);
+        if (sortBy !== currentSortBy) setSortBy(currentSortBy);
+        if (currentPage !== currentPageNum) setCurrentPage(currentPageNum);
+    }
 
     // Provide setter functions that update BOTH local state and URL params at once
     const handleSetSearchTerm = (val: string) => {
@@ -192,8 +197,11 @@ const CatalogPage: React.FC = () => {
 
     // Scroll to top when page or filters change
     useEffect(() => {
+        // Skip scroll-to-top if we are currently opening/viewing a modal
+        if (isModalOpen) return;
+        
         window.scrollTo({ top: 0, behavior: 'smooth' });
-    }, [currentPage, searchTerm, selectedSizes, selectedCategory, sortBy, priceRange]);
+    }, [currentPage, searchTerm, selectedSizes, selectedCategory, sortBy, priceRange, isModalOpen]);
 
     // Sync initial price range once products load
     useEffect(() => {
