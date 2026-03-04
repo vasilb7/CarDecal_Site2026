@@ -2,14 +2,11 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
-import { Lock, Truck } from "lucide-react";
+import { Truck } from "lucide-react";
 import { useProducts } from "../hooks/useProducts";
 import { supabase } from "../lib/supabase";
-import ProductCard from "../components/ProductCard";
 import FeaturedProductCard from "../components/FeaturedProductCard";
 import { useSiteSettings } from "../context/SiteSettingsContext";
-import { useAuth } from "../context/AuthContext";
-import ProductQuickView from "../components/ProductQuickViewModal";
 import { getOptimizedUrl } from "../lib/cloudinary-utils";
 
 const fadeInUp = {
@@ -40,7 +37,6 @@ const HomePage: React.FC = () => {
   } = useProducts();
   const { settings: siteSettings, loading: settingsLoading } =
     useSiteSettings();
-  const { user } = useAuth();
 
   const [displayProducts, setDisplayProducts] = useState<any[]>([]);
   const [individualProjects, setIndividualProjects] = useState<any[]>([]);
@@ -60,7 +56,7 @@ const HomePage: React.FC = () => {
     const fetchShowcase = async () => {
       const { data, error } = await supabase
         .from("showcase_projects")
-        .select("*")
+        .select("id,title_bg,image_url")
         .order("order_index", { ascending: true });
       if (!error && data) {
         setIndividualProjects(
@@ -409,15 +405,12 @@ const HomePage: React.FC = () => {
               >
                 Разгледай Каталога
               </Link>
-
-              {user && (
-                <Link
-                  to="/book-now"
-                  className="group relative flex items-center justify-center w-full md:w-[280px] h-14 bg-black/40 backdrop-blur-md text-white/90 font-black uppercase tracking-[0.2em] text-[12px] md:text-[14px] rounded-lg border border-white/20 shadow-[0_5px_20px_rgba(0,0,0,0.5)] hover:bg-white/10 hover:text-white hover:border-white/40 transition-all duration-300 active:scale-95"
-                >
-                  Индивидуални Поръчки
-                </Link>
-              )}
+              <Link
+                to="/book-now"
+                className="group relative flex items-center justify-center w-full md:w-[280px] h-14 bg-black/40 backdrop-blur-md text-white/90 font-black uppercase tracking-[0.2em] text-[12px] md:text-[14px] rounded-lg border border-white/20 shadow-[0_5px_20px_rgba(0,0,0,0.5)] hover:bg-white/10 hover:text-white hover:border-white/40 transition-all duration-300 active:scale-95"
+              >
+                Индивидуални Поръчки
+              </Link>
             </motion.div>
           </motion.div>
         </div>

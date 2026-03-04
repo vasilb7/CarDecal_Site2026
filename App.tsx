@@ -1,38 +1,39 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import ScrollToTop from './components/ScrollToTop';
 import Layout from './components/Layout';
 import HomePage from './pages/HomePage';
-import CatalogPage from './pages/CatalogPage';
-import ProductDetailsPage from './pages/ProductDetailsPage';
-import ContactPage from './pages/ContactPage';
-import PricingPage from './pages/PricingPage';
-import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
-import PrivacyPage from './pages/PrivacyPage';
-import TermsPage from './pages/TermsPage';
-import BookingPage from './pages/BookingPage';
-import ProfilePage from './pages/ProfilePage';
-import RecoveryPage from './pages/RecoveryPage';
-import AdminPage from './pages/AdminPage';
-import CartPage from './pages/CartPage';
-import CheckoutPage from './pages/CheckoutPage';
-import OrderSuccessPage from './pages/OrderSuccessPage';
-import OrderReceiptPage from './pages/OrderReceiptPage';
-import OrderDetailPage from './pages/OrderDetailPage';
 import { ToastProvider } from './components/Toast/ToastProvider';
 import { useAuth } from './context/AuthContext';
 import { useSiteSettings, SiteSettingsProvider } from './context/SiteSettingsContext';
 import { UIProvider } from './context/UIContext';
 import { CartProvider } from './context/CartContext';
 import { ProductsProvider } from './context/ProductsContext';
-import MaintenancePage from './pages/MaintenancePage';
 import { Loader2 } from 'lucide-react';
 import { CompleteRegistrationModal } from './components/ui/complete-registration';
 import { useToast } from './hooks/useToast';
 import { useTranslation } from 'react-i18next';
 
+// Lazy-loaded pages - only downloaded when navigated to
+const CatalogPage = React.lazy(() => import('./pages/CatalogPage'));
+const ProductDetailsPage = React.lazy(() => import('./pages/ProductDetailsPage'));
+const ContactPage = React.lazy(() => import('./pages/ContactPage'));
+const PricingPage = React.lazy(() => import('./pages/PricingPage'));
+const LoginPage = React.lazy(() => import('./pages/LoginPage'));
+const RegisterPage = React.lazy(() => import('./pages/RegisterPage'));
+const PrivacyPage = React.lazy(() => import('./pages/PrivacyPage'));
+const TermsPage = React.lazy(() => import('./pages/TermsPage'));
+const BookingPage = React.lazy(() => import('./pages/BookingPage'));
+const ProfilePage = React.lazy(() => import('./pages/ProfilePage'));
+const RecoveryPage = React.lazy(() => import('./pages/RecoveryPage'));
+const AdminPage = React.lazy(() => import('./pages/AdminPage'));
+const CartPage = React.lazy(() => import('./pages/CartPage'));
+const CheckoutPage = React.lazy(() => import('./pages/CheckoutPage'));
+const OrderSuccessPage = React.lazy(() => import('./pages/OrderSuccessPage'));
+const OrderReceiptPage = React.lazy(() => import('./pages/OrderReceiptPage'));
+const OrderDetailPage = React.lazy(() => import('./pages/OrderDetailPage'));
+const MaintenancePage = React.lazy(() => import('./pages/MaintenancePage'));
 const ProductQuickViewModal = React.lazy(() => import('./components/ProductQuickViewModal'));
 
 function PageWrapper({ children }: { children: React.ReactNode }) {
@@ -96,14 +97,20 @@ function AppContent() {
     );
   }
 
-  // Maintenance Check
   if (isGlobalMaintenanceActive && !isAdmin && !isEditor && !isMaintenancePageAllowed) {
-    return <MaintenancePage />;
+    return <Suspense fallback={<div className="flex items-center justify-center min-h-screen bg-black"><Loader2 className="w-10 h-10 animate-spin text-red-600" /></div>}><MaintenancePage /></Suspense>;
   }
+
+  const LazyFallback = (
+    <div className="flex items-center justify-center min-h-[50vh]">
+      <Loader2 className="w-8 h-8 animate-spin text-red-600" />
+    </div>
+  );
 
   return (
     <>
       <ScrollToTop />
+      <Suspense fallback={LazyFallback}>
       <Routes location={backgroundLocation || location}>
         {/* Admin - Protected */}
         <Route path="/admin/*" element={isAdmin || isEditor ? <AdminPage /> : <Navigate to="/login" replace />} />
@@ -142,6 +149,7 @@ function AppContent() {
           </Layout>
         } />
       </Routes>
+      </Suspense>
 
       {/* Modal Overlay Section */}
       {backgroundLocation && (

@@ -61,7 +61,7 @@ export const ProductsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       while (true) {
         const { data, error } = await supabase
           .from('products')
-          .select("*")
+          .select("slug,name,name_bg,avatar,cover_image,categories,location,dimensions,size,is_best_seller,is_verified,price,price_eur,wholesale_price,wholesale_price_eur,card_images,is_hidden,posts,highlights")
           .order('id', { ascending: false })
           .range(rFrom, rFrom + rSize - 1);
           

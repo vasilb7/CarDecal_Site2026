@@ -65,9 +65,9 @@ export function getOptimizedUrl(url: string, options: { width?: number; height?:
 
   const { width, height, crop = 'fit', blur } = options;
   // f_auto sets WebP/AVIF format automatically
-  // q_auto:eco reduces file size significantly (often 30-50% smaller than default) with minimal visual loss
+  // q_auto balances file size and visual fidelity without making images blurry
   // fl_progressive makes JPEGs load progressively instead of top-to-bottom
-  const transformations = ['f_auto', 'q_auto:eco', 'fl_progressive'];
+  const transformations = ['f_auto', 'q_auto', 'fl_progressive'];
 
   if (width) transformations.push(`w_${width}`);
   if (height) transformations.push(`h_${height}`);

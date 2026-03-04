@@ -22,6 +22,20 @@ export default defineConfig(({ mode }) => {
       build: {
         sourcemap: false,
         minify: 'esbuild',
+        rollupOptions: {
+          output: {
+            manualChunks: {
+              // Core React runtime
+              'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+              // Animation library (heavy)
+              'framer': ['framer-motion'],
+              // Supabase client
+              'supabase': ['@supabase/supabase-js'],
+              // i18n
+              'i18n': ['i18next', 'react-i18next'],
+            },
+          },
+        },
       },
       esbuild: {
         drop: mode === 'production' ? ['console', 'debugger'] : [],

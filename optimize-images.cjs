@@ -5,17 +5,17 @@ async function optimize() {
   const publicDir = path.join(__dirname, 'public');
   const heroPath = path.join(publicDir, 'hero_image.jpg');
 
-  // Hero for mobile (800px width)
+  // Hero for mobile (1080px width - Retina displays)
   await sharp(heroPath)
-    .resize(800, null, { withoutEnlargement: true })
-    .webp({ quality: 75 })
+    .resize(1080, null, { withoutEnlargement: true })
+    .webp({ quality: 80 })
     .toFile(path.join(publicDir, 'hero_mobile.webp'));
   console.log('Done: hero_mobile.webp');
 
-  // Hero for desktop (1400px width)
+  // Hero for desktop (1920px width for 4K/FullHD)
   await sharp(heroPath)
-    .resize(1400, null, { withoutEnlargement: true })
-    .webp({ quality: 80 })
+    .resize(1920, null, { withoutEnlargement: true })
+    .webp({ quality: 85 })
     .toFile(path.join(publicDir, 'hero_desktop.webp'));
   console.log('Done: hero_desktop.webp');
 
