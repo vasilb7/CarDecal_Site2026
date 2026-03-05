@@ -462,7 +462,7 @@ const HomePage: React.FC = () => {
 
       {/* Featured Products */}
       <section className="py-24 bg-background">
-        <div className="container mx-auto px-6">
+        <div className="w-full max-w-[1600px] 2xl:max-w-[1800px] mx-auto px-6">
           <div className="flex flex-col md:flex-row justify-between items-center md:items-end mb-10 md:mb-16 gap-6 md:gap-0 text-center md:text-left">
             <motion.div
               initial="hidden"

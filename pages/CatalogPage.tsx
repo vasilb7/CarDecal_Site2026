@@ -519,7 +519,7 @@ const CatalogPage: React.FC = () => {
                 </aside>
 
                 <main className="flex-1 p-4 md:p-8 lg:p-12">
-                    <div className="max-w-[1400px] mx-auto">
+                    <div className="max-w-[1600px] 2xl:max-w-[1800px] mx-auto">
                         {/* Header Section */}
                         <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-6">
                             <div className="w-full md:w-auto">
@@ -616,7 +616,7 @@ const CatalogPage: React.FC = () => {
                                 description="Опитайте с други филтри или премахнете някои от тях. Ако смятате че става дума за грешка, моля да ни уведомите."
                             />
                         ) : (
-                            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-3 gap-3 md:gap-8 min-h-[500px]">
+                            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3 gap-3 md:gap-8 lg:gap-10 min-h-[500px]">
                                 {paginatedProducts.map((product, index) => (
                                     <motion.div
                                         key={product.slug}
