@@ -13,7 +13,8 @@ import {
     Eye, EyeOff, Tag, Image, ArrowLeft, Loader2, RefreshCw,
     UserCheck, UserX, Crown, Upload, Video, Film, AlertCircle, Mail,
     Megaphone, Palette, Type, ShoppingBag, Receipt, Printer, Download,
-    FileText, BoxSelect, LayoutGrid, ClipboardCheck, Boxes, FileJson, Clock, Bug
+    FileText, BoxSelect, LayoutGrid, ClipboardCheck, Boxes, FileJson, Clock, Bug,
+    Banknote, TrendingUp
 } from 'lucide-react';
 import { useToast } from '../components/Toast/ToastProvider';
 import { uploadToCloudinary } from '../lib/cloudinary-utils';
@@ -2978,22 +2979,50 @@ const MaintenanceSettingsSection: React.FC = () => {
 
 // ─── Dashboard Stats ──────────────────────────────────────────────────────
 const DashboardTab: React.FC = () => {
-    const [stats, setStats] = useState({ products: 0, users: 0, banned: 0, editors: 0, admins: 0 });
+    const [stats, setStats] = useState({ 
+        products: 0, 
+        users: 0, 
+        banned: 0, 
+        editors: 0, 
+        admins: 0,
+        monthlyRevenue: 0,
+        totalRevenue: 0
+    });
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchStats = async () => {
-            const [{ count: products }, { data: profiles }] = await Promise.all([
+            const now = new Date();
+            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+
+            const [
+                { count: products }, 
+                { data: profiles },
+                { data: completedOrders }
+            ] = await Promise.all([
                 supabase.from('products').select('id', { count: 'exact', head: true }),
                 supabase.from('profiles').select('role,is_banned'),
+                supabase.from('orders')
+                    .select('total_amount, created_at')
+                    .eq('status', 'completed')
             ]);
+
             const profilesArr = profiles || [];
+            const orders = completedOrders || [];
+            
+            const totalRevenue = orders.reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0);
+            const monthlyRevenue = orders
+                .filter(o => o.created_at >= startOfMonth)
+                .reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0);
+
             setStats({
                 products: products || 0,
                 users: profilesArr.length,
                 banned: profilesArr.filter((p: any) => p.is_banned).length,
                 editors: profilesArr.filter((p: any) => p.role === 'editor').length,
                 admins: profilesArr.filter((p: any) => p.role === 'admin').length,
+                monthlyRevenue,
+                totalRevenue
             });
             setLoading(false);
         };
@@ -3001,11 +3030,11 @@ const DashboardTab: React.FC = () => {
     }, []);
 
     const cards = [
-        { label: 'Стикери в Базата', value: stats.products, icon: Package, color: 'text-blue-400' },
-        { label: 'Потребители', value: stats.users, icon: Users, color: 'text-green-400' },
+        { label: 'Приход (Месец)', value: stats.monthlyRevenue.toFixed(2) + ' €', icon: Banknote, color: 'text-green-500' },
+        { label: 'Общ Приход', value: stats.totalRevenue.toFixed(2) + ' €', icon: TrendingUp, color: 'text-emerald-400' },
+        { label: 'Стикери', value: stats.products, icon: Package, color: 'text-blue-400' },
+        { label: 'Потребители', value: stats.users, icon: Users, color: 'text-zinc-400' },
         { label: 'Администратори', value: stats.admins, icon: Crown, color: 'text-red-400' },
-        { label: 'Редактори', value: stats.editors, icon: Edit3, color: 'text-yellow-400' },
-        { label: 'Блокирани', value: stats.banned, icon: ShieldBan, color: 'text-zinc-400' },
     ];
 
     return (
