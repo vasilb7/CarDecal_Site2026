@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, Suspense, useRef } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import ScrollToTop from './components/ScrollToTop';
@@ -87,6 +87,19 @@ function AppContent() {
     location.pathname === '/login';
   const isGlobalMaintenanceActive = settings.maintenance_mode || isTimeUp;
   const backgroundLocation = (location.state as any)?.backgroundLocation;
+  
+  // Detect transition from maintenance ACTIVE -> INACTIVE to trigger hard refresh
+  const wasMaintenanceActive = useRef(isGlobalMaintenanceActive);
+
+  useEffect(() => {
+    if (wasMaintenanceActive.current && !isGlobalMaintenanceActive) {
+      // Small delay to ensure DB/Settings are synced before reload
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
+    }
+    wasMaintenanceActive.current = isGlobalMaintenanceActive;
+  }, [isGlobalMaintenanceActive]);
 
   // Early return for loading - AFTER hooks
   if (authLoading || settingsLoading) {

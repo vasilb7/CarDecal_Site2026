@@ -29,7 +29,7 @@ const Lightbox: React.FC<{ src: string; onClose: () => void }> = ({ src, onClose
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[300] bg-black/96 flex flex-col items-center justify-center backdrop-blur-xl"
+        className="fixed inset-0 z-[300] bg-black/98 flex flex-col items-center justify-center"
         onClick={onClose}
     >
         <button
@@ -113,7 +113,7 @@ const ProductDetailsPage: React.FC = () => {
             `}</style>
             
             {/* ── Breadcrumb & Mobile Back ── */}
-            <div className="sticky top-20 z-40 bg-[#0A0A0A]/80 backdrop-blur-xl border-b border-white/5 py-4">
+            <div className="sticky top-20 z-40 bg-[#0A0A0A] border-b border-white/5 py-4">
                 <div className="container mx-auto max-w-7xl px-6 flex items-center justify-between">
                     <div className="flex items-center gap-2 text-[10px] md:text-[11px] uppercase tracking-[0.2em] font-medium text-zinc-500 overflow-x-auto no-scrollbar whitespace-nowrap">
                         <Link to="/catalog" className="hover:text-red-500 transition-colors flex items-center gap-1">
@@ -243,7 +243,7 @@ const ProductDetailsPage: React.FC = () => {
                         </div>
 
                         {/* Product Title */}
-                        <h1 className="text-4xl md:text-5xl lg:text-6xl font-black uppercase tracking-tight leading-[0.9] mb-8">
+                        <h1 className="text-3xl md:text-4xl lg:text-5xl font-black uppercase tracking-tight leading-tight mb-8 break-words">
                             {product.nameBg || product.name}
                         </h1>
 
@@ -335,7 +335,7 @@ const ProductDetailsPage: React.FC = () => {
             </div>
 
             {/* ── Mobile Sticky Purchase Bar ── */}
-            <div className="md:hidden fixed bottom-0 left-0 w-full bg-[#0F0F0F]/90 backdrop-blur-2xl border-t border-white/10 p-5 z-[60] pb-[calc(env(safe-area-inset-bottom)+1.25rem)]">
+            <div className="md:hidden fixed bottom-0 left-0 w-full bg-[#0F0F0F] border-t border-white/10 p-5 z-[60] pb-[calc(env(safe-area-inset-bottom)+1.25rem)]">
                 <div className="flex items-center gap-4">
                     <div className="flex flex-col">
                         <span className="text-[9px] uppercase tracking-widest text-zinc-500 font-bold">{t('pricing.total', 'ОБЩО')}</span>
