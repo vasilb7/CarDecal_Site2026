@@ -121,6 +121,8 @@ interface DBUser {
     created_at: string;
     last_login_at: string | null;
     last_device_info: string | null;
+    last_ip_address: string | null;
+    ip_history: string[] | null;
     admin_notes?: string | null;
 }
 
@@ -861,7 +863,7 @@ const UsersTab: React.FC = () => {
         setLoading(true);
         const { data, error } = await supabase
             .from('profiles')
-            .select('id,email,full_name,avatar_url,role,is_banned,banned_reason,created_at')
+            .select('id,email,full_name,avatar_url,role,is_banned,banned_reason,created_at,last_login_at,last_device_info,last_ip_address,ip_history,admin_notes')
             .is('deletion_scheduled_at', null)
             .order('created_at', { ascending: false });
         if (!error && data) setUsers(data as DBUser[]);
@@ -1036,7 +1038,7 @@ const UsersTab: React.FC = () => {
                                     {u.is_banned && u.banned_reason && (
                                         <p className="text-red-400/60 text-xs mt-0.5">Причина: {u.banned_reason}</p>
                                     )}
-                                    <div className="flex items-center gap-3 mt-1.5 pt-1.5 border-t border-white/5">
+                                    <div className="flex flex-wrap items-center gap-2 mt-1.5 pt-1.5 border-t border-white/5">
                                         {u.last_login_at && (
                                             <p className="text-[10px] text-zinc-500 uppercase tracking-widest">
                                                 Последно: {new Date(u.last_login_at).toLocaleString('bg-BG', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
@@ -1045,6 +1047,16 @@ const UsersTab: React.FC = () => {
                                         {u.last_device_info && (
                                             <p className="text-[10px] text-zinc-400 bg-white/5 px-2 py-0.5 rounded flex items-center gap-1">
                                                 💻 {u.last_device_info}
+                                            </p>
+                                        )}
+                                        {u.last_ip_address && (
+                                            <p className="text-[10px] text-red-400/80 bg-red-950/20 px-2 py-0.5 rounded flex items-center gap-1 font-mono border border-red-900/10">
+                                                🌐 {u.last_ip_address}
+                                            </p>
+                                        )}
+                                        {u.ip_history && u.ip_history.length > 1 && (
+                                            <p className="text-[9px] text-zinc-500 bg-zinc-900/50 px-2 py-0.5 rounded border border-white/5 hover:border-white/10 transition-colors" title={u.ip_history.join(', ')}>
+                                                📝 {u.ip_history.length} уникални IP-та
                                             </p>
                                         )}
                                     </div>

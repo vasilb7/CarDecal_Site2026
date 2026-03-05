@@ -159,32 +159,65 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     };
   }, [user]);
 
-  // Record login info (Device, OS, Browser)
+  // Record login info (Device, OS, Browser, IP)
   useEffect(() => {
     if (user && profile) {
       const updateLoginInfo = async () => {
-        const ua = navigator.userAgent;
-        // Simple parser for human readable device/browser
-        let deviceInfo = "Unknown Device";
-        if (ua.includes("Windows")) deviceInfo = "Windows PC";
-        else if (ua.includes("Android")) deviceInfo = "Android Phone";
-        else if (ua.includes("iPhone")) deviceInfo = "iPhone";
-        else if (ua.includes("Macintosh")) deviceInfo = "Mac / Apple";
-        else if (ua.includes("Linux")) deviceInfo = "Linux Device";
+        try {
+          const ua = navigator.userAgent;
+          // Simple parser for human readable device/browser
+          let deviceInfo = "Unknown Device";
+          if (ua.includes("Windows")) deviceInfo = "Windows PC";
+          else if (ua.includes("Android")) deviceInfo = "Android Phone";
+          else if (ua.includes("iPhone")) deviceInfo = "iPhone";
+          else if (ua.includes("Macintosh")) deviceInfo = "Mac / Apple";
+          else if (ua.includes("Linux")) deviceInfo = "Linux Device";
 
-        // Only update if it hasn't been updated in this session
-        const hasRecentlyUpdated = sessionStorage.getItem(
-          `last_login_sync_${user.id}`,
-        );
-        if (!hasRecentlyUpdated) {
-          await supabase
-            .from("profiles")
-            .update({
+          // Fetch Public IP
+          let currentIp = null;
+          try {
+            const ipRes = await fetch('https://api.ipify.org?format=json');
+            const ipData = await ipRes.json();
+            currentIp = ipData.ip;
+          } catch (e) {
+            console.error("Could not fetch IP:", e);
+          }
+
+          // Only update if it hasn't been updated in this session
+          const hasRecentlyUpdated = sessionStorage.getItem(
+            `last_login_sync_${user.id}`,
+          );
+
+          if (!hasRecentlyUpdated) {
+            const updates: any = {
               last_device_info: deviceInfo,
               last_login_at: new Date().toISOString(),
-            })
-            .eq("id", user.id);
-          sessionStorage.setItem(`last_login_sync_${user.id}`, "true");
+            };
+
+            if (currentIp) {
+              updates.last_ip_address = currentIp;
+              
+              // Handle IP history to detect attacks/changing IPs
+              const { data: currentProfile } = await supabase
+                .from("profiles")
+                .select("ip_history")
+                .eq("id", user.id)
+                .single();
+              
+              const history = currentProfile?.ip_history || [];
+              if (!history.includes(currentIp)) {
+                updates.ip_history = [...history, currentIp].slice(-20); // Keep last 20
+              }
+            }
+
+            await supabase
+              .from("profiles")
+              .update(updates)
+              .eq("id", user.id);
+            sessionStorage.setItem(`last_login_sync_${user.id}`, "true");
+          }
+        } catch (err) {
+          console.error("Failed to update login info:", err);
         }
       };
       updateLoginInfo();
