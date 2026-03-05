@@ -529,7 +529,7 @@ const HomePage: React.FC = () => {
                 displayProducts.map((product, index) => (
                   <motion.div
                     key={product.slug}
-                    className="flex-shrink-0 w-[85%] sm:w-[55%] md:w-auto snap-center"
+                    className="flex-shrink-0 w-[48%] sm:w-[55%] md:w-auto snap-center"
                     whileHover={{ y: -5 }}
                     transition={{ type: "spring", stiffness: 300, damping: 20 }}
                   >
