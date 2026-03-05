@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Loader2, Bug, CheckCircle2, ChevronDown, CheckSquare, RefreshCw, X } from 'lucide-react';
+import { Loader2, Bug, CheckCircle2, ChevronDown, CheckSquare, RefreshCw, X, Trash2, Globe, Monitor } from 'lucide-react';
 import { useToast } from '../Toast/ToastProvider';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -28,7 +28,31 @@ export const BugsTab: React.FC = () => {
 
     useEffect(() => {
         fetchBugs();
+
+        // Realtime sync
+        const channel = supabase
+            .channel('bug_reports_realtime')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'bug_reports' }, () => {
+                fetchBugs();
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, []);
+
+    const deleteBug = async (id: string) => {
+        if (!confirm('Сигурни ли сте, че искате да изтриете този сигнал?')) return;
+        try {
+            const { error } = await supabase.from('bug_reports').delete().eq('id', id);
+            if (error) throw error;
+            showToast('Сигналът е изтрит', 'info');
+            fetchBugs();
+        } catch (err: any) {
+            showToast('Грешка: ' + err.message, 'error');
+        }
+    };
 
     const updateStatus = async (id: string, newStatus: string) => {
         try {
@@ -94,23 +118,47 @@ export const BugsTab: React.FC = () => {
                                     {categoryMap[bug.category] || bug.category}
                                 </span>
                                 
-                                <select 
-                                    className="bg-black/60 border border-white/10 text-white text-[10px] uppercase font-black p-1 rounded focus:outline-none focus:border-red-600"
-                                    value={bug.status}
-                                    onChange={(e) => updateStatus(bug.id, e.target.value)}
-                                >
-                                    {statusOptions.map(opt => (
-                                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                    ))}
-                                </select>
+                                <div className="flex items-center gap-2">
+                                    <select 
+                                        className="bg-black/60 border border-white/10 text-white text-[10px] uppercase font-black p-1 rounded focus:outline-none focus:border-red-600"
+                                        value={bug.status}
+                                        onChange={(e) => updateStatus(bug.id, e.target.value)}
+                                    >
+                                        {statusOptions.map(opt => (
+                                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                        ))}
+                                    </select>
+                                    <button 
+                                        onClick={() => deleteBug(bug.id)}
+                                        className="p-1.5 text-zinc-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+                                        title="Изтрий"
+                                    >
+                                        <Trash2 size={14} />
+                                    </button>
+                                </div>
                             </div>
                             
                             <div className="p-5 flex-1 flex flex-col">
                                 <div className="mb-4">
-                                    <h3 className="text-sm font-bold text-white mb-2 line-clamp-2">{bug.description}</h3>
-                                    <div className="text-[10px] font-mono text-zinc-500 flex flex-col gap-1">
+                                    <h3 className="text-sm font-bold text-white mb-2">{bug.description}</h3>
+                                    <div className="text-[10px] font-mono text-zinc-500 flex flex-col gap-1.5">
                                         {bug.email && <span>От: <a href={`mailto:${bug.email}`} className="text-zinc-400 hover:text-white underline">{bug.email}</a></span>}
                                         {bug.url && <span>URL: <span className="text-zinc-400">{bug.url}</span></span>}
+                                        
+                                        <div className="flex flex-col gap-1 pt-2 mt-1 border-t border-white/5">
+                                            {bug.ip_address && (
+                                                <div className="flex items-center gap-1.5">
+                                                    <Globe size={12} className="text-zinc-600" />
+                                                    <span>IP: <span className="text-zinc-400">{bug.ip_address}</span></span>
+                                                </div>
+                                            )}
+                                            {bug.device_info && (
+                                                <div className="flex items-start gap-1.5">
+                                                    <Monitor size={12} className="text-zinc-600 mt-0.5 shrink-0" />
+                                                    <span className="line-clamp-1">Устройство: <span className="text-zinc-400">{bug.device_info}</span></span>
+                                                </div>
+                                            )}
+                                        </div>
                                         <span className="text-zinc-600 pt-1 mt-1 border-t border-white/5">{new Date(bug.created_at).toLocaleString('bg-BG')}</span>
                                     </div>
                                 </div>

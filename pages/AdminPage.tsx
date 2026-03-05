@@ -3078,6 +3078,23 @@ const OrdersTab: React.FC = () => {
         if (searchVal) {
             setSearchTerm(searchVal);
         }
+
+        fetchOrders();
+
+        // Real-time listener for regular orders
+        const channel = supabase
+            .channel('admin_orders_realtime')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
+                if (payload.eventType === 'INSERT') {
+                    showToast('Нова поръчка е получена!', 'success');
+                }
+                fetchOrders();
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, []);
 
     const fetchOrders = async () => {
@@ -3859,9 +3876,7 @@ const OrdersTab: React.FC = () => {
         setArchivedLoading(false);
     };
 
-    useEffect(() => {
-        fetchOrders();
-    }, []);
+
 
     if (loading) return <div className="flex items-center justify-center p-10"><Loader2 className="w-8 h-8 animate-spin text-red-600" /></div>;
 
@@ -4273,6 +4288,21 @@ const CustomOrdersTab: React.FC = () => {
 
     useEffect(() => {
         fetchOrders();
+
+        // Real-time listener for custom orders
+        const channel = supabase
+            .channel('admin_custom_orders_realtime')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'custom_orders' }, (payload) => {
+                if (payload.eventType === 'INSERT') {
+                    showToast('Ново запитване за индивидуален дизайн!', 'success');
+                }
+                fetchOrders();
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, []);
 
     const handleDelete = async () => {
