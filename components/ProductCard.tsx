@@ -53,10 +53,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, isPriority = false }
         borderColor: "rgba(212, 175, 55, 0.2)"
       }}
       transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
-      className="bg-[#141414] rounded-[32px] md:rounded-[48px] p-6 md:p-10 flex flex-col justify-between relative shadow-2xl border border-white/[0.03] transition-colors h-full"
+      className="bg-[#141414] rounded-[28px] md:rounded-[40px] p-4 md:p-6 flex flex-col justify-between relative shadow-2xl border border-white/[0.03] transition-colors h-full overflow-hidden"
     >
       {/* Product Image Area */}
-      <div className="relative w-full h-[180px] sm:h-[220px] md:h-[280px] flex-shrink-0 flex items-center justify-center mb-6 md:mb-8 p-4">
+      <div className="relative w-full aspect-square sm:aspect-[4/3] flex-shrink-0 flex items-center justify-center mb-4 md:mb-6">
         <div className="relative w-full h-full flex items-center justify-center group-hover:scale-110 transition-transform duration-700 ease-out">
           {/* Subtle Soft Glow behind the item - Golden hint */}
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(212,175,55,0.05)_0%,transparent_70%)] blur-3xl pointer-events-none" />
@@ -77,7 +77,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, isPriority = false }
             src={product.avatar}
             alt={name}
             onLoad={() => setImageLoaded(true)}
-            className={`max-w-full max-h-full transition-opacity duration-200 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+            className={`w-full h-full object-contain transition-opacity duration-200 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
             priority={isPriority}
             widths={[300, 500, 800]}
             sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"

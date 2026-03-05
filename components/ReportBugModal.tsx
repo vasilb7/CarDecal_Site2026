@@ -16,12 +16,25 @@ const ReportBugModal: React.FC = () => {
     });
     const [screenshot, setScreenshot] = useState<File | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    
     const { user, profile } = useAuth();
     const { showToast } = useToast();
 
+    const userRef = useRef(user);
+    const profileRef = useRef(profile);
+
     useEffect(() => {
-        const handleOpen = () => setIsOpen(true);
+        userRef.current = user;
+        profileRef.current = profile;
+    }, [user, profile]);
+
+    useEffect(() => {
+        const handleOpen = () => {
+            setIsOpen(true);
+            setFormData(prev => ({
+                ...prev,
+                email: userRef.current?.email || profileRef.current?.email || prev.email
+            }));
+        };
         const handleClose = () => setIsOpen(false);
         
         window.addEventListener('open-bug-report', handleOpen);
@@ -36,14 +49,6 @@ const ReportBugModal: React.FC = () => {
     useEffect(() => {
         if (isOpen) {
             setStatus('idle');
-            // Populate email if user is logged in
-            if (user || profile) {
-                setFormData(prev => ({
-                    ...prev,
-                    email: user?.email || profile?.email || prev.email
-                }));
-            }
-            
             // Disable scroll
             document.body.style.overflow = 'hidden';
             document.body.style.touchAction = 'none';
@@ -57,7 +62,7 @@ const ReportBugModal: React.FC = () => {
             document.body.style.overflow = '';
             document.body.style.touchAction = 'auto';
         };
-    }, [isOpen, user, profile]);
+    }, [isOpen]);
 
     const handleCloseModal = () => {
         setIsOpen(false);
@@ -105,13 +110,13 @@ const ReportBugModal: React.FC = () => {
             setStatus('success');
             setTimeout(() => {
                 setIsOpen(false);
-                setFormData({ category: 'other', description: '', email: '' });
+                setFormData({ category: 'other', description: '', email: userRef.current?.email || profileRef.current?.email || '' });
                 setScreenshot(null);
             }, 2500);
-        } catch (error) {
+        } catch (error: any) {
             console.error('Submission error:', error);
             setStatus('idle');
-            // optionally show an error toast here
+            showToast('Грешка при изпращане: ' + (error.message || 'Възникна проблем'), 'error');
         }
     };
 

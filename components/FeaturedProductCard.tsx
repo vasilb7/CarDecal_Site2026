@@ -46,8 +46,8 @@ const FeaturedProductCard: React.FC<FeaturedProductCardProps> = ({ product, isPr
       className="bg-gradient-to-b from-[#141414] to-[#0A0A0A] rounded-[24px] md:rounded-[32px] p-5 md:p-6 flex flex-col h-full justify-between relative shadow-2xl border border-white/5 transition-colors overflow-hidden group/card"
     >
       {/* Product Image Area */}
-      <div className="relative w-full aspect-[4/5] flex-shrink-0 flex items-center justify-center mb-4 min-h-0">
-        <div className="relative w-full h-full flex items-center justify-center transition-transform duration-700 ease-out group-hover/card:scale-110">
+      <div className="relative w-full aspect-square flex-shrink-0 flex items-center justify-center mb-4 min-h-0">
+        <div className="relative w-full h-full flex items-center justify-center transition-transform duration-700 ease-out group-hover/card:scale-105">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(220,38,38,0.15)_0%,transparent_60%)] blur-2xl pointer-events-none opacity-0 group-hover/card:opacity-100 transition-opacity duration-500" />
           
           <AnimatePresence>
@@ -61,12 +61,12 @@ const FeaturedProductCard: React.FC<FeaturedProductCardProps> = ({ product, isPr
             )}
           </AnimatePresence>
 
-          {/* Using 75% max-width instead of 100% so images have breathing room and are never cut off by the border radius */}
+          {/* Using 90% size instead of 100% so images have breathing room and are never cut off by the border radius */}
           <OptimizedImage
             src={product.avatar}
             alt={name}
             onLoad={() => setImageLoaded(true)}
-            className={`max-w-[80%] max-h-[80%] transition-opacity duration-200 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+            className={`w-[90%] h-[90%] object-contain transition-opacity duration-200 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
             priority={isPriority}
             widths={[300, 500, 800]}
             sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
