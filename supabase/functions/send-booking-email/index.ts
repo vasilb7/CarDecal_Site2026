@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
-const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
+const BREVO_API_KEY = Deno.env.get('BREVO_API_KEY')
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -23,8 +23,8 @@ serve(async (req) => {
       })
     }
 
-    if (!RESEND_API_KEY) {
-        throw new Error("Missing RESEND_API_KEY environment credential");
+    if (!BREVO_API_KEY) {
+        throw new Error("Missing BREVO_API_KEY environment credential");
     }
 
     const htmlContent = `
@@ -193,25 +193,26 @@ serve(async (req) => {
     </html>
     `;
 
-    const res = await fetch('https://api.resend.com/emails', {
+    // Send via Brevo SMTP API
+    const res = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${RESEND_API_KEY}`,
+            'api-key': BREVO_API_KEY,
         },
         body: JSON.stringify({
-           from: 'CarDecal <onboarding@resend.dev>', // Update this when domain is verified -> 'CarDecal <noreply@cardecal.bg>'
-           to: email,
+           sender: { name: 'CarDecal', email: 'cardecal@abv.bg' },
+           to: [{ email, name: `${firstName} ${lastName || ''}`.trim() }],
            subject: 'Успешно запитване за индивидуален проект | CarDecal',
-           html: htmlContent,
+           htmlContent: htmlContent,
         }),
     });
     
     const data = await res.json();
 
     if (!res.ok) {
-        console.error("Resend API issue:", data);
-        throw new Error(data.message || 'Error communicating with Resend');
+        console.error("Brevo API issue:", data);
+        throw new Error(data.message || 'Error communicating with Brevo');
     }
 
     return new Response(JSON.stringify({ success: true, data }), {
