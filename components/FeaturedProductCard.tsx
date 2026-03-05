@@ -46,7 +46,7 @@ const FeaturedProductCard: React.FC<FeaturedProductCardProps> = ({ product, isPr
       className="bg-gradient-to-b from-[#141414] to-[#0A0A0A] rounded-[24px] md:rounded-[32px] p-5 md:p-6 flex flex-col h-full justify-between relative shadow-2xl border border-white/5 transition-colors overflow-hidden group/card"
     >
       {/* Product Image Area */}
-      <div className="relative w-full aspect-[4/3] flex-shrink-0 flex items-center justify-center mb-4 min-h-0">
+      <div className="relative w-full aspect-square flex-shrink-0 flex items-center justify-center mb-4 min-h-0">
         <div className="relative w-full h-full flex items-center justify-center transition-transform duration-700 ease-out group-hover/card:scale-105">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(220,38,38,0.15)_0%,transparent_60%)] blur-2xl pointer-events-none opacity-0 group-hover/card:opacity-100 transition-opacity duration-500" />
           
