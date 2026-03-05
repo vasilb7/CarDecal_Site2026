@@ -162,9 +162,9 @@ const ReportBugModal: React.FC = () => {
                                 </button>
                             </div>
 
-                            {/* Body */}
-                            <div className="p-5 sm:p-6 overflow-y-auto custom-scrollbar">
-                                {status === 'success' ? (
+                            {/* Content */}
+                            {status === 'success' ? (
+                                <div className="p-5 sm:p-6 overflow-y-auto custom-scrollbar flex flex-col items-center justify-center">
                                     <motion.div 
                                         initial={{ opacity: 0, scale: 0.9 }}
                                         animate={{ opacity: 1, scale: 1 }}
@@ -176,8 +176,10 @@ const ReportBugModal: React.FC = () => {
                                         <h4 className="text-xl font-bold text-white mb-2">Благодарим ти!</h4>
                                         <p className="text-white/50 text-sm">Твоят сигнал е изпратен успешно.<br/>Ще го разгледаме възможно най-скоро.</p>
                                     </motion.div>
-                                ) : (
-                                    <form id="bug-report-form" onSubmit={handleSubmit} className="space-y-5">
+                                </div>
+                            ) : (
+                                <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+                                    <div className="p-5 sm:p-6 overflow-y-auto custom-scrollbar space-y-5">
                                         
                                         {/* Category */}
                                         <div className="space-y-1.5">
@@ -214,10 +216,11 @@ const ReportBugModal: React.FC = () => {
                                                     type="email"
                                                     id="bug_email"
                                                     required
+                                                    readOnly={Boolean(user || profile)}
                                                     placeholder=" "
                                                     value={formData.email}
                                                     onChange={(e) => setFormData({...formData, email: e.target.value})}
-                                                    className="peer w-full h-[46px] bg-[#151515] border border-white/10 rounded-xl px-4 text-white text-sm focus:outline-none focus:border-red-500/50 transition-colors"
+                                                    className={`peer w-full h-[46px] bg-[#151515] border border-white/10 rounded-xl px-4 text-white text-sm focus:outline-none transition-colors ${Boolean(user || profile) ? 'opacity-60 cursor-not-allowed' : 'focus:border-red-500/50'}`}
                                                 />
                                                 <label 
                                                     htmlFor="bug_email"
@@ -267,33 +270,30 @@ const ReportBugModal: React.FC = () => {
                                                  )}
                                             </div>
                                         </div>
-                                    </form>
-                                )}
-                            </div>
+                                    </div>
 
-                            {/* Footer / Buttons */}
-                            {status !== 'success' && (
-                                <div className="p-5 sm:p-6 border-t border-white/5 bg-[#0a0a0a] flex gap-3 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] sm:pb-6">
-                                    <button 
-                                        type="button"
-                                        onClick={handleCloseModal}
-                                        className="flex-1 py-3.5 px-4 rounded-xl font-bold text-white/60 hover:text-white hover:bg-white/5 transition-all text-sm"
-                                    >
-                                        Отказ
-                                    </button>
-                                    <button 
-                                        type="submit"
-                                        form="bug-report-form"
-                                        disabled={status === 'submitting'}
-                                        className="flex-[2] py-3.5 px-4 bg-white hover:bg-gray-200 text-black rounded-xl font-bold flex items-center justify-center gap-2 transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed leading-none"
-                                    >
-                                        {status === 'submitting' ? (
-                                            <><Loader2 size={16} className="animate-spin" /> Изпращане...</>
-                                        ) : (
-                                            'Изпрати сигнал'
-                                        )}
-                                    </button>
-                                </div>
+                                    {/* Footer / Buttons */}
+                                    <div className="p-5 sm:p-6 border-t border-white/5 bg-[#0a0a0a] flex gap-3 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] sm:pb-6">
+                                        <button 
+                                            type="button"
+                                            onClick={handleCloseModal}
+                                            className="flex-1 py-3.5 px-4 rounded-xl font-bold text-white/60 hover:text-white hover:bg-white/5 transition-all text-sm"
+                                        >
+                                            Отказ
+                                        </button>
+                                        <button 
+                                            type="submit"
+                                            disabled={status === 'submitting'}
+                                            className="flex-[2] py-3.5 px-4 bg-white hover:bg-gray-200 text-black rounded-xl font-bold flex items-center justify-center gap-2 transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed leading-none"
+                                        >
+                                            {status === 'submitting' ? (
+                                                <><Loader2 size={16} className="animate-spin" /> Изпращане...</>
+                                            ) : (
+                                                'Изпрати сигнал'
+                                            )}
+                                        </button>
+                                    </div>
+                                </form>
                             )}
                         </motion.div>
                     </div>

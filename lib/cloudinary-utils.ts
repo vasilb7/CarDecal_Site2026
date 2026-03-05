@@ -18,6 +18,11 @@ async function generateSignature(params: Record<string, any>, secret: string): P
 }
 
 export async function uploadToCloudinary(file: File, folder: string = 'general'): Promise<string> {
+  if (!cloudinaryConfig.apiKey || !cloudinaryConfig.apiSecret || !cloudinaryConfig.cloudName) {
+    console.error('Missing Cloudinary config:', cloudinaryConfig);
+    throw new Error('Липсва Cloudinary конфигурация (API Key/Secret). Моля, рестартирайте локалния сървър (npm run dev)!');
+  }
+
   const timestamp = Math.round(new Date().getTime() / 1000);
   const params = {
     folder,
