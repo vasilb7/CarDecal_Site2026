@@ -378,9 +378,10 @@ const HomePage: React.FC = () => {
               className="flex flex-col items-center mb-10 sm:mb-12 px-2 w-full"
             >
               <p className="text-white/80 text-sm md:text-xl font-medium tracking-[0.2em] md:tracking-[0.3em] uppercase max-w-2xl mx-auto leading-relaxed drop-shadow-lg text-center font-sans">
-                Произведено от{" "}
+                Висок клас стикери над 1000+ различни дизайни{" "}
                 <span className="text-white font-bold opacity-100">
-                  CarDecal
+                  - Car
+                  <span className="text-red-600 font-bold opacity-100">Decal</span>
                 </span>
               </p>
             </motion.div>
@@ -446,7 +447,7 @@ const HomePage: React.FC = () => {
                 Разгледай Каталога
               </Link>
               <Link
-                to="/book-now"
+                to="/custom-orders"
                 className="group relative flex items-center justify-center w-full md:w-[280px] h-14 bg-black/40 backdrop-blur-md text-white/90 font-black uppercase tracking-[0.2em] text-[12px] md:text-[14px] rounded-lg border border-white/20 shadow-[0_5px_20px_rgba(0,0,0,0.5)] hover:bg-white/10 hover:text-white hover:border-white/40 transition-all duration-300 active:scale-95"
               >
                 Индивидуални Поръчки
@@ -705,7 +706,7 @@ const HomePage: React.FC = () => {
             желаните размери за изработка.
           </p>
           <Link
-            to={`/book-now`}
+            to={`/custom-orders`}
             className="inline-flex items-center gap-2 px-10 sm:px-12 md:px-16 py-4 md:py-5 bg-black text-white font-bold uppercase tracking-widest text-xs md:text-sm shadow-[0_15px_30px_rgba(0,0,0,0.4)] hover:bg-white hover:text-black hover:shadow-[0_20px_40px_rgba(0,0,0,0.2)] hover:scale-105 active:scale-95 transition-all duration-300"
           >
             Изпрати Запитване

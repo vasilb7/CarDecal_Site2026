@@ -150,7 +150,7 @@ function AppContent() {
                   <Route path="/pricing" element={<PageWrapper><PricingPage /></PageWrapper>} />
                   <Route path="/privacy" element={<PageWrapper><PrivacyPage /></PageWrapper>} />
                   <Route path="/terms" element={<PageWrapper><TermsPage /></PageWrapper>} />
-                  <Route path="/book-now" element={<PageWrapper><BookingPage /></PageWrapper>} />
+                  <Route path="/custom-orders" element={<PageWrapper><BookingPage /></PageWrapper>} />
                   <Route path="/cart" element={<PageWrapper><CartPage /></PageWrapper>} />
                   <Route path="/profile" element={isAuthenticated ? <PageWrapper><ProfilePage /></PageWrapper> : <Navigate to="/login" replace />} />
                   <Route path="/account/orders/:orderId" element={isAuthenticated ? <PageWrapper><OrderDetailPage /></PageWrapper> : <Navigate to="/login" replace />} />

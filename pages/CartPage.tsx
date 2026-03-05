@@ -7,6 +7,7 @@ import { useCart } from '../context/CartContext';
 import { DiscountProgress } from '../components/DiscountProgress';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import ErrorStateCard from '../components/ErrorStateCard';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -129,10 +130,17 @@ const CartPage: React.FC = () => {
                     </p>
                     <Link 
                         to="/catalog" 
-                        className="px-8 py-4 bg-gradient-to-r from-[#3d0000] to-[#950101] text-white text-xs font-bold uppercase tracking-[0.2em] hover:from-[#950101] hover:to-[#ff0000] rounded-sm transition-all focus:scale-[0.98] active:scale-[0.98] shadow-lg shadow-red-900/20"
+                        className="px-8 py-4 bg-gradient-to-r from-[#3d0000] to-[#950101] text-white text-xs font-bold uppercase tracking-[0.2em] hover:from-[#950101] hover:to-[#ff0000] rounded-sm transition-all focus:scale-[0.98] active:scale-[0.98] shadow-lg shadow-red-900/20 mb-8"
                     >
                         КЪМ КАТАЛОГА
                     </Link>
+
+                    <button 
+                        onClick={() => window.dispatchEvent(new Event('open-bug-report'))}
+                        className="text-xs uppercase tracking-widest text-[#B0BEC5] hover:text-white underline decoration-[#B0BEC5]/30 hover:decoration-white/50 underline-offset-4 transition-all"
+                    >
+                        Нещо се обърка? Докладвай проблем
+                    </button>
                 </motion.div>
             </div>
         );
@@ -414,6 +422,10 @@ const CartPage: React.FC = () => {
                             </div>
                         </motion.div>
                     </div>
+                </div>
+                
+                <div className="mt-12">
+                   <ErrorStateCard />
                 </div>
             </div>
         </div>

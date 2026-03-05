@@ -10,6 +10,7 @@ import { Search, SlidersHorizontal, X, ChevronDown } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import type { Product } from '../types';
 import { getOptimizedUrl } from '../lib/cloudinary-utils';
+import ErrorStateCard from '../components/ErrorStateCard';
 
 const CatalogPage: React.FC = () => {
     const { t, i18n } = useTranslation();
@@ -609,18 +610,25 @@ const CatalogPage: React.FC = () => {
                         </div>
 
                         {/* Product Grid - Reduced padding for mobile to gain space */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-3 gap-5 md:gap-8 min-h-[500px]">
-                            {paginatedProducts.map((product, index) => (
-                                <motion.div
-                                    key={product.slug}
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ duration: 0.3 }}
-                                >
-                                    <ProductCard product={product} isPriority={index < 6} />
-                                </motion.div>
-                            ))}
-                        </div>
+                        {filteredProducts.length === 0 ? (
+                            <ErrorStateCard 
+                                title="Няма намерени продукти"
+                                description="Опитайте с други филтри или премахнете някои от тях. Ако смятате че става дума за грешка, моля да ни уведомите."
+                            />
+                        ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-3 gap-5 md:gap-8 min-h-[500px]">
+                                {paginatedProducts.map((product, index) => (
+                                    <motion.div
+                                        key={product.slug}
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ duration: 0.3 }}
+                                    >
+                                        <ProductCard product={product} isPriority={index < 6} />
+                                    </motion.div>
+                                ))}
+                            </div>
+                        )}
 
                         {/* Pagination - Add flex-wrap and slightly smaller mobile buttons to prevent horizontal overflow on middle pages */}
                         {totalPages > 1 && (

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { NavLink, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, LogOut, ChevronDown, Shield, X, Mail, Lock, ChevronLeft, ChevronRight } from 'lucide-react';
+import { User, LogOut, ChevronDown, Shield, X, Mail, Lock, ChevronLeft, ChevronRight, Bug } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../hooks/useToast';
 import { useCart } from '../context/CartContext';
@@ -420,6 +420,18 @@ const Header: React.FC = () => {
                                                 )}
                                                 
                                                 <button 
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        setIsProfileMenuOpen(false);
+                                                        window.dispatchEvent(new Event('open-bug-report'));
+                                                    }}
+                                                    className="w-full flex items-center gap-3 px-4 py-3 text-xs uppercase tracking-widest text-[#B0BEC5] hover:bg-white/5 hover:text-white transition-colors text-left border-b border-white/5"
+                                                >
+                                                    <Bug className="w-3.5 h-3.5" />
+                                                    Докладвай проблем
+                                                </button>
+                                                
+                                                <button 
                                                      onClick={async () => { 
                                                          await signOut(); 
                                                          clearCart();
@@ -444,7 +456,7 @@ const Header: React.FC = () => {
                         )}
                         
                         {user && (
-                            <Link to={`/book-now`} className="px-6 py-2.5 bg-gradient-to-r from-[#3d0000] to-[#950101] border border-[#ff0000]/30 text-white text-[11px] font-medium uppercase tracking-[0.25em] hover:from-[#950101] hover:to-[#ff0000] rounded-sm transition-all duration-300 shadow-[0_0_15px_rgba(149,1,1,0.3)] hover:shadow-[0_0_20px_rgba(255,0,0,0.5)] flex items-center gap-2">
+                            <Link to={`/custom-orders`} className="px-6 py-2.5 bg-gradient-to-r from-[#3d0000] to-[#950101] border border-[#ff0000]/30 text-white text-[11px] font-medium uppercase tracking-[0.25em] hover:from-[#950101] hover:to-[#ff0000] rounded-sm transition-all duration-300 shadow-[0_0_15px_rgba(149,1,1,0.3)] hover:shadow-[0_0_20px_rgba(255,0,0,0.5)] flex items-center gap-2">
                                 ИНДИВИДУАЛНИ ПОРЪЧКИ
                             </Link>
                         )}
@@ -574,6 +586,20 @@ const Header: React.FC = () => {
                                             )}
                                             
                                             <button 
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    closeMenu();
+                                                    window.dispatchEvent(new Event('open-bug-report'));
+                                                }}
+                                                className="flex items-center gap-4 text-[#B0BEC5] hover:text-white transition-colors p-3 -ml-3 rounded-xl hover:bg-white/5 w-full text-left min-h-[48px]"
+                                            >
+                                                <div className="w-8 h-8 flex items-center justify-center shrink-0">
+                                                    <Bug className="w-5 h-5 opacity-70" />
+                                                </div>
+                                                <span className="text-base font-normal">Докладвай проблем</span>
+                                            </button>
+                                            
+                                            <button 
                                                  onClick={async () => { 
                                                      await signOut(); 
                                                      clearCart();
@@ -624,7 +650,7 @@ const Header: React.FC = () => {
                             <div className="p-6 pb-8 border-t border-white/5 bg-gradient-to-t from-black to-[#0a0a0a] shrink-0">
                                 {user && (
                                     <Link 
-                                        to={`/book-now`} 
+                                        to={`/custom-orders`} 
                                         onClick={closeMenu} 
                                         className="flex items-center justify-center gap-2 w-full px-4 py-4 md:py-5 bg-gradient-to-r from-[#3d0000] to-[#950101] border border-[#ff0000]/30 text-white text-[13px] font-bold uppercase tracking-[0.2em] rounded-xl hover:from-[#950101] hover:to-[#ff0000] transition-all duration-300 shadow-[0_4px_20px_rgba(255,0,0,0.15)] focus:scale-[0.98] active:scale-[0.98]"
                                     >

@@ -81,7 +81,7 @@ const BookingPage: React.FC = () => {
     useEffect(() => {
         if (!authLoading && !user) {
             showToast("Моля, влезте в профила си, за да направите запитване за индивидуален проект.", "info");
-            navigate('/login', { state: { from: '/book-now' } });
+            navigate('/login', { state: { from: '/custom-orders' } });
         }
     }, [user, authLoading, navigate]);
     
@@ -358,7 +358,7 @@ const BookingPage: React.FC = () => {
                                 {/* Special Offer Banner */}
                                 <div className="relative bg-gradient-to-b from-[#3a0a0a] to-[#150202] rounded-md border border-[#551313] p-4 mb-8 flex items-center gap-4 shadow-[inset_0_1px_0_rgba(255,100,100,0.1),0_2px_10px_rgba(0,0,0,0.5)] overflow-hidden">
                                     <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white/5 to-transparent pointer-events-none"></div>
-                                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-full border border border-[#7a1818] bg-gradient-to-b from-[#2a0505] to-[#110000] flex items-center justify-center shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)] shrink-0 relative">
+                                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-full border border-[#7a1818] bg-gradient-to-b from-[#2a0505] to-[#110000] flex items-center justify-center shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)] shrink-0 relative">
                                         <div className="absolute inset-1 rounded-full border border-red-500/20 border-dashed animate-[spin_10s_linear_infinite]"></div>
                                         <AlertCircle className="text-[#cc2222] w-5 h-5 md:w-6 md:h-6 relative z-10 drop-shadow-[0_0_5px_rgba(200,0,0,0.5)]" />
                                     </div>
@@ -472,11 +472,12 @@ const BookingPage: React.FC = () => {
                                                      </div>
                                                  ) : (
                                                       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 w-full h-full relative z-10 p-2">
-                                                         <AnimatePresence>
+                                                         <AnimatePresence mode="popLayout">
                                                              {photos.map((file, idx) => (
                                                                  <motion.div 
+                                                                     layout
                                                                      initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}
-                                                                     key={file.name + idx} 
+                                                                     key={`${file.name}-${file.lastModified}-${file.size}`} 
                                                                      className="relative aspect-square rounded-md overflow-hidden bg-black border border-[#333] group shadow-[0_5px_15px_rgba(0,0,0,0.8)]"
                                                                  >
                                                                      <img 
@@ -492,7 +493,7 @@ const BookingPage: React.FC = () => {
                                                                  </motion.div>
                                                              ))}
                                                              {photos.length < 5 && (
-                                                                 <motion.button type="button" onClick={() => fileInputRef.current?.click()} className="aspect-square rounded-md border border-[#333] border-dashed bg-[#111] flex flex-col items-center justify-center transition-colors hover:bg-[#1a1a1a] hover:border-[#555] shadow-[inset_0_2px_10px_rgba(0,0,0,0.8)]">
+                                                                 <motion.button layout initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }} key="add-button" type="button" onClick={() => fileInputRef.current?.click()} className="aspect-square rounded-md border border-[#333] border-dashed bg-[#111] flex flex-col items-center justify-center transition-colors hover:bg-[#1a1a1a] hover:border-[#555] shadow-[inset_0_2px_10px_rgba(0,0,0,0.8)]">
                                                                      <Plus className="text-[#555] w-5 h-5 mb-1" />
                                                                  </motion.button>
                                                              )}
@@ -664,7 +665,7 @@ const MeasurementInput = ({ name, label, unit, value, icon, onChange, min, onKey
                 </div>
 
                 {/* Counter Input area */}
-                <div className="w-[4.5rem] h-7 bg-[#0a0a0a] border border-black rounded-sm flex items-center justify-center shadow-[inset_0_2px_6px_rgba(0,0,0,1)] relative shadow-[0_1px_0_rgba(255,255,255,0.05)]">
+                <div className="w-[4.5rem] h-7 bg-[#0a0a0a] border border-black rounded-sm flex items-center justify-center shadow-[inset_0_2px_6px_rgba(0,0,0,1),0_1px_0_rgba(255,255,255,0.05)] relative">
                     <input 
                         type="number" name={name} required min={min} placeholder="0" value={value} onChange={onChange}
                         onKeyDown={onKeyDown}

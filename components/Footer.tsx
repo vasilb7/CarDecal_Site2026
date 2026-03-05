@@ -75,7 +75,7 @@ const Footer: React.FC = () => {
     topBgClass = "bg-[#0F0F0F]";
   } else if (path === '/profile' || path === '/cart') {
     topBgClass = "bg-[#0a0a0a]";
-  } else if (path === '/book-now') {
+  } else if (path === '/custom-orders') {
     topBgClass = "bg-[#080808]";
   }
 
@@ -172,7 +172,7 @@ const Footer: React.FC = () => {
               <div className="flex flex-col gap-3 sm:gap-[0.7vw] lg:gap-[0.8vw] items-start">
                 <RollingLink to="/catalog"  className="text-[0.95rem] sm:text-[2.8vw] lg:text-[2vw] xl:text-[1.7vw] font-black uppercase text-white leading-none inline-block">КАТАЛОГ</RollingLink>
                 <RollingLink to="/about"    className="text-[0.95rem] sm:text-[2.8vw] lg:text-[2vw] xl:text-[1.7vw] font-black uppercase text-white leading-none inline-block">ЗА НАС</RollingLink>
-                <RollingLink to="/book-now" className="text-[0.95rem] sm:text-[2.8vw] lg:text-[2vw] xl:text-[1.7vw] font-black uppercase text-white leading-none inline-block">ПОРЪЧКИ</RollingLink>
+                <RollingLink to="/custom-orders" className="text-[0.95rem] sm:text-[2.8vw] lg:text-[2vw] xl:text-[1.7vw] font-black uppercase text-white leading-none inline-block">ПОРЪЧКИ</RollingLink>
                 <RollingLink to="/contact"  className="text-[0.95rem] sm:text-[2.8vw] lg:text-[2vw] xl:text-[1.7vw] font-black uppercase text-white leading-none inline-block">КОНТАКТИ</RollingLink>
               </div>
             </div>
@@ -244,6 +244,16 @@ const Footer: React.FC = () => {
                 Общи условия
               </Link>
             </div>
+
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                window.dispatchEvent(new Event('open-bug-report'));
+              }}
+              className="text-[9px] sm:text-[9px] lg:text-[11px] font-bold uppercase tracking-[0.1em] text-black/80 hover:text-black transition-colors mt-1"
+            >
+              Докладвай проблем
+            </button>
           </div>
 
         </div>

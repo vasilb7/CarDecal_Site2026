@@ -13,10 +13,11 @@ import {
     Eye, EyeOff, Tag, Image, ArrowLeft, Loader2, RefreshCw,
     UserCheck, UserX, Crown, Upload, Video, Film, AlertCircle, Mail,
     Megaphone, Palette, Type, ShoppingBag, Receipt, Printer, Download,
-    FileText, BoxSelect, LayoutGrid, ClipboardCheck, Boxes, FileJson, Clock
+    FileText, BoxSelect, LayoutGrid, ClipboardCheck, Boxes, FileJson, Clock, Bug
 } from 'lucide-react';
 import { useToast } from '../components/Toast/ToastProvider';
 import { uploadToCloudinary } from '../lib/cloudinary-utils';
+import { BugsTab } from '../components/Admin/BugsTab';
 
 // ─── Custom Confirm Dialog ──────────────────────────────────────────────────
 interface ConfirmDialogProps {
@@ -88,7 +89,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     );
 };
 
-type AdminTab = 'dashboard' | 'homepage' | 'messages' | 'maintenance' | 'products' | 'users' | 'archived_users' | 'custom_orders' | 'orders';
+type AdminTab = 'dashboard' | 'homepage' | 'messages' | 'maintenance' | 'products' | 'users' | 'archived_users' | 'custom_orders' | 'orders' | 'bugs';
 
 interface DBProduct {
     id: string;
@@ -5310,16 +5311,24 @@ const AdminPage: React.FC = () => {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
     const [scheduledCount, setScheduledCount] = useState(0);
+    const [newBugsCount, setNewBugsCount] = useState(0);
 
     useEffect(() => {
-        const fetchScheduledCount = async () => {
-            const { count } = await supabase
-                .from('profiles')
-                .select('id', { count: 'exact', head: true })
-                .not('deletion_scheduled_at', 'is', null);
-            setScheduledCount(count || 0);
+        const fetchCounts = async () => {
+            const [scheduledRes, bugsRes] = await Promise.all([
+                supabase
+                    .from('profiles')
+                    .select('id', { count: 'exact', head: true })
+                    .not('deletion_scheduled_at', 'is', null),
+                supabase
+                    .from('bug_reports')
+                    .select('id', { count: 'exact', head: true })
+                    .eq('status', 'new')
+            ]);
+            setScheduledCount(scheduledRes.count || 0);
+            setNewBugsCount(bugsRes.count || 0);
         };
-        fetchScheduledCount();
+        fetchCounts();
     }, [activeTab]);
 
     useEffect(() => {
@@ -5347,6 +5356,7 @@ const AdminPage: React.FC = () => {
         { id: 'products' as AdminTab, label: 'Стикери', icon: Package },
         { id: 'orders' as AdminTab, label: 'Поръчки', icon: CheckCircle },
         { id: 'custom_orders' as AdminTab, label: 'Индивидуални', icon: Edit3 },
+        { id: 'bugs' as AdminTab, label: 'Доклади', icon: Bug, badge: newBugsCount },
         ...(isAdmin ? [
             { id: 'users' as AdminTab, label: 'Потребители', icon: Users },
             { id: 'archived_users' as AdminTab, label: 'Архив Изтрити', icon: Trash2, badge: scheduledCount }
@@ -5422,6 +5432,7 @@ const AdminPage: React.FC = () => {
                     {activeTab === 'custom_orders' && <CustomOrdersTab />}
                     {activeTab === 'users' && <UsersTab />}
                     {activeTab === 'archived_users' && <ArchivedUsersTab />}
+                    {activeTab === 'bugs' && <BugsTab />}
                 </main>
             </div>
         </div>
