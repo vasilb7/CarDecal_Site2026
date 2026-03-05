@@ -37,10 +37,10 @@ const Toast: React.FC<ToastProps> = ({ id, message, type, duration = 4000, onClo
       layout
       drag="y"
       dragConstraints={{ top: 0, bottom: 0 }}
-      dragElastic={0.7}
+      dragElastic={{ top: 0, bottom: 1 }}
       onDragEnd={(_, info) => {
-        // Dismiss on swipe up or down (threshold 50px)
-        if (Math.abs(info.offset.y) > 50) {
+        // Dismiss on swipe down (threshold 50px)
+        if (info.offset.y > 50) {
           onClose(id);
         }
       }}
