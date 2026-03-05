@@ -96,13 +96,26 @@ const ReportBugModal: React.FC = () => {
 
             const currentUrl = window.location.pathname;
             
+            // Get user agent and IP
+            const userAgent = navigator.userAgent;
+            let userIP = 'Unknown';
+            try {
+                const ipRes = await fetch('https://api.ipify.org?format=json');
+                const ipData = await ipRes.json();
+                userIP = ipData.ip;
+            } catch (e) {
+                console.error('Failed to fetch IP:', e);
+            }
+            
             const { error } = await supabase.from('bug_reports').insert({
                 category: formData.category,
                 description: formData.description,
                 email: formData.email,
                 images: uploadedImages,
                 url: currentUrl,
-                user_id: user?.id || null
+                user_id: user?.id || null,
+                device_info: userAgent,
+                ip_address: userIP
             });
 
             if (error) throw error;
