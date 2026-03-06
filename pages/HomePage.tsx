@@ -361,8 +361,8 @@ const HomePage: React.FC = () => {
             {/* Main Title - Single Line */}
             <motion.h1
               variants={fadeInUp}
-              className="w-full text-center font-black uppercase tracking-[-0.03em] mb-4 drop-shadow-[0_20px_50px_rgba(0,0,0,0.9)] flex flex-row items-center justify-center leading-none"
-              style={{ fontSize: "clamp(42px, 13vw, 140px)" }}
+              className="w-full text-center font-black uppercase tracking-[-0.05em] mb-6 drop-shadow-[0_20px_50px_rgba(0,0,0,0.9)] flex flex-wrap items-center justify-center leading-[1] gap-x-2 py-2"
+              style={{ fontSize: "clamp(38px, 14vw, 140px)" }}
             >
               <span className="text-white drop-shadow-[0_0_30px_rgba(255,255,255,0.1)]">
                 CAR
@@ -375,11 +375,12 @@ const HomePage: React.FC = () => {
             {/* Subtitles */}
             <motion.div
               variants={fadeInUp}
-              className="flex flex-col items-center mb-10 sm:mb-12 px-2 w-full"
+              className="flex flex-col items-center mb-10 sm:mb-12 px-4 w-full"
             >
-              <p className="text-white/80 text-sm md:text-xl font-medium tracking-[0.2em] md:tracking-[0.3em] uppercase max-w-2xl mx-auto leading-relaxed drop-shadow-lg text-center font-sans">
+              <p className="text-white/80 text-[11px] sm:text-base md:text-xl font-medium tracking-[0.1em] sm:tracking-[0.2em] md:tracking-[0.3em] uppercase max-w-2xl mx-auto leading-relaxed drop-shadow-lg text-center font-sans">
                 Висок клас стикери над 1000+ различни дизайни{" "}
-                <span className="text-white font-bold opacity-100">
+                <br className="sm:hidden" />
+                <span className="inline-block text-white font-bold opacity-100 mt-1 sm:mt-0">
                   - Car
                   <span className="text-red-600 font-bold opacity-100">Decal</span>
                 </span>
@@ -389,7 +390,7 @@ const HomePage: React.FC = () => {
             {/* Minimal Quality Icons */}
             <motion.div
               variants={fadeInUp}
-              className="flex items-center justify-center gap-x-5 md:gap-x-8 mb-8 md:mb-12 opacity-80"
+              className="flex flex-wrap items-center justify-center gap-x-4 gap-y-4 md:gap-x-8 mb-8 md:mb-12 opacity-80 px-4"
             >
               <div className="flex items-center gap-2 md:gap-2.5">
                 <svg

@@ -185,12 +185,19 @@ const ProductQuickViewModal: React.FC = () => {
                 className="relative w-full h-[100svh] lg:w-[90vw] xl:w-[1200px] max-w-full bg-[#050505] shadow-[-20px_0_100px_rgba(0,0,0,0.9)] lg:border-l border-white/5 flex flex-col lg:flex-row overflow-hidden"
             >
                 {/* Close Button Top Left */}
-                <button
-                    onClick={handleClose}
-                    className="absolute top-4 left-4 z-50 p-3 bg-black/60 hover:bg-white/10 border border-white/10 rounded-full text-white/50 hover:text-white transition-all min-w-[48px] min-h-[48px] flex items-center justify-center group"
-                >
-                    <X size={24} className="group-hover:scale-110 transition-transform" />
-                </button>
+                <AnimatePresence>
+                    {!zoomActive && (
+                        <motion.button
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.8 }}
+                            onClick={handleClose}
+                            className="absolute top-4 left-4 z-50 p-3 bg-black/60 hover:bg-white/10 border border-white/10 rounded-full text-white/50 hover:text-white transition-all min-w-[48px] min-h-[48px] flex items-center justify-center group"
+                        >
+                            <X size={24} className="group-hover:scale-110 transition-transform" />
+                        </motion.button>
+                    )}
+                </AnimatePresence>
 
                 {/* Container that handles split layout and internal scrolling */}
                 <div className="w-full h-full flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden relative no-scrollbar">
@@ -233,16 +240,23 @@ const ProductQuickViewModal: React.FC = () => {
                                         {/* Action Buttons Container */}
                                         <div className="absolute bottom-4 right-4 md:bottom-6 md:right-6 flex items-center gap-3 z-20">
                                             {/* Share Button */}
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setIsShareOpen(true);
-                                                }}
-                                                className="p-3 md:p-4 rounded-full border text-white/80 hover:text-white transition-all shadow-[0_4px_20px_rgba(0,0,0,0.5)] active:scale-90 flex items-center justify-center bg-black/80 border-white/10 hover:bg-black/90 hover:border-white/20"
-                                                title="Сподели"
-                                            >
-                                                <Share2 size={22} className="md:w-6 md:h-6" />
-                                            </button>
+                                            <AnimatePresence>
+                                                {!zoomActive && (
+                                                    <motion.button
+                                                        initial={{ opacity: 0, scale: 0.8, x: 20 }}
+                                                        animate={{ opacity: 1, scale: 1, x: 0 }}
+                                                        exit={{ opacity: 0, scale: 0.8, x: 20 }}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setIsShareOpen(true);
+                                                        }}
+                                                        className="p-3 md:p-4 rounded-full border text-white/80 hover:text-white transition-all shadow-[0_4px_20px_rgba(0,0,0,0.5)] active:scale-90 flex items-center justify-center bg-black/80 border-white/10 hover:bg-black/90 hover:border-white/20"
+                                                        title="Сподели"
+                                                    >
+                                                        <Share2 size={22} className="md:w-6 md:h-6" />
+                                                    </motion.button>
+                                                )}
+                                            </AnimatePresence>
 
                                             {/* Magnifier Zoom Button */}
                                             <button 
