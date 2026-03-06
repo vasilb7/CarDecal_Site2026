@@ -6,6 +6,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { hasProfanity } from '../lib/profanity';
 import { useToast } from '../hooks/useToast';
 import { validatePassword, translateAuthError } from '../lib/passwordUtils';
+import { isValidBulgarianPhone } from '../lib/utils';
 
 
 const RegisterPage: React.FC = () => {
@@ -33,7 +34,7 @@ const RegisterPage: React.FC = () => {
         return;
     }
 
-    if (!phone || phone.length < 6) {
+    if (!isValidBulgarianPhone(phone)) {
         showToast(t('toast.register_phone_required', 'Моля, въведете валиден телефонен номер!'), "warning");
         setLoading(false);
         return;

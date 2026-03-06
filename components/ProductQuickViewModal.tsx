@@ -7,6 +7,7 @@ import { useToast } from '../hooks/useToast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getOptimizedUrl } from '../lib/cloudinary-utils';
 import OptimizedImage from './ui/OptimizedImage';
+import ShareProductModal from './ShareProductModal';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { 
     ShoppingBag, 
@@ -18,7 +19,8 @@ import {
     ArrowRight,
     Loader2,
     ZoomIn,
-    ZoomOut
+    ZoomOut,
+    Share2
 } from 'lucide-react';
 
 const Lightbox: React.FC<{ src: string; onClose: () => void }> = ({ src, onClose }) => (
@@ -75,6 +77,7 @@ const ProductQuickViewModal: React.FC = () => {
     const [imageLoaded, setImageLoaded] = useState(false);
     const [isVisible, setIsVisible] = useState(true);
     const [zoomActive, setZoomActive] = useState(false);
+    const [isShareOpen, setIsShareOpen] = useState(false);
 
     useEffect(() => {
         setZoomActive(false);
@@ -227,21 +230,37 @@ const ProductQuickViewModal: React.FC = () => {
                                             />
                                         </TransformComponent>
                                         
-                                        {/* Magnifier Zoom Button - Always Visible */}
-                                        <button 
-                                            onClick={() => {
-                                                if (zoomActive) {
-                                                    resetTransform(300);
-                                                    setZoomActive(false);
-                                                } else {
-                                                    setZoomActive(true);
-                                                }
-                                            }}
-                                            className={`absolute bottom-4 right-4 md:bottom-6 md:right-6 p-3 md:p-4 rounded-full border text-white/80 hover:text-white transition-all z-20 shadow-[0_4px_20px_rgba(0,0,0,0.5)] active:scale-90 flex items-center justify-center ${zoomActive ? 'bg-red-500/80 border-red-500/50' : 'bg-black/80 border-white/10'}`}
-                                            title={zoomActive ? "Излез от приближаване (Lock Zoom)" : "Отключи приближаване (Unlock Zoom)"}
-                                        >
-                                            {zoomActive ? <ZoomOut size={22} className="md:w-6 md:h-6" /> : <ZoomIn size={22} className="md:w-6 md:h-6" />}
-                                        </button>
+                                        {/* Action Buttons Container */}
+                                        <div className="absolute bottom-4 right-4 md:bottom-6 md:right-6 flex items-center gap-3 z-20">
+                                            {/* Share Button */}
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setIsShareOpen(true);
+                                                }}
+                                                className="p-3 md:p-4 rounded-full border text-white/80 hover:text-white transition-all shadow-[0_4px_20px_rgba(0,0,0,0.5)] active:scale-90 flex items-center justify-center bg-black/80 border-white/10 hover:bg-black/90 hover:border-white/20"
+                                                title="Сподели"
+                                            >
+                                                <Share2 size={22} className="md:w-6 md:h-6" />
+                                            </button>
+
+                                            {/* Magnifier Zoom Button */}
+                                            <button 
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    if (zoomActive) {
+                                                        resetTransform(300);
+                                                        setZoomActive(false);
+                                                    } else {
+                                                        setZoomActive(true);
+                                                    }
+                                                }}
+                                                className={`p-3 md:p-4 rounded-full border text-white/80 hover:text-white transition-all shadow-[0_4px_20px_rgba(0,0,0,0.5)] active:scale-90 flex items-center justify-center ${zoomActive ? 'bg-red-500/80 border-red-500/50' : 'bg-black/80 border-white/10 hover:bg-black/90 hover:border-white/20'}`}
+                                                title={zoomActive ? "Излез от приближаване (Lock Zoom)" : "Отключи приближаване (Unlock Zoom)"}
+                                            >
+                                                {zoomActive ? <ZoomOut size={22} className="md:w-6 md:h-6" /> : <ZoomIn size={22} className="md:w-6 md:h-6" />}
+                                            </button>
+                                        </div>
                                     </>
                                 )}}
                             </TransformWrapper>
@@ -293,7 +312,7 @@ const ProductQuickViewModal: React.FC = () => {
 
                     {/* RIGHT COLUMN: Details & Actions */}
                     <div className="w-full lg:w-[45%] xl:w-[40%] shrink-0 flex flex-col lg:h-full relative bg-[#080808] z-20 shadow-[-10px_0_30px_rgba(0,0,0,0.5)]">
-                        <div className="flex-1 p-6 md:p-10 lg:p-12 xl:p-16 lg:overflow-y-auto no-scrollbar pb-[140px] lg:pb-10 space-y-10">
+                        <div className="flex-1 p-6 md:p-10 lg:p-12 xl:p-16 lg:overflow-y-auto no-scrollbar pb-[240px] md:pb-[240px] lg:pb-10 space-y-10">
                             
                             {/* Header Section */}
                             <div>
@@ -423,8 +442,9 @@ const ProductQuickViewModal: React.FC = () => {
                                    <span className="text-xs font-mono font-bold text-white/40">лв</span>
                                </div>
                            </div>
-                           {/* Small quantity for mobile header */}
-                           <div className="flex bg-[#0f0f0f] rounded-xl border border-white/10 overflow-hidden h-10 w-[110px]">
+                            {/* Small quantity for mobile header */}
+                           <div className="flex items-center gap-3">
+                               <div className="flex bg-[#0f0f0f] rounded-xl border border-white/10 overflow-hidden h-10 w-[110px]">
                                 <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="flex-1 flex items-center justify-center text-white/60"><Minus size={16} /></button>
                                 <input
                                     type="text"
@@ -445,6 +465,7 @@ const ProductQuickViewModal: React.FC = () => {
                                 />
                                 <button onClick={() => setQuantity(q => q + 1)} className="flex-1 flex items-center justify-center text-white/60"><Plus size={16} /></button>
                             </div>
+                           </div>
                         </div>
                         <button
                             onClick={handleAddToCart}
@@ -461,6 +482,14 @@ const ProductQuickViewModal: React.FC = () => {
             <AnimatePresence>
                 {lightboxSrc && (
                     <Lightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />
+                )}
+                {isShareOpen && (
+                    <ShareProductModal
+                        isOpen={isShareOpen}
+                        onClose={() => setIsShareOpen(false)}
+                        productTitle={product.nameBg || product.name}
+                        productUrl={`${window.location.origin}/catalog/${product.slug}`}
+                    />
                 )}
             </AnimatePresence>
 

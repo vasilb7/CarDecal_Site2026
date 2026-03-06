@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase';
 import { useTranslation } from 'react-i18next';
 import { Loader2, User, Phone } from 'lucide-react';
 import { useToast } from '../Toast/ToastProvider';
+import { isValidBulgarianPhone } from '../../lib/utils';
 
 const FloatingInput = ({ 
     label, 
@@ -74,11 +75,7 @@ export const CompleteRegistrationModal = () => {
         if (phone) sessionStorage.setItem('registration_draft_phone', phone);
     }, [name, phone]);
 
-    const isValidBulgarianPhone = (number: string) => {
-        const cleanNumber = number.replace(/[\s-]/g, '');
-        const currentRegex = /^(?:\+359|00359|0)(?:8[789]|9[89])\d{7}$/;
-        return currentRegex.test(cleanNumber);
-    };
+    // Използваме isValidBulgarianPhone от utils
 
     const normalizePhone = (num: string) => {
         let clean = num.replace(/[\s-]/g, '');

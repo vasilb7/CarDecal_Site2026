@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { useToast } from '../components/Toast/ToastProvider';
 import { AvatarCropModal } from '../components/AvatarCropModal';
 import { validatePassword, translateAuthError } from '../lib/passwordUtils';
+import { isValidBulgarianPhone } from '../lib/utils';
 import PasswordStrengthMeter from '../components/ui/PasswordStrengthMeter';
 import {
     User, Camera, LogOut, Settings, ShoppingBag,
@@ -317,11 +318,7 @@ const SettingsTab: React.FC<{
         }
     };
 
-    const isValidBulgarianPhone = (number: string) => {
-        const cleanNumber = number.replace(/[\s-]/g, '');
-        const currentRegex = /^(?:\+359|00359|0)(?:8[789]|9[89])\d{7}$/;
-        return currentRegex.test(cleanNumber);
-    };
+
 
     const normalizePhone = (num: string) => {
         let clean = num.replace(/[\s-]/g, '');

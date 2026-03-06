@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { AlertCircle, Plus, X, Mail, Phone, User as UserIcon, Lock, Loader2 } from 'lucide-react';
 import { uploadToCloudinary } from '../lib/cloudinary-utils';
+import { isValidBulgarianPhone } from '../lib/utils';
 
 const DB_NAME = 'CarDecalBookingDB';
 const STORE_NAME = 'booking_photos';
@@ -230,6 +231,12 @@ const BookingPage: React.FC = () => {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        
+        if (!isValidBulgarianPhone(formData.phone)) {
+            showToast("Невалиден телефон! Въведете коректен български мобилен номер.", "error");
+            return;
+        }
+        
         setShowSubmitConfirm(true);
     };
 

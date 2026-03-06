@@ -20,8 +20,10 @@ import {
     RotateCcw,
     X,
     ChevronRight,
-    Search
+    Search,
+    Share2
 } from 'lucide-react';
+import ShareProductModal from '../components/ShareProductModal';
 
 /* ─── Full-screen zoom lightbox ─── */
 const Lightbox: React.FC<{ src: string; onClose: () => void }> = ({ src, onClose }) => (
@@ -60,6 +62,7 @@ const ProductDetailsPage: React.FC = () => {
 
     const [activeIdx, setActiveIdx] = useState(0);
     const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+    const [isShareOpen, setIsShareOpen] = useState(false);
     const [quantity, setQuantity] = useState(1);
     const thumbsRef = useRef<HTMLDivElement>(null);
     const { addToCart } = useCart();
@@ -134,7 +137,7 @@ const ProductDetailsPage: React.FC = () => {
             </div>
 
             {/* ── Main Content ── */}
-            <div className="container mx-auto max-w-7xl px-6 pt-8 pb-32 md:pb-20">
+            <div className="container mx-auto max-w-7xl px-6 pt-8 pb-[240px] md:pb-20">
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20">
 
                     {/* ═══ LEFT — Gallery Zone (7/12 cols) ═══ */}
@@ -167,8 +170,21 @@ const ProductDetailsPage: React.FC = () => {
                                 )}
 
                                 {/* Interactive Overlay */}
-                                <div className="absolute bottom-6 right-6 p-4 bg-black/40 backdrop-blur-md rounded-full border border-white/10 text-white/60 group-hover/main:text-white transition-colors opacity-0 group-hover/main:opacity-100 duration-300">
-                                    <Maximize2 size={20} />
+                                <div className="absolute bottom-4 right-4 md:bottom-6 md:right-6 flex items-center gap-2 opacity-0 group-hover/main:opacity-100 transition-opacity duration-300">
+                                    <button 
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setIsShareOpen(true);
+                                        }}
+                                        className="p-3 md:p-4 bg-black/40 backdrop-blur-md rounded-full border border-white/10 text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+                                        title="Сподели"
+                                    >
+                                        <Share2 size={20} />
+                                    </button>
+                                    <div className="p-3 md:p-4 bg-black/40 backdrop-blur-md rounded-full border border-white/10 text-white/60 hover:text-white hover:bg-white/10 transition-colors">
+                                        <Maximize2 size={20} />
+                                    </div>
                                 </div>
                             </motion.div>
 
@@ -344,6 +360,7 @@ const ProductDetailsPage: React.FC = () => {
                             <span className="text-sm font-mono font-bold text-red-600">€</span>
                         </div>
                     </div>
+                    
                     <button
                         onClick={() => {
                             const itemName = product.nameBg || product.name;
@@ -366,11 +383,11 @@ const ProductDetailsPage: React.FC = () => {
                         {t('cart.add_to_cart', 'Добави')}
                     </button>
                     {images.length > 1 && (
-                        <div className="flex flex-col items-center">
+                        <div className="flex flex-col items-center ml-auto">
                             <span className="text-[9px] uppercase tracking-widest text-zinc-600 font-bold mb-1">{t('catalog.qty', 'БРОЙ')}</span>
                             <div className="flex h-10 bg-white/5 rounded-xl border border-white/10 overflow-hidden">
-                                <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="w-8 h-full flex items-center justify-center text-zinc-400"><Minus size={12}/></button>
-                                <input
+                                    <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="w-8 h-full flex items-center justify-center text-zinc-400"><Minus size={12}/></button>
+                                    <input
                                     type="text"
                                     inputMode="numeric"
                                     pattern="[0-9]*"
@@ -389,7 +406,7 @@ const ProductDetailsPage: React.FC = () => {
                                     onBlur={() => {
                                         if (quantity < 1) setQuantity(1);
                                     }}
-                                    className="w-8 h-full bg-transparent text-center font-mono font-bold text-xs focus:outline-none"
+                                    className="w-8 h-full bg-transparent text-center font-mono font-bold text-xs focus:outline-none flex-1 min-w-[32px]"
                                 />
                                 <button onClick={() => setQuantity(q => q + 1)} className="w-8 h-full flex items-center justify-center text-zinc-400"><Plus size={12}/></button>
                             </div>
@@ -402,6 +419,14 @@ const ProductDetailsPage: React.FC = () => {
             <AnimatePresence>
                 {lightboxSrc && (
                     <Lightbox key="lb" src={lightboxSrc} onClose={() => setLightboxSrc(null)} />
+                )}
+                {isShareOpen && (
+                    <ShareProductModal
+                        isOpen={isShareOpen}
+                        onClose={() => setIsShareOpen(false)}
+                        productTitle={product?.nameBg || product?.name || ''}
+                        productUrl={`${window.location.origin}/catalog/${product?.slug}`}
+                    />
                 )}
             </AnimatePresence>
         </div>

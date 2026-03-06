@@ -348,6 +348,17 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
                             >
                                 {t('auth.sign_in_link', 'Влезте тук')}
                             </Link>
+
+                            <button
+                                type="button"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    window.dispatchEvent(new Event('open-bug-report'));
+                                }}
+                                className="text-[9px] text-white/30 hover:text-white uppercase tracking-widest mt-4 transition-colors flex items-center gap-1"
+                            >
+                                Проблем при регистрация?
+                            </button>
                         </div>
                     </div>
                 </form>

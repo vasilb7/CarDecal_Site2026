@@ -12,6 +12,7 @@ import { CartProvider } from './context/CartContext';
 import { ProductsProvider } from './context/ProductsContext';
 import { Loader2 } from 'lucide-react';
 import { CompleteRegistrationModal } from './components/ui/complete-registration';
+import ReportBugModal from './components/ReportBugModal';
 import { useToast } from './hooks/useToast';
 import { useTranslation } from 'react-i18next';
 
@@ -172,6 +173,9 @@ function AppContent() {
           </Routes>
         </React.Suspense>
       )}
+
+      {/* Global Modals */}
+      <ReportBugModal />
     </>
   );
 }
