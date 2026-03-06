@@ -89,7 +89,7 @@ export const StealthTab: React.FC = () => {
 
                     <div className="space-y-4">
                         <div className="flex items-center justify-between px-1">
-                            <label className="text-[10px] uppercase tracking-[0.3em] font-black text-white/30">Сложен секретен код</ts-ignore></label>
+                            <label className="text-[10px] uppercase tracking-[0.3em] font-black text-white/30">Сложен секретен код</label>
                             <Lock className="w-3 h-3 text-red-600/50" />
                         </div>
                         <div className="bg-black/40 border border-white/5 p-6 rounded-3xl flex items-center justify-between gap-4 group/code hover:border-white/20 transition-all">
@@ -158,7 +158,7 @@ export const StealthTab: React.FC = () => {
                     <p className="text-[10px] text-zinc-500 uppercase tracking-widest mb-3 font-black">Сигурност на ключа</p>
                     <div className="flex items-center gap-3">
                         <div className="flex gap-1">
-                            {[1,2,3,4,5].map(i => <div key={i} className="w-1.5 h-1.5 bg-red-600 rounded-full" />)}
+                            {[1, 2, 3, 4, 5].map(i => <div key={i} className="w-1.5 h-1.5 bg-red-600 rounded-full" />)}
                         </div>
                         <p className="text-white/60 text-xs font-black uppercase tracking-widest ml-2">High Encryption</p>
                     </div>
