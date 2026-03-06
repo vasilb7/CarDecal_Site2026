@@ -138,6 +138,12 @@ const Header: React.FC = () => {
 
             if (diff <= 0) {
                 setTimeLeftToStart(null);
+                // Force a reload once when the timer hits zero to securely transition into maintenance context
+                const reloadKey = `maint_reloaded_${autoStart}`;
+                if (!sessionStorage.getItem(reloadKey)) {
+                    sessionStorage.setItem(reloadKey, 'true');
+                    setTimeout(() => window.location.reload(), 500);
+                }
                 return true;
             }
 
