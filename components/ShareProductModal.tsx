@@ -427,9 +427,9 @@ const ShareProductModal: React.FC<ShareProductModalProps> = ({
             <motion.div
               drag="y"
               dragConstraints={{ top: 0, bottom: 0 }}
-              dragElastic={{ top: 0, bottom: 0.2 }}
+              dragElastic={0.7}
               onDragEnd={(_, info) => {
-                if (info.offset.y > 50 || info.velocity.y > 300) {
+                if (info.offset.y > 100 || info.velocity.y > 500) {
                   onClose();
                 }
               }}
@@ -438,10 +438,9 @@ const ShareProductModal: React.FC<ShareProductModalProps> = ({
               exit={{ y: "100%" }}
               transition={{ 
                 type: "spring", 
-                damping: 32, 
-                stiffness: 280, 
-                mass: 1,
-                velocity: 2
+                damping: 40, 
+                stiffness: 350, 
+                mass: 1
               }}
               className="bg-[#0A0A0A] w-full max-h-[85vh] rounded-t-[40px] border-t border-white/10 shadow-[0_-20px_50px_rgba(0,0,0,0.8)] pointer-events-auto flex flex-col overflow-hidden pb-[env(safe-area-inset-bottom)] touch-none"
               onClick={(e) => e.stopPropagation()}

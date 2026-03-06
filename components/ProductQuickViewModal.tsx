@@ -361,7 +361,7 @@ const ProductQuickViewModal: React.FC = () => {
                                 <div className="text-sm md:text-base text-white/60 leading-relaxed font-medium space-y-4">
                                     <p>• Защита: Пълна водоустойчивост и вграден UV филтър срещу избледняване.</p>
                                     <p>• Издръжливост: Устойчиви на автомивка, високи температури и сняг.</p>
-                                    <p>• Качество: Екологичен печат с висока резолюция и наситени, живи цветове.</p>
+                                    <p>• Качество: Професионален печат с висока резолюция и наситени, живи цветове.</p>
                                     <p>• Монтаж: Силно прилепващо лепило, което не оставя следи при премахване.</p>
                                 </div>
                             </div>
@@ -483,14 +483,12 @@ const ProductQuickViewModal: React.FC = () => {
                 {lightboxSrc && (
                     <Lightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />
                 )}
-                {isShareOpen && (
-                    <ShareProductModal
-                        isOpen={isShareOpen}
-                        onClose={() => setIsShareOpen(false)}
-                        productTitle={product.nameBg || product.name}
-                        productUrl={`${window.location.origin}/catalog/${product.slug}`}
-                    />
-                )}
+                <ShareProductModal
+                    isOpen={isShareOpen}
+                    onClose={() => setIsShareOpen(false)}
+                    productTitle={product.nameBg || product.name}
+                    productUrl={`${window.location.origin}/catalog/${product.slug}`}
+                />
             </AnimatePresence>
 
             {/* Close outer dialog div */}
