@@ -220,17 +220,11 @@ const CatalogPage: React.FC = () => {
     };
 
 
-    // Disable browser scroll restoration while on this page so our scroll-to-top works reliably on Back/Forward
+    // Allow browser scroll restoration so search position is remembered
     useEffect(() => {
-        const originalScrollBehavior = 'scrollRestoration' in window.history ? window.history.scrollRestoration : 'auto';
         if ('scrollRestoration' in window.history) {
-            window.history.scrollRestoration = 'manual';
+            window.history.scrollRestoration = 'auto';
         }
-        return () => {
-            if ('scrollRestoration' in window.history) {
-                window.history.scrollRestoration = originalScrollBehavior;
-            }
-        };
     }, []);
 
     // Scroll to top when page or filters change
@@ -238,13 +232,27 @@ const CatalogPage: React.FC = () => {
         // Skip scroll-to-top if:
         // 1. A modal is open
         if (isModalOpen) return;
+
+        // 2. Check if we just returned to this page from a modal/back button
+        // We look at the URL params. If they match our state, it's likely a restoration event.
+        const params = new URLSearchParams(location.search);
+        const urlPage = parseInt(params.get('page') || '1');
+        const urlQ = params.get('q') || '';
+        
+        // If we transition to a state that is ALREADY in the URL, don't scroll up.
+        // This is the key to preventing the "jump" when closing modals.
+        if (urlPage === currentPage && urlQ === searchTerm && window.scrollY > 0) {
+            // Check if we were previously in a modal (using a ref or state)
+            // For now, let's just return if the scroll position is non-zero,
+            // assuming the browser or user wants to stay here.
+            return;
+        }
         
         // Only scroll if we are definitely NOT at the top already (prevents jitter)
-        // This ensures opening modals doesn't trigger a reset
-        if (window.scrollY > 200) {
+        if (window.scrollY > 100) {
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
-    }, [currentPage, searchTerm, selectedSizes.join(','), selectedCategory, sortBy, priceRange[0], priceRange[1]]);
+    }, [currentPage, searchTerm, selectedSizes.join(','), selectedCategory, sortBy]);
 
     // Sync initial price range once products load
     useEffect(() => {

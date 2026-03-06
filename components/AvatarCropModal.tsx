@@ -30,12 +30,12 @@ export const AvatarCropModal: React.FC<AvatarCropModalProps> = ({
   // Disable background scroll when modal is open
   useEffect(() => {
     if (isOpen) {
-      document.body.style.overflow = 'hidden';
+      document.documentElement.classList.add('scroll-locked');
     } else {
-      document.body.style.overflow = '';
+      document.documentElement.classList.remove('scroll-locked');
     }
     return () => {
-      document.body.style.overflow = '';
+      document.documentElement.classList.remove('scroll-locked');
     };
   }, [isOpen]);
 

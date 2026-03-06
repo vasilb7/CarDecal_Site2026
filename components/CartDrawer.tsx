@@ -31,8 +31,7 @@ export const CartDrawer: React.FC = () => {
   // Handle Cart Drawer (Body Scroll Lock & Back Button)
   useEffect(() => {
     if (isCartOpen) {
-      document.body.style.overflow = 'hidden';
-      document.documentElement.style.overflow = 'hidden';
+      document.documentElement.classList.add('scroll-locked');
       
       // Push state for back button handling
       window.history.pushState({ modal: 'cart-drawer' }, '');
@@ -46,8 +45,7 @@ export const CartDrawer: React.FC = () => {
       
       return () => {
         window.removeEventListener('popstate', handlePopState);
-        document.body.style.overflow = '';
-        document.documentElement.style.overflow = '';
+        document.documentElement.classList.remove('scroll-locked');
       };
     }
   }, [isCartOpen, setIsCartOpen]);

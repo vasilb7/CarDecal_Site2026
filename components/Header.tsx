@@ -90,8 +90,7 @@ const Header: React.FC = () => {
     // Body Scroll Lock & Back Button Handling for Mobile Menu
     useEffect(() => {
         if (isMenuOpen) {
-            document.body.style.overflow = 'hidden';
-            document.body.style.touchAction = 'none';
+            document.documentElement.classList.add('scroll-locked');
             
             // Push state for back button handling
             window.history.pushState({ modal: 'mobile-nav' }, '');
@@ -104,8 +103,7 @@ const Header: React.FC = () => {
             
             return () => {
                 window.removeEventListener('popstate', handlePopState);
-                document.body.style.overflow = '';
-                document.body.style.touchAction = 'auto';
+                document.documentElement.classList.remove('scroll-locked');
             };
         }
     }, [isMenuOpen]);

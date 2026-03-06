@@ -75,10 +75,24 @@ const ProductQuickViewModal: React.FC = () => {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
 
     const handleCloseFinal = useCallback(() => {
+        const backLoc = (location.state as any)?.backgroundLocation;
         const queryParams = new URLSearchParams(location.search);
         queryParams.delete('modal');
-        const from = (location.state as any)?.from || '/catalog';
-        navigate(from, { replace: true });
+
+        // If we have a background location (where we came from), use its path + search
+        const basePath = backLoc?.pathname || (location.state as any)?.from || '/catalog';
+        const fromSearch = backLoc?.search || '';
+        const fromParams = new URLSearchParams(fromSearch);
+        
+        // Merge current URL params (like search term 'q' or 'page') into the destination
+        queryParams.forEach((value, key) => {
+            fromParams.set(key, value);
+        });
+
+        const finalSearch = fromParams.toString();
+        const finalPath = `${basePath}${finalSearch ? `?${finalSearch}` : ''}`;
+
+        navigate(finalPath, { replace: true });
     }, [location, navigate]);
 
     const handleClose = useCallback(() => {
@@ -153,17 +167,18 @@ const ProductQuickViewModal: React.FC = () => {
         product.coverImage || product.avatar
     ].filter(Boolean) as string[])) : [];
 
-    // Force body scroll lock via style tag for maximum compatibility - works on mobile Safari/Chrome
-    // We avoid position: fixed because it causes the page to jump to the top
-    const scrollLockStyle = (isVisible || (slug && !product)) ? `
-        body { 
-            overflow: hidden !important; 
-            touch-action: none !important;
-            -ms-touch-action: none !important;
-            overscroll-behavior: none !important;
-            padding-right: ${window.innerWidth - document.documentElement.clientWidth}px !important;
+    // Use the unified scroll lock class from index.css
+    useEffect(() => {
+        const isLocked = isVisible || (slug && !product);
+        if (isLocked) {
+            document.documentElement.classList.add('scroll-locked');
+        } else {
+            document.documentElement.classList.remove('scroll-locked');
         }
-    ` : '';
+        return () => {
+            document.documentElement.classList.remove('scroll-locked');
+        };
+    }, [isVisible, slug, product]);
 
     if (!product && !loading) {
         return (
@@ -175,8 +190,7 @@ const ProductQuickViewModal: React.FC = () => {
                         exit={{ opacity: 0 }} 
                         className="fixed inset-0 z-[200] flex items-center justify-center overflow-hidden"
                     >
-                        {/* Global scroll lock override */}
-                        <style dangerouslySetInnerHTML={{ __html: scrollLockStyle }} />
+                        {/* Global scroll lock override - handled via class */}
                         
                         <div 
                             className="absolute inset-0 bg-[#020202]/80 backdrop-blur-xl" 
@@ -218,7 +232,7 @@ const ProductQuickViewModal: React.FC = () => {
             slug: product.slug
         });
         showToast(`Добавени ${finalQuantity}бр. от ${product.nameBg || product.name}`, "success");
-        handleClose();
+        handleClose(); // Close the modal automatically after success
     };
 
     const fadeSlide = {
@@ -235,8 +249,7 @@ const ProductQuickViewModal: React.FC = () => {
                     role="dialog" 
                     aria-modal="true"
                 >
-                    {/* Global scroll lock override */}
-                    <style dangerouslySetInnerHTML={{ __html: scrollLockStyle }} />
+                    {/* Global scroll lock override - handled via class */}
                     
             {/* Dark Backdrop */}
             <motion.div

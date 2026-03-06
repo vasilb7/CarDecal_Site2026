@@ -50,17 +50,14 @@ const ReportBugModal: React.FC = () => {
         if (isOpen) {
             setStatus('idle');
             // Disable scroll
-            document.body.style.overflow = 'hidden';
-            document.body.style.touchAction = 'none';
+            document.documentElement.classList.add('scroll-locked');
         } else {
             // Re-enable scroll
-            document.body.style.overflow = '';
-            document.body.style.touchAction = 'auto';
+            document.documentElement.classList.remove('scroll-locked');
         }
 
         return () => {
-            document.body.style.overflow = '';
-            document.body.style.touchAction = 'auto';
+            document.documentElement.classList.remove('scroll-locked');
         };
     }, [isOpen]);
 

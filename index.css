@@ -46,6 +46,12 @@
   --section-py: clamp(4rem, 10vw, 10rem);
 }
 
+html {
+  scrollbar-gutter: stable;
+  /* Prevent horizontal stretch on mobile */
+  width: 100%;
+}
+
 body {
   margin: 0;
   padding: 0;
@@ -59,6 +65,16 @@ body {
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Unified Scroll Lock */
+html.scroll-locked {
+  overflow: hidden !important;
+}
+
+html.scroll-locked body {
+  touch-action: none !important;
+  overscroll-behavior: none !important;
 }
 
 /* Custom Scrollbar */

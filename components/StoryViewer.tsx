@@ -15,9 +15,9 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ images, onClose, onAllStories
 
   // Disable background scroll when open
   useEffect(() => {
-    document.body.style.overflow = 'hidden';
+    document.documentElement.classList.add('scroll-locked');
     return () => {
-      document.body.style.overflow = '';
+      document.documentElement.classList.remove('scroll-locked');
     };
   }, []);
 

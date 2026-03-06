@@ -12,12 +12,12 @@ interface LightboxPortalProps {
 export const LightboxPortal: React.FC<LightboxPortalProps> = ({ isOpen, onClose, imageSrc }) => {
     useEffect(() => {
         if (isOpen) {
-            document.body.style.overflow = 'hidden';
+            document.documentElement.classList.add('scroll-locked');
         } else {
-            document.body.style.overflow = 'unset';
+            document.documentElement.classList.remove('scroll-locked');
         }
         return () => {
-            document.body.style.overflow = 'unset';
+            document.documentElement.classList.remove('scroll-locked');
         };
     }, [isOpen]);
 
