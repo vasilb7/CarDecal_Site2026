@@ -2579,7 +2579,7 @@ const MaintenanceSettingsSection: React.FC = () => {
             
             await Promise.all([
                 updateSetting('maintenance_auto_start_at', targetTime),
-                updateSetting('maintenance_end_time', null as any),
+                updateSetting('maintenance_end_time', endTime || null as any),
                 updateSetting('announcement_mode', 'true'),
                 updateSetting('announcement_text', modalAnnText),
                 updateSetting('maintenance_features', JSON.stringify(features))
@@ -2669,6 +2669,7 @@ const MaintenanceSettingsSection: React.FC = () => {
             await updateSetting('maintenance_mode', 'false');
             await Promise.all([
                 updateSetting('maintenance_auto_start_at', null as any),
+                updateSetting('maintenance_end_time', null as any),
                 updateSetting('announcement_mode', 'false')
             ]);
 
@@ -2684,7 +2685,7 @@ const MaintenanceSettingsSection: React.FC = () => {
             await Promise.all([
                 updateSetting('maintenance_mode', 'true'),
                 updateSetting('maintenance_auto_start_at', null as any),
-                updateSetting('maintenance_end_time', null as any),
+                updateSetting('maintenance_end_time', endTime || null as any),
                 updateSetting('maintenance_features', JSON.stringify(features))
             ]);
             showToast('Режимът е ВКЛЮЧЕН мигновено!', 'success');
