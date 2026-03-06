@@ -86,6 +86,7 @@ function AppContent() {
   const isAuthenticated = !!user;
   const isMaintenancePageAllowed = 
     location.pathname.startsWith('/admin') || 
+    location.pathname.startsWith('/s/') ||
     location.pathname === '/login';
   const isGlobalMaintenanceActive = settings.maintenance_mode || isTimeUp;
   const isProductPage = location.pathname.startsWith('/catalog/') && location.pathname.split('/').length === 3;
