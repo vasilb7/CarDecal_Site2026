@@ -75,7 +75,7 @@ export const SiteSettingsProvider: React.FC<{ children: React.ReactNode }> = ({ 
                 maintenance_mode: String(map['maintenance_mode']).toLowerCase() === 'true',
                 maintenance_title: map['maintenance_title'] || DEFAULTS.maintenance_title,
                 maintenance_message: map['maintenance_message'] || DEFAULTS.maintenance_message,
-                maintenance_end_time: map['maintenance_end_time'] || DEFAULTS.maintenance_end_time,
+                maintenance_end_time: map['maintenance_end_time'] === 'null' ? null : (map['maintenance_end_time'] || DEFAULTS.maintenance_end_time),
                 maintenance_bg_url: map['maintenance_bg_url'] || DEFAULTS.maintenance_bg_url,
                 maintenance_bg_url_mobile: map['maintenance_bg_url_mobile'] || DEFAULTS.maintenance_bg_url_mobile,
                 maintenance_logo_url: map['maintenance_logo_url'] || DEFAULTS.maintenance_logo_url,
@@ -86,7 +86,7 @@ export const SiteSettingsProvider: React.FC<{ children: React.ReactNode }> = ({ 
                 announcement_font_size: map['announcement_font_size'] || DEFAULTS.announcement_font_size,
                 announcement_font_weight: map['announcement_font_weight'] || DEFAULTS.announcement_font_weight,
                 announcement_letter_spacing: map['announcement_letter_spacing'] || DEFAULTS.announcement_letter_spacing,
-                maintenance_auto_start_at: map['maintenance_auto_start_at'] || DEFAULTS.maintenance_auto_start_at,
+                maintenance_auto_start_at: map['maintenance_auto_start_at'] === 'null' ? null : (map['maintenance_auto_start_at'] || DEFAULTS.maintenance_auto_start_at),
                 maintenance_features: map['maintenance_features'] || DEFAULTS.maintenance_features,
             });
 
@@ -144,15 +144,20 @@ export const SiteSettingsProvider: React.FC<{ children: React.ReactNode }> = ({ 
             const serverNow = Date.now() + serverTimeOffset;
             let active = settings.maintenance_mode;
 
-            if (settings.maintenance_auto_start_at) {
+            if (settings.maintenance_auto_start_at && settings.maintenance_auto_start_at !== 'null') {
                 if (serverNow >= new Date(settings.maintenance_auto_start_at).getTime()) {
                     active = true;
                 }
             }
 
-            if (settings.maintenance_end_time) {
-                if (serverNow >= new Date(settings.maintenance_end_time).getTime()) {
-                    active = false;
+            if (settings.maintenance_end_time && settings.maintenance_end_time !== 'null') {
+                const endMs = new Date(settings.maintenance_end_time).getTime();
+                if (!isNaN(endMs) && serverNow >= endMs) {
+                    const startMs = settings.maintenance_auto_start_at && settings.maintenance_auto_start_at !== 'null' ? new Date(settings.maintenance_auto_start_at).getTime() : 0;
+                    // Only disable maintenance if the end_time is AFTER the auto_start_time
+                    if (!startMs || endMs > startMs) {
+                        active = false;
+                    }
                 }
             }
 
