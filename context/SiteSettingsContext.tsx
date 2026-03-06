@@ -157,6 +157,26 @@ export const SiteSettingsProvider: React.FC<{ children: React.ReactNode }> = ({ 
                     // Only disable maintenance if the end_time is AFTER the auto_start_time
                     if (!startMs || endMs > startMs) {
                         active = false;
+
+                        // Blindly attempt to clean up database state
+                        // If user is Admin/Editor, RLS permits it. If Guest, RLS silently rejects it.
+                        // This ensures that when the timer hits zero, the visual settings in Admin panel turn OFF dynamically.
+                        if (settings.maintenance_mode && sessionStorage.getItem('maint_cleanup_attempted') !== settings.maintenance_end_time) {
+                            sessionStorage.setItem('maint_cleanup_attempted', settings.maintenance_end_time);
+                            
+                            // Fire-and-forget DB updates without updating optimistic state to prevent loops
+                            (async () => {
+                                try {
+                                    await supabase.from('site_settings').upsert([
+                                        { key: 'maintenance_mode', value: 'false' },
+                                        { key: 'maintenance_end_time', value: 'null' },
+                                        { key: 'maintenance_auto_start_at', value: 'null' }
+                                    ]);
+                                } catch (e) {
+                                    // Silent failure for non-admins
+                                }
+                            })();
+                        }
                     }
                 }
             }
