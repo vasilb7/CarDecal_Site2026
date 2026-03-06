@@ -519,7 +519,7 @@ const HomePage: React.FC = () => {
             <div
               ref={carouselRef}
               onScroll={handleScroll}
-              className="flex md:grid md:grid-cols-2 lg:grid-cols-4 overflow-x-auto md:overflow-visible snap-x snap-mandatory gap-5 md:gap-6 lg:gap-8 pb-12 pt-4 no-scrollbar scroll-smooth w-full"
+              className="flex md:grid md:grid-cols-2 lg:grid-cols-4 overflow-x-auto md:overflow-visible snap-x snap-mandatory gap-6 md:gap-6 lg:gap-8 pb-12 pt-4 no-scrollbar scroll-smooth w-full"
             >
               {productsLoading ||
               (products.length > 0 && displayProducts.length === 0) ? (
@@ -530,9 +530,7 @@ const HomePage: React.FC = () => {
                 displayProducts.map((product, index) => (
                   <motion.div
                     key={product.slug}
-                    className="flex-shrink-0 w-[75%] sm:w-[55%] md:w-auto snap-center"
-                    whileHover={{ y: -5 }}
-                    transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                    className="flex-shrink-0 w-[75%] sm:w-[55%] md:w-auto snap-center lg:hover:-translate-y-2 transition-transform duration-300"
                   >
                     <FeaturedProductCard product={product} isPriority={index < 4} />
                   </motion.div>

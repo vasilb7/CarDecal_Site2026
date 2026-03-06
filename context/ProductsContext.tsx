@@ -102,7 +102,7 @@ export const ProductsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, [fetchAll]);
 
   const getAllProducts       = ()                  : Product[]           => products;
-  const getProductBySlug    = (slug: string)       : Product | undefined => products.find(p => p.slug === slug);
+  const getProductBySlug    = (slug: string)       : Product | undefined => products.find(p => p.slug.toLowerCase() === (slug || '').toLowerCase());
   const getFeaturedProducts = (count = 6)          : Product[]           => products.filter(p => p.isBestSeller).slice(0, count);
 
   return (

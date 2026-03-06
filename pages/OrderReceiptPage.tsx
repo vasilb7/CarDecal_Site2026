@@ -288,9 +288,6 @@ const OrderReceiptPage: React.FC = () => {
                                             <span style={{ fontWeight: 700, color: '#111', display: 'block', fontSize: '13px' }}>
                                                 {item.name_bg || item.name}
                                             </span>
-                                            <span style={{ fontSize: '11px', color: '#999', fontWeight: 500 }}>
-                                                {item.variant}
-                                            </span>
                                         </div>
                                     </td>
                                     <td style={{ ...tdStyle, textAlign: 'center' }}>

@@ -246,9 +246,9 @@ const CartPage: React.FC = () => {
                                                             {item.name}
                                                         </h3>
                                                     </Link>
-                                                    {(item.variant || item.selectedSize) && (
+                                                    {item.selectedSize && (
                                                       <p className="text-sm text-[#B0BEC5] uppercase tracking-widest font-medium mb-4">
-                                                          {[item.variant, item.selectedSize].filter(Boolean).join(' / ')}
+                                                          {item.selectedSize}
                                                       </p>
                                                     )}
                                                 </div>

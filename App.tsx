@@ -88,7 +88,11 @@ function AppContent() {
     location.pathname === '/login';
   const isGlobalMaintenanceActive = settings.maintenance_mode || isTimeUp;
   const isProductPage = location.pathname.startsWith('/catalog/') && location.pathname.split('/').length === 3;
-  const backgroundLocation = (location.state as any)?.backgroundLocation || (isProductPage ? { pathname: '/catalog' } : null);
+  
+  // Logic to determine if we should render a background page (for modals)
+  // We MUST preserve search params and existing state to prevent CatalogPage from resetting filters/scroll
+  const backgroundLocation = (location.state as any)?.backgroundLocation || 
+    (isProductPage ? { pathname: '/catalog', search: location.search, state: location.state } : null);
   
   // Detect transition from maintenance ACTIVE -> INACTIVE to trigger hard refresh
   const wasMaintenanceActive = useRef(isGlobalMaintenanceActive);

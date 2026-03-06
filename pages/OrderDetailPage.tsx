@@ -142,9 +142,9 @@ const OrderDetailPage: React.FC = () => {
                                                     {item.name_bg || item.name}
                                                 </h4>
                                                 <div className="flex flex-wrap gap-2 mt-1">
-                                                    {(item.variant || item.selectedSize) && (
+                                                    {item.selectedSize && (
                                                         <span className="text-[9px] px-2 py-0.5 bg-white/5 text-zinc-300 rounded font-bold uppercase tracking-widest">
-                                                            {[item.variant, item.selectedSize].filter(Boolean).join(' / ')}
+                                                            {item.selectedSize}
                                                         </span>
                                                     )}
                                                 </div>

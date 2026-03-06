@@ -24,6 +24,7 @@ import {
     Share2
 } from 'lucide-react';
 import ShareProductModal from '../components/ShareProductModal';
+import OptimizedImage from '../components/ui/OptimizedImage';
 
 /* ─── Full-screen zoom lightbox ─── */
 const Lightbox: React.FC<{ src: string; onClose: () => void }> = ({ src, onClose }) => (
@@ -77,17 +78,33 @@ const ProductDetailsPage: React.FC = () => {
 
     /* price */
     let price = '';
-    if (product?.wholesalePriceEur) price = product.wholesalePriceEur.toFixed(2);
-    else if (product?.price_eur) price = product.price_eur.toFixed(2);
+    const priceValue = product?.wholesalePriceEur || product?.price_eur || 0;
+    if (priceValue) price = priceValue.toFixed(2);
 
     /* images */
-    const images: string[] = product
-        ? (product.cardImages && product.cardImages.length > 0
-            ? product.cardImages
-            : [product.coverImage || product.avatar])
-        : [];
+    const images: string[] = product ? Array.from(new Set([
+        ...(product.cardImages || []),
+        product.coverImage || product.avatar
+    ].filter(Boolean) as string[])) : [];
 
     const mainSrc = images[activeIdx] || '';
+
+    const handleAddToCart = () => {
+        if (!product) return;
+        const finalQuantity = Math.max(1, quantity);
+        addToCart({
+            id: `${product.slug}-${activeIdx}`,
+            name: product.name,
+            name_bg: product.nameBg || product.name,
+            variant: (product.cardImages && product.cardImages.length > 0) ? `Вариант ${activeIdx + 1}` : '',
+            selectedSize: product.size,
+            price: priceValue,
+            quantity: finalQuantity,
+            image: mainSrc,
+            slug: product.slug
+        });
+        showToast(`Добавени ${finalQuantity}бр. от ${product.nameBg || product.name}`, "success");
+    };
 
     if (loading) return (
         <div className="min-h-screen bg-[#080808] flex items-center justify-center">
@@ -152,7 +169,6 @@ const ProductDetailsPage: React.FC = () => {
                                 className="relative aspect-square w-full bg-[#0F0F0F] rounded-3xl border border-white/5 overflow-hidden flex items-center justify-center group/main cursor-zoom-in"
                                 onClick={() => setLightboxSrc(mainSrc)}
                             >
-                                {/* Background Glow */}
                                 <div className="absolute inset-0 bg-gradient-to-tr from-red-600/5 via-transparent to-red-600/5" />
                                 
                                 <img
@@ -169,7 +185,6 @@ const ProductDetailsPage: React.FC = () => {
                                     </div>
                                 )}
 
-                                {/* Interactive Overlay */}
                                 <div className="absolute bottom-4 right-4 md:bottom-6 md:right-6 flex items-center gap-2 opacity-0 group-hover/main:opacity-100 transition-opacity duration-300">
                                     <button 
                                         type="button"
@@ -188,7 +203,7 @@ const ProductDetailsPage: React.FC = () => {
                                 </div>
                             </motion.div>
 
-                            {/* Nav Buttons (Desktop) */}
+                            {/* Nav Buttons (Desktop) - Only if multiple images */}
                             {images.length > 1 && (
                                 <>
                                     <button 
@@ -207,8 +222,8 @@ const ProductDetailsPage: React.FC = () => {
                             )}
                         </div>
 
-                        {/* Thumbnails Control */}
-                        {images.length > 1 && (
+                        {/* Thumbnails Control - Only if cardImages exist */}
+                        {product.cardImages && product.cardImages.length > 0 && (
                             <div className="flex flex-col gap-4">
                                 <div className="flex items-center justify-between">
                                     <span className="text-[10px] uppercase tracking-[0.3em] font-bold text-zinc-500">
@@ -229,11 +244,13 @@ const ProductDetailsPage: React.FC = () => {
                                                     : 'border-white/5 opacity-40 hover:opacity-100 hover:border-white/20'
                                             }`}
                                         >
-                                            <img 
-                                                src={getOptimizedUrl(img, { width: 200 })} 
+                                            <OptimizedImage 
+                                                src={img} 
                                                 alt="" 
                                                 className="w-full h-full object-contain filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.3)] transition-transform duration-500 group-hover:scale-110 pointer-events-none select-none" 
-                                                draggable={false}
+                                                priority={false}
+                                                widths={[200]}
+                                                sizes="100px"
                                             />
                                             {activeIdx === idx && (
                                                 <div className="absolute top-2 right-2">
@@ -264,7 +281,7 @@ const ProductDetailsPage: React.FC = () => {
                         </h1>
 
                         {/* Pricing Banner */}
-                        <div className="bg-[#0F0F0F] rounded-3xl border border-white/5 p-8 mb-10 relative overflow-hidden group/price transition-all hover:bg-black/40">
+                        <div className="bg-[#0F0F0F] rounded-3xl border border-white/5 p-8 mb-8 relative overflow-hidden group/price transition-all hover:bg-black/40">
                             <div className="absolute -right-10 -top-10 w-40 h-40 bg-red-600/10 blur-[80px] group-hover/price:bg-red-600/20 transition-all" />
                             
                             <div className="relative flex flex-col md:flex-row md:items-end justify-between gap-6">
@@ -275,157 +292,97 @@ const ProductDetailsPage: React.FC = () => {
                                         <span className="text-xl md:text-2xl font-mono font-medium text-red-600">€</span>
                                     </div>
                                 </div>
-                                <div className="flex flex-col items-start md:items-end">
-                                    {/* Availability and VAT removed as requested */}
-                                </div>
                             </div>
                         </div>
 
-                        {/* Order Controls (Desktop) */}
-                        <div className="hidden md:flex flex-col gap-6 mb-10">
-                            <div className="flex gap-4">
-                                <div className="flex h-16 bg-[#0F0F0F] rounded-2xl border border-white/5 overflow-hidden">
-                                    <button 
-                                        onClick={() => setQuantity(q => Math.max(1, q - 1))}
-                                        className="w-16 h-full flex items-center justify-center text-zinc-500 hover:bg-white/5 hover:text-white transition-all"
-                                    >
-                                        <Minus size={18} />
-                                    </button>
-                                    <input
-                                        type="text"
-                                        inputMode="numeric"
-                                        pattern="[0-9]*"
-                                        value={quantity === 0 ? '' : String(quantity)}
-                                        onChange={(e) => {
-                                            const val = e.target.value.replace(/[^0-9]/g, '');
-                                            if (val === '') {
-                                                setQuantity(0);
-                                            } else {
-                                                const parsed = parseInt(val, 10);
-                                                if (!isNaN(parsed)) {
-                                                    setQuantity(parsed);
+                        {/* Variant Selection Buttons - Only if cardImages exist */}
+                        {product.cardImages && product.cardImages.length > 0 && (
+                            <div className="mb-8 space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-[10px] uppercase tracking-[0.3em] font-black text-white/60">
+                                        Изберете вариант
+                                    </span>
+                                    <span className="font-mono text-[10px] text-zinc-600">
+                                        {activeIdx + 1} / {images.length}
+                                    </span>
+                                </div>
+                                <div className="grid grid-cols-5 sm:grid-cols-6 lg:grid-cols-5 gap-3">
+                                    {images.map((_, idx) => (
+                                        <button
+                                            key={idx}
+                                            onClick={() => setActiveIdx(idx)}
+                                            className={`
+                                                h-12 rounded-xl flex items-center justify-center font-mono font-black text-sm transition-all duration-300 border
+                                                ${activeIdx === idx 
+                                                    ? 'bg-red-600 border-red-500 text-white shadow-[0_4px_15px_rgba(220,38,38,0.4)]' 
+                                                    : 'bg-white/5 border-white/10 text-white/40 hover:text-white hover:bg-white/10 hover:border-white/20'
                                                 }
-                                            }
-                                        }}
-                                        onBlur={() => {
-                                            if (quantity < 1) setQuantity(1);
-                                        }}
-                                        className="w-14 h-full bg-transparent text-center text-xl font-mono font-black border-x border-white/5 text-white focus:outline-none"
-                                    />
+                                            `}
+                                        >
+                                            {idx + 1}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Add to Cart Actions */}
+                        <div className="flex flex-col gap-4 mb-10">
+                            <div className="flex gap-4 h-16">
+                                <div className="flex bg-[#0F0F0F] rounded-2xl border border-white/10 overflow-hidden w-32 shrink-0">
                                     <button 
-                                        onClick={() => setQuantity(q => q + 1)}
-                                        className="w-16 h-full flex items-center justify-center text-zinc-500 hover:bg-white/5 hover:text-white transition-all"
+                                        onClick={() => setQuantity(prev => Math.max(1, prev - 1))}
+                                        className="flex-1 flex items-center justify-center text-zinc-500 hover:text-white hover:bg-white/5 transition-colors"
                                     >
-                                        <Plus size={18} />
+                                        <Minus size={20} />
+                                    </button>
+                                    <div className="flex-1 flex items-center justify-center font-mono font-black text-lg border-x border-white/10">
+                                        {quantity}
+                                    </div>
+                                    <button 
+                                        onClick={() => setQuantity(prev => prev + 1)}
+                                        className="flex-1 flex items-center justify-center text-zinc-500 hover:text-white hover:bg-white/5 transition-colors"
+                                    >
+                                        <Plus size={20} />
                                     </button>
                                 </div>
-                                
                                 <button
-                                    onClick={() => {
-                                        const itemName = product.nameBg || product.name;
-                                        addToCart({
-                                            id: `${product.slug}-${activeIdx}`,
-                                            name: product.name,
-                                            name_bg: product.nameBg || product.name,
-                                            variant: `Вариант ${activeIdx + 1}`,
-                                            selectedSize: isSize ? displayCategory : undefined,
-                                            price: parseFloat(price),
-                                            quantity,
-                                            image: mainSrc,
-                                            slug: product.slug
-                                        });
-                                        showToast(`Добавени ${quantity}бр. от ${itemName}`, "success");
-                                    }}
-                                    className="flex-1 h-16 bg-white text-black rounded-2xl flex items-center justify-center gap-4 font-black uppercase tracking-[0.2em] text-sm hover:bg-red-600 hover:text-white transition-all group active:scale-95 shadow-[0_10px_30px_rgba(255,255,255,0.1)] hover:shadow-red-600/30"
+                                    onClick={handleAddToCart}
+                                    className="flex-1 bg-red-600 hover:bg-red-700 active:scale-[0.98] text-white rounded-2xl flex items-center justify-center gap-3 transition-all font-black uppercase text-xs tracking-widest shadow-[0_8px_30px_rgba(220,38,38,0.4)]"
                                 >
-                                    <ShoppingBag size={20} className="transition-transform group-hover:-translate-y-1" />
-                                    {t('cart.add_to_cart', 'Добави в количката')}
+                                    <ShoppingBag size={20} />
+                                    {t('catalog.add_to_cart', 'Добави Избора')}
                                 </button>
                             </div>
                         </div>
 
-
-
-                    </div>
-                </div>
-            </div>
-
-            {/* ── Mobile Sticky Purchase Bar ── */}
-            <div className="md:hidden fixed bottom-0 left-0 w-full bg-[#0F0F0F] border-t border-white/10 p-5 z-[60] pb-[calc(env(safe-area-inset-bottom)+1.25rem)]">
-                <div className="flex items-center gap-4">
-                    <div className="flex flex-col">
-                        <span className="text-[9px] uppercase tracking-widest text-zinc-500 font-bold">{t('pricing.total', 'ОБЩО')}</span>
-                        <div className="flex items-baseline gap-1">
-                            <span className="text-2xl font-mono font-black text-white">{price}</span>
-                            <span className="text-sm font-mono font-bold text-red-600">€</span>
-                        </div>
-                    </div>
-                    
-                    <button
-                        onClick={() => {
-                            const itemName = product.nameBg || product.name;
-                            addToCart({
-                                id: `${product.slug}-${activeIdx}`,
-                                name: product.name,
-                                name_bg: product.nameBg || product.name,
-                                variant: `Вариант ${activeIdx + 1}`,
-                                selectedSize: isSize ? displayCategory : undefined,
-                                price: parseFloat(price),
-                                quantity,
-                                image: mainSrc,
-                                slug: product.slug
-                            });
-                            showToast(`Добавени ${quantity}бр. от ${itemName}`, "success");
-                        }}
-                        className="flex-1 h-14 bg-white text-black rounded-2xl flex items-center justify-center gap-3 font-black uppercase tracking-[0.15em] text-xs hover:bg-red-600 hover:text-white transition-all active:scale-95 shadow-xl"
-                    >
-                        <ShoppingBag size={18} />
-                        {t('cart.add_to_cart', 'Добави')}
-                    </button>
-                    {images.length > 1 && (
-                        <div className="flex flex-col items-center ml-auto">
-                            <span className="text-[9px] uppercase tracking-widest text-zinc-600 font-bold mb-1">{t('catalog.qty', 'БРОЙ')}</span>
-                            <div className="flex h-10 bg-white/5 rounded-xl border border-white/10 overflow-hidden">
-                                    <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="w-8 h-full flex items-center justify-center text-zinc-400"><Minus size={12}/></button>
-                                    <input
-                                    type="text"
-                                    inputMode="numeric"
-                                    pattern="[0-9]*"
-                                    value={quantity === 0 ? '' : String(quantity)}
-                                    onChange={(e) => {
-                                        const val = e.target.value.replace(/[^0-9]/g, '');
-                                        if (val === '') {
-                                            setQuantity(0);
-                                        } else {
-                                            const parsed = parseInt(val, 10);
-                                            if (!isNaN(parsed)) {
-                                                setQuantity(parsed);
-                                            }
-                                        }
-                                    }}
-                                    onBlur={() => {
-                                        if (quantity < 1) setQuantity(1);
-                                    }}
-                                    className="w-8 h-full bg-transparent text-center font-mono font-bold text-xs focus:outline-none flex-1 min-w-[32px]"
-                                />
-                                <button onClick={() => setQuantity(q => q + 1)} className="w-8 h-full flex items-center justify-center text-zinc-400"><Plus size={12}/></button>
+                        {/* Description & Specs */}
+                        <div className="space-y-8 border-t border-white/5 pt-10">
+                            <div className="space-y-4">
+                                <h3 className="text-[10px] uppercase tracking-[0.3em] font-black text-zinc-500">Детайли за продукта</h3>
+                                <div className="text-zinc-400 text-sm md:text-base leading-relaxed font-medium space-y-4">
+                                    <p>• Защита: Пълна водоустойчивост и вграден UV филтър срещу избледняване.</p>
+                                    <p>• Издръжливост: Устойчиви на автомивка, високи температури и сняг.</p>
+                                    <p>• Качество: Професионален печат с висока резолюция и наситени, живи цветове.</p>
+                                    <p>• Монтаж: Силно прилепващо лепило, което не оставя следи при премахване.</p>
+                                </div>
                             </div>
                         </div>
-                    )}
+                    </div>
                 </div>
             </div>
 
-            {/* ─── Lightbox ─── */}
+            {/* Lightbox / Share Modals */}
             <AnimatePresence>
                 {lightboxSrc && (
-                    <Lightbox key="lb" src={lightboxSrc} onClose={() => setLightboxSrc(null)} />
+                    <Lightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />
                 )}
                 {isShareOpen && (
-                    <ShareProductModal
+                    <ShareProductModal 
                         isOpen={isShareOpen}
                         onClose={() => setIsShareOpen(false)}
-                        productTitle={product?.nameBg || product?.name || ''}
-                        productUrl={`${window.location.origin}/catalog/${product?.slug}`}
+                        product={product}
+                        variantName={(product.cardImages && product.cardImages.length > 0) ? `Вариант ${activeIdx + 1}` : undefined}
                     />
                 )}
             </AnimatePresence>

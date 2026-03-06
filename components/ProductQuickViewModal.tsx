@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useProducts } from '../hooks/useProducts';
@@ -21,7 +21,8 @@ import {
     Loader2,
     ZoomIn,
     ZoomOut,
-    Share2
+    Share2,
+    Search
 } from 'lucide-react';
 
 const Lightbox: React.FC<{ src: string; onClose: () => void }> = ({ src, onClose }) => (
@@ -29,7 +30,7 @@ const Lightbox: React.FC<{ src: string; onClose: () => void }> = ({ src, onClose
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[400] bg-black/96 flex flex-col items-center justify-center backdrop-blur-xl"
+        className="fixed inset-0 z-[300] bg-black/98 flex flex-col items-center justify-center"
         onClick={onClose}
     >
         <button
@@ -45,117 +46,127 @@ const Lightbox: React.FC<{ src: string; onClose: () => void }> = ({ src, onClose
                 </TransformComponent>
             </TransformWrapper>
         </div>
+        <p className="absolute bottom-5 text-zinc-600 text-[11px] uppercase tracking-[0.25em]">
+            Щипни / скролни за зуум &nbsp;·&nbsp; Кликни навън за затваряне
+        </p>
     </motion.div>
 );
-
-const fadeSlide = {
-    hidden: { x: '100%', opacity: 0.5 },
-    visible: { 
-        x: 0, 
-        opacity: 1, 
-        transition: { type: 'spring', damping: 28, stiffness: 250, mass: 0.8 } 
-    },
-    exit: { 
-        x: '100%', 
-        opacity: 0, 
-        transition: { ease: 'easeInOut', duration: 0.4 } 
-    }
-};
 
 const ProductQuickViewModal: React.FC = () => {
     const { slug } = useParams<{ slug: string }>();
     const navigate = useNavigate();
     const location = useLocation();
-    const { t } = useTranslation();
+    const { i18n } = useTranslation();
     const { getProductBySlug, loading } = useProducts();
     const { addToCart } = useCart();
     const { showToast } = useToast();
-    const { setIsProductModalOpen } = useUI();
-
+    const { isCartOpen, openCart, closeCart } = useUI();
+    
+    // Find product
     const product = getProductBySlug(slug || '');
-
+    const [isVisible, setIsVisible] = useState(false);
     const [activeIdx, setActiveIdx] = useState(0);
-    const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
     const [quantity, setQuantity] = useState(1);
-    const [imageLoaded, setImageLoaded] = useState(false);
-    const [isVisible, setIsVisible] = useState(true);
     const [zoomActive, setZoomActive] = useState(false);
-    const [isShareOpen, setIsShareOpen] = useState(false);
     const [scrollProgress, setScrollProgress] = useState(0);
+    const [isShareOpen, setIsShareOpen] = useState(false);
+    const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+
     const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-    const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-        const target = e.currentTarget;
-        const maxScroll = target.scrollWidth - target.clientWidth;
-        const progress = maxScroll > 0 ? target.scrollLeft / maxScroll : 0;
-        setScrollProgress(progress);
-    };
+    const handleCloseFinal = useCallback(() => {
+        const queryParams = new URLSearchParams(location.search);
+        queryParams.delete('modal');
+        const from = (location.state as any)?.from || '/catalog';
+        navigate(from, { replace: true });
+    }, [location, navigate]);
+
+    const handleClose = useCallback(() => {
+        setIsVisible(false);
+    }, []);
 
     useEffect(() => {
-        setZoomActive(false);
-    }, [activeIdx, isVisible]);
+        if (product) {
+            setIsVisible(true);
+            setActiveIdx(0);
+            setQuantity(1);
+        } else if (!loading) {
+            // If product definitely not found, we show not found UI then eventually close
+        }
+    }, [product, loading]);
 
-
+    // Lock body scroll when modal is open
     useEffect(() => {
-        document.body.style.overflow = 'hidden';
-        setIsProductModalOpen(true);
+        if (isVisible) {
+            const scrollBarWidth = window.innerWidth - document.documentElement.clientWidth;
+            document.body.style.overflow = 'hidden';
+            document.body.style.paddingRight = `${scrollBarWidth}px`;
+        } else {
+            document.body.style.overflow = '';
+            document.body.style.paddingRight = '';
+        }
         return () => {
             document.body.style.overflow = '';
-            setIsProductModalOpen(false);
+            document.body.style.paddingRight = '';
         };
-    }, [setIsProductModalOpen]);
+    }, [isVisible]);
 
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Escape' && !lightboxSrc) handleClose();
-        };
-        document.addEventListener('keydown', handleKeyDown);
-        return () => document.removeEventListener('keydown', handleKeyDown);
-    }, [lightboxSrc]);
-
-    const handleClose = () => {
-        setIsVisible(false);
-    };
-
-    const handleCloseFinal = () => {
-        if (!isVisible) {
-            const backgroundLocation = (location.state as any)?.backgroundLocation;
-            if (backgroundLocation) {
-                navigate(-1);
-            } else {
-                // Determine if we should go to catalog or somewhere else based on URL
-                const target = location.pathname.startsWith('/catalog') ? '/catalog' : '/';
-                navigate(target, { replace: true });
-            }
+    // Track variation ribbon scroll
+    const handleScroll = () => {
+        if (scrollContainerRef.current) {
+            const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
+            setScrollProgress(scrollLeft / (scrollWidth - clientWidth));
         }
     };
 
-    if (loading) {
-        return (
-            <AnimatePresence onExitComplete={handleCloseFinal}>
-                {isVisible && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] flex items-center justify-center">
-                        <div className="absolute inset-0 bg-black/70 backdrop-blur-md" onClick={handleClose} />
-                        <div className="relative z-10 flex flex-col items-center gap-4">
-                            <Loader2 className="w-10 h-10 text-red-600 animate-spin" />
-                            <p className="text-zinc-500 text-xs uppercase tracking-widest">Зареждане на продукт</p>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-        );
-    }
+    const priceValue = product?.price_eur || product?.wholesalePriceEur || 0;
+    
+    // Combine main image with card images, ensuring uniqueness
+    const images: string[] = product ? Array.from(new Set([
+        ...(product.cardImages || []),
+        product.coverImage || product.avatar
+    ].filter(Boolean) as string[])) : [];
 
-    if (!product) {
+    // Force body scroll lock via style tag for maximum compatibility - works on mobile Safari/Chrome
+    // We avoid position: fixed because it causes the page to jump to the top
+    const scrollLockStyle = (isVisible || (slug && !product)) ? `
+        body { 
+            overflow: hidden !important; 
+            touch-action: none !important;
+            -ms-touch-action: none !important;
+            overscroll-behavior: none !important;
+            padding-right: ${window.innerWidth - document.documentElement.clientWidth}px !important;
+        }
+    ` : '';
+
+    if (!product && !loading) {
         return (
             <AnimatePresence onExitComplete={handleCloseFinal}>
                 {isVisible && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] flex items-center justify-center">
-                        <div className="absolute inset-0 bg-black/70 backdrop-blur-md" onClick={handleClose} />
-                        <div className="relative z-10 bg-[#0A0A0A] p-10 rounded-3xl border border-white/10 text-center flex flex-col items-center max-w-sm">
-                            <p className="text-zinc-400 uppercase tracking-widest text-sm mb-6">Продуктът не е намерен</p>
-                            <button onClick={handleClose} className="px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs uppercase tracking-widest font-bold transition-colors border border-white/10">
-                                Затвори
+                    <motion.div 
+                        initial={{ opacity: 0 }} 
+                        animate={{ opacity: 1 }} 
+                        exit={{ opacity: 0 }} 
+                        className="fixed inset-0 z-[200] flex items-center justify-center overflow-hidden"
+                    >
+                        {/* Global scroll lock override */}
+                        <style dangerouslySetInnerHTML={{ __html: scrollLockStyle }} />
+                        
+                        <div 
+                            className="absolute inset-0 bg-[#020202]/80 backdrop-blur-xl" 
+                            onClick={handleClose} 
+                        />
+                        <div className="relative z-10 bg-[#0A0A0A]/90 backdrop-blur-2xl p-12 rounded-[32px] border border-white/10 text-center flex flex-col items-center max-w-sm shadow-[0_30px_100_px_rgba(0,0,0,0.8)]">
+                            <div className="w-16 h-16 bg-red-600/10 rounded-full flex items-center justify-center mb-6 border border-red-600/20">
+                                <Search className="w-8 h-8 text-red-500" />
+                            </div>
+                            <h2 className="text-xl font-black text-white uppercase tracking-tight mb-2">Продуктът не е намерен</h2>
+                            <p className="text-zinc-500 text-sm mb-8 leading-relaxed">Изглежда този артикул вече не е наличен или линкът е грешен.</p>
+                            <button 
+                                onClick={handleClose} 
+                                className="w-full py-4 bg-white text-black hover:bg-red-600 hover:text-white rounded-2xl text-[11px] uppercase tracking-[0.2em] font-black transition-all active:scale-95 shadow-xl"
+                            >
+                                Към Каталога
                             </button>
                         </div>
                     </motion.div>
@@ -164,17 +175,16 @@ const ProductQuickViewModal: React.FC = () => {
         );
     }
 
-    const priceValue = product.price_eur || product.wholesalePriceEur || 0;
-    const images: string[] = product.cardImages?.length ? product.cardImages : [product.coverImage || product.avatar];
     const mainSrc = images[activeIdx] || '';
 
     const handleAddToCart = () => {
+        if (!product) return;
         const finalQuantity = Math.max(1, quantity);
         addToCart({
             id: `${product.slug}-${activeIdx}`,
             name: product.name,
             name_bg: product.nameBg || product.name,
-            variant: images.length > 1 ? `Вариант ${activeIdx + 1}` : '',
+            variant: (product.cardImages && product.cardImages.length > 0) ? `Вариант ${activeIdx + 1}` : '',
             selectedSize: product.size,
             price: priceValue,
             quantity: finalQuantity,
@@ -185,14 +195,23 @@ const ProductQuickViewModal: React.FC = () => {
         handleClose();
     };
 
+    const fadeSlide = {
+        hidden: { x: '100%', opacity: 0 },
+        visible: { x: 0, opacity: 1, transition: { type: 'spring', damping: 30, stiffness: 200 } },
+        exit: { x: '100%', opacity: 0, transition: { duration: 0.3, ease: 'easeInOut' } }
+    };
+
     return (
         <AnimatePresence onExitComplete={handleCloseFinal}>
-            {isVisible && (
+            {isVisible && product && (
                 <div 
                     className="fixed inset-0 z-[200] flex justify-end" 
                     role="dialog" 
                     aria-modal="true"
                 >
+                    {/* Global scroll lock override */}
+                    <style dangerouslySetInnerHTML={{ __html: scrollLockStyle }} />
+                    
             {/* Dark Backdrop */}
             <motion.div
                 initial={{ opacity: 0 }}
@@ -236,15 +255,13 @@ const ProductQuickViewModal: React.FC = () => {
 
                         <div className="relative w-full aspect-square md:aspect-auto md:flex-1 flex items-center justify-center p-8 lg:p-16 group mx-auto max-w-[800px]">
                             
-                            {/* Removed blurred placeholders as per user request for instant loading */}
-
                             {/* The actual high-res image with Pan & Zoom */}
                             <TransformWrapper 
                                 initialScale={1} 
                                 minScale={1} 
                                 maxScale={3} 
                                 centerOnInit
-                                doubleClick={{ disabled: true }} // Prevent accidental zoom on double tap
+                                doubleClick={{ disabled: true }} 
                                 panning={{ disabled: !zoomActive }}
                                 pinch={{ disabled: !zoomActive }}
                                 wheel={{ disabled: !zoomActive }}
@@ -265,54 +282,51 @@ const ProductQuickViewModal: React.FC = () => {
                                         </TransformComponent>
                                         
                                         {/* Action Buttons Container */}
-                                        <div className="absolute bottom-4 right-4 md:bottom-6 md:right-6 flex items-center gap-3 z-20">
-                                            {/* Share Button */}
-                                            <AnimatePresence>
-                                                {!zoomActive && (
-                                                    <motion.button
-                                                        initial={{ opacity: 0, scale: 0.8, x: 20 }}
-                                                        animate={{ opacity: 1, scale: 1, x: 0 }}
-                                                        exit={{ opacity: 0, scale: 0.8, x: 20 }}
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setIsShareOpen(true);
-                                                        }}
-                                                        className="p-3 md:p-4 rounded-full border text-white/80 hover:text-white transition-all shadow-[0_4px_20px_rgba(0,0,0,0.5)] active:scale-90 flex items-center justify-center bg-black/80 border-white/10 hover:bg-black/90 hover:border-white/20"
-                                                        title="Сподели"
-                                                    >
-                                                        <Share2 size={22} className="md:w-6 md:h-6" />
-                                                    </motion.button>
-                                                )}
-                                            </AnimatePresence>
+                                        {images.length > 1 && (
+                                            <div className="absolute bottom-4 right-4 md:bottom-6 md:right-6 flex items-center gap-3 z-20">
+                                                <AnimatePresence>
+                                                    {!zoomActive && (
+                                                        <motion.button
+                                                            initial={{ opacity: 0, scale: 0.8, x: 20 }}
+                                                            animate={{ opacity: 1, scale: 1, x: 0 }}
+                                                            exit={{ opacity: 0, scale: 0.8, x: 20 }}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setIsShareOpen(true);
+                                                            }}
+                                                            className="p-3 md:p-4 rounded-full border text-white/80 hover:text-white transition-all shadow-[0_4px_20px_rgba(0,0,0,0.5)] active:scale-90 flex items-center justify-center bg-black/80 border-white/10 hover:bg-black/90 hover:border-white/20"
+                                                            title="Сподели"
+                                                        >
+                                                            <Share2 size={22} className="md:w-6 md:h-6" />
+                                                        </motion.button>
+                                                    )}
+                                                </AnimatePresence>
 
-                                            {/* Magnifier Zoom Button */}
-                                            <button 
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    if (zoomActive) {
-                                                        resetTransform(300);
-                                                        setZoomActive(false);
-                                                    } else {
-                                                        setZoomActive(true);
-                                                    }
-                                                }}
-                                                className={`p-3 md:p-4 rounded-full border text-white/80 hover:text-white transition-all shadow-[0_4px_20px_rgba(0,0,0,0.5)] active:scale-90 flex items-center justify-center ${zoomActive ? 'bg-red-500/80 border-red-500/50' : 'bg-black/80 border-white/10 hover:bg-black/90 hover:border-white/20'}`}
-                                                title={zoomActive ? "Излез от приближаване (Lock Zoom)" : "Отключи приближаване (Unlock Zoom)"}
-                                            >
-                                                {zoomActive ? <ZoomOut size={22} className="md:w-6 md:h-6" /> : <ZoomIn size={22} className="md:w-6 md:h-6" />}
-                                            </button>
-                                        </div>
+                                                <button 
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        if (zoomActive) {
+                                                            resetTransform(300);
+                                                            setZoomActive(false);
+                                                        } else {
+                                                            setZoomActive(true);
+                                                        }
+                                                    }}
+                                                    className={`p-3 md:p-4 rounded-full border text-white/80 hover:text-white transition-all shadow-[0_4px_20px_rgba(0,0,0,0.5)] active:scale-90 flex items-center justify-center ${zoomActive ? 'bg-red-500/80 border-red-500/50' : 'bg-black/80 border-white/10 hover:bg-black/90 hover:border-white/20'}`}
+                                                    title={zoomActive ? "Излез от приближаване" : "Докосни за приближаване"}
+                                                >
+                                                    {zoomActive ? <ZoomOut size={22} className="md:w-6 md:h-6" /> : <ZoomIn size={22} className="md:w-6 md:h-6" />}
+                                                </button>
+                                            </div>
+                                        )}
                                     </>
                                 )}}
                             </TransformWrapper>
-
-                            {/* Navigation Arrows */}
                         </div>
 
-                        {/* Premium Variation Selector Ribbon */}
-                        {images.length > 1 && (
+                        {/* Variant Selection Buttons - Only if cardImages exist */}
+                        {product.cardImages && product.cardImages.length > 0 && (
                             <div className="relative shrink-0 z-20 mt-auto pb-6 pt-4">
-                                {/* Edge Fades for scroll indication on mobile */}
                                 <div className="absolute left-0 top-0 bottom-10 w-12 bg-gradient-to-r from-[#020202] to-transparent z-30 pointer-events-none lg:hidden" />
                                 <div className="absolute right-0 top-0 bottom-10 w-12 bg-gradient-to-l from-[#020202] to-transparent z-30 pointer-events-none lg:hidden" />
                                 
@@ -334,7 +348,6 @@ const ProductQuickViewModal: React.FC = () => {
                                                     : 'bg-white/[0.03] border border-white/[0.05] hover:border-white/10 opacity-40 hover:opacity-100 backdrop-blur-md'
                                                 }
                                             `}>
-                                                {/* Active Glow Background */}
                                                 {activeIdx === idx && (
                                                     <div className="absolute inset-0 bg-red-600/10 blur-2xl rounded-full animate-pulse pointer-events-none" />
                                                 )}
@@ -349,12 +362,10 @@ const ProductQuickViewModal: React.FC = () => {
                                                     objectFit="contain"
                                                 />
                                             </div>
-
                                         </button>
                                     ))}
                                 </div>
 
-                                {/* Custom Scrollbar Indicator */}
                                 <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-[100px] md:w-[200px] h-[3px] bg-white/10 rounded-full overflow-hidden shadow-[0_1px_2px_rgba(0,0,0,0.5)]">
                                     <div 
                                         className="absolute top-0 bottom-0 bg-red-600 rounded-full transition-all duration-100"
@@ -387,13 +398,41 @@ const ProductQuickViewModal: React.FC = () => {
                                         </div>
                                     )}
                                 </div>
-                                <h1 className="text-2xl md:text-3xl xl:text-4xl font-black uppercase tracking-tight leading-tight text-white break-words">
+                                <h1 className="text-2xl md:text-3xl xl:text-4xl font-black uppercase tracking-tight leading-tight text-white mb-2 break-words">
                                     {product.nameBg || product.name}
                                 </h1>
                             </div>
 
-                            
-                            {/* Product Info Description (Optional if you have descriptions) */}
+                            {/* Variant Selection Buttons - Only if cardImages exist */}
+                            {product.cardImages && product.cardImages.length > 0 && (
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="text-xs uppercase tracking-[0.2em] font-black text-white">Изберете вариант</h3>
+                                        <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest bg-white/5 px-2 py-1 rounded-md">
+                                            {activeIdx + 1} / {images.length}
+                                        </span>
+                                    </div>
+                                    <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-4 gap-3">
+                                        {images.map((_, idx) => (
+                                            <button
+                                                key={idx}
+                                                onClick={() => setActiveIdx(idx)}
+                                                className={`
+                                                    h-12 rounded-xl flex items-center justify-center font-mono font-black text-sm transition-all duration-300 border
+                                                    ${activeIdx === idx 
+                                                        ? 'bg-red-600 border-red-500 text-white shadow-[0_4px_15px_rgba(220,38,38,0.4)]' 
+                                                        : 'bg-white/5 border-white/10 text-white/40 hover:text-white hover:bg-white/10 hover:border-white/20'
+                                                    }
+                                                `}
+                                            >
+                                                {idx + 1}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Product Info Description */}
                             <div className="space-y-4">
                                 <h3 className="text-sm uppercase tracking-[0.2em] font-bold text-white/60">Детайли за продукта</h3>
                                 <div className="text-sm md:text-base text-white/60 leading-relaxed font-medium space-y-4">
@@ -403,7 +442,6 @@ const ProductQuickViewModal: React.FC = () => {
                                     <p>• Монтаж: Силно прилепващо лепило, което не оставя следи при премахване.</p>
                                 </div>
                             </div>
-
                         </div>
 
                         {/* Desktop & Mobile Fixed Footer Container */}
@@ -418,129 +456,72 @@ const ProductQuickViewModal: React.FC = () => {
                                 </div>
                             </div>
                             <div className="flex gap-4 items-stretch h-14">
-                                {/* Quantity Stepper */}
                                 <div className="flex bg-[#0f0f0f] rounded-2xl border border-white/10 overflow-hidden w-[140px] shrink-0">
                                     <button 
-                                        onClick={() => setQuantity(q => Math.max(1, q - 1))}
-                                        className="flex-1 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/5 transition-colors"
+                                        onClick={() => setQuantity(prev => Math.max(1, prev - 1))}
+                                        className="flex-1 flex items-center justify-center text-white hover:bg-white/5 transition-colors"
                                     >
                                         <Minus size={18} />
                                     </button>
-                                    <input
-                                        type="text"
-                                        inputMode="numeric"
-                                        pattern="[0-9]*"
-                                        value={quantity === 0 ? '' : String(quantity)}
-                                        onChange={(e) => {
-                                            const val = e.target.value.replace(/[^0-9]/g, '');
-                                            if (val === '') { 
-                                                setQuantity(0); 
-                                            } else {
-                                                const parsed = parseInt(val, 10);
-                                                if (!isNaN(parsed)) setQuantity(parsed);
-                                            }
-                                        }}
-                                        onBlur={() => { if (quantity < 1) setQuantity(1); }}
-                                        className="w-14 bg-transparent text-center font-mono font-black border-x border-white/5 text-white/90 focus:outline-none text-lg"
-                                    />
+                                    <div className="flex-1 flex items-center justify-center font-mono font-black text-lg border-x border-white/10 text-white">
+                                        {quantity}
+                                    </div>
                                     <button 
-                                        onClick={() => setQuantity(q => q + 1)}
-                                        className="flex-1 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/5 transition-colors"
+                                        onClick={() => setQuantity(prev => prev + 1)}
+                                        className="flex-1 flex items-center justify-center text-white hover:bg-white/5 transition-colors"
                                     >
                                         <Plus size={18} />
                                     </button>
                                 </div>
-                                
-                                {/* CTA Button */}
                                 <button
                                     onClick={handleAddToCart}
-                                    className="flex-1 bg-red-600 text-white rounded-2xl flex items-center justify-center gap-3 font-black uppercase tracking-[0.15em] text-sm transition-all hover:bg-red-500 shadow-[0_10px_30px_rgba(220,38,38,0.3)] hover:shadow-[0_10px_40px_rgba(220,38,38,0.5)] hover:-translate-y-1 active:translate-y-0"
+                                    className="flex-1 bg-red-600 hover:bg-red-700 active:scale-95 text-white rounded-2xl flex items-center justify-center gap-3 transition-all font-black uppercase text-xs tracking-widest shadow-[0_4px_25px_rgba(220,38,38,0.4)]"
                                 >
-                                    <ShoppingBag size={20} />
-                                    <span>Добави Избора</span>
+                                    <ShoppingBag size={18} />
+                                    Добави Избора
                                 </button>
                             </div>
                         </div>
-                    </div>
 
-                </div>
-
-                {/* Mobile Fixed CTA */}
-                <div className="lg:hidden absolute bottom-0 left-0 w-full bg-[#050505]/95 backdrop-blur-2xl border-t border-white/10 z-[100] pb-[env(safe-area-inset-bottom)]">
-                    <div className="p-4 sm:p-6 shadow-[0_-20px_40px_rgba(0,0,0,0.8)]">
-                        <div className="flex gap-3 justify-between items-end mb-4 px-2">
-                           <div className="flex flex-col">
-                               <span className="text-[10px] uppercase tracking-[0.2em] font-bold text-white/40 block mb-1">Крайна Сума</span>
-                               <div className="flex items-baseline gap-1">
-                                   <span className="text-2xl font-mono font-black text-white">{(priceValue * Math.max(1, quantity)).toFixed(2)}</span>
-                                   <span className="text-lg font-mono font-bold text-zinc-500">€</span>
-                               </div>
-                               <div className="flex items-baseline gap-1 mt-1">
-                                   <span className="text-sm font-mono font-medium text-white/50">/ {(priceValue * Math.max(1, quantity) * 1.95583).toFixed(2)}</span>
-                                   <span className="text-xs font-mono font-bold text-white/40">лв</span>
-                               </div>
-                           </div>
-                            {/* Small quantity for mobile header */}
-                           <div className="flex items-center gap-3">
-                               <div className="flex bg-[#0f0f0f] rounded-[20px] border border-white/10 overflow-hidden h-[54px] w-[150px] shadow-2xl">
-                                <button 
-                                    onClick={() => setQuantity(q => Math.max(1, q - 1))} 
-                                    className="flex-1 flex items-center justify-center text-white/80 active:bg-white/10 active:scale-90 transition-all touch-none"
+                        {/* Mobile Floating Footer */}
+                        <div className="lg:hidden fixed bottom-0 left-0 right-0 p-6 bg-[#080808]/95 backdrop-blur-xl border-t border-white/5 z-[60] shadow-[0_-20px_50px_rgba(0,0,0,0.8)] pb-safe">
+                            <div className="flex items-center gap-4 h-14">
+                                <div className="flex bg-[#0f0f0f] rounded-2xl border border-white/10 overflow-hidden h-full max-w-[120px]">
+                                    <button onClick={() => setQuantity(prev => Math.max(1, prev - 1))} className="flex-1 px-3 flex items-center justify-center text-white"><Minus size={16} /></button>
+                                    <div className="flex-1 flex items-center justify-center font-mono font-black border-x border-white/10 text-white min-w-[30px]">{quantity}</div>
+                                    <button onClick={() => setQuantity(prev => prev + 1)} className="flex-1 px-3 flex items-center justify-center text-white"><Plus size={16} /></button>
+                                </div>
+                                <button
+                                    onClick={handleAddToCart}
+                                    className="flex-1 h-full bg-red-600 text-white rounded-2xl flex items-center justify-center gap-3 font-black uppercase text-[10px] tracking-[0.15em] shadow-[0_8px_30px_rgba(220,38,38,0.4)] active:scale-95 transition-all"
                                 >
-                                    <Minus size={24} strokeWidth={2.5} />
-                                </button>
-                                <input
-                                    type="text"
-                                    inputMode="numeric"
-                                    pattern="[0-9]*"
-                                    value={quantity === 0 ? '' : String(quantity)}
-                                    onChange={(e) => {
-                                        const val = e.target.value.replace(/[^0-9]/g, '');
-                                        if (val === '') { 
-                                            setQuantity(0); 
-                                        } else {
-                                            const parsed = parseInt(val, 10);
-                                            if (!isNaN(parsed)) setQuantity(parsed);
-                                        }
-                                    }}
-                                    onBlur={() => { if (quantity < 1) setQuantity(1); }}
-                                    className="w-12 text-center font-mono font-black text-white text-xl bg-black/40 border-x border-white/5 focus:outline-none select-none"
-                                />
-                                <button 
-                                    onClick={() => setQuantity(q => q + 1)} 
-                                    className="flex-1 flex items-center justify-center text-white/80 active:bg-white/10 active:scale-90 transition-all touch-none"
-                                >
-                                    <Plus size={24} strokeWidth={2.5} />
+                                    <ShoppingBag size={18} />
+                                    Добави ({(priceValue * Math.max(1, quantity)).toFixed(2)}€)
                                 </button>
                             </div>
-                           </div>
                         </div>
-                        <button
-                            onClick={handleAddToCart}
-                            className="w-full h-[52px] bg-red-600 text-white rounded-[16px] flex items-center justify-center gap-2 font-black uppercase tracking-[0.1em] text-sm hover:bg-red-500 active:scale-[0.98] transition-all shadow-[0_10px_30px_rgba(220,38,38,0.3)]"
-                        >
-                            <ShoppingBag size={20} />
-                            <span>Добави в количката</span>
-                        </button>
+
                     </div>
                 </div>
-
             </motion.div>
+            
+            <AnimatePresence>
+                {isShareOpen && (
+                    <ShareProductModal 
+                        isOpen={isShareOpen}
+                        onClose={() => setIsShareOpen(false)}
+                        product={product}
+                        variantName={(product.cardImages && product.cardImages.length > 0) ? `Вариант ${activeIdx + 1}` : undefined}
+                    />
+                )}
+            </AnimatePresence>
 
             <AnimatePresence>
                 {lightboxSrc && (
                     <Lightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />
                 )}
-                <ShareProductModal
-                    isOpen={isShareOpen}
-                    onClose={() => setIsShareOpen(false)}
-                    productTitle={product.nameBg || product.name}
-                    productUrl={`${window.location.origin}/catalog/${product.slug}`}
-                />
             </AnimatePresence>
-
-            {/* Close outer dialog div */}
-                </div>
+          </div>
             )}
         </AnimatePresence>
     );

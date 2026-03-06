@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { normalizeSearch } from '../lib/search-utils';
+import { normalizeSearch, findClosestMatch } from '../lib/search-utils';
 import { useTranslation } from 'react-i18next';
 import { useParams, useLocation } from 'react-router-dom';
 import { useProducts } from '../hooks/useProducts';
@@ -25,6 +25,7 @@ const CatalogPage: React.FC = () => {
     
     // Initial state from URL params
     const [searchTerm, setSearchTerm] = useState(searchParams.get('q') || '');
+    const [localSearchValue, setLocalSearchValue] = useState(searchTerm);
     const [selectedSizes, setSelectedSizes] = useState<string[]>(searchParams.get('sizes')?.split(',').filter(Boolean) || []);
     const [selectedCategory, setSelectedCategory] = useState<string>(urlCategory || searchParams.get('cat') || 'All');
     const [sortBy, setSortBy] = useState(searchParams.get('sort') || 'default');
@@ -118,24 +119,60 @@ const CatalogPage: React.FC = () => {
     const currentSortBy = searchParams.get('sort') || 'default';
     const currentPageNum = parseInt(searchParams.get('page') || '1');
 
-    // We only update local state if it differs from URL. This runs during render so it acts synchronously.
-    // IMPORTANT: Skip sync if a modal is open to prevent resetting page/filters while user is viewing a product.
-    if (!isModalOpen) {
-        if (searchTerm !== currentSearchTerm) setSearchTerm(currentSearchTerm);
-        if (selectedSizes.join(',') !== currentSizes.join(',')) setSelectedSizes(currentSizes);
-        if (selectedCategory !== currentCategory) setSelectedCategory(currentCategory);
-        if (sortBy !== currentSortBy) setSortBy(currentSortBy);
-        if (currentPage !== currentPageNum) setCurrentPage(currentPageNum);
-    }
+    // URL to State synchronization (Handles Back/Forward navigation)
+    useEffect(() => {
+        if (isModalOpen) return;
+
+        // Only update local state if URL represents a DIFFERENT state than what we have
+        // This avoids the "bounce-back" effect while typing/debouncing
+        if (searchTerm !== currentSearchTerm) {
+            setSearchTerm(currentSearchTerm);
+            setLocalSearchValue(currentSearchTerm);
+        }
+        
+        if (selectedSizes.join(',') !== currentSizes.join(',')) {
+            setSelectedSizes(currentSizes);
+        }
+        
+        if (selectedCategory !== currentCategory) {
+            setSelectedCategory(currentCategory);
+        }
+        
+        if (sortBy !== currentSortBy) {
+            setSortBy(currentSortBy);
+        }
+        
+        if (currentPage !== currentPageNum) {
+            setCurrentPage(currentPageNum);
+        }
+    }, [
+        currentSearchTerm, 
+        currentSizes.join(','), 
+        currentCategory, 
+        currentSortBy, 
+        currentPageNum, 
+        isModalOpen
+    ]);
+
+    // Debounce search term update to fix lag
+    useEffect(() => {
+        if (localSearchValue === searchTerm) return;
+
+        const timer = setTimeout(() => {
+            setSearchTerm(localSearchValue);
+            const params = new URLSearchParams(searchParams);
+            if (localSearchValue) params.set('q', localSearchValue); else params.delete('q');
+            params.delete('page');
+            setCurrentPage(1);
+            setSearchParams(params, { replace: true });
+        }, 400);
+
+        return () => clearTimeout(timer);
+    }, [localSearchValue, searchParams, setSearchParams, searchTerm]);
 
     // Provide setter functions that update BOTH local state and URL params at once
     const handleSetSearchTerm = (val: string) => {
-        setSearchTerm(val);
-        const params = new URLSearchParams(searchParams);
-        if (val) params.set('q', val); else params.delete('q');
-        params.delete('page'); // Reset to page 1
-        setCurrentPage(1);
-        setSearchParams(params, { replace: true });
+        setLocalSearchValue(val);
     };
 
     const handleSetSelectedCategory = (val: string) => {
@@ -198,11 +235,16 @@ const CatalogPage: React.FC = () => {
 
     // Scroll to top when page or filters change
     useEffect(() => {
-        // Skip scroll-to-top if we are currently opening/viewing a modal
+        // Skip scroll-to-top if:
+        // 1. A modal is open
         if (isModalOpen) return;
         
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }, [currentPage, searchTerm, selectedSizes, selectedCategory, sortBy, priceRange, isModalOpen]);
+        // Only scroll if we are definitely NOT at the top already (prevents jitter)
+        // This ensures opening modals doesn't trigger a reset
+        if (window.scrollY > 200) {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    }, [currentPage, searchTerm, selectedSizes.join(','), selectedCategory, sortBy, priceRange[0], priceRange[1]]);
 
     // Sync initial price range once products load
     useEffect(() => {
@@ -285,11 +327,12 @@ const CatalogPage: React.FC = () => {
     }, []);
 
     const filteredProducts = useMemo(() => {
+        const query = searchTerm.toLowerCase().trim();
+        const searchVariations = query ? normalizeSearch(query) : [];
+
         return allProducts.filter(product => {
             // Search Term Filter
-            if (searchTerm.trim()) {
-                const query = searchTerm.toLowerCase().trim();
-                const searchVariations = normalizeSearch(query);
+            if (query) {
                 const productName = product.name.toLowerCase();
                 const productNameBg = (product.nameBg || '').toLowerCase();
                 const productSlug = (product.slug || '').toLowerCase();
@@ -333,6 +376,67 @@ const CatalogPage: React.FC = () => {
         });
     }, [allProducts, searchTerm, selectedCategory, priceRange, selectedSizes, sortBy, i18n.language]);
 
+    // Memoized dictionary for faster search suggestions
+    const searchDictionary = useMemo(() => {
+        const dictionary = Array.from(new Set([
+            ...allProducts.map(p => p.nameBg || p.name),
+            ...filterStats.categories.map(c => c.name),
+            'черепи', 'бебе', 'кола', 'мерцедес', 'ауди', 'бмв', 'фолксваген', 'монстър', 'стикери'
+        ].flatMap(s => s.toLowerCase().split(/\s+/).filter(w => w.length > 2))));
+        return dictionary;
+    }, [allProducts, filterStats.categories]);
+
+    // Search Suggestion Logic
+    const searchSuggestion = useMemo(() => {
+        if (!searchTerm || searchTerm.length < 3 || filteredProducts.length > 0) return null;
+        
+        const words = searchTerm.toLowerCase().split(/\s+/);
+        const correctedWords = words.map(word => {
+            const match = findClosestMatch(word, searchDictionary);
+            return match || word;
+        });
+
+        const suggestedTerm = correctedWords.join(' ');
+        if (suggestedTerm.toLowerCase() !== searchTerm.toLowerCase()) {
+            // CRITICAL: Only suggest if the suggested term actually returns products
+            const wouldFindProducts = allProducts.some(product => {
+                const searchVariations = normalizeSearch(suggestedTerm.toLowerCase());
+                const productName = product.name.toLowerCase();
+                const productNameBg = (product.nameBg || '').toLowerCase();
+                const productSlug = (product.slug || '').toLowerCase();
+
+                return searchVariations.some(v => 
+                    productName.includes(v) || 
+                    productNameBg.includes(v) ||
+                    productSlug.includes(v)
+                );
+            });
+
+            if (wouldFindProducts) {
+                return suggestedTerm;
+            }
+        }
+        return null;
+    }, [searchTerm, filteredProducts.length, allProducts, searchDictionary]);
+
+    // Products that match the suggestion
+    const suggestedProducts = useMemo(() => {
+        if (!searchSuggestion) return [];
+        
+        return allProducts.filter(product => {
+            const searchVariations = normalizeSearch(searchSuggestion.toLowerCase());
+            const productName = product.name.toLowerCase();
+            const productNameBg = (product.nameBg || '').toLowerCase();
+            const productSlug = (product.slug || '').toLowerCase();
+
+            return searchVariations.some(v => 
+                productName.includes(v) || 
+                productNameBg.includes(v) ||
+                productSlug.includes(v)
+            );
+        }).slice(0, 6); // Just show top 6 as "examples"
+    }, [searchSuggestion, allProducts]);
+
     const paginatedProducts = useMemo(() => {
         const start = (currentPage - 1) * itemsPerPage;
         return filteredProducts.slice(start, start + itemsPerPage);
@@ -349,13 +453,13 @@ const CatalogPage: React.FC = () => {
 
     const renderFilters = () => (
         <>
-            {/* Search */}
-            <div className="relative mb-10">
+            {/* Search - Hidden on mobile drawer as it's moved to the main header */}
+            <div className="relative mb-10 hidden lg:block">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#525252]" size={18} />
                 <input 
                     type="text"
                     placeholder="Search..."
-                    value={searchTerm}
+                    value={localSearchValue}
                     onChange={(e) => handleSetSearchTerm(e.target.value)}
                     onKeyDown={(e) => {
                         if (e.key === 'Enter') {
@@ -555,13 +659,13 @@ const CatalogPage: React.FC = () => {
                                 </div>
                             </div>
 
-                            <div className="flex items-center justify-between md:justify-end gap-6 text-xs md:text-sm text-[#737373]">
-                                <div className="relative">
+                            <div className="flex items-center justify-between md:justify-end gap-3 md:gap-6 text-xs md:text-sm text-[#737373] w-full md:w-auto">
+                                <div className="relative shrink-0">
                                     <button 
                                         onClick={() => setIsSortOpen(!isSortOpen)}
                                         className="flex items-center gap-2 hover:text-white transition-colors py-2"
                                     >
-                                        <span className="font-medium">
+                                        <span className="font-medium whitespace-nowrap">
                                             {sortBy === 'default' ? t('catalog.sort.label') : t(`catalog.sort.${sortBy}`)}
                                         </span>
                                         <ChevronDown size={14} className={`transition-transform duration-300 ${isSortOpen ? 'rotate-180' : ''}`} />
@@ -603,20 +707,92 @@ const CatalogPage: React.FC = () => {
                                         )}
                                     </AnimatePresence>
                                 </div>
-                                <div className="font-mono text-[10px] md:text-[11px] uppercase tracking-widest bg-[#1A1A1A] px-3 py-1.5 rounded-full border border-[#262626] text-white">
+
+                                {/* Mobile Always-Visible Search Bar with Debounce */}
+                                <div className="flex-1 lg:hidden relative">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={14} />
+                                    <input 
+                                        type="text"
+                                        placeholder="Търсене..."
+                                        value={localSearchValue}
+                                        onChange={(e) => handleSetSearchTerm(e.target.value)}
+                                        className="w-full bg-white/5 border border-white/5 focus:border-white/20 focus:bg-white/10 rounded-full py-2 pl-9 pr-3 text-[13px] text-white outline-none transition-all"
+                                    />
+                                </div>
+
+                                <div className="font-mono text-[10px] md:text-[11px] uppercase tracking-widest bg-[#1A1A1A] px-3 py-1.5 rounded-full border border-[#262626] text-white shrink-0">
                                     {filteredProducts.length} {t('catalog.results')}
                                 </div>
                             </div>
                         </div>
 
-                        {/* Product Grid - Reduced padding for mobile to gain space */}
+                        {/* Search Suggestion UI */}
+                        <AnimatePresence>
+                            {searchSuggestion && (
+                                <motion.div 
+                                    initial={{ opacity: 0, y: -10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="mb-8 p-4 md:p-6 bg-red-600/5 border border-red-600/20 rounded-2xl flex items-center justify-between group"
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-10 h-10 rounded-full bg-red-600 flex items-center justify-center text-white shadow-[0_0_15px_rgba(220,38,38,0.4)]">
+                                            <Search size={18} />
+                                        </div>
+                                        <div>
+                                            <p className="text-zinc-500 text-[11px] uppercase tracking-widest font-bold mb-1">Няма точни съвпадения</p>
+                                            <p className="text-sm md:text-base text-white">
+                                                Може би имахте предвид: <button 
+                                                    onClick={() => handleSetSearchTerm(searchSuggestion)}
+                                                    className="text-red-500 font-black hover:underline underline-offset-4 decoration-2"
+                                                >
+                                                    {searchSuggestion}
+                                                </button>?
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <button 
+                                        onClick={() => handleSetSearchTerm(searchSuggestion)}
+                                        className="hidden md:flex items-center gap-2 px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white text-[11px] font-black uppercase tracking-widest rounded-xl transition-all active:scale-95 shadow-lg shadow-red-600/20"
+                                    >
+                                        Търси това
+                                    </button>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+
+                        {/* Product Grid */}
                         {filteredProducts.length === 0 ? (
-                            <ErrorStateCard 
-                                title="Няма намерени продукти"
-                                description="Опитайте с други филтри или премахнете някои от тях. Ако смятате че става дума за грешка, моля да ни уведомите."
-                            />
+                            <div>
+                                {searchSuggestion && suggestedProducts.length > 0 ? (
+                                    <div className="space-y-8">
+                                        <div className="flex items-center gap-4">
+                                            <div className="h-px flex-1 bg-white/5" />
+                                            <span className="text-[10px] uppercase tracking-[0.3em] font-black text-zinc-600">Примерни резултати за "{searchSuggestion}"</span>
+                                            <div className="h-px flex-1 bg-white/5" />
+                                        </div>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 md:gap-8 lg:gap-10">
+                                            {suggestedProducts.map((product) => (
+                                                <ProductCard key={product.slug} product={product} />
+                                            ))}
+                                        </div>
+                                        <div className="flex justify-center pt-4">
+                                            <button 
+                                                onClick={() => handleSetSearchTerm(searchSuggestion)}
+                                                className="px-8 py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl text-white text-[11px] font-black uppercase tracking-[0.2em] transition-all"
+                                            >
+                                                Виж всички за "{searchSuggestion}"
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <ErrorStateCard 
+                                        title="Няма намерени продукти"
+                                        description="Опитайте с други филтри или премахнете някои от тях. Ако смятате че става дума за грешка, моля да ни уведомите."
+                                    />
+                                )}
+                            </div>
                         ) : (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3 gap-3 md:gap-8 lg:gap-10 min-h-[500px]">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3 gap-6 md:gap-8 lg:gap-10 min-h-[500px]">
                                 {paginatedProducts.map((product, index) => (
                                     <motion.div
                                         key={product.slug}

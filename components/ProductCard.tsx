@@ -47,13 +47,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, isPriority = false }
 
   const CardContent = (
     <motion.div
-      whileHover={{ 
-        y: -12,
-        boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 20px rgba(212, 175, 55, 0.15)",
-        borderColor: "rgba(212, 175, 55, 0.2)"
-      }}
-      transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
-      className="bg-[#141414] rounded-[28px] md:rounded-[40px] p-4 md:p-8 flex flex-col justify-between relative shadow-2xl border border-white/[0.03] transition-colors h-full overflow-hidden"
+      className="bg-[#141414] rounded-[28px] md:rounded-[40px] p-4 md:p-8 flex flex-col justify-between relative shadow-2xl border border-white/[0.03] transition-all duration-500 ease-out h-full overflow-hidden lg:hover:-translate-y-3 lg:hover:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5),0_0_20px_rgba(212,175,55,0.15)] lg:hover:border-[#d4af37]/20"
     >
       {/* Product Image Area */}
       <div className="relative w-full aspect-video md:aspect-[4/3] flex-shrink-0 mb-4 md:mb-6">
@@ -85,33 +79,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, isPriority = false }
           />
         </div>
 
-        {/* Variations Mini-Preview */}
-        {product.cardImages && product.cardImages.length > 0 && (
-          <div className="absolute -bottom-4 left-0 right-0 flex gap-2 overflow-x-auto no-scrollbar py-2 px-4 z-10 group-hover:translate-y-[-6px] transition-transform duration-500">
-            {product.cardImages.slice(0, 6).map((img, i) => (
-              <motion.div
-                key={i}
-                whileHover={{
-                  scale: 1.2,
-                  y: -6,
-                  borderColor: "rgba(212, 175, 55, 0.4)",
-                  backgroundColor: "rgba(212, 175, 55, 0.1)"
-                }}
-                className="h-9 min-w-[36px] max-w-[72px] px-2 rounded-xl overflow-hidden border border-white/10 bg-white/[0.03] backdrop-blur-2xl shrink-0 shadow-[0_8px_16px_rgba(0,0,0,0.4)] flex items-center justify-center transition-all cursor-pointer"
-              >
-                <OptimizedImage
-                  src={img}
-                  className="max-h-full max-w-full"
-                  alt={`Variation ${i}`}
-                  priority={false}
-                  widths={[100, 200]}
-                  sizes="100px"
-                  objectFit="contain"
-                />
-              </motion.div>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* Footer Content */}
