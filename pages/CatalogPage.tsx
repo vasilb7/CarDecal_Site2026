@@ -11,6 +11,7 @@ import { useSearchParams } from 'react-router-dom';
 import type { Product } from '../types';
 import { getOptimizedUrl } from '../lib/cloudinary-utils';
 import ErrorStateCard from '../components/ErrorStateCard';
+import SEO from '../components/SEO';
 
 const CatalogPage: React.FC = () => {
     const { t, i18n } = useTranslation();
@@ -561,6 +562,7 @@ const CatalogPage: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-[#0F0F0F] text-[#E2E8F0] font-sans pb-20 lg:pb-0">
+            <SEO title={selectedCategory === 'All' ? 'Онлайн Каталог' : selectedCategory} />
             <style>{`
                 .no-scrollbar::-webkit-scrollbar { display: none; }
                 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

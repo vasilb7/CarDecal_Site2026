@@ -9,6 +9,7 @@ import FeaturedProductCard from "../components/FeaturedProductCard";
 import { useSiteSettings } from "../context/SiteSettingsContext";
 import { getOptimizedUrl, getSrcSet } from "../lib/cloudinary-utils";
 import OptimizedImage from "../components/ui/OptimizedImage";
+import SEO from "../components/SEO";
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 60 },
@@ -294,6 +295,7 @@ const HomePage: React.FC = () => {
 
   return (
     <div className="bg-background">
+      <SEO title="Начало" />
       {/* Hero Section */}
       <div className="relative min-h-[100svh] flex flex-col items-center justify-center overflow-hidden bg-black pt-[calc(env(safe-area-inset-top)+theme(spacing.4))] md:pt-0">
         {/* Background Overlay Layer */}

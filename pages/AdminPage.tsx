@@ -20,6 +20,7 @@ import { useToast } from '../components/Toast/ToastProvider';
 import { uploadToCloudinary } from '../lib/cloudinary-utils';
 import { BugsTab } from '../components/Admin/BugsTab';
 import { StealthTab } from '../components/Admin/StealthTab';
+import SEO from '../components/SEO';
 
 // ─── Custom Confirm Dialog ──────────────────────────────────────────────────
 interface ConfirmDialogProps {
@@ -2510,9 +2511,9 @@ const MaintenanceSettingsSection: React.FC = () => {
 
     const formatPreview = (text: string) => {
         if (!text) return "";
-        if (!text.includes("{timer}")) return text;
+        if (!text.toLowerCase().includes("{timer}")) return text;
         
-        const parts = text.split("{timer}");
+        const parts = text.split(/{timer}/i);
         return (
             <span className="items-center inline-flex">
                 {parts[0]}
@@ -2660,6 +2661,7 @@ const MaintenanceSettingsSection: React.FC = () => {
         try {
             await updateSetting('maintenance_mode', 'false');
             await updateSetting('maintenance_auto_start_at', null as any);
+            await updateSetting('announcement_mode', 'false');
 
             showToast('Поддръжката и таймерите са изключени!', 'success');
         } catch (err) {
@@ -5439,6 +5441,7 @@ const AdminPage: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-[#0a0a0a] text-white">
+            <SEO title="Админ Панел" />
             <div className="flex min-h-screen">
                 {/* Sidebar */}
                 <aside className="w-64 bg-black border-r border-white/5 flex flex-col py-8 flex-shrink-0">

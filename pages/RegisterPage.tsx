@@ -7,6 +7,7 @@ import { hasProfanity } from '../lib/profanity';
 import { useToast } from '../hooks/useToast';
 import { validatePassword, translateAuthError } from '../lib/passwordUtils';
 import { isValidBulgarianPhone } from '../lib/utils';
+import SEO from '../components/SEO';
 
 
 const RegisterPage: React.FC = () => {
@@ -109,11 +110,14 @@ const RegisterPage: React.FC = () => {
   };
 
   return (
-    <SignUpPage
-      onSignUp={handleSignUp}
-      onGoogleSignUp={handleGoogleSignUp}
-      loading={loading}
-    />
+    <>
+      <SEO title="Регистрация" />
+      <SignUpPage
+        onSignUp={handleSignUp}
+        onGoogleSignUp={handleGoogleSignUp}
+        loading={loading}
+      />
+    </>
   );
 };
 

@@ -5,6 +5,7 @@ import { useSiteSettings } from "../context/SiteSettingsContext";
 import { useToast } from "../components/Toast/ToastProvider";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { Announcement, AnnouncementTag, AnnouncementTitle } from "../components/ui/announcement";
+import SEO from "../components/SEO";
 
 const MaintenancePage: React.FC = () => {
   const { showToast } = useToast();
@@ -126,6 +127,7 @@ const MaintenancePage: React.FC = () => {
 
   return (
     <div className="fixed inset-0 z-[99999] bg-[#000] overflow-y-auto">
+      <SEO title="Профилактика" />
       {/* Background */}
       <div className="fixed inset-0 z-0 pointer-events-none">
         <picture>

@@ -8,6 +8,7 @@ import { DiscountProgress } from '../components/DiscountProgress';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import ErrorStateCard from '../components/ErrorStateCard';
+import SEO from '../components/SEO';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -148,6 +149,7 @@ const CartPage: React.FC = () => {
 
     return (
         <div className="pt-24 pb-16 min-h-screen">
+            <SEO title="Количка" />
             <div className="container mx-auto px-6">
                 
                 {/* Back link & Header */}

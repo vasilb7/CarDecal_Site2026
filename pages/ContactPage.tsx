@@ -2,12 +2,15 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import { MapPin, Phone, Mail } from "lucide-react";
+import SEO from "../components/SEO";
 
 const ContactPage: React.FC = () => {
     const { t } = useTranslation();
 
     return (
         <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center px-4 py-24 relative overflow-hidden mt-16 lg:mt-0">
+            <SEO title="Контакти" />
+            
             {/* Subtle Ambient Background Effects */}
             <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-red-600/10 rounded-full blur-[120px] pointer-events-none" />
             <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-red-900/10 rounded-full blur-[100px] pointer-events-none" />

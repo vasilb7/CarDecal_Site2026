@@ -55,32 +55,12 @@ function PageWrapper({ children }: { children: React.ReactNode }) {
 function AppContent() {
   const location = useLocation();
   const { user, loading: authLoading, isAdmin, isEditor, profile } = useAuth();
-  const { settings, loading: settingsLoading, serverTimeOffset } = useSiteSettings();
+  const { settings, loading: settingsLoading, serverTimeOffset, isMaintenanceActive } = useSiteSettings();
   const { showToast } = useToast();
   const { t } = useTranslation();
-  const [isTimeUp, setIsTimeUp] = useState(false);
 
 
-  useEffect(() => {
-    if (!settings?.maintenance_auto_start_at) {
-      setIsTimeUp(false);
-      return;
-    }
 
-    const checkTime = () => {
-      const serverNow = Date.now() + serverTimeOffset;
-      const target = new Date(settings.maintenance_auto_start_at).getTime();
-      if (serverNow >= target) {
-        setIsTimeUp(true);
-        return true;
-      }
-      return false;
-    };
-
-    if (checkTime()) return;
-    const interval = setInterval(() => { if (checkTime()) clearInterval(interval); }, 1000);
-    return () => clearInterval(interval);
-  }, [settings?.maintenance_auto_start_at, settings?.maintenance_mode, serverTimeOffset]);
 
   // Derived state
   const isAuthenticated = !!user;
@@ -88,7 +68,7 @@ function AppContent() {
     location.pathname.startsWith('/admin') || 
     location.pathname.startsWith('/s/') ||
     location.pathname === '/login';
-  const isGlobalMaintenanceActive = settings.maintenance_mode || isTimeUp;
+  const isGlobalMaintenanceActive = isMaintenanceActive;
   const isProductPage = location.pathname.startsWith('/catalog/') && location.pathname.split('/').length === 3;
   
   // Logic to determine if we should render a background page (for modals)

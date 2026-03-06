@@ -3,6 +3,7 @@ import { RecoveryPage } from "../components/ui/account-recovery";
 import { supabase } from "../lib/supabase";
 import { useToast } from "../hooks/useToast";
 import { useTranslation } from "react-i18next";
+import SEO from "../components/SEO";
 
 const RecoveryPageContainer: React.FC = () => {
   const { showToast } = useToast();
@@ -35,7 +36,12 @@ const RecoveryPageContainer: React.FC = () => {
     }
   };
 
-  return <RecoveryPage onRecover={handleRecover} />;
+  return (
+    <>
+      <SEO title="Възстановяване на профил" />
+      <RecoveryPage onRecover={handleRecover} />
+    </>
+  );
 };
 
 export default RecoveryPageContainer;

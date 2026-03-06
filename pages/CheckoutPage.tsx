@@ -12,6 +12,7 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { useToast } from '../components/Toast/ToastProvider';
 import { isValidBulgarianPhone } from '../lib/utils';
+import SEO from '../components/SEO';
 
 // --- Sub-components for better organization ---
 
@@ -216,6 +217,8 @@ const CheckoutPage: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-[#050505] text-white flex flex-col pt-[env(safe-area-inset-top)] pb-24 lg:pb-0">
+            <SEO title="Завършване на поръчка" />
+            
             {/* Minimalist Header */}
             <header className="h-20 sm:h-24 sticky top-0 bg-black/80 backdrop-blur-xl border-b border-white/5 z-50">
                 <div className="max-w-[1200px] mx-auto h-full px-4 sm:px-6 flex items-center justify-between">

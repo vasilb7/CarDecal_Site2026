@@ -14,6 +14,7 @@ import {
 import { getOrderById, Order } from '../lib/order-api';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast/ToastProvider';
+import SEO from '../components/SEO';
 
 const OrderReceiptPage: React.FC = () => {
     const { orderId } = useParams<{ orderId: string }>();
@@ -84,6 +85,7 @@ const OrderReceiptPage: React.FC = () => {
     return (
         <div style={{ fontFamily: "'Inter', 'Helvetica Neue', Arial, sans-serif" }}
              className="min-h-screen bg-[#EAEAEA] py-6 md:py-12 px-4 print:bg-white print:p-0 print:m-0">
+            <SEO title={`Касова бележка за поръчка #${order?.order_number || ''}`} />
 
             {/* --- Action Bar (hidden on print) --- */}
             <div className="max-w-[210mm] mx-auto mb-6 flex items-center justify-between print:hidden">

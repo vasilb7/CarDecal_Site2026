@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { getOrderById, Order } from '../lib/order-api';
 import { useToast } from '../components/Toast/ToastProvider';
+import SEO from '../components/SEO';
 
 const OrderSuccessPage: React.FC = () => {
     const { orderId } = useParams<{ orderId: string }>();
@@ -68,6 +69,8 @@ const OrderSuccessPage: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-[#050505] pt-32 pb-24 px-4 overflow-hidden relative">
+            <SEO title={`Успешна поръчка #${order?.order_number || ''}`} />
+            
             {/* Ambient Background */}
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[500px] bg-gradient-to-b from-red-900/10 to-transparent pointer-events-none" />
             

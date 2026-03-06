@@ -1,11 +1,13 @@
 import { PricingCard } from "@/components/ui/dark-gradient-pricing"
 import { useTranslation } from 'react-i18next';
+import SEO from '../components/SEO';
 
 const PricingPage = () => {
   const { t } = useTranslation();
 
   return (
     <section className="relative overflow-hidden bg-background text-foreground min-h-screen flex items-center justify-center py-20 md:py-32">
+      <SEO title="Цени" />
       <div className="relative z-10 mx-auto max-w-7xl px-6 md:px-12 w-full">
         <div className="mb-20 space-y-6 text-center">
           <h2 className="text-4xl md:text-6xl font-serif leading-tight">

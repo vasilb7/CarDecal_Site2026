@@ -47,6 +47,7 @@ interface SiteSettingsContextType {
     settings: SiteSettings;
     loading: boolean;
     serverTimeOffset: number;
+    isMaintenanceActive: boolean;
     updateSetting: (key: string, value: string) => Promise<void>;
     refetch: () => Promise<void>;
 }
@@ -136,6 +137,35 @@ export const SiteSettingsProvider: React.FC<{ children: React.ReactNode }> = ({ 
         };
     }, [fetchSettings]);
 
+    const [isMaintenanceActive, setIsMaintenanceActive] = useState(false);
+
+    useEffect(() => {
+        const check = () => {
+            const serverNow = Date.now() + serverTimeOffset;
+            let active = settings.maintenance_mode;
+
+            if (settings.maintenance_auto_start_at) {
+                if (serverNow >= new Date(settings.maintenance_auto_start_at).getTime()) {
+                    active = true;
+                }
+            }
+
+            if (settings.maintenance_end_time) {
+                if (serverNow >= new Date(settings.maintenance_end_time).getTime()) {
+                    active = false;
+                }
+            }
+
+            if (active !== isMaintenanceActive) {
+                setIsMaintenanceActive(active);
+            }
+        };
+
+        check();
+        const interval = setInterval(check, 1000);
+        return () => clearInterval(interval);
+    }, [settings.maintenance_mode, settings.maintenance_auto_start_at, settings.maintenance_end_time, serverTimeOffset, isMaintenanceActive]);
+
     const updateSetting = async (key: string, value: string) => {
         // Optimistic update
         setSettings(prev => {
@@ -162,7 +192,7 @@ export const SiteSettingsProvider: React.FC<{ children: React.ReactNode }> = ({ 
     };
 
     return (
-        <SiteSettingsContext.Provider value={{ settings, loading, serverTimeOffset, updateSetting, refetch: fetchSettings }}>
+        <SiteSettingsContext.Provider value={{ settings, loading, serverTimeOffset, isMaintenanceActive, updateSetting, refetch: fetchSettings }}>
             {children}
         </SiteSettingsContext.Provider>
     );

@@ -17,39 +17,14 @@ const Header: React.FC = () => {
     const { showToast } = useToast();
     const { clearCart } = useCart();
     const navigate = useNavigate();
-    const { settings, serverTimeOffset } = useSiteSettings();
+    const { settings, serverTimeOffset, isMaintenanceActive } = useSiteSettings();
     const location = useLocation();
     const { isMobileNavOpen: isMenuOpen, setIsMobileNavOpen: setIsMenuOpen } = useUI();
     const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
     const [isBannerVisible, setIsBannerVisible] = useState(true);
     const [timeLeftToStart, setTimeLeftToStart] = useState<string | null>(null);
 
-    const [isTimeUp, setIsTimeUp] = useState(() => {
-        if (!settings.maintenance_auto_start_at) return false;
-        return (Date.now() + serverTimeOffset) >= new Date(settings.maintenance_auto_start_at).getTime();
-    });
-    const isMaintenanceOn = settings.maintenance_mode || isTimeUp;
-    
-    // Auto-start switch logic for Header consistency
-    useEffect(() => {
-        const autoStartAt = settings.maintenance_auto_start_at;
-        if (!autoStartAt || settings.maintenance_mode) {
-            setIsTimeUp(false);
-            return;
-        }
-
-        const check = () => {
-            if ((Date.now() + serverTimeOffset) >= new Date(autoStartAt).getTime()) {
-                setIsTimeUp(true);
-                return true;
-            }
-            return false;
-        };
-
-        if (check()) return;
-        const interval = setInterval(() => { if (check()) clearInterval(interval); }, 1000);
-        return () => clearInterval(interval);
-    }, [settings.maintenance_auto_start_at, settings.maintenance_mode]);
+    const isMaintenanceOn = isMaintenanceActive;
     
     const autoStart = settings.maintenance_auto_start_at;
     const sessionKey = `ann_dismissed_${autoStart}`;
@@ -57,7 +32,10 @@ const Header: React.FC = () => {
         return sessionStorage.getItem(sessionKey) === 'true';
     });
 
-    const isMaintenanceWarningActive = !!autoStart && !isMaintenanceOn && !isBannerDismissed;
+    const isMaintenanceWarningActive = !!autoStart && 
+        !isMaintenanceOn && 
+        !isBannerDismissed && 
+        (new Date(autoStart).getTime() > (Date.now() + serverTimeOffset));
     const isPermanentAnnouncementActive = settings.announcement_mode && !isMaintenanceOn;
     const isAnnouncementVisible = isMaintenanceWarningActive || isPermanentAnnouncementActive;
 
@@ -181,7 +159,8 @@ const Header: React.FC = () => {
 
     const renderMessageWithTimer = (text: string, forceTimer: boolean = false) => {
         if (!text) return null;
-        const hasPlaceholder = text.includes("{timer}");
+        const lowerText = text.toLowerCase();
+        const hasPlaceholder = lowerText.includes("{timer}");
         const timerElement = timeLeftToStart ? (
             <span className="inline-flex items-center justify-center px-2 py-0.5 bg-[#ff0000] text-white text-[10px] font-black rounded font-mono ml-2 shrink-0 shadow-[0_0_12px_rgba(255,0,0,0.5)] border border-white/20 animate-pulse">
                 {timeLeftToStart}
@@ -197,7 +176,7 @@ const Header: React.FC = () => {
             );
         }
 
-        const parts = text.split("{timer}");
+        const parts = text.split(/{timer}/i);
         return (
             <span className="flex items-center flex-wrap justify-center">
                 {parts[0]}
@@ -269,7 +248,7 @@ const Header: React.FC = () => {
                                                 {isMaintenanceWarningActive ? (
                                                     <span className="flex items-center justify-center gap-x-3 text-[10px] sm:text-[11px] font-bold">
                                                         <span className="w-1.5 h-1.5 rounded-full bg-[#ff0000] animate-pulse shrink-0 hidden sm:block" />
-                                                        {renderMessageWithTimer("Профилактика!", true)}
+                                                        {renderMessageWithTimer(annMessages[0] || settings.announcement_text || "Профилактика!", true)}
                                                     </span>
                                                 ) : (
                                                     <span className="text-[10px] sm:text-[11px] uppercase tracking-wider line-clamp-1 font-medium">

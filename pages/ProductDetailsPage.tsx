@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import ShareProductModal from '../components/ShareProductModal';
 import OptimizedImage from '../components/ui/OptimizedImage';
+import SEO from '../components/SEO';
 
 /* ─── Full-screen zoom lightbox ─── */
 const Lightbox: React.FC<{ src: string; onClose: () => void }> = ({ src, onClose }) => (
@@ -123,6 +124,7 @@ const ProductDetailsPage: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-[#0A0A0A] text-white selection:bg-red-600/30">
+            <SEO title={product?.nameBg || product?.name} />
             <style>{`
                 .scrollbar-hide::-webkit-scrollbar { display: none; }
                 @keyframes pulse-soft {

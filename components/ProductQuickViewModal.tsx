@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { getOptimizedUrl } from '../lib/cloudinary-utils';
 import OptimizedImage from './ui/OptimizedImage';
 import ShareProductModal from './ShareProductModal';
+import SEO from './SEO';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { 
     ShoppingBag, 
@@ -71,6 +72,7 @@ const ProductQuickViewModal: React.FC = () => {
     const [scrollProgress, setScrollProgress] = useState(0);
     const [isShareOpen, setIsShareOpen] = useState(false);
     const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+    const [addedFeedback, setAddedFeedback] = useState(false);
 
     const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -232,7 +234,12 @@ const ProductQuickViewModal: React.FC = () => {
             slug: product.slug
         });
         showToast(`Добавени ${finalQuantity}бр. от ${product.nameBg || product.name}`, "success");
-        handleClose(); // Close the modal automatically after success
+        
+        // Show title feedback before closing
+        setAddedFeedback(true);
+        setTimeout(() => {
+            handleClose();
+        }, 1200);
     };
 
     const fadeSlide = {
@@ -249,6 +256,7 @@ const ProductQuickViewModal: React.FC = () => {
                     role="dialog" 
                     aria-modal="true"
                 >
+                    <SEO title={addedFeedback ? "Добавено в количката!" : (product.nameBg || product.name)} />
                     {/* Global scroll lock override - handled via class */}
                     
             {/* Dark Backdrop */}

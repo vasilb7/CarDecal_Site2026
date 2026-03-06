@@ -4,6 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useToast } from '../hooks/useToast';
 import { ShieldCheck, ShieldAlert, Key } from 'lucide-react';
+import SEO from '../components/SEO';
 
 const StealthAuthPage: React.FC = () => {
   const { name, code } = useParams<{ name: string; code: string }>();
@@ -58,6 +59,7 @@ const StealthAuthPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center p-6 text-white font-sans">
+      <SEO title="Таен Достъп" />
       <div className="max-w-md w-full text-center space-y-8">
         <div className="flex justify-center">
             <div className={`w-24 h-24 rounded-[2rem] flex items-center justify-center transition-all duration-500 border-2 ${

@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../components/Toast/ToastProvider';
+import SEO from '../components/SEO';
 import { AvatarCropModal } from '../components/AvatarCropModal';
 import { validatePassword, translateAuthError } from '../lib/passwordUtils';
 import { isValidBulgarianPhone } from '../lib/utils';
@@ -958,6 +959,8 @@ const ProfilePage: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-[#0a0a0a] text-white">
+            <SEO title="Профил" />
+            
             {/* ──── Hero Header ──── */}
             <div className="relative bg-gradient-to-b from-zinc-950 to-[#0a0a0a] border-b border-white/5 overflow-hidden">
                 {/* Grid bg */}

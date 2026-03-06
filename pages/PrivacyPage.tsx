@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { Shield, Eye, Share2, Lock, UserCheck, FileText } from 'lucide-react';
+import SEO from '../components/SEO';
 
 const PrivacyPage: React.FC = () => {
     const { t } = useTranslation();
@@ -72,6 +73,8 @@ const PrivacyPage: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-[#0a0a0a] text-white selection:bg-red-600/30">
+            <SEO title="Поверителност" />
+            
             {/* Hero Header */}
             <div className="relative pt-32 pb-16 px-6 overflow-hidden">
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-red-900/10 via-transparent to-transparent -z-10" />

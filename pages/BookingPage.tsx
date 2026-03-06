@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { AlertCircle, Plus, X, Mail, Phone, User as UserIcon, Lock, Loader2 } from 'lucide-react';
 import { uploadToCloudinary } from '../lib/cloudinary-utils';
 import { isValidBulgarianPhone } from '../lib/utils';
+import SEO from '../components/SEO';
 
 const DB_NAME = 'CarDecalBookingDB';
 const STORE_NAME = 'booking_photos';
@@ -324,6 +325,7 @@ const BookingPage: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-[#080808] pb-24 relative overflow-hidden font-sans">
+            <SEO title="Индивидуални Проекти" />
             <style dangerouslySetInnerHTML={{ __html: `
                 .custom-number-input::-webkit-inner-spin-button, 
                 .custom-number-input::-webkit-outer-spin-button { 

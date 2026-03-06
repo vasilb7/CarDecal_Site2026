@@ -4,6 +4,7 @@ import { SignInPage } from '../components/ui/sign-in';
 import { supabase } from '../lib/supabase';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useToast } from '../hooks/useToast';
+import SEO from '../components/SEO';
 
 
 
@@ -121,15 +122,18 @@ const LoginPage: React.FC = () => {
   const stealthMessage = (location.state as any)?.message || (sessionStorage.getItem('stealth_authorized') ? 'Таен достъп активен. Моля, влезте в профила си.' : null);
 
   return (
-    <SignInPage
-      onSignIn={handleSignIn}
-      onGoogleSignIn={handleGoogleSignIn}
-      onResetPassword={handleResetPassword}
-      isUpdatingPassword={isUpdatingPassword}
-      onUpdatePassword={handleUpdatePassword}
-      loading={loading}
-      stealthMessage={stealthMessage}
-    />
+    <>
+      <SEO title="Вход" />
+      <SignInPage
+        onSignIn={handleSignIn}
+        onGoogleSignIn={handleGoogleSignIn}
+        onResetPassword={handleResetPassword}
+        isUpdatingPassword={isUpdatingPassword}
+        onUpdatePassword={handleUpdatePassword}
+        loading={loading}
+        stealthMessage={stealthMessage}
+      />
+    </>
   );
 };
 
