@@ -2467,7 +2467,7 @@ const MessagesTab: React.FC = () => {
 };
 
 const MaintenanceSettingsSection: React.FC = () => {
-    const { settings, loading, updateSetting } = useSiteSettings();
+    const { settings, loading, updateSetting, serverTimeOffset } = useSiteSettings();
     const [saving, setSaving] = useState(false);
     const [uploading, setUploading] = useState<'bg' | 'logo' | 'bg_mobile' | null>(null);
     const [title, setTitle] = useState('');
@@ -2555,10 +2555,12 @@ const MaintenanceSettingsSection: React.FC = () => {
     const handleSave = async () => {
         setSaving(true);
         try {
-            await updateSetting('maintenance_title', title);
-            await updateSetting('maintenance_message', msg);
-            await updateSetting('maintenance_end_time', endTime || null as any);
-            await updateSetting('maintenance_features', JSON.stringify(features));
+            await Promise.all([
+                updateSetting('maintenance_title', title),
+                updateSetting('maintenance_message', msg),
+                updateSetting('maintenance_end_time', endTime || null as any),
+                updateSetting('maintenance_features', JSON.stringify(features))
+            ]);
             showToast('Настройките са запазени успешно!', 'success');
         } catch (err) {
             showToast('Грешка при запис на съобщението.', 'error');
@@ -2572,11 +2574,16 @@ const MaintenanceSettingsSection: React.FC = () => {
         setSaving(true);
         try {
             const ms = unit === 'min' ? val * 60000 : val * 1000;
-            const targetTime = new Date(Date.now() + ms).toISOString();
-            await updateSetting('maintenance_auto_start_at', targetTime);
-            await updateSetting('announcement_mode', 'true');
-            await updateSetting('announcement_text', modalAnnText);
-            await updateSetting('maintenance_features', JSON.stringify(features));
+            // Calculate time just before saving
+            const targetTime = new Date(Date.now() + serverTimeOffset + ms).toISOString();
+            
+            await Promise.all([
+                updateSetting('maintenance_auto_start_at', targetTime),
+                updateSetting('maintenance_end_time', null as any),
+                updateSetting('announcement_mode', 'true'),
+                updateSetting('announcement_text', modalAnnText),
+                updateSetting('maintenance_features', JSON.stringify(features))
+            ]);
             showToast(`Таймерът е пуснат за ${val} ${unit === 'min' ? 'минути' : 'секунди'}!`, 'success');
         } catch (err) {
             showToast('Грешка при пускане на таймера.', 'error');
@@ -2660,8 +2667,10 @@ const MaintenanceSettingsSection: React.FC = () => {
         setConfirmToggle(false);
         try {
             await updateSetting('maintenance_mode', 'false');
-            await updateSetting('maintenance_auto_start_at', null as any);
-            await updateSetting('announcement_mode', 'false');
+            await Promise.all([
+                updateSetting('maintenance_auto_start_at', null as any),
+                updateSetting('announcement_mode', 'false')
+            ]);
 
             showToast('Поддръжката и таймерите са изключени!', 'success');
         } catch (err) {
@@ -2672,10 +2681,12 @@ const MaintenanceSettingsSection: React.FC = () => {
     const handleInstantStart = async () => {
         setIsActivationMenuOpen(false);
         try {
-            await updateSetting('maintenance_mode', 'true');
-            await updateSetting('maintenance_auto_start_at', null as any);
-
-            await updateSetting('maintenance_features', JSON.stringify(features));
+            await Promise.all([
+                updateSetting('maintenance_mode', 'true'),
+                updateSetting('maintenance_auto_start_at', null as any),
+                updateSetting('maintenance_end_time', null as any),
+                updateSetting('maintenance_features', JSON.stringify(features))
+            ]);
             showToast('Режимът е ВКЛЮЧЕН мигновено!', 'success');
         } catch (err) {
             showToast('Грешка при пускане.', 'error');
