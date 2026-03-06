@@ -76,18 +76,8 @@ function AppContent() {
   const backgroundLocation = (location.state as any)?.backgroundLocation || 
     (isProductPage ? { pathname: '/catalog', search: location.search, state: location.state } : null);
   
-  // Detect transition from maintenance ACTIVE -> INACTIVE to trigger hard refresh
-  const wasMaintenanceActive = useRef(isGlobalMaintenanceActive);
+  // Maintenance logic handles automatically via React state
 
-  useEffect(() => {
-    if (wasMaintenanceActive.current && !isGlobalMaintenanceActive) {
-      // Small delay to ensure DB/Settings are synced before reload
-      setTimeout(() => {
-        window.location.reload();
-      }, 500);
-    }
-    wasMaintenanceActive.current = isGlobalMaintenanceActive;
-  }, [isGlobalMaintenanceActive]);
 
   // Early return for loading - AFTER hooks
   if (authLoading || settingsLoading) {
