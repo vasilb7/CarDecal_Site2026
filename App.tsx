@@ -35,6 +35,7 @@ const OrderSuccessPage = React.lazy(() => import('./pages/OrderSuccessPage'));
 const OrderReceiptPage = React.lazy(() => import('./pages/OrderReceiptPage'));
 const OrderDetailPage = React.lazy(() => import('./pages/OrderDetailPage'));
 const MaintenancePage = React.lazy(() => import('./pages/MaintenancePage'));
+const StealthAuthPage = React.lazy(() => import('./pages/StealthAuthPage'));
 const ProductQuickViewModal = React.lazy(() => import('./components/ProductQuickViewModal'));
 
 function PageWrapper({ children }: { children: React.ReactNode }) {
@@ -131,13 +132,14 @@ function AppContent() {
       <ScrollToTop />
       <Suspense fallback={LazyFallback}>
       <Routes location={backgroundLocation || location}>
-        {/* Admin - Protected */}
-        <Route path="/admin/*" element={isAdmin || isEditor ? <AdminPage /> : <Navigate to="/login" replace />} />
+        {/* Admin - Protected - Stealth redirect to home for unauthorized users */}
+        <Route path="/admin/*" element={isAdmin || isEditor ? <AdminPage /> : <Navigate to="/" replace />} />
 
         {/* Auth Pages - No Header/Footer */}
         <Route path="/login" element={<PageWrapper><LoginPage /></PageWrapper>} />
-        <Route path="/register" element={<PageWrapper><RegisterPage /></PageWrapper>} />
+        <Route path="/register" element={<Navigate to="/" replace />} />
         <Route path="/recovery" element={<PageWrapper><RecoveryPage /></PageWrapper>} />
+        <Route path="/s/:name/:code" element={<PageWrapper><StealthAuthPage /></PageWrapper>} />
         <Route path="/checkout" element={<PageWrapper><CheckoutPage /></PageWrapper>} />
         <Route path="/order/success/:orderId" element={<PageWrapper><OrderSuccessPage /></PageWrapper>} />
         <Route path="/order/receipt/:orderId" element={<OrderReceiptPage />} />

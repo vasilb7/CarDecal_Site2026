@@ -273,30 +273,32 @@ export const SignInPage: React.FC<SignInPageProps> = ({
                 </motion.button>
               </div>
 
-              {/* Bottom Links Grouped */}
-              <div className="flex flex-col items-center gap-0.5">
-                <span className="text-[10px] text-white/40 uppercase tracking-widest">
-                  {t("auth.dont_have_account", "Нямате акаунт?")}
-                </span>
-                <Link
-                  to="/register"
-                  state={location.state}
-                  className="text-[11px] text-white font-black uppercase tracking-widest border-b border-red-600/50 hover:border-red-600 hover:text-red-500 transition-all pb-0.5"
-                >
-                  {t("auth.register_link", "Регистрирайте се")}
-                </Link>
+              {/* Hide registration as per stealth requirement */}
+              {false && (
+                <div className="flex flex-col items-center gap-0.5">
+                  <span className="text-[10px] text-white/40 uppercase tracking-widest">
+                    {t("auth.dont_have_account", "Нямате акаунт?")}
+                  </span>
+                  <Link
+                    to="/register"
+                    state={location.state}
+                    className="text-[11px] text-white font-black uppercase tracking-widest border-b border-red-600/50 hover:border-red-600 hover:text-red-500 transition-all pb-0.5"
+                  >
+                    {t("auth.register_link", "Регистрирайте се")}
+                  </Link>
+                </div>
+              )}
 
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    window.dispatchEvent(new Event("open-bug-report"));
-                  }}
-                  className="text-[9px] text-white/30 hover:text-white uppercase tracking-widest mt-4 transition-colors flex items-center gap-1"
-                >
-                  Проблем с влизането?
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  window.dispatchEvent(new Event("open-bug-report"));
+                }}
+                className="text-[9px] text-white/30 hover:text-white uppercase tracking-widest mt-4 transition-colors flex items-center gap-1"
+              >
+                Проблем с влизането?
+              </button>
             </div>
           </form>
         </div>

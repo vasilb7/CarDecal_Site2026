@@ -14,11 +14,12 @@ import {
     UserCheck, UserX, Crown, Upload, Video, Film, AlertCircle, Mail,
     Megaphone, Palette, Type, ShoppingBag, Receipt, Printer, Download,
     FileText, BoxSelect, LayoutGrid, ClipboardCheck, Boxes, FileJson, Clock, Bug,
-    Banknote, TrendingUp
+    Banknote, TrendingUp, Key
 } from 'lucide-react';
 import { useToast } from '../components/Toast/ToastProvider';
 import { uploadToCloudinary } from '../lib/cloudinary-utils';
 import { BugsTab } from '../components/Admin/BugsTab';
+import { StealthTab } from '../components/Admin/StealthTab';
 
 // ─── Custom Confirm Dialog ──────────────────────────────────────────────────
 interface ConfirmDialogProps {
@@ -90,7 +91,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     );
 };
 
-type AdminTab = 'dashboard' | 'homepage' | 'messages' | 'maintenance' | 'products' | 'users' | 'archived_users' | 'custom_orders' | 'orders' | 'bugs';
+type AdminTab = 'dashboard' | 'homepage' | 'messages' | 'maintenance' | 'products' | 'users' | 'archived_users' | 'custom_orders' | 'orders' | 'bugs' | 'stealth';
 
 interface DBProduct {
     id: string;
@@ -5433,6 +5434,7 @@ const AdminPage: React.FC = () => {
             { id: 'archived_users' as AdminTab, label: 'Архив Изтрити', icon: Trash2, badge: scheduledCount }
         ] : []),
         { id: 'maintenance' as AdminTab, label: 'Поддръжка', icon: Settings },
+        { id: 'stealth' as AdminTab, label: 'Таен Вход', icon: Key },
     ];
 
     return (
@@ -5504,6 +5506,7 @@ const AdminPage: React.FC = () => {
                     {activeTab === 'users' && <UsersTab />}
                     {activeTab === 'archived_users' && <ArchivedUsersTab />}
                     {activeTab === 'bugs' && <BugsTab />}
+                    {activeTab === 'stealth' && <StealthTab />}
                 </main>
             </div>
         </div>
