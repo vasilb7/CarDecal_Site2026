@@ -444,8 +444,13 @@ const ProductQuickViewModal: React.FC = () => {
                            </div>
                             {/* Small quantity for mobile header */}
                            <div className="flex items-center gap-3">
-                               <div className="flex bg-[#0f0f0f] rounded-xl border border-white/10 overflow-hidden h-10 w-[110px]">
-                                <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="flex-1 flex items-center justify-center text-white/60"><Minus size={16} /></button>
+                               <div className="flex bg-[#0f0f0f] rounded-[20px] border border-white/10 overflow-hidden h-[54px] w-[150px] shadow-2xl">
+                                <button 
+                                    onClick={() => setQuantity(q => Math.max(1, q - 1))} 
+                                    className="flex-1 flex items-center justify-center text-white/80 active:bg-white/10 active:scale-90 transition-all touch-none"
+                                >
+                                    <Minus size={24} strokeWidth={2.5} />
+                                </button>
                                 <input
                                     type="text"
                                     inputMode="numeric"
@@ -461,9 +466,14 @@ const ProductQuickViewModal: React.FC = () => {
                                         }
                                     }}
                                     onBlur={() => { if (quantity < 1) setQuantity(1); }}
-                                    className="w-10 text-center font-mono font-bold text-white text-sm bg-black/20 border-x border-white/5 focus:outline-none"
+                                    className="w-12 text-center font-mono font-black text-white text-xl bg-black/40 border-x border-white/5 focus:outline-none select-none"
                                 />
-                                <button onClick={() => setQuantity(q => q + 1)} className="flex-1 flex items-center justify-center text-white/60"><Plus size={16} /></button>
+                                <button 
+                                    onClick={() => setQuantity(q => q + 1)} 
+                                    className="flex-1 flex items-center justify-center text-white/80 active:bg-white/10 active:scale-90 transition-all touch-none"
+                                >
+                                    <Plus size={24} strokeWidth={2.5} />
+                                </button>
                             </div>
                            </div>
                         </div>
