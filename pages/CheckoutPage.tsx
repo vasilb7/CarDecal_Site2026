@@ -492,7 +492,10 @@ const CheckoutPage: React.FC = () => {
                                                 <h3 className="text-[11px] font-black text-white uppercase tracking-wider truncate">{item.name}</h3>
                                                 <span className="text-xs font-black text-white italic whitespace-nowrap">{(item.price * item.quantity).toFixed(2)} €</span>
                                             </div>
-                                            <p className="text-[9px] text-zinc-500 uppercase font-black mt-1">Вариант: {item.variant} <span className="text-red-500 ml-2">x{item.quantity}</span></p>
+                                            <p className="text-[9px] text-zinc-500 uppercase font-black mt-1">
+                                                {(item.variant || item.selectedSize) && `Вариант: ${[item.variant, item.selectedSize].filter(Boolean).join(' / ')}`}
+                                                <span className="text-red-500 ml-2">x{item.quantity}</span>
+                                            </p>
                                         </div>
                                     </div>
                                 ))}

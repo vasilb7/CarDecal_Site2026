@@ -710,7 +710,7 @@ const HomePage: React.FC = () => {
             to={`/custom-orders`}
             className="inline-flex items-center gap-2 px-10 sm:px-12 md:px-16 py-4 md:py-5 bg-black text-white font-bold uppercase tracking-widest text-xs md:text-sm shadow-[0_15px_30px_rgba(0,0,0,0.4)] hover:bg-white hover:text-black hover:shadow-[0_20px_40px_rgba(0,0,0,0.2)] hover:scale-105 active:scale-95 transition-all duration-300"
           >
-            Изпрати Запитване
+            Изпрати Заявка
           </Link>
         </div>
       </section>

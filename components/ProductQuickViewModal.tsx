@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useProducts } from '../hooks/useProducts';
@@ -81,6 +81,15 @@ const ProductQuickViewModal: React.FC = () => {
     const [isVisible, setIsVisible] = useState(true);
     const [zoomActive, setZoomActive] = useState(false);
     const [isShareOpen, setIsShareOpen] = useState(false);
+    const [scrollProgress, setScrollProgress] = useState(0);
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+    const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+        const target = e.currentTarget;
+        const maxScroll = target.scrollWidth - target.clientWidth;
+        const progress = maxScroll > 0 ? target.scrollLeft / maxScroll : 0;
+        setScrollProgress(progress);
+    };
 
     useEffect(() => {
         setZoomActive(false);
@@ -165,7 +174,7 @@ const ProductQuickViewModal: React.FC = () => {
             id: `${product.slug}-${activeIdx}`,
             name: product.name,
             name_bg: product.nameBg || product.name,
-            variant: `Вариант ${activeIdx + 1}`,
+            variant: images.length > 1 ? `Вариант ${activeIdx + 1}` : '',
             selectedSize: product.size,
             price: priceValue,
             quantity: finalQuantity,
@@ -298,46 +307,63 @@ const ProductQuickViewModal: React.FC = () => {
                             </TransformWrapper>
 
                             {/* Navigation Arrows */}
-                            {images.length > 1 && (
-                                <>
-                                    <button 
-                                        onClick={(e) => { e.stopPropagation(); setActiveIdx(prev => (prev > 0 ? prev - 1 : images.length - 1)); }}
-                                        className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-black/90 border border-white/10 flex items-center justify-center text-white/70 hover:text-white hover:bg-white/20 hover:scale-110 transition-all z-20"
-                                    >
-                                        <ArrowLeft size={20} />
-                                    </button>
-                                    <button 
-                                        onClick={(e) => { e.stopPropagation(); setActiveIdx(prev => (prev < images.length - 1 ? prev + 1 : 0)); }}
-                                        className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-black/90 border border-white/10 flex items-center justify-center text-white/70 hover:text-white hover:bg-white/20 hover:scale-110 transition-all z-20"
-                                    >
-                                        <ArrowRight size={20} />
-                                    </button>
-                                </>
-                            )}
                         </div>
 
-                        {/* Thumbnails */}
+                        {/* Premium Variation Selector Ribbon */}
                         {images.length > 1 && (
-                            <div className="flex gap-4 overflow-x-auto no-scrollbar justify-start lg:justify-center px-6 md:px-10 pb-6 shrink-0 relative z-20">
-                                {images.map((img, idx) => (
-                                    <button
-                                        key={idx}
-                                        onClick={() => { setActiveIdx(idx); }}
-                                        className={`relative flex-shrink-0 w-20 h-20 md:w-24 md:h-24 bg-[#0a0a0a] rounded-2xl border transition-all p-3 ${
-                                            activeIdx === idx ? 'border-white/40 bg-white/5 ring-4 ring-white/5' : 'border-white/5 opacity-40 hover:opacity-100 hover:border-white/20'
-                                        }`}
-                                    >
-                                        <OptimizedImage 
-                                            src={img} 
-                                            alt="" 
-                                            className="w-full h-full pointer-events-none select-none drop-shadow-lg"
-                                            priority={false}
-                                            widths={[100, 200]}
-                                            sizes="100px"
-                                            objectFit="contain"
-                                        />
-                                    </button>
-                                ))}
+                            <div className="relative shrink-0 z-20 mt-auto pb-6 pt-4">
+                                {/* Edge Fades for scroll indication on mobile */}
+                                <div className="absolute left-0 top-0 bottom-10 w-12 bg-gradient-to-r from-[#020202] to-transparent z-30 pointer-events-none lg:hidden" />
+                                <div className="absolute right-0 top-0 bottom-10 w-12 bg-gradient-to-l from-[#020202] to-transparent z-30 pointer-events-none lg:hidden" />
+                                
+                                <div 
+                                    ref={scrollContainerRef}
+                                    onScroll={handleScroll}
+                                    className="relative flex gap-5 overflow-x-auto no-scrollbar justify-start lg:justify-center px-8 md:px-12 pb-6"
+                                >
+                                    {images.map((img, idx) => (
+                                        <button
+                                            key={idx}
+                                            onClick={() => setActiveIdx(idx)}
+                                            className="relative flex-shrink-0 group/thumb py-2"
+                                        >
+                                            <div className={`
+                                                relative w-22 h-22 md:w-26 md:h-26 p-3 rounded-[24px] transition-all duration-500 flex items-center justify-center
+                                                ${activeIdx === idx 
+                                                    ? 'bg-gradient-to-b from-white/[0.12] to-white/[0.04] border border-white/20 shadow-[0_15px_35px_rgba(220,38,38,0.2)]' 
+                                                    : 'bg-white/[0.03] border border-white/[0.05] hover:border-white/10 opacity-40 hover:opacity-100 backdrop-blur-md'
+                                                }
+                                            `}>
+                                                {/* Active Glow Background */}
+                                                {activeIdx === idx && (
+                                                    <div className="absolute inset-0 bg-red-600/10 blur-2xl rounded-full animate-pulse pointer-events-none" />
+                                                )}
+                                                
+                                                <OptimizedImage 
+                                                    src={img} 
+                                                    alt="" 
+                                                    className={`w-full h-full pointer-events-none select-none transition-all duration-500 drop-shadow-2xl ${activeIdx === idx ? 'scale-110' : 'group-hover/thumb:scale-110'}`}
+                                                    priority={false}
+                                                    widths={[100, 200]}
+                                                    sizes="100px"
+                                                    objectFit="contain"
+                                                />
+                                            </div>
+
+                                        </button>
+                                    ))}
+                                </div>
+
+                                {/* Custom Scrollbar Indicator */}
+                                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-[100px] md:w-[200px] h-[3px] bg-white/10 rounded-full overflow-hidden shadow-[0_1px_2px_rgba(0,0,0,0.5)]">
+                                    <div 
+                                        className="absolute top-0 bottom-0 bg-red-600 rounded-full transition-all duration-100"
+                                        style={{ 
+                                            left: `${(Number.isNaN(scrollProgress) ? 0 : scrollProgress) * (100 - Math.max(20, 100 / images.length))}%`, 
+                                            width: `${Math.max(20, 100 / images.length)}%` 
+                                        }}
+                                    />
+                                </div>
                             </div>
                         )}
                     </div>

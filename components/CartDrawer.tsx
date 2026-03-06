@@ -32,6 +32,7 @@ export const CartDrawer: React.FC = () => {
   useEffect(() => {
     if (isCartOpen) {
       document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
       
       // Push state for back button handling
       window.history.pushState({ modal: 'cart-drawer' }, '');
@@ -45,7 +46,8 @@ export const CartDrawer: React.FC = () => {
       
       return () => {
         window.removeEventListener('popstate', handlePopState);
-        document.body.style.overflow = 'unset';
+        document.body.style.overflow = '';
+        document.documentElement.style.overflow = '';
       };
     }
   }, [isCartOpen, setIsCartOpen]);
@@ -150,7 +152,7 @@ export const CartDrawer: React.FC = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.25 }}
-            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[130]"
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[130] touch-none"
             onClick={close}
           />
 
@@ -328,9 +330,13 @@ export const CartDrawer: React.FC = () => {
                                 <p className="text-white font-bold truncate tracking-wider text-xs uppercase mb-1 drop-shadow-sm group-hover/item:text-red-500 transition-colors">
                                   {item.name}
                                 </p>
-                                <p className="text-[11px] text-[#B0BEC5] uppercase tracking-wider truncate">
-                                  {item.variant}
-                                </p>
+                                  <div className="flex items-center gap-1.5 overflow-hidden text-[#B0BEC5]">
+                                    {(item.variant || item.selectedSize) && (
+                                      <p className="text-[11px] uppercase tracking-wider truncate font-medium">
+                                        {[item.variant, item.selectedSize].filter(Boolean).join(' / ')}
+                                      </p>
+                                    )}
+                                  </div>
                               </div>
                             </div>
                           </Link>

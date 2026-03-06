@@ -27,6 +27,9 @@ export interface Product {
    dimensions: string;
    size: string;
    stockStatus?: string;
+   finish?: string;
+   material?: string;
+   description?: string;
 
    highlights: Highlight[];
    posts: Post[];

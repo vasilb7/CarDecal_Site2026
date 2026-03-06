@@ -1262,7 +1262,7 @@ const UserProfileModal: React.FC<{
                     <div style="font-size: 10px; color: #666666; font-family: monospace; letter-spacing: 0.5px;">SKU: ${item.slug || 'N/A'}</div>
                 </td>
                 <td style="padding: 14px 16px; font-size: 12px; font-weight: 500; color: #4A0000;">
-                    ${item.variant || '-'}
+                    ${item.variant && item.variant !== '-' ? item.variant : ''}
                     ${item.material ? `<br><span style="font-size:10px;color:#666666">${item.material}</span>` : ''}
                 </td>
                 <td style="padding: 14px 16px; font-size: 12px; font-weight: 600; color: #4A0000;">
@@ -4127,7 +4127,7 @@ const OrdersTab: React.FC = () => {
                                             <div className="flex-1 min-w-0">
                                                 <p className="text-[10px] font-bold text-white uppercase truncate">{item.name_bg || item.name}</p>
                                                 <div className="flex items-center gap-1.5 mt-0.5">
-                                                    <span className="text-[9px] text-zinc-500 uppercase tracking-tighter">{item.variant}</span>
+                                                    {item.variant && <span className="text-[9px] text-zinc-500 uppercase tracking-tighter">{item.variant}</span>}
                                                     {item.selectedSize && <span className="text-[9px] text-red-500/60 font-black uppercase tracking-widest">{item.selectedSize}</span>}
                                                     <span className="text-[9px] text-zinc-400 font-black">x{item.quantity}</span>
                                                 </div>

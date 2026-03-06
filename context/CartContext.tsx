@@ -46,7 +46,12 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (saved) {
          const parsed = JSON.parse(saved);
          // Reset any isRemoving state that might have been saved
-         return parsed.map((item: CartItem) => ({ ...item, isRemoving: false }));
+         return parsed.map((item: CartItem) => {
+            let size = item.selectedSize || '';
+            if (/various|различни|small/i.test(size)) size = '7 см';
+            if (size.toLowerCase() === '7cm') size = '7 см';
+            return { ...item, selectedSize: size, isRemoving: false };
+         });
       }
       return [];
     } catch {
