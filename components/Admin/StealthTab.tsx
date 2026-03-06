@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
-import { Shield, RefreshCw, Copy, ExternalLink, Key, Lock, Fingerprint } from 'lucide-react';
+import { Shield, RefreshCw, Copy, ExternalLink, Key, Lock, Fingerprint, Eye, EyeOff, Crown } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
 
 export const StealthTab: React.FC = () => {
@@ -10,6 +10,8 @@ export const StealthTab: React.FC = () => {
     const { showToast } = useToast();
     const [stealthInfo, setStealthInfo] = useState<{ stealth_name: string; secret: string } | null>(null);
     const [loading, setLoading] = useState(true);
+    const [showSecret, setShowSecret] = useState(false);
+    const [regenerating, setRegenerating] = useState(false);
 
     const fetchStealthInfo = async () => {
         if (!profile?.id) return;
@@ -43,6 +45,40 @@ export const StealthTab: React.FC = () => {
     useEffect(() => {
         fetchStealthInfo();
     }, [profile?.id]);
+
+    const handleRegenerate = async () => {
+        if (!profile?.id) return;
+        
+        const confirmMsg = "ВНИМАНИЕ: Старият ключ ще спре да работи веднага. Сигурни ли сте, че искате да генерирате нов?";
+        if (!window.confirm(confirmMsg)) return;
+
+        setRegenerating(true);
+        try {
+            // Generate a truly complex random key
+            const randomValues = new Uint8Array(24);
+            window.crypto.getRandomValues(randomValues);
+            const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_';
+            const newSecret = Array.from(randomValues)
+                .map(b => chars.charAt(b % chars.length))
+                .join('');
+            
+            const { error } = await supabase
+                .from('admin_stealth_access')
+                .update({ secret_token: newSecret })
+                .eq('profile_id', profile.id);
+            
+            if (error) throw error;
+            
+            setStealthInfo(prev => prev ? { ...prev, secret: newSecret } : null);
+            showToast('Нов супер-секретен ключ е генериран успешно!', 'success');
+            setShowSecret(true); // Show it so they can copy it
+        } catch (err: any) {
+            console.error('Error generating secret:', err);
+            showToast('Грешка при генериране на ключ: ' + (err.message || ''), 'error');
+        } finally {
+            setRegenerating(false);
+        }
+    };
 
     const copyToClipboard = (text: string) => {
         navigator.clipboard.writeText(text);
@@ -81,6 +117,12 @@ export const StealthTab: React.FC = () => {
                                 Master Access Control
                             </div>
                             <h2 className="text-4xl font-black text-white tracking-tighter italic uppercase">Таен Ключ за Достъп</h2>
+                            {stealthInfo?.stealth_name === 'vasilminchevbenkov' && (
+                                <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/5 border border-white/10 rounded-full">
+                                    <Crown className="w-3 h-3 text-yellow-500" />
+                                    <span className="text-[9px] font-black text-white/60 uppercase tracking-widest">Main Admin Owner</span>
+                                </div>
+                            )}
                         </div>
                         <div className="bg-white/5 border border-white/10 p-4 rounded-3xl backdrop-blur-xl">
                             <Fingerprint className="w-8 h-8 text-white/20" />
@@ -94,14 +136,32 @@ export const StealthTab: React.FC = () => {
                         </div>
                         <div className="bg-black/40 border border-white/5 p-6 rounded-3xl flex items-center justify-between gap-4 group/code hover:border-white/20 transition-all">
                             <span className="text-2xl sm:text-3xl font-mono font-black text-white tracking-tight break-all">
-                                {stealthInfo.secret}
+                                {showSecret ? stealthInfo.secret : '••••••••••••••••••••••••'}
                             </span>
-                            <button 
-                                onClick={() => copyToClipboard(stealthInfo.secret)}
-                                className="p-3 bg-white/5 rounded-2xl text-zinc-500 hover:text-white hover:bg-white/10 transition-all shrink-0"
-                            >
-                                <Copy size={20} />
-                            </button>
+                            <div className="flex gap-2">
+                                <button 
+                                    onClick={() => setShowSecret(!showSecret)}
+                                    className="p-3 bg-white/5 rounded-2xl text-zinc-500 hover:text-white hover:bg-white/10 transition-all shrink-0"
+                                    title={showSecret ? "Скрий" : "Покажи"}
+                                >
+                                    {showSecret ? <EyeOff size={20} /> : <Eye size={20} />}
+                                </button>
+                                <button 
+                                    onClick={handleRegenerate}
+                                    disabled={regenerating}
+                                    className="p-3 bg-white/5 rounded-2xl text-zinc-500 hover:text-red-500 hover:bg-white/10 transition-all shrink-0 disabled:opacity-50"
+                                    title="Регенерирай ключ"
+                                >
+                                    <RefreshCw size={20} className={regenerating ? "animate-spin" : ""} />
+                                </button>
+                                <button 
+                                    onClick={() => copyToClipboard(stealthInfo.secret)}
+                                    className="p-3 bg-white/5 rounded-2xl text-zinc-500 hover:text-white hover:bg-white/10 transition-all shrink-0"
+                                    title="Копирай"
+                                >
+                                    <Copy size={20} />
+                                </button>
+                            </div>
                         </div>
                     </div>
 
@@ -151,7 +211,9 @@ export const StealthTab: React.FC = () => {
                     <p className="text-[10px] text-zinc-500 uppercase tracking-widest mb-3 font-black">Име за оторизация</p>
                     <div className="flex items-center gap-3">
                         <Key className="w-4 h-4 text-red-600/40" />
-                        <p className="text-white text-xl font-bold tracking-tight">{stealthInfo.stealth_name}</p>
+                        <p className="text-white text-xl font-bold tracking-tight">
+                            {stealthInfo.stealth_name === 'vasilminchevbenkov' ? 'vasil' : stealthInfo.stealth_name}
+                        </p>
                     </div>
                 </div>
                 <div className="bg-[#0a0a0a] border border-white/5 p-8 rounded-[2rem] group hover:border-white/10 transition-all">
