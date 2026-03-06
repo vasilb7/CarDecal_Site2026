@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useProducts } from '../hooks/useProducts';
 import { useCart } from '../context/CartContext';
 import { useToast } from '../hooks/useToast';
+import { useUI } from '../context/UIContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getOptimizedUrl } from '../lib/cloudinary-utils';
 import OptimizedImage from './ui/OptimizedImage';
@@ -64,10 +65,12 @@ const fadeSlide = {
 const ProductQuickViewModal: React.FC = () => {
     const { slug } = useParams<{ slug: string }>();
     const navigate = useNavigate();
+    const location = useLocation();
     const { t } = useTranslation();
     const { getProductBySlug, loading } = useProducts();
     const { addToCart } = useCart();
     const { showToast } = useToast();
+    const { setIsProductModalOpen } = useUI();
 
     const product = getProductBySlug(slug || '');
 
@@ -86,10 +89,12 @@ const ProductQuickViewModal: React.FC = () => {
 
     useEffect(() => {
         document.body.style.overflow = 'hidden';
+        setIsProductModalOpen(true);
         return () => {
             document.body.style.overflow = '';
+            setIsProductModalOpen(false);
         };
-    }, []);
+    }, [setIsProductModalOpen]);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -103,9 +108,22 @@ const ProductQuickViewModal: React.FC = () => {
         setIsVisible(false);
     };
 
+    const handleCloseFinal = () => {
+        if (!isVisible) {
+            const backgroundLocation = (location.state as any)?.backgroundLocation;
+            if (backgroundLocation) {
+                navigate(-1);
+            } else {
+                // Determine if we should go to catalog or somewhere else based on URL
+                const target = location.pathname.startsWith('/catalog') ? '/catalog' : '/';
+                navigate(target, { replace: true });
+            }
+        }
+    };
+
     if (loading) {
         return (
-            <AnimatePresence onExitComplete={() => navigate(-1)}>
+            <AnimatePresence onExitComplete={handleCloseFinal}>
                 {isVisible && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] flex items-center justify-center">
                         <div className="absolute inset-0 bg-black/70 backdrop-blur-md" onClick={handleClose} />
@@ -121,7 +139,7 @@ const ProductQuickViewModal: React.FC = () => {
 
     if (!product) {
         return (
-            <AnimatePresence onExitComplete={() => navigate(-1)}>
+            <AnimatePresence onExitComplete={handleCloseFinal}>
                 {isVisible && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] flex items-center justify-center">
                         <div className="absolute inset-0 bg-black/70 backdrop-blur-md" onClick={handleClose} />
@@ -159,7 +177,7 @@ const ProductQuickViewModal: React.FC = () => {
     };
 
     return (
-        <AnimatePresence onExitComplete={() => { if (!isVisible) navigate(-1); }}>
+        <AnimatePresence onExitComplete={handleCloseFinal}>
             {isVisible && (
                 <div 
                     className="fixed inset-0 z-[200] flex justify-end" 

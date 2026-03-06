@@ -87,7 +87,8 @@ function AppContent() {
     location.pathname.startsWith('/admin') || 
     location.pathname === '/login';
   const isGlobalMaintenanceActive = settings.maintenance_mode || isTimeUp;
-  const backgroundLocation = (location.state as any)?.backgroundLocation;
+  const isProductPage = location.pathname.startsWith('/catalog/') && location.pathname.split('/').length === 3;
+  const backgroundLocation = (location.state as any)?.backgroundLocation || (isProductPage ? { pathname: '/catalog' } : null);
   
   // Detect transition from maintenance ACTIVE -> INACTIVE to trigger hard refresh
   const wasMaintenanceActive = useRef(isGlobalMaintenanceActive);

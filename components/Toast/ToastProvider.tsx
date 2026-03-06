@@ -28,14 +28,17 @@ export const useToast = () => {
 
 export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [toasts, setToasts] = useState<Toast[]>([]);
-  const { isCartOpen } = useUI();
+  const { isCartOpen, isProductModalOpen } = useUI();
+  const [lastOpenState, setLastOpenState] = useState(false);
 
-  // Clear toasts when cart is opened
+  // Clear toasts when cart or product modal is opened
   useEffect(() => {
-    if (isCartOpen) {
+    const isAnyModalOpen = isCartOpen || isProductModalOpen;
+    if (isAnyModalOpen && !lastOpenState) {
       setToasts([]);
     }
-  }, [isCartOpen]);
+    setLastOpenState(isAnyModalOpen);
+  }, [isCartOpen, isProductModalOpen, lastOpenState]);
 
   const showToast = useCallback((message: string, type: ToastType = 'info', duration: number = 4000) => {
     const id = Math.random().toString(36).substring(2, 9);

@@ -5,6 +5,8 @@ interface UIContextType {
     setIsMobileNavOpen: (open: boolean) => void;
     isCartOpen: boolean;
     setIsCartOpen: (open: boolean) => void;
+    isProductModalOpen: boolean;
+    setIsProductModalOpen: (open: boolean) => void;
 }
 
 const UIContext = createContext<UIContextType | undefined>(undefined);
@@ -12,9 +14,17 @@ const UIContext = createContext<UIContextType | undefined>(undefined);
 export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
     const [isCartOpen, setIsCartOpen] = useState(false);
+    const [isProductModalOpen, setIsProductModalOpen] = useState(false);
 
     return (
-        <UIContext.Provider value={{ isMobileNavOpen, setIsMobileNavOpen, isCartOpen, setIsCartOpen }}>
+        <UIContext.Provider value={{ 
+            isMobileNavOpen, 
+            setIsMobileNavOpen, 
+            isCartOpen, 
+            setIsCartOpen,
+            isProductModalOpen,
+            setIsProductModalOpen
+        }}>
             {children}
         </UIContext.Provider>
     );
