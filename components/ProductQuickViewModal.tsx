@@ -348,44 +348,24 @@ const ProductQuickViewModal: React.FC = () => {
                             
                             {/* Header Section */}
                             <div>
-                                <div className="flex items-center gap-3 mb-4">
-                                    <span className="w-8 h-[2px] bg-red-600 rounded-full" />
-                                    <span className="text-[10px] md:text-[11px] uppercase tracking-[0.3em] font-black text-red-500">
-                                        {product.location || 'Premium Quality'}
-                                    </span>
+                                <div className="flex items-center justify-between mb-4">
+                                    <div className="flex items-center gap-3">
+                                        <span className="w-8 h-[2px] bg-red-600 rounded-full" />
+                                        <span className="text-[10px] md:text-[11px] uppercase tracking-[0.3em] font-black text-red-600">
+                                            Произведено от CarDecal
+                                        </span>
+                                    </div>
+                                    {product.size && (
+                                        <div className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-xl text-white font-black uppercase text-[10px] tracking-widest shadow-2xl">
+                                            {product.size}
+                                        </div>
+                                    )}
                                 </div>
                                 <h1 className="text-2xl md:text-3xl xl:text-4xl font-black uppercase tracking-tight leading-tight text-white break-words">
                                     {product.nameBg || product.name}
                                 </h1>
                             </div>
 
-                            {/* Price Config */}
-                            <div className="bg-[#0f0f0f] border border-white/5 rounded-3xl p-6 md:p-8 relative overflow-hidden">
-                                <div className="absolute top-0 right-0 w-32 h-32 bg-red-600/20 blur-3xl" />
-                                 <div className="absolute bottom-0 left-0 w-32 h-32 bg-red-600/20 blur-3xl" />
-                                <div className="flex flex-col gap-1">
-                                    <span className="text-[10px] uppercase tracking-[0.25em] font-bold text-white/40">Цена за Брой</span>
-                                    <div className="flex items-baseline gap-2">
-                                        <span className="text-4xl md:text-5xl font-mono font-black text-white">{priceValue.toFixed(2)}</span>
-                                        <span className="text-1xl md:text-2xl font-mono font-bold text-white-500">€</span>
-                                    </div>
-                                    <div className="flex items-baseline gap-1 mt-1">
-                                        <span className="text-sm font-mono font-medium text-white/50">/ {(priceValue * 1.95583).toFixed(2)}</span>
-                                        <span className="text-xs font-mono font-bold text-white/40">лв</span>
-                                    </div>
-                                </div>
-
-                                {product.size && (
-                                    <div className="mt-6 pt-6 border-t border-white/5 flex gap-4">
-                                        <div>
-                                            <span className="text-[12px] uppercase tracking-[0.2em] font-bold text-white/40 block mb-2">Размер</span>
-                                            <div className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white font-bold uppercase text-xs">
-                                                {product.size}
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
                             
                             {/* Product Info Description (Optional if you have descriptions) */}
                             <div className="space-y-4">

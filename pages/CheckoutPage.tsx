@@ -63,7 +63,7 @@ const ShippingMethodCard = ({
 
 const CheckoutPage: React.FC = () => {
     const { activeItems, subtotal, total, discountPercentage, clearCart, isFreeShipping, amountToFreeShipping } = useCart();
-    const { user, profile } = useAuth();
+    const { user, profile, loading: authLoading } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
     const { showToast } = useToast();
@@ -182,12 +182,30 @@ const CheckoutPage: React.FC = () => {
         }
     };
 
-    // Redirect if cart empty
+    // Guard: Redirect if cart empty or user not authenticated
     useEffect(() => {
-        if (activeItems.length === 0 && user) {
-            navigate('/cart');
+        if (authLoading) return;
+
+        if (activeItems.length === 0) {
+            const timer = setTimeout(() => {
+                navigate('/catalog', { replace: true });
+            }, 100);
+            return () => clearTimeout(timer);
         }
-    }, [activeItems.length, user, navigate]);
+        
+        if (!user) {
+            navigate('/login?redirectTo=/checkout', { replace: true });
+        }
+    }, [activeItems.length, user, authLoading, navigate]);
+
+    // Show loading if we're in a state that will redirect or while checking auth
+    if (authLoading || activeItems.length === 0 || !user) {
+        return (
+            <div className="min-h-screen bg-black flex items-center justify-center">
+                <Loader2 className="w-10 h-10 animate-spin text-red-600" />
+            </div>
+        );
+    }
 
     // UI Helpers
     const inputStyle = (errorKey: string) => `
@@ -514,7 +532,7 @@ const CheckoutPage: React.FC = () => {
                                     <div className="flex flex-col">
                                         <span>Доставка</span>
                                         {!isFreeShipping && amountToFreeShipping > 0 && (
-                                            <span className="text-[8px] text-red-500/80 lowercase font-bold normal-case mt-0.5 animate-pulse">
+                                            <span className="text-[8px] text-red-500/80 lowercase font-bold mt-0.5 animate-pulse">
                                                 Остават {(amountToFreeShipping * 1.95583).toFixed(2)} лв. до безплатна
                                             </span>
                                         )}
@@ -531,7 +549,7 @@ const CheckoutPage: React.FC = () => {
                                 <div className="pt-6 mt-2 border-t border-white/10 flex justify-between items-end">
                                     <div>
                                         <span className="text-white text-xs block mb-1">ОБЩО ЗА ПЛАЩАНЕ</span>
-                                        <p className="text-[10px] text-zinc-500 lowercase font-bold opacity-60 normal-case italic">~Плащане при доставка</p>
+                                        <p className="text-[10px] text-zinc-500 lowercase font-bold opacity-60 italic">~Плащане при доставка</p>
                                     </div>
                                     <div className="text-right">
                                         <div className="flex items-baseline gap-1 justify-end">
