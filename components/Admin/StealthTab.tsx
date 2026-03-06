@@ -2,8 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
-import { Shield, RefreshCw, Copy, ExternalLink, Key, Lock, Fingerprint, Eye, EyeOff, Crown } from 'lucide-react';
+import { Shield, RefreshCw, Copy, ExternalLink, Key, Lock, Fingerprint, Eye, EyeOff, Crown, AlertTriangle, X } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export const StealthTab: React.FC = () => {
     const { profile } = useAuth();
@@ -12,6 +13,7 @@ export const StealthTab: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [showSecret, setShowSecret] = useState(false);
     const [regenerating, setRegenerating] = useState(false);
+    const [showConfirmModal, setShowConfirmModal] = useState(false);
 
     const fetchStealthInfo = async () => {
         if (!profile?.id) return;
@@ -46,12 +48,14 @@ export const StealthTab: React.FC = () => {
         fetchStealthInfo();
     }, [profile?.id]);
 
-    const handleRegenerate = async () => {
+    const handleRegenerateClick = () => {
         if (!profile?.id) return;
-        
-        const confirmMsg = "ВНИМАНИЕ: Старият ключ ще спре да работи веднага. Сигурни ли сте, че искате да генерирате нов?";
-        if (!window.confirm(confirmMsg)) return;
+        setShowConfirmModal(true);
+    };
 
+    const confirmRegenerate = async () => {
+        if (!profile?.id) return;
+        setShowConfirmModal(false);
         setRegenerating(true);
         try {
             // Generate a truly complex random key
@@ -147,7 +151,7 @@ export const StealthTab: React.FC = () => {
                                     {showSecret ? <EyeOff size={20} /> : <Eye size={20} />}
                                 </button>
                                 <button 
-                                    onClick={handleRegenerate}
+                                    onClick={handleRegenerateClick}
                                     disabled={regenerating}
                                     className="p-3 bg-white/5 rounded-2xl text-zinc-500 hover:text-red-500 hover:bg-white/10 transition-all shrink-0 disabled:opacity-50"
                                     title="Регенерирай ключ"
@@ -226,6 +230,66 @@ export const StealthTab: React.FC = () => {
                     </div>
                 </div>
             </div>
+
+            <AnimatePresence>
+                {showConfirmModal && (
+                    <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setShowConfirmModal(false)}
+                            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+                        />
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                            className="relative w-full max-w-sm bg-gradient-to-b from-[#1a0505] to-[#0A0202] border border-red-500/20 rounded-3xl p-6 md:p-8 shadow-2xl flex flex-col items-center text-center overflow-hidden"
+                        >
+                            <div className="absolute -top-32 -right-32 w-64 h-64 bg-red-600/10 blur-[80px] rounded-full pointer-events-none" />
+                            
+                            <button 
+                                onClick={() => setShowConfirmModal(false)}
+                                className="absolute right-4 top-4 p-2 text-zinc-500 hover:text-white bg-white/5 hover:bg-white/10 rounded-full transition-colors z-10"
+                            >
+                                <X size={16} />
+                            </button>
+
+                            <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mb-6 relative">
+                                <div className="absolute inset-0 bg-red-500/20 blur-xl rounded-full" />
+                                <AlertTriangle className="w-8 h-8 text-red-500 relative z-10" />
+                            </div>
+
+                            <h3 className="text-xl md:text-2xl font-black text-white tracking-widest uppercase mb-3 text-balance">
+                                Внимание!
+                            </h3>
+                            
+                            <p className="text-zinc-400 text-xs md:text-sm mb-8 leading-relaxed font-medium">
+                                Старият ключ ще <strong className="text-red-400">спре да работи веднага</strong>. 
+                                Всички съществуващи връзки с него ще бъдат прекратени.
+                                <br/><br/>
+                                Сигурни ли сте, че искате да генерирате нов секретен ключ?
+                            </p>
+
+                            <div className="flex flex-col sm:flex-row gap-3 w-full relative z-10">
+                                <button
+                                    onClick={() => setShowConfirmModal(false)}
+                                    className="flex-1 py-3 px-4 rounded-xl font-bold uppercase tracking-widest text-xs bg-white/5 text-white hover:bg-white/10 border border-white/10 transition-all focus:outline-none focus:ring-2 focus:ring-white/20"
+                                >
+                                    Отказ
+                                </button>
+                                <button
+                                    onClick={confirmRegenerate}
+                                    className="flex-1 py-3 px-4 rounded-xl font-bold uppercase tracking-widest text-xs bg-red-600 text-white hover:bg-red-500 border border-red-500/50 shadow-[0_0_20px_rgba(220,38,38,0.3)] transition-all focus:outline-none focus:ring-2 focus:ring-red-500"
+                                >
+                                    Генерирай
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

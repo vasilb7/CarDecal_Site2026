@@ -37,7 +37,7 @@ const Header: React.FC = () => {
         !isBannerDismissed && 
         (new Date(autoStart).getTime() > (Date.now() + serverTimeOffset));
     const isPermanentAnnouncementActive = settings.announcement_mode && !isMaintenanceOn;
-    const isAnnouncementVisible = isMaintenanceWarningActive || isPermanentAnnouncementActive;
+    const isAnnouncementVisible = (isMaintenanceWarningActive || isPermanentAnnouncementActive) && !isBannerDismissed;
 
     const [currentMsgIndex, setCurrentMsgIndex] = useState(0);
     const annMessages = (settings.announcement_text || "").split('\n').filter(m => m.trim());
