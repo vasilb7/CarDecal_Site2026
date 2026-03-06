@@ -118,6 +118,8 @@ const LoginPage: React.FC = () => {
     }
   };
 
+  const stealthMessage = (location.state as any)?.message || (sessionStorage.getItem('stealth_authorized') ? 'Таен достъп активен. Моля, влезте в профила си.' : null);
+
   return (
     <SignInPage
       onSignIn={handleSignIn}
@@ -126,6 +128,7 @@ const LoginPage: React.FC = () => {
       isUpdatingPassword={isUpdatingPassword}
       onUpdatePassword={handleUpdatePassword}
       loading={loading}
+      stealthMessage={stealthMessage}
     />
   );
 };

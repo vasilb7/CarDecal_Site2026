@@ -2,15 +2,13 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
-import { Shield, RefreshCw, Copy, ExternalLink, Clock, Key } from 'lucide-react';
+import { Shield, RefreshCw, Copy, ExternalLink, Key, Lock, Fingerprint } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
 
 export const StealthTab: React.FC = () => {
     const { profile } = useAuth();
     const { showToast } = useToast();
     const [stealthInfo, setStealthInfo] = useState<{ stealth_name: string; secret: string } | null>(null);
-    const [currentCode, setCurrentCode] = useState<string>('');
-    const [timeLeft, setTimeLeft] = useState<number>(0);
     const [loading, setLoading] = useState(true);
 
     const fetchStealthInfo = async () => {
@@ -42,57 +40,16 @@ export const StealthTab: React.FC = () => {
         }
     };
 
-    const updateCode = async () => {
-        if (!stealthInfo) return;
-        try {
-            const { data, error } = await supabase.rpc('get_my_stealth_code', {
-                p_stealth_name: stealthInfo.stealth_name
-            });
-            if (error) throw error;
-            setCurrentCode(data);
-            
-            // Calculate time left in current 10-min bucket
-            const now = Math.floor(Date.now() / 1000);
-            const bucketSize = 600;
-            const remaining = bucketSize - (now % bucketSize);
-            setTimeLeft(remaining);
-        } catch (err) {
-            console.error('Error updating code:', err);
-        }
-    };
-
     useEffect(() => {
         fetchStealthInfo();
     }, [profile?.id]);
 
-    useEffect(() => {
-        if (stealthInfo) {
-            updateCode();
-            const interval = setInterval(() => {
-                setTimeLeft(prev => {
-                    if (prev <= 1) {
-                        updateCode();
-                        return 600;
-                    }
-                    return prev - 1;
-                });
-            }, 1000);
-            return () => clearInterval(interval);
-        }
-    }, [stealthInfo]);
-
-    const formatTime = (seconds: number) => {
-        const m = Math.floor(seconds / 60);
-        const s = seconds % 60;
-        return `${m}:${s.toString().padStart(2, '0')}`;
-    };
-
     const copyToClipboard = (text: string) => {
         navigator.clipboard.writeText(text);
-        showToast('Копирано!', 'success');
+        showToast('Копирано в клипборда!', 'success');
     };
 
-    const stealthUrl = stealthInfo ? `${window.location.origin}/s/${stealthInfo.stealth_name}/${currentCode}` : '';
+    const stealthUrl = stealthInfo ? `${window.location.origin}/s/${stealthInfo.stealth_name}/${stealthInfo.secret}` : '';
 
     if (loading) return (
         <div className="flex items-center justify-center py-20">
@@ -104,69 +61,84 @@ export const StealthTab: React.FC = () => {
         <div className="max-w-md mx-auto py-20 text-center space-y-4">
             <Shield className="w-12 h-12 text-zinc-700 mx-auto" />
             <h3 className="text-white font-bold uppercase tracking-widest">Нямате настроен таен достъп</h3>
-            <p className="text-zinc-500 text-xs">
-                Свържете се с главния администратор за активиране на тази функция.
+            <p className="text-zinc-500 text-xs text-balance">
+                Свържете се с главния администратор за активиране на функцията за супер-секретен достъп.
             </p>
         </div>
     );
 
     return (
-        <div className="max-w-2xl mx-auto py-8 space-y-8">
-            <div className="bg-gradient-to-br from-zinc-900 to-black border border-white/5 p-8 rounded-2xl shadow-2xl relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-8 opacity-5">
-                    <Shield className="w-32 h-32" />
-                </div>
+        <div className="max-w-3xl mx-auto py-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            {/* Main Header / Status */}
+            <div className="bg-gradient-to-br from-[#0a0a0a] to-[#050505] border border-white/10 p-8 sm:p-12 rounded-[2.5rem] shadow-2xl relative overflow-hidden group">
+                <div className="absolute -top-24 -right-24 w-64 h-64 bg-red-600/10 blur-[100px] rounded-full group-hover:bg-red-600/20 transition-all duration-700" />
                 
-                <div className="relative z-10 space-y-6">
-                    <div className="flex items-center gap-3 text-red-500 mb-2">
-                        <Key className="w-5 h-5" />
-                        <h2 className="text-sm font-black uppercase tracking-[0.2em]">Професионален Таен Вход</h2>
-                    </div>
-
-                    <div className="space-y-1">
-                        <p className="text-zinc-400 text-[10px] uppercase font-bold tracking-widest">Текущ код за достъп (10 мин)</p>
-                        <div className="flex items-center gap-4">
-                            <span className="text-5xl font-black text-white tracking-tighter tabular-nums font-mono">
-                                {currentCode}
-                            </span>
-                            <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-full border border-white/10">
-                                <Clock className="w-3.5 h-3.5 text-zinc-500" />
-                                <span className="text-[11px] font-mono text-zinc-400 font-bold">{formatTime(timeLeft)}</span>
+                <div className="relative z-10 space-y-10">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+                        <div className="space-y-2">
+                            <div className="flex items-center gap-3 text-red-500 font-black tracking-widest uppercase text-[10px]">
+                                <span className="w-2 h-2 bg-red-600 rounded-full animate-pulse" />
+                                Master Access Control
                             </div>
+                            <h2 className="text-4xl font-black text-white tracking-tighter italic uppercase">Таен Ключ за Достъп</h2>
+                        </div>
+                        <div className="bg-white/5 border border-white/10 p-4 rounded-3xl backdrop-blur-xl">
+                            <Fingerprint className="w-8 h-8 text-white/20" />
                         </div>
                     </div>
 
-                    <div className="pt-4 border-t border-white/5 space-y-4">
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between px-1">
+                            <label className="text-[10px] uppercase tracking-[0.3em] font-black text-white/30">Сложен секретен код</ts-ignore></label>
+                            <Lock className="w-3 h-3 text-red-600/50" />
+                        </div>
+                        <div className="bg-black/40 border border-white/5 p-6 rounded-3xl flex items-center justify-between gap-4 group/code hover:border-white/20 transition-all">
+                            <span className="text-2xl sm:text-3xl font-mono font-black text-white tracking-tight break-all">
+                                {stealthInfo.secret}
+                            </span>
+                            <button 
+                                onClick={() => copyToClipboard(stealthInfo.secret)}
+                                className="p-3 bg-white/5 rounded-2xl text-zinc-500 hover:text-white hover:bg-white/10 transition-all shrink-0"
+                            >
+                                <Copy size={20} />
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="space-y-4 pt-10 border-t border-white/5">
                         <div className="space-y-2">
-                            <label className="text-xs text-zinc-500 uppercase tracking-widest">Вашият персонален URL за вход:</label>
-                            <div className="flex gap-2">
-                                <div className="flex-1 bg-black/40 border border-white/10 px-4 py-3 text-xs text-zinc-300 font-mono truncate rounded-xl">
+                            <label className="text-[10px] uppercase tracking-[0.3em] font-black text-white/30 pl-1">Вашият персонален Stealth URL:</label>
+                            <div className="flex flex-col sm:flex-row gap-3">
+                                <div className="flex-1 bg-black/40 border border-white/5 p-5 text-sm text-zinc-400 font-mono truncate rounded-[1.5rem] group-hover:border-red-600/20 transition-all">
                                     {stealthUrl}
                                 </div>
-                                <button 
-                                    onClick={() => copyToClipboard(stealthUrl)}
-                                    className="p-3 bg-white/5 border border-white/10 hover:bg-white/10 text-white transition-all rounded-xl"
-                                    title="Копирай линк"
-                                >
-                                    <Copy size={18} />
-                                </button>
-                                <a 
-                                    href={stealthUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="p-3 bg-red-600 border border-red-500 hover:bg-red-500 text-white transition-all rounded-xl"
-                                    title="Отвори линк"
-                                >
-                                    <ExternalLink size={18} />
-                                </a>
+                                <div className="flex gap-2">
+                                    <button 
+                                        onClick={() => copyToClipboard(stealthUrl)}
+                                        className="flex-1 sm:flex-none px-6 py-4 bg-white/5 border border-white/10 hover:bg-white/10 text-white transition-all rounded-[1.5rem] flex items-center justify-center"
+                                        title="Копирай линк"
+                                    >
+                                        <Copy size={20} />
+                                    </button>
+                                    <a 
+                                        href={stealthUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex-1 sm:flex-none px-6 py-4 bg-red-600 hover:bg-red-500 text-white transition-all rounded-[1.5rem] flex items-center justify-center transform active:scale-95 shadow-xl shadow-red-600/20"
+                                        title="Тествай линк"
+                                    >
+                                        <ExternalLink size={20} />
+                                    </a>
+                                </div>
                             </div>
                         </div>
 
-                        <div className="bg-red-950/10 border border-red-900/20 p-4 rounded-xl">
-                            <div className="flex gap-3">
-                                <Shield className="w-4 h-4 text-red-500 shrink-0" />
-                                <p className="text-[10px] text-red-500/80 uppercase tracking-widest font-bold leading-relaxed">
-                                    С този линк можете да влезете директно в административния панел, без да въвеждате парола. Кодът в края на линка се сменя автоматично на всеки 10 минути за максимална сигурност.
+                        <div className="bg-red-600/5 border border-red-600/10 p-6 rounded-[2rem] flex gap-4">
+                            <Shield className="w-6 h-6 text-red-600 shrink-0 mt-1" />
+                            <div className="space-y-1">
+                                <p className="text-[11px] text-white font-black uppercase tracking-widest">Двуфакторна Гейтуей Система</p>
+                                <p className="text-[10px] text-zinc-500 leading-relaxed font-medium uppercase tracking-wider">
+                                    Този линк служи като таен вход, който ви прекарва през режима на поддръжка (maintance) и деактивираните защити. След разпознаване на ключа ще бъдете пренасочени към логин страницата за финално потвърждение на вашата идентичност чрез Google или парола.
                                 </p>
                             </div>
                         </div>
@@ -174,21 +146,21 @@ export const StealthTab: React.FC = () => {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-zinc-900/50 border border-white/5 p-6 rounded-2xl">
-                    <p className="text-[10px] text-zinc-500 uppercase tracking-widest mb-2 font-bold">Име на достъп</p>
-                    <p className="text-white font-mono font-bold">{stealthInfo.stealth_name}</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-[#0a0a0a] border border-white/5 p-8 rounded-[2rem] group hover:border-white/10 transition-all">
+                    <p className="text-[10px] text-zinc-500 uppercase tracking-widest mb-3 font-black">Име за оторизация</p>
+                    <div className="flex items-center gap-3">
+                        <Key className="w-4 h-4 text-red-600/40" />
+                        <p className="text-white text-xl font-bold tracking-tight">{stealthInfo.stealth_name}</p>
+                    </div>
                 </div>
-                <div className="bg-zinc-900/50 border border-white/5 p-6 rounded-2xl">
-                    <p className="text-[10px] text-zinc-500 uppercase tracking-widest mb-2 font-bold">Таен ключ (Secret)</p>
-                    <div className="flex items-center justify-between">
-                        <p className="text-white font-mono font-bold truncate pr-4">••••••••••••••••</p>
-                        <button 
-                            onClick={() => copyToClipboard(stealthInfo.secret)}
-                            className="text-zinc-500 hover:text-white transition-colors"
-                        >
-                            <Copy size={14} />
-                        </button>
+                <div className="bg-[#0a0a0a] border border-white/5 p-8 rounded-[2rem] group hover:border-white/10 transition-all">
+                    <p className="text-[10px] text-zinc-500 uppercase tracking-widest mb-3 font-black">Сигурност на ключа</p>
+                    <div className="flex items-center gap-3">
+                        <div className="flex gap-1">
+                            {[1,2,3,4,5].map(i => <div key={i} className="w-1.5 h-1.5 bg-red-600 rounded-full" />)}
+                        </div>
+                        <p className="text-white/60 text-xs font-black uppercase tracking-widest ml-2">High Encryption</p>
                     </div>
                 </div>
             </div>

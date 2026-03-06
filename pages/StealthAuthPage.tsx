@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useToast } from '../hooks/useToast';
-import { RefreshCcw, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { ShieldCheck, ShieldAlert, Key } from 'lucide-react';
 
 const StealthAuthPage: React.FC = () => {
   const { name, code } = useParams<{ name: string; code: string }>();
@@ -16,37 +16,40 @@ const StealthAuthPage: React.FC = () => {
     const handleStealthAuth = async () => {
       if (!name || !code) {
         setStatus('error');
-        setErrorMsg('Липсва име или код.');
+        setErrorMsg('Липсва име или секретен ключ.');
         return;
       }
 
       try {
-        // Call the edge function
-        const { data, error } = await supabase.functions.invoke('stealth-auth', {
-          body: { name, code }
+        // 1. Verify token directly via RPC
+        const { data: profileId, error } = await supabase.rpc('verify_stealth_access', {
+          p_stealth_name: name,
+          p_code: code
         });
 
-        if (error || !data.success) {
-          throw new Error(error?.message || data?.error || 'Невалиден код или име.');
+        if (error || !profileId) {
+          throw new Error('Невалиден ключ или име. Проверете линка отново.');
         }
 
-        // The edge function returns a magic link.
-        // We could redirect to it, or if it was a session, we'd set it.
-        // Actually, since we want immediate login, we follows the action_link.
-        // The action_link contains the hashed token that Supabase uses to log in.
-        
-        if (data.action_link) {
-          window.location.href = data.action_link;
-        } else {
-            throw new Error('Не беше генериран линк за достъп.');
-        }
+        // 2. Clear previous login state and set stealth flag
+        // We use sessionStorage so it only applies to this tab/session
+        sessionStorage.setItem('stealth_authorized', 'true');
+        sessionStorage.setItem('stealth_name', name);
 
         setStatus('success');
+        
+        // Small delay to show success icon before redirect
+        setTimeout(() => {
+          navigate('/login', { 
+            state: { from: '/admin', message: 'Таен достъп активиран. Моля, влезте в профила си.' } 
+          });
+        }, 1500);
+
       } catch (err: any) {
         console.error('Stealth auth error:', err);
         setStatus('error');
         setErrorMsg(err.message || 'Възникна грешка при оторизацията.');
-        showToast(err.message || 'Грешка при таен вход', 'error');
+        showToast(err.message || 'Грешка при таен достъп', 'error');
       }
     };
 
@@ -54,25 +57,29 @@ const StealthAuthPage: React.FC = () => {
   }, [name, code, navigate, showToast]);
 
   return (
-    <div className="min-h-screen bg-[#111] flex flex-col items-center justify-center p-6 text-white font-sans">
+    <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center p-6 text-white font-sans">
       <div className="max-w-md w-full text-center space-y-8">
         <div className="flex justify-center">
-          <div className="w-20 h-20 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
-            {status === 'verifying' && <RefreshCcw className="w-10 h-10 text-red-500 animate-spin" />}
-            {status === 'success' && <ShieldCheck className="w-10 h-10 text-green-500" />}
-            {status === 'error' && <ShieldAlert className="w-10 h-10 text-red-600" />}
-          </div>
+            <div className={`w-24 h-24 rounded-[2rem] flex items-center justify-center transition-all duration-500 border-2 ${
+                status === 'verifying' ? 'bg-white/5 border-white/10' : 
+                status === 'success' ? 'bg-green-500/10 border-green-500/30' : 
+                'bg-red-500/10 border-red-500/30'
+            }`}>
+                {status === 'verifying' && <Key className="w-10 h-10 text-white animate-pulse" />}
+                {status === 'success' && <ShieldCheck className="w-10 h-10 text-green-500 animate-bounce" />}
+                {status === 'error' && <ShieldAlert className="w-10 h-10 text-red-600 animate-pulse" />}
+            </div>
         </div>
 
-        <div className="space-y-2">
-          <h1 className="text-2xl font-black uppercase tracking-tighter italic">
-            {status === 'verifying' && 'Проверка на таен достъп...'}
-            {status === 'success' && 'Достъпът е потвърден!'}
-            {status === 'error' && 'Неуспешна проверка!'}
+        <div className="space-y-3">
+          <h1 className="text-3xl font-black uppercase tracking-tighter italic">
+            {status === 'verifying' && 'Валидиране на ключ...'}
+            {status === 'success' && 'Ключът е приет!'}
+            {status === 'error' && 'Невалиден достъп!'}
           </h1>
-          <p className="text-white/40 text-xs uppercase tracking-widest font-bold">
-            {status === 'verifying' && `Валидиране на ключ за ${name?.toUpperCase()}`}
-            {status === 'success' && 'Пренасочване към административен панел...'}
+          <p className="text-white/40 text-[10px] uppercase tracking-[0.3em] font-bold">
+            {status === 'verifying' && `Система за криптиран вход : ${name?.toUpperCase()}`}
+            {status === 'success' && 'Оторизацията е успешна. Изчакайте пренасочване към вход...'}
             {status === 'error' && errorMsg}
           </p>
         </div>
@@ -80,9 +87,9 @@ const StealthAuthPage: React.FC = () => {
         {status === 'error' && (
           <button
             onClick={() => navigate('/')}
-            className="px-8 py-3 bg-white text-black font-black uppercase tracking-widest text-[10px] hover:bg-white/90 transition-all rounded-full"
+            className="px-10 py-4 bg-white text-black font-black uppercase tracking-widest text-[11px] hover:bg-zinc-200 transition-all rounded-full shadow-2xl"
           >
-            Връщане към начало
+            Към сайта
           </button>
         )}
       </div>

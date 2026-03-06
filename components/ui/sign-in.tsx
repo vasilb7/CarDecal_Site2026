@@ -11,6 +11,7 @@ interface SignInPageProps {
   isUpdatingPassword?: boolean;
   onUpdatePassword?: (password: string) => Promise<void>;
   loading: boolean;
+  stealthMessage?: string | null;
 }
 
 // ──── Sub-components ────
@@ -106,6 +107,7 @@ export const SignInPage: React.FC<SignInPageProps> = ({
   isUpdatingPassword,
   onUpdatePassword,
   loading,
+  stealthMessage,
 }) => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
@@ -179,14 +181,26 @@ export const SignInPage: React.FC<SignInPageProps> = ({
             >
               {t("auth.login_title", "Добре Дошли")}
             </motion.h1>
-            <motion.p
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="text-white/40 text-[10px] sm:text-xs font-bold uppercase tracking-widest"
-            >
-              {t("auth.login_subtitle", "Достъп до вашия профил и поръчки")}
-            </motion.p>
+            {stealthMessage ? (
+              <motion.p
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="text-red-500 text-[10px] sm:text-xs font-black uppercase tracking-widest flex items-center justify-center lg:justify-start gap-2"
+              >
+                <Lock size={12} className="text-red-600" />
+                {stealthMessage}
+              </motion.p>
+            ) : (
+              <motion.p
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="text-white/40 text-[10px] sm:text-xs font-bold uppercase tracking-widest"
+              >
+                {t("auth.login_subtitle", "Достъп до вашия профил и поръчки")}
+              </motion.p>
+            )}
           </div>
 
           <form className="space-y-6 pt-8" onSubmit={onSignIn}>
