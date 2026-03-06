@@ -60,7 +60,7 @@ const ProductQuickViewModal: React.FC = () => {
     const { getProductBySlug, loading } = useProducts();
     const { addToCart } = useCart();
     const { showToast } = useToast();
-    const { isCartOpen, openCart, closeCart } = useUI();
+    const { isCartOpen, setIsProductModalOpen } = useUI();
     
     // Find product
     const product = getProductBySlug(slug || '');
@@ -95,21 +95,23 @@ const ProductQuickViewModal: React.FC = () => {
         }
     }, [product, loading]);
 
-    // Lock body scroll when modal is open
     useEffect(() => {
         if (isVisible) {
+            setIsProductModalOpen(true);
             const scrollBarWidth = window.innerWidth - document.documentElement.clientWidth;
             document.body.style.overflow = 'hidden';
             document.body.style.paddingRight = `${scrollBarWidth}px`;
         } else {
+            setIsProductModalOpen(false);
             document.body.style.overflow = '';
             document.body.style.paddingRight = '';
         }
         return () => {
+            setIsProductModalOpen(false);
             document.body.style.overflow = '';
             document.body.style.paddingRight = '';
         };
-    }, [isVisible]);
+    }, [isVisible, setIsProductModalOpen]);
 
     // Track variation ribbon scroll
     const handleScroll = () => {
@@ -117,6 +119,30 @@ const ProductQuickViewModal: React.FC = () => {
             const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
             setScrollProgress(scrollLeft / (scrollWidth - clientWidth));
         }
+    };
+
+    const handleQuantityChange = (val: string) => {
+        // Remove everything except numbers
+        const clean = val.replace(/[^0-9]/g, '');
+        
+        // If it's an empty string, let it be (user is typing), but we will fix it on Blur
+        if (clean === '') {
+            setQuantity(0); // Temporary state while typing
+            return;
+        }
+
+        const num = parseInt(clean, 10);
+        
+        // Final protection: no zero, no negative, no "01" (parseInt handles leading zeros)
+        if (num > 0) {
+            setQuantity(num);
+        } else {
+            setQuantity(1);
+        }
+    };
+
+    const handleQuantityBlur = () => {
+        if (quantity < 1) setQuantity(1);
     };
 
     const priceValue = product?.price_eur || product?.wholesalePriceEur || 0;
@@ -463,9 +489,14 @@ const ProductQuickViewModal: React.FC = () => {
                                     >
                                         <Minus size={18} />
                                     </button>
-                                    <div className="flex-1 flex items-center justify-center font-mono font-black text-lg border-x border-white/10 text-white">
-                                        {quantity}
-                                    </div>
+                                    <input 
+                                        type="text"
+                                        inputMode="numeric"
+                                        value={quantity === 0 ? "" : quantity}
+                                        onChange={(e) => handleQuantityChange(e.target.value)}
+                                        onBlur={handleQuantityBlur}
+                                        className="flex-1 w-full bg-transparent border-x border-white/10 text-center font-mono font-black text-lg text-white outline-none focus:bg-white/5 transition-all"
+                                    />
                                     <button 
                                         onClick={() => setQuantity(prev => prev + 1)}
                                         className="flex-1 flex items-center justify-center text-white hover:bg-white/5 transition-colors"
@@ -483,23 +514,29 @@ const ProductQuickViewModal: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* Mobile Floating Footer */}
-                        <div className="lg:hidden fixed bottom-0 left-0 right-0 p-6 bg-[#080808]/95 backdrop-blur-xl border-t border-white/5 z-[60] shadow-[0_-20px_50px_rgba(0,0,0,0.8)] pb-safe">
-                            <div className="flex items-center gap-4 h-14">
-                                <div className="flex bg-[#0f0f0f] rounded-2xl border border-white/10 overflow-hidden h-full max-w-[120px]">
-                                    <button onClick={() => setQuantity(prev => Math.max(1, prev - 1))} className="flex-1 px-3 flex items-center justify-center text-white"><Minus size={16} /></button>
-                                    <div className="flex-1 flex items-center justify-center font-mono font-black border-x border-white/10 text-white min-w-[30px]">{quantity}</div>
-                                    <button onClick={() => setQuantity(prev => prev + 1)} className="flex-1 px-3 flex items-center justify-center text-white"><Plus size={16} /></button>
-                                </div>
-                                <button
-                                    onClick={handleAddToCart}
-                                    className="flex-1 h-full bg-red-600 text-white rounded-2xl flex items-center justify-center gap-3 font-black uppercase text-[10px] tracking-[0.15em] shadow-[0_8px_30px_rgba(220,38,38,0.4)] active:scale-95 transition-all"
-                                >
-                                    <ShoppingBag size={18} />
-                                    Добави ({(priceValue * Math.max(1, quantity)).toFixed(2)}€)
-                                </button>
-                            </div>
-                        </div>
+                         <div className="lg:hidden fixed bottom-0 left-0 right-0 p-6 bg-[#080808]/95 backdrop-blur-xl border-t border-white/5 z-[60] shadow-[0_-20px_50px_rgba(0,0,0,0.8)] pb-safe">
+                             <div className="flex items-center gap-4 h-14">
+                                 <div className="flex bg-[#0f0f0f] rounded-2xl border border-white/10 overflow-hidden h-full max-w-[120px]">
+                                     <button onClick={() => setQuantity(prev => Math.max(1, prev - 1))} className="flex-1 px-3 flex items-center justify-center text-white"><Minus size={16} /></button>
+                                     <input 
+                                         type="text"
+                                         inputMode="numeric"
+                                         value={quantity === 0 ? "" : quantity}
+                                         onChange={(e) => handleQuantityChange(e.target.value)}
+                                         onBlur={handleQuantityBlur}
+                                         className="flex-1 w-full bg-transparent border-x border-white/10 text-center font-mono font-black text-white outline-none focus:bg-white/5 transition-all min-w-[40px]"
+                                     />
+                                     <button onClick={() => setQuantity(prev => prev + 1)} className="flex-1 px-3 flex items-center justify-center text-white"><Plus size={16} /></button>
+                                 </div>
+                                 <button
+                                     onClick={handleAddToCart}
+                                     className="flex-1 h-full bg-red-600 text-white rounded-2xl flex items-center justify-center gap-3 font-black uppercase text-[10px] tracking-[0.15em] shadow-[0_8px_30px_rgba(220,38,38,0.4)] active:scale-95 transition-all"
+                                 >
+                                     <ShoppingBag size={18} />
+                                     Добави ({(priceValue * Math.max(1, quantity)).toFixed(2)}€)
+                                 </button>
+                             </div>
+                         </div>
 
                     </div>
                 </div>
