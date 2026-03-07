@@ -5,12 +5,13 @@ import Footer from './Footer';
 interface LayoutProps {
   children: React.ReactNode;
   hideFooter?: boolean;
+  hideHeader?: boolean;
 }
 
-const Layout: React.FC<LayoutProps> = ({ children, hideFooter = false }) => {
+const Layout: React.FC<LayoutProps> = ({ children, hideFooter = false, hideHeader = false }) => {
   return (
     <div className="min-h-screen bg-background font-sans flex flex-col">
-      <Header />
+      {!hideHeader && <Header />}
       <main className="flex-grow w-full">
         {children}
       </main>

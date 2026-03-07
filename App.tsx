@@ -233,7 +233,10 @@ function AppContent() {
           <Route
             path="*"
             element={
-              <Layout hideFooter={location.pathname === '/profile' || location.pathname.startsWith('/account/orders/')}>
+              <Layout 
+                hideHeader={isRestricted}
+                hideFooter={isRestricted || location.pathname === '/profile' || location.pathname.startsWith('/account/orders/')}
+              >
                 <AnimatePresence mode="wait" initial={false}>
                   <motion.div
                     key={(backgroundLocation || location).pathname}
