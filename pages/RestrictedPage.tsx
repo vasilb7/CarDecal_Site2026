@@ -147,6 +147,37 @@ const RestrictedPage: React.FC = () => {
         }
     };
 
+    // ─── Auto-Refresh Logic ─────────────────────────────────────────────
+    const [timeLeft, setTimeLeft] = useState<string | null>(null);
+
+    React.useEffect(() => {
+        if (!isTemporary || !profile?.banned_until) return;
+
+        const checkTime = () => {
+            const bannedUntil = new Date(profile.banned_until).getTime();
+            const now = new Date().getTime();
+            const diff = bannedUntil - now;
+
+            if (diff <= 0) {
+                // Ban expired! Force reload to re-evaluate AuthContext
+                window.location.href = '/';
+                return;
+            }
+
+            // Update human readable countdown if under 1 hour
+            if (diff < 3600000) {
+                const minutes = Math.floor(diff / 60000);
+                const seconds = Math.floor((diff % 60000) / 1000);
+                setTimeLeft(`${minutes}:${seconds < 10 ? '0' : ''}${seconds}`);
+            }
+        };
+
+        const timer = setInterval(checkTime, 1000);
+        checkTime(); // Initial check
+
+        return () => clearInterval(timer);
+    }, [isTemporary, profile?.banned_until]);
+
     const handleSignOut = async () => {
         await signOut();
         window.location.href = '/';
@@ -218,6 +249,12 @@ const RestrictedPage: React.FC = () => {
                                     <span className="text-[10px] uppercase tracking-widest font-bold text-zinc-500">Ограничението изтича</span>
                                 </div>
                                 <p className="text-white font-semibold text-sm">{bannedUntilDate}</p>
+                                {timeLeft && (
+                                    <div className="mt-2 inline-flex items-center gap-2 px-2 py-1 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                                        <div className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse" />
+                                        <span className="text-[10px] text-amber-500 font-black tracking-widest uppercase">Авто-рефреш след: {timeLeft}</span>
+                                    </div>
+                                )}
                                 <p className="text-zinc-500 text-xs mt-1">
                                     След изтичането ще имаш пълен достъп до профила си.
                                 </p>
