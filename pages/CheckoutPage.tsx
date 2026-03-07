@@ -12,6 +12,7 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { useToast } from '../components/Toast/ToastProvider';
 import { isValidPhone as isValidBulgarianPhone, isValidFullName, formatToE164 } from '../lib/utils';
+import { Ticket, X as XIcon } from 'lucide-react';
 import SEO from '../components/SEO';
 
 // --- Sub-components for better organization ---
@@ -63,7 +64,7 @@ const ShippingMethodCard = ({
 );
 
 const CheckoutPage: React.FC = () => {
-    const { activeItems, subtotal, total, discountPercentage, clearCart, isFreeShipping, amountToFreeShipping } = useCart();
+    const { activeItems, subtotal, total, discountPercentage, clearCart, isFreeShipping, amountToFreeShipping, appliedPromo, applyPromo, removePromo } = useCart();
     const { user, profile, loading: authLoading } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
@@ -72,6 +73,10 @@ const CheckoutPage: React.FC = () => {
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
+    
+    // Promo Code State
+    const [promoInput, setPromoInput] = useState('');
+    const [promoLoading, setPromoLoading] = useState(false);
     
     // Form State
     const [formData, setFormData] = useState({
@@ -148,6 +153,41 @@ const CheckoutPage: React.FC = () => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
+    const handleApplyPromo = async () => {
+        if (!promoInput.trim()) return;
+        setPromoLoading(true);
+        try {
+            const { data, error } = await supabase
+                .from('promo_codes')
+                .select('*')
+                .eq('code', promoInput.toUpperCase())
+                .eq('is_active', true)
+                .single();
+            
+            if (error || !data) throw new Error('Невалиден или несъществуващ промо код.');
+
+            // Validate date
+            if (data.valid_from && new Date(data.valid_from) > new Date()) throw new Error('Този код все още не е активен.');
+            if (data.valid_until && new Date(data.valid_until) < new Date()) throw new Error('Този код е изтекъл.');
+
+            // Validate min order
+            if (data.min_order_amount && subtotal < data.min_order_amount) {
+                throw new Error(`Този код изисква минимална поръчка от ${data.min_order_amount} €`);
+            }
+
+            // Client-side quick checks (RPC will do strictly later)
+            if (data.max_uses && data.current_uses >= data.max_uses) throw new Error('Лимитът за използване на този код е достигнат.');
+
+            applyPromo(data);
+            showToast('Промо кодът е приложен успешно!', 'success');
+            setPromoInput('');
+        } catch (err: any) {
+            showToast(err.message, 'error');
+        } finally {
+            setPromoLoading(false);
+        }
+    };
+
     const handleSubmitOrder = async () => {
         if (loading) return;
         setLoading(true);
@@ -166,6 +206,17 @@ const CheckoutPage: React.FC = () => {
             }).select('id').single();
 
             if (error) throw error;
+
+            if (appliedPromo) {
+                try {
+                    await supabase.rpc('use_promo_code', {
+                        p_code: appliedPromo.code,
+                        p_user_id: user?.id || null,
+                        p_email: formData.email || '',
+                        p_order_id: data.id
+                    });
+                } catch(e) { /* ignore tracking error on checkout if it fails */ }
+            }
 
             if (user && saveForFuture) {
                 await supabase.from('profiles').update({
@@ -526,16 +577,69 @@ const CheckoutPage: React.FC = () => {
                                 )}
                             </div>
 
-                            {/* Totals */}
+                            {/* Totals & Promo */}
                             <div className="space-y-3 pt-4 text-[10px] uppercase font-black tracking-widest">
+                                
+                                {/* Promo Code Input */}
+                                <div className="mb-4 pb-4 border-b border-white/5">
+                                    {appliedPromo ? (
+                                        <div className="flex items-center justify-between bg-white/[0.03] border border-white/10 rounded-xl p-3">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-6 h-6 rounded-md bg-green-500/10 flex items-center justify-center">
+                                                    <CheckCircle2 size={12} className="text-green-500" />
+                                                </div>
+                                                <div>
+                                                    <span className="text-white text-xs">{appliedPromo.code}</span>
+                                                    <p className="text-[9px] text-green-500 font-bold capitalize mt-0.5">
+                                                        {appliedPromo.discount_type === 'percentage' ? `-${appliedPromo.discount_value}% отстъпка` : `-${appliedPromo.discount_value} € отстъпка`}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <button onClick={removePromo} className="p-2 text-zinc-500 hover:text-red-500 transition-colors">
+                                                <XIcon size={14} />
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="flex gap-2">
+                                            <div className="relative flex-1">
+                                                <input 
+                                                    type="text" 
+                                                    value={promoInput} 
+                                                    onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
+                                                    placeholder="ПРОМО КОД?" 
+                                                    className="w-full h-10 bg-[#0d0d0d] border border-white/10 rounded-xl px-4 pl-9 text-xs text-white focus:border-red-600 transition-all font-bold placeholder:text-zinc-600"
+                                                />
+                                                <Ticket size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+                                            </div>
+                                            <button 
+                                                onClick={handleApplyPromo}
+                                                disabled={promoLoading || !promoInput.trim()}
+                                                className="px-4 h-10 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-white text-[9px] transition-all disabled:opacity-50"
+                                            >
+                                                {promoLoading ? <Loader2 size={14} className="animate-spin text-zinc-400" /> : 'ПРИЛОЖИ'}
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+
                                 <div className="flex justify-between text-zinc-500">
                                     <span>Междинна сума</span>
                                     <span className="text-zinc-300">{subtotal.toFixed(2)} €</span>
                                 </div>
                                 {discountPercentage > 0 && (
                                     <div className="flex justify-between text-red-500">
-                                        <span>Промо отстъпка</span>
-                                        <span>-{(subtotal - total).toFixed(2)} €</span>
+                                        <span>Отстъпка (Количество)</span>
+                                        <span>-{(subtotal * (discountPercentage / 100)).toFixed(2)} €</span>
+                                    </div>
+                                )}
+                                {appliedPromo && (
+                                    <div className="flex justify-between text-green-500 text-[11px]">
+                                        <span>Отстъпка (Код {appliedPromo.code})</span>
+                                        <span>
+                                            -{appliedPromo.discount_type === 'percentage' ? 
+                                                ((subtotal - subtotal * (discountPercentage / 100)) * (appliedPromo.discount_value / 100)).toFixed(2) : 
+                                                appliedPromo.discount_value.toFixed(2)} €
+                                        </span>
                                     </div>
                                 )}
                                 <div className="flex justify-between text-zinc-500 items-start">

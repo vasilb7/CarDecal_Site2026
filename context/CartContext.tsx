@@ -4,6 +4,13 @@ export const EXCHANGE_RATE = 1.95583;
 export const FREE_SHIPPING_THRESHOLD_BGN = 150;
 export const FREE_SHIPPING_THRESHOLD_EUR = FREE_SHIPPING_THRESHOLD_BGN / EXCHANGE_RATE;
 
+export interface PromoCode {
+  id: string;
+  code: string;
+  discount_type: 'percentage' | 'fixed_amount';
+  discount_value: number;
+}
+
 export interface CartItem {
   id: string; // unique identifier (usually product slug + variant)
   name: string;
@@ -35,6 +42,9 @@ interface CartContextType {
   clearCart: () => void;
   isFreeShipping: boolean;
   amountToFreeShipping: number;
+  appliedPromo: PromoCode | null;
+  applyPromo: (promo: PromoCode) => void;
+  removePromo: () => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -56,6 +66,15 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return [];
     } catch {
       return [];
+    }
+  });
+
+  const [appliedPromo, setAppliedPromo] = useState<PromoCode | null>(() => {
+    try {
+      const saved = localStorage.getItem('cardecal_promo');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
     }
   });
 
@@ -88,7 +107,32 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       discountPercentage = DISCOUNT_TIERS[i].discount;
     }
   }
-  const total = subtotal - (subtotal * (discountPercentage / 100));
+
+  let finalDiscountValue = 0;
+  let discountedTotal = subtotal;
+
+  // Apply automatic percentage discount first
+  if (discountPercentage > 0) {
+    const autoDiscountValue = subtotal * (discountPercentage / 100);
+    finalDiscountValue += autoDiscountValue;
+    discountedTotal -= autoDiscountValue;
+  }
+
+  // Apply promo code on top if available
+  if (appliedPromo) {
+    if (appliedPromo.discount_type === 'percentage') {
+       const pbDis = discountedTotal * (appliedPromo.discount_value / 100);
+       finalDiscountValue += pbDis;
+       discountedTotal -= pbDis;
+    } else {
+       finalDiscountValue += appliedPromo.discount_value;
+       discountedTotal -= appliedPromo.discount_value;
+    }
+    // Prevent negative total
+    if (discountedTotal < 0) discountedTotal = 0;
+  }
+
+  const total = discountedTotal;
   
   const isFreeShipping = total >= FREE_SHIPPING_THRESHOLD_EUR;
   const amountToFreeShipping = Math.max(0, FREE_SHIPPING_THRESHOLD_EUR - total);
@@ -178,6 +222,18 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     Object.values(removeTimeouts.current).forEach(clearTimeout);
     removeTimeouts.current = {};
     setItems([]);
+    setAppliedPromo(null);
+    localStorage.removeItem('cardecal_promo');
+  };
+
+  const applyPromo = (promo: PromoCode) => {
+    setAppliedPromo(promo);
+    localStorage.setItem('cardecal_promo', JSON.stringify(promo));
+  };
+
+  const removePromo = () => {
+    setAppliedPromo(null);
+    localStorage.removeItem('cardecal_promo');
   };
 
   // Cleanup timeouts on unmount and listen for global clear cart event
@@ -195,7 +251,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   return (
-    <CartContext.Provider value={{ items, activeItems, itemsCount, subtotal, discountPercentage, total, addToCart, increase, decrease, updateQuantity, remove, initiateRemove, cancelRemove, clearCart, isFreeShipping, amountToFreeShipping }}>
+    <CartContext.Provider value={{ items, activeItems, itemsCount, subtotal, discountPercentage, total, addToCart, increase, decrease, updateQuantity, remove, initiateRemove, cancelRemove, clearCart, isFreeShipping, amountToFreeShipping, appliedPromo, applyPromo, removePromo }}>
       {children}
     </CartContext.Provider>
   );

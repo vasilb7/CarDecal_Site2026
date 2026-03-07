@@ -14,13 +14,14 @@ import {
     UserCheck, UserX, Crown, Upload, Video, Film, AlertCircle, Mail,
     Megaphone, Palette, Type, ShoppingBag, Receipt, Printer, Download,
     FileText, BoxSelect, LayoutGrid, ClipboardCheck, Boxes, FileJson, Clock, Bug,
-    Banknote, TrendingUp, Key, ChevronRight, History
+    Banknote, TrendingUp, Key, ChevronRight, History, Ticket
 } from 'lucide-react';
 import { useToast } from '../components/Toast/ToastProvider';
 import { uploadToCloudinary } from '../lib/cloudinary-utils';
 import { BugsTab } from '../components/Admin/BugsTab';
 import { StealthTab } from '../components/Admin/StealthTab';
 import { SecurityTab } from '../components/Admin/SecurityTab';
+import { PromoCodesTab } from '../components/Admin/PromoCodesTab';
 import SEO from '../components/SEO';
 
 // ─── Custom Confirm Dialog ──────────────────────────────────────────────────
@@ -6360,6 +6361,7 @@ const AdminPage: React.FC = () => {
         { id: 'products' as AdminTab, label: 'Стикери', icon: Package },
         { id: 'orders' as AdminTab, label: 'Поръчки', icon: CheckCircle },
         { id: 'custom_orders' as AdminTab, label: 'Индивидуални', icon: Edit3 },
+        { id: 'promo_codes' as AdminTab, label: 'Отстъпки', icon: Ticket },
         { id: 'bugs' as AdminTab, label: 'Доклади', icon: Bug, badge: newBugsCount },
         ...(isAdmin ? [
             { id: 'users' as AdminTab, label: 'Потребители', icon: Users },
@@ -6439,6 +6441,7 @@ const AdminPage: React.FC = () => {
                     {activeTab === 'products' && <ProductsTab />}
                     {activeTab === 'orders' && <OrdersTab />}
                     {activeTab === 'custom_orders' && <CustomOrdersTab />}
+                    {activeTab === 'promo_codes' && <PromoCodesTab />}
                     {activeTab === 'users' && <UsersTab />}
                     {activeTab === 'archived_users' && <ArchivedUsersTab />}
                     {activeTab === 'bugs' && <BugsTab />}
