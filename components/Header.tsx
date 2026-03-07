@@ -190,6 +190,19 @@ const Header: React.FC = () => {
         );
     };
 
+    // Performance: Close menus on scroll
+    useEffect(() => {
+        const handleScroll = () => {
+            if (isProfileMenuOpen) setIsProfileMenuOpen(false);
+        };
+
+        if (isProfileMenuOpen) {
+            window.addEventListener('scroll', handleScroll, { passive: true });
+        }
+        
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, [isProfileMenuOpen]);
+
     // Close menu on route change
     useEffect(() => {
         setIsMenuOpen(false);
