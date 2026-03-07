@@ -603,9 +603,15 @@ const SettingsTab: React.FC<{
                         <div className="flex items-center gap-3 bg-white/5 px-5 py-3.5 rounded-xl border border-white/5 w-full md:max-w-md">
                             <Mail className="w-4 h-4 text-zinc-500 flex-shrink-0" />
                             <span className="text-zinc-300 text-sm pointer-events-none truncate">{user?.email}</span>
-                            <span className="ml-auto text-[9px] text-emerald-400 font-bold uppercase tracking-widest border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 rounded shadow-inner">
-                                Потвърден
-                            </span>
+                            {user?.email_confirmed_at ? (
+                                <span className="ml-auto text-[9px] text-emerald-400 font-bold uppercase tracking-widest border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 rounded shadow-inner whitespace-nowrap">
+                                    Потвърден
+                                </span>
+                            ) : (
+                                <span className="ml-auto text-[9px] text-amber-500 font-bold uppercase tracking-widest border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 rounded shadow-inner whitespace-nowrap">
+                                    Очаква потвърждение
+                                </span>
+                            )}
                         </div>
                     </div>
                 </div>
