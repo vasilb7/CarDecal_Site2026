@@ -881,6 +881,22 @@ const UsersTab: React.FC = () => {
     const [modHistory, setModHistory] = useState<any[]>([]);
     const [modHistoryLoading, setModHistoryLoading] = useState(false);
     const [modStatusFilter, setModStatusFilter] = useState<'all' | 'active' | 'temporarily_suspended' | 'permanently_banned'>('all');
+    
+    // Auto-refresh timer to re-evaluate effective statuses
+    const [tick, setTick] = useState(0);
+    useEffect(() => {
+        const interval = setInterval(() => setTick(t => t + 1), 30000); // Re-render every 30s
+        return () => clearInterval(interval);
+    }, []);
+
+    const getEffectiveStatus = useCallback((u: DBUser): string => {
+        if (u.moderation_status === 'temporarily_suspended' && u.banned_until) {
+            if (new Date(u.banned_until).getTime() <= Date.now()) {
+                return 'active';
+            }
+        }
+        return u.moderation_status;
+    }, []);
 
     const fetchUsers = useCallback(async () => {
         setLoading(true);
@@ -910,8 +926,10 @@ const UsersTab: React.FC = () => {
     const filtered = users.filter(u => {
         const matchesSearch = u.email?.toLowerCase().includes(search.toLowerCase()) ||
             u.full_name?.toLowerCase().includes(search.toLowerCase());
+        const effectiveStatus = getEffectiveStatus(u);
+
         if (modStatusFilter === 'all') return matchesSearch;
-        return matchesSearch && u.moderation_status === modStatusFilter;
+        return matchesSearch && effectiveStatus === modStatusFilter;
     });
 
     const handleRoleUpdate = (user: DBUser, targetRole: 'user' | 'editor' | 'admin') => {
@@ -1164,7 +1182,8 @@ const UsersTab: React.FC = () => {
     };
 
     // Moderation status helpers
-    const modStatusBadge = (status: string) => {
+    const modStatusBadge = (user: DBUser) => {
+        const status = getEffectiveStatus(user);
         if (status === 'permanently_banned') return { label: 'Перманентно Огр.', cls: 'bg-red-900/40 text-red-400 border-red-900/20' };
         if (status === 'temporarily_suspended') return { label: 'Временно Огр.', cls: 'bg-amber-900/40 text-amber-400 border-amber-900/20' };
         return { label: 'Активен', cls: 'bg-emerald-900/30 text-emerald-400 border-emerald-900/20' };
@@ -1222,9 +1241,9 @@ const UsersTab: React.FC = () => {
                 <div className="flex items-center gap-2 flex-wrap">
                     {[
                         { key: 'all', label: 'Всички', count: users.length },
-                        { key: 'active', label: 'Активни', count: users.filter(u => u.moderation_status === 'active').length },
-                        { key: 'temporarily_suspended', label: 'Временно Огр.', count: users.filter(u => u.moderation_status === 'temporarily_suspended').length },
-                        { key: 'permanently_banned', label: 'Перманентно Огр.', count: users.filter(u => u.moderation_status === 'permanently_banned').length },
+                        { key: 'active', label: 'Активни', count: users.filter(u => getEffectiveStatus(u) === 'active').length },
+                        { key: 'temporarily_suspended', label: 'Временно Огр.', count: users.filter(u => getEffectiveStatus(u) === 'temporarily_suspended').length },
+                        { key: 'permanently_banned', label: 'Перманентно Огр.', count: users.filter(u => getEffectiveStatus(u) === 'permanently_banned').length },
                     ].map(f => (
                         <button
                             key={f.key}
@@ -1245,10 +1264,11 @@ const UsersTab: React.FC = () => {
             ) : (
                 <div className="space-y-2">
                     {filtered.map(u => {
-                        const badge = modStatusBadge(u.moderation_status);
-                        const isActive = u.moderation_status === 'active';
-                        const isTemp = u.moderation_status === 'temporarily_suspended';
-                        const isPerm = u.moderation_status === 'permanently_banned';
+                        const effectiveStatus = getEffectiveStatus(u);
+                        const badge = modStatusBadge(u);
+                        const isActive = effectiveStatus === 'active';
+                        const isTemp = effectiveStatus === 'temporarily_suspended';
+                        const isPerm = effectiveStatus === 'permanently_banned';
                         const hasDeletionRequest = !!u.deletion_requested_at;
 
                         return (
@@ -3500,7 +3520,7 @@ const DashboardTab: React.FC = () => {
             setStats({
                 products: products || 0,
                 users: profilesArr.length,
-                banned: profilesArr.filter((p: any) => p.is_banned).length,
+                banned: profilesArr.filter((p: any) => p.is_banned && (!p.banned_until || new Date(p.banned_until) > now)).length,
                 editors: profilesArr.filter((p: any) => p.role === 'editor').length,
                 admins: profilesArr.filter((p: any) => p.role === 'admin').length,
                 monthlyRevenue,
