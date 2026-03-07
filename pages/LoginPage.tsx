@@ -68,22 +68,26 @@ const LoginPage: React.FC = () => {
             showToast(error.message, "error");
         }
       } else {
-        // Record successful login + detect suspicious activity
-        const loginResult = await recordSuccessfulLogin(data?.user?.id);
+        // Record successful login in background
+        recordSuccessfulLogin(data?.user?.id).catch(console.error);
         
-        // Extract a friendly name
+        // Extract a friendly name for the greeting
         const md = data?.user?.user_metadata || {};
         const name = md.full_name || md.name || md.first_name || (data?.user?.email?.split('@')[0]) || '';
-        showToast(name ? `Добре дошли, ${name}!` : 'Добре дошли!', 'success');
+        
+        // Show success toast with translation key if possible
+        showToast(t('toast.login_success', { name: name || '!' }), 'success');
 
         if (rememberMe) {
           localStorage.setItem('remember_me', 'true');
-          // Log remember-me choice
-          logSecurityEvent('remember_me_set', data?.user?.id);
+          // Log remember-me choice in background
+          logSecurityEvent('remember_me_set', data?.user?.id).catch(console.error);
         } else {
           localStorage.setItem('remember_me', 'false');
           sessionStorage.setItem('temp_session', 'true');
         }
+        
+        // Immediate navigation after state updates
         navigate(from, { replace: true });
       }
     } catch (err) {

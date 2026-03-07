@@ -22,7 +22,7 @@ const CatalogPage: React.FC = () => {
 
     const [searchParams, setSearchParams] = useSearchParams();
     const location = useLocation();
-    const isModalOpen = !!location.state?.backgroundLocation;
+    const isModalOpen = !!location.state?.backgroundLocation || (location.pathname.startsWith('/catalog/') && location.pathname.split('/').length === 3);
     
     // Initial state from URL params
     const [searchTerm, setSearchTerm] = useState(searchParams.get('q') || '');

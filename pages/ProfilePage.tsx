@@ -2,13 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { logSecurityEvent } from '../lib/security';
+import { logSecurityEvent, recordProfileChange } from '../lib/security';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../components/Toast/ToastProvider';
 import SEO from '../components/SEO';
 import { AvatarCropModal } from '../components/AvatarCropModal';
 import { validatePassword, translateAuthError } from '../lib/passwordUtils';
-import { isValidBulgarianPhone } from '../lib/utils';
+import { isValidPhone as isValidBulgarianPhone, isValidFullName, formatToE164 } from '../lib/utils';
 import PasswordStrengthMeter from '../components/ui/PasswordStrengthMeter';
 import {
     User, Camera, LogOut, Settings, ShoppingBag,
@@ -348,14 +348,29 @@ const SettingsTab: React.FC<{
 
     const saveProfile = async () => {
         if (!fullName.trim()) return;
+        
+        if (!isValidFullName(fullName)) {
+            showToast('Въведете име и фамилия (3-100 символа). Допускат се само букви, интервали и тире.', 'error');
+            return;
+        }
+
         setSaving(true);
         try {
-            await supabase.auth.updateUser({ data: { full_name: fullName.trim() } });
+            const oldName = profile?.full_name || '';
+            const newName = fullName.trim();
+            
+            await supabase.auth.updateUser({ data: { full_name: newName } });
             const { error } = await supabase
                 .from('profiles')
-                .update({ full_name: fullName.trim(), updated_at: new Date().toISOString() })
+                .update({ full_name: newName, updated_at: new Date().toISOString() })
                 .eq('id', user.id);
             if (error) throw error;
+
+            // Track change history
+            if (oldName !== newName) {
+                await recordProfileChange(user.id, 'full_name', oldName, newName, 'user');
+            }
+
             await refreshProfile();
             setNameEditing(false);
             showToast('Профилът е обновен!', 'success');
@@ -368,25 +383,18 @@ const SettingsTab: React.FC<{
 
 
 
-    const normalizePhone = (num: string) => {
-        let clean = num.replace(/[\s-]/g, '');
-        if (clean.startsWith('00')) clean = '+' + clean.substring(2);
-        if (clean.startsWith('0')) clean = '+359' + clean.substring(1);
-        if (!clean.startsWith('+')) clean = '+359' + clean;
-        return clean;
-    };
-
     const savePhone = async () => {
         if (!userPhone.trim()) return;
 
-        if (!isValidBulgarianPhone(userPhone)) {
-            showToast('Невалиден телефон! Въведете коректен български мобилен номер.', 'error');
+        if (!isValidBulgarianPhone(userPhone)) { // Assuming userPhone is the variable to validate
+            showToast("Невалиден телефон! (8-15 цифри, + се допуска само в началото)", "error");
             return;
         }
 
         setPhoneSaving(true);
         try {
-            const normalizedPhone = normalizePhone(userPhone);
+            const oldPhone = profile?.phone || '';
+            const normalizedPhone = formatToE164(userPhone);
 
             // Update profile first for uniqueness check
             const { error: profileError } = await supabase
@@ -404,6 +412,11 @@ const SettingsTab: React.FC<{
             // Sync with Auth
             await supabase.auth.updateUser({ data: { phone: normalizedPhone } });
             
+            // Track change history
+            if (oldPhone !== normalizedPhone) {
+                await recordProfileChange(user.id, 'phone', oldPhone, normalizedPhone, 'user');
+            }
+
             await refreshProfile();
             setPhoneEditing(false);
             showToast('Телефонният номер е обновен!', 'success');

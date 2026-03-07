@@ -211,13 +211,18 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
 
                 <form className="space-y-6 pt-8" onSubmit={onSignUp}>
                     {/* Name - Restrict to two names via label instructions */}
-                    <FloatingInput 
-                        label={t('auth.name_label', 'Име и Фамилия')}
-                        name="name"
-                        storageKey="name"
-                        required
-                        onChange={(e) => setName(e.target.value)}
-                    />
+                    <div className="space-y-1">
+                        <FloatingInput 
+                            label={t('auth.name_label', 'Въведете име и Фамилия')}
+                            name="name"
+                            storageKey="name"
+                            required
+                            onChange={(e: any) => setName(e.target.value)}
+                        />
+                        <p className="px-6 text-[9px] text-white/30 uppercase tracking-widest leading-none font-bold">
+                            Допускат се само букви, интервали и тире
+                        </p>
+                    </div>
 
                     {/* Email */}
                     <FloatingInput 
@@ -230,13 +235,18 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
                     />
 
                     {/* Phone Number */}
-                    <FloatingInput 
-                        label={t('auth.phone', 'Телефонен номер')}
-                        name="phone"
-                        storageKey="phone"
-                        type="tel"
-                        required
-                    />
+                    <div className="space-y-1">
+                        <FloatingInput 
+                            label={t('auth.phone', 'Телефонен номер')}
+                            name="phone"
+                            storageKey="phone"
+                            type="tel"
+                            required
+                        />
+                        <p className="px-6 text-[9px] text-white/30 uppercase tracking-widest leading-none font-bold">
+                            8 до 15 цифри, + в началото (Е.164 формат)
+                        </p>
+                    </div>
 
                     {/* Password */}
                     <div>

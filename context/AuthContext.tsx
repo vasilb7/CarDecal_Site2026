@@ -8,7 +8,7 @@ import React, {
 import { supabase } from "../lib/supabase";
 import { Session, User } from "@supabase/supabase-js";
 import { UserProfile, ModerationStatus } from "../types";
-import { logSecurityEvent, recordSuccessfulLogin } from "../lib/security";
+import { logSecurityEvent, recordSuccessfulLogin, recordProfileChange } from "../lib/security";
 
 interface AuthContextType {
   user: User | null;
@@ -115,6 +115,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
+      const prevEmail = sessionStorage.getItem('last_user_email');
+      const currentEmail = session?.user?.email;
+
       setSession(session);
       setUser(session?.user ?? null);
 
@@ -125,6 +128,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             recordSuccessfulLogin(session.user.id);
             sessionStorage.setItem(`login_recorded_${session.user.id}`, 'true');
         }
+      }
+
+      // Track email changes if detected in auth state
+      if (session?.user && prevEmail && prevEmail !== currentEmail) {
+          recordProfileChange(session.user.id, 'email', prevEmail, currentEmail || '', 'user');
+      }
+      
+      if (currentEmail) {
+          sessionStorage.setItem('last_user_email', currentEmail);
       }
 
       if (session?.user) {

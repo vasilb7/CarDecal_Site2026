@@ -112,6 +112,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, isPriority = false }
         <Link 
             to={`/catalog/${product.slug}`} 
             state={{ backgroundLocation: location }} 
+            preventScrollReset={true}
             className="block h-full cursor-pointer"
         >
           {CardContent}

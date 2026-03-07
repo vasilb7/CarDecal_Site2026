@@ -11,7 +11,7 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { useToast } from '../components/Toast/ToastProvider';
-import { isValidBulgarianPhone } from '../lib/utils';
+import { isValidPhone as isValidBulgarianPhone, isValidFullName, formatToE164 } from '../lib/utils';
 import SEO from '../components/SEO';
 
 // --- Sub-components for better organization ---
@@ -117,8 +117,8 @@ const CheckoutPage: React.FC = () => {
 
     const validateForm = () => {
         const newErrors: Record<string, string> = {};
-        if (!formData.fullName.trim()) newErrors.fullName = "Името е задължително";
-        if (!isValidBulgarianPhone(formData.phone)) newErrors.phone = "Въведете валиден реален телефонен номер";
+        if (!isValidFullName(formData.fullName)) newErrors.fullName = "Въведете име и фамилия (3-100 символа). Допускат се само букви, интервали и тире.";
+        if (!isValidBulgarianPhone(formData.phone)) newErrors.phone = "Невалиден телефон! (8-15 цифри, + се допуска само в началото)";
         if (!formData.city.trim()) newErrors.city = "Въведете град";
         
         const activeOffice = formData.deliveryType === 'econt' ? formData.econtOffice : formData.speedyOffice;

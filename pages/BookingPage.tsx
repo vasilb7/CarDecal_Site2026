@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { AlertCircle, Plus, X, Mail, Phone, User as UserIcon, Lock, Loader2 } from 'lucide-react';
 import { uploadToCloudinary } from '../lib/cloudinary-utils';
-import { isValidBulgarianPhone } from '../lib/utils';
+import { isValidPhone as isValidBulgarianPhone, isValidFullName, formatToE164 } from '../lib/utils';
 import SEO from '../components/SEO';
 
 const DB_NAME = 'CarDecalBookingDB';
@@ -233,8 +233,13 @@ const BookingPage: React.FC = () => {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         
+        if (!isValidFullName(formData.fullName)) {
+            showToast("Въведете име и фамилия (3-100 символа). Допускат се само букви, интервали и тире.", "error");
+            return;
+        }
+
         if (!isValidBulgarianPhone(formData.phone)) {
-            showToast("Невалиден телефон! Въведете коректен български мобилен номер.", "error");
+            showToast("Невалиден телефон! Въведете коректен мобилен номер (8-15 цифри).", "error");
             return;
         }
         
@@ -265,7 +270,7 @@ const BookingPage: React.FC = () => {
             const { error: insertError } = await supabase.from('custom_orders').insert({
                  first_name: firstName,
                  last_name: lastName,
-                 phone: formData.phone,
+                 phone: formatToE164(formData.phone),
                  email: formData.email,
                  user_id: user?.id || null,
                  width: formData.width,
@@ -277,6 +282,8 @@ const BookingPage: React.FC = () => {
             
             if (insertError) throw insertError;
             
+            const normalizedPhone = formatToE164(formData.phone);
+            
             // Trigger email notification
             if (formData.email) {
                 supabase.functions.invoke('send-booking-email', {
@@ -284,7 +291,7 @@ const BookingPage: React.FC = () => {
                         email: formData.email,
                         firstName: firstName,
                         lastName: lastName,
-                        phone: formData.phone,
+                        phone: normalizedPhone,
                         width: formData.width,
                         height: formData.height,
                         quantity: formData.quantity,

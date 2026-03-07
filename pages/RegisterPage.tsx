@@ -6,7 +6,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { hasProfanity } from '../lib/profanity';
 import { useToast } from '../hooks/useToast';
 import { validatePassword, translateAuthError } from '../lib/passwordUtils';
-import { isValidBulgarianPhone } from '../lib/utils';
+import { isValidPhone as isValidBulgarianPhone, isValidFullName, formatToE164 } from '../lib/utils';
 import SEO from '../components/SEO';
 
 
@@ -29,23 +29,19 @@ const RegisterPage: React.FC = () => {
     const fullName = formData.get('name') as string;
     const phone = formData.get('phone') as string;
 
-    if (fullName.trim().split(' ').length < 2) {
-        showToast(t('toast.register_full_name_required', 'Моля, въведете две имена!'), "warning");
+    if (!isValidFullName(fullName)) {
+        showToast('Въведете име и фамилия (3-100 символа). Допускат се само букви, интервали и тире.', "warning");
         setLoading(false);
         return;
     }
 
     if (!isValidBulgarianPhone(phone)) {
-        showToast(t('toast.register_phone_required', 'Моля, въведете валиден телефонен номер!'), "warning");
+        showToast("Невалиден телефон! (8-15 цифри, + се допуска само в началото)", "warning");
         setLoading(false);
         return;
     }
 
-    if (fullName.length < 4) {
-        showToast(t('toast.register_short_name'), "warning");
-        setLoading(false);
-        return;
-    }
+    const normalizedPhone = formatToE164(phone);
 
     if (hasProfanity(fullName)) {
         showToast(t('toast.register_profanity'), "error");
@@ -66,8 +62,8 @@ const RegisterPage: React.FC = () => {
         password,
         options: {
           data: {
-            full_name: fullName,
-            phone: phone,
+            full_name: fullName.trim(),
+            phone: normalizedPhone,
             role: 'user', 
           },
         },

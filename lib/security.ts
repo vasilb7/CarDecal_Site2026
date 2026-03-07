@@ -229,3 +229,64 @@ export const securityEventColors: Record<SecurityEventType, string> = {
     remember_me_set: 'text-sky-400',
     failed_rate_limit: 'text-red-400',
 };
+
+// ── Profile Change Tracking ──
+
+export interface ProfileChangeRecord {
+    id: string;
+    user_id: string;
+    field_name: 'full_name' | 'phone' | 'email';
+    old_value: string | null;
+    new_value: string | null;
+    change_source: 'user' | 'admin';
+    admin_id?: string;
+    ip_address: string | null;
+    device_info: string | null;
+    created_at: string;
+}
+
+export async function recordProfileChange(
+    userId: string,
+    fieldName: 'full_name' | 'phone' | 'email',
+    oldValue: string | null,
+    newValue: string | null,
+    source: 'user' | 'admin' = 'user',
+    adminId?: string
+): Promise<void> {
+    if ((!oldValue && !newValue) || oldValue === newValue) return;
+
+    try {
+        const ip = await getClientIp();
+        const device = getDeviceFingerprint();
+
+        await supabase.from('profile_change_history').insert({
+            user_id: userId,
+            field_name: fieldName,
+            old_value: oldValue,
+            new_value: newValue,
+            change_source: source,
+            admin_id: adminId || null,
+            ip_address: ip,
+            device_info: device
+        });
+
+        // 🛡️ Abuse monitoring: Detect if changed more than 3 times in 24h
+        if (source === 'user') {
+            const { count } = await supabase
+                .from('profile_change_history')
+                .select('*', { count: 'exact', head: true })
+                .eq('user_id', userId)
+                .eq('field_name', fieldName)
+                .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+
+            if (count && count >= 3) {
+                await logSecurityEvent('suspicious_login', userId, {
+                    reason: `Прекалено честа смяна на ${fieldName}`,
+                    change_count: count
+                });
+            }
+        }
+    } catch (err) {
+        console.error('[Security] Failed to record profile change:', err);
+    }
+}

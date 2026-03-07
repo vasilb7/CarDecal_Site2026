@@ -11,7 +11,10 @@ interface FeaturedProductCardProps {
   isPriority?: boolean;
 }
 
-const FeaturedProductCard: React.FC<FeaturedProductCardProps> = ({ product, isPriority = false }) => {
+const FeaturedProductCard: React.FC<FeaturedProductCardProps> = ({
+  product,
+  isPriority = false,
+}) => {
   const { i18n } = useTranslation();
   const [imageLoaded, setImageLoaded] = useState(false);
 
@@ -19,7 +22,10 @@ const FeaturedProductCard: React.FC<FeaturedProductCardProps> = ({ product, isPr
   let displayPrice = "";
   if (product.price_eur !== undefined && product.price_eur !== null) {
     displayPrice = `€${Number(product.price_eur).toFixed(2)}`;
-  } else if (product.wholesalePriceEur !== undefined && product.wholesalePriceEur !== null) {
+  } else if (
+    product.wholesalePriceEur !== undefined &&
+    product.wholesalePriceEur !== null
+  ) {
     displayPrice = `€${Number(product.wholesalePriceEur).toFixed(2)}`;
   } else if (product.price) {
     displayPrice = product.price;
@@ -32,18 +38,19 @@ const FeaturedProductCard: React.FC<FeaturedProductCardProps> = ({ product, isPr
     }
   }
 
-  const name = i18n.language.startsWith("bg") && product.nameBg ? product.nameBg : product.name;
+  const name =
+    i18n.language.startsWith("bg") && product.nameBg
+      ? product.nameBg
+      : product.name;
   const shortDesc = product.dimensions || product.size || "Premium Sticker";
 
   const CardContent = (
-    <motion.div
-      className="bg-gradient-to-b from-[#141414] to-[#0A0A0A] rounded-[24px] md:rounded-[32px] p-5 md:p-8 flex flex-col h-full justify-between relative shadow-2xl border border-white/5 transition-all duration-500 ease-out overflow-hidden group/card lg:hover:-translate-y-3 lg:hover:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.8),0_0_25px_rgba(220,38,38,0.2)] lg:hover:border-red-600/30"
-    >
+    <motion.div className="bg-gradient-to-b from-[#141414] to-[#0A0A0A] rounded-[24px] md:rounded-[32px] p-5 md:p-8 flex flex-col h-full justify-between relative shadow-2xl border border-white/5 transition-all duration-500 ease-out overflow-hidden group/card lg:hover:-translate-y-3 lg:hover:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.8),0_0_25px_rgba(220,38,38,0.2)] lg:hover:border-red-600/30">
       {/* Product Image Area */}
       <div className="relative w-full aspect-video md:aspect-[4/3] flex-shrink-0 mb-4 min-h-0">
         <div className="absolute inset-0 flex items-center justify-center transition-transform duration-700 ease-out group-hover/card:scale-105">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(220,38,38,0.15)_0%,transparent_60%)] blur-2xl pointer-events-none opacity-0 group-hover/card:opacity-100 transition-opacity duration-500" />
-          
+
           <AnimatePresence>
             {!imageLoaded && (
               <motion.div
@@ -60,19 +67,21 @@ const FeaturedProductCard: React.FC<FeaturedProductCardProps> = ({ product, isPr
             src={product.avatar}
             alt={name}
             onLoad={() => setImageLoaded(true)}
-            className={`w-[90%] h-[90%] object-contain transition-opacity duration-200 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+            className={`w-[90%] h-[90%] object-contain transition-opacity duration-200 ${imageLoaded ? "opacity-100" : "opacity-0"}`}
             priority={isPriority}
             widths={[300, 500, 800]}
             sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
             objectFit="contain"
           />
         </div>
-
       </div>
 
       {/* Footer Content */}
       <div className="w-full mt-auto pt-4 border-t border-white/10 flex flex-col gap-2 shrink-0">
-        <h3 className="text-xs md:text-sm lg:text-base font-black text-white leading-snug line-clamp-2 uppercase tracking-tight group-hover/card:text-red-500 transition-colors w-full" title={name}>
+        <h3
+          className="text-xs md:text-sm lg:text-base font-black text-white leading-snug line-clamp-2 uppercase tracking-tight group-hover/card:text-red-500 transition-colors w-full"
+          title={name}
+        >
           {name}
         </h3>
         <div className="w-full flex items-end justify-between">
@@ -91,9 +100,14 @@ const FeaturedProductCard: React.FC<FeaturedProductCardProps> = ({ product, isPr
 
   return (
     <div className="group relative h-full">
-        <Link to={`/catalog/${product.slug}`} state={{ backgroundLocation: location }} className="block h-full cursor-pointer">
-          {CardContent}
-        </Link>
+      <Link
+        to={`/catalog/${product.slug}`}
+        state={{ backgroundLocation: location }}
+        preventScrollReset={true}
+        className="block h-full cursor-pointer"
+      >
+        {CardContent}
+      </Link>
     </div>
   );
 };

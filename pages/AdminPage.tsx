@@ -14,7 +14,7 @@ import {
     UserCheck, UserX, Crown, Upload, Video, Film, AlertCircle, Mail,
     Megaphone, Palette, Type, ShoppingBag, Receipt, Printer, Download,
     FileText, BoxSelect, LayoutGrid, ClipboardCheck, Boxes, FileJson, Clock, Bug,
-    Banknote, TrendingUp, Key
+    Banknote, TrendingUp, Key, ChevronRight, History
 } from 'lucide-react';
 import { useToast } from '../components/Toast/ToastProvider';
 import { uploadToCloudinary } from '../lib/cloudinary-utils';
@@ -1742,6 +1742,8 @@ const UserProfileModal: React.FC<{
 }> = ({ user, onClose }) => {
     const [orders, setOrders] = useState<RegularOrder[]>([]);
     const [customOrders, setCustomOrders] = useState<CustomOrder[]>([]);
+    const [profileHistory, setProfileHistory] = useState<any[]>([]);
+    const [securityLogs, setSecurityLogs] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const { showToast } = useToast();
@@ -2063,16 +2065,22 @@ const UserProfileModal: React.FC<{
         const fetchUserData = async () => {
             setLoading(true);
             try {
-                const [ordersRes, customOrdersRes] = await Promise.all([
+                const [ordersRes, customOrdersRes, historyRes, logsRes] = await Promise.all([
                     supabase.from('orders').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
-                    supabase.from('custom_orders').select('*').eq('user_id', user.id).order('created_at', { ascending: false })
+                    supabase.from('custom_orders').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
+                    supabase.from('profile_change_history').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
+                    supabase.from('security_logs').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(50)
                 ]);
 
                 if (ordersRes.error) throw ordersRes.error;
                 if (customOrdersRes.error) throw customOrdersRes.error;
+                if (historyRes.error) throw historyRes.error;
+                if (logsRes.error) throw logsRes.error;
 
                 setOrders(ordersRes.data || []);
                 setCustomOrders(customOrdersRes.data || []);
+                setProfileHistory(historyRes.data || []);
+                setSecurityLogs(logsRes.data || []);
             } catch (err: any) {
                 showToast("Грешка при зареждане на историята", "error");
             } finally {
@@ -2228,6 +2236,80 @@ const UserProfileModal: React.FC<{
                                 </div>
                             ) : (
                                 <>
+                                    {/* Profile Change History & Security Logs Section */}
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-12">
+                                        <div className="space-y-4">
+                                            <h4 className="text-[10px] text-zinc-600 uppercase font-black tracking-widest flex items-center gap-2">
+                                                <History className="w-3.5 h-3.5 text-blue-500" /> История на промените ({profileHistory.length})
+                                            </h4>
+                                            <div className="bg-white/[0.02] border border-white/5 rounded-2xl overflow-hidden">
+                                                {profileHistory.length === 0 ? (
+                                                    <p className="p-8 text-center text-zinc-600 text-[10px] uppercase font-bold tracking-widest italic">Няма регистрирани промени</p>
+                                                ) : (
+                                                    <div className="divide-y divide-white/5">
+                                                        {profileHistory.map(h => (
+                                                            <div key={h.id} className="p-4 hover:bg-white/[0.02] transition-colors">
+                                                                <div className="flex items-center justify-between mb-1">
+                                                                    <span className="text-[9px] uppercase font-black tracking-widest text-zinc-400">
+                                                                        {h.field_name === 'full_name' ? 'Име и фамилия' : 
+                                                                         h.field_name === 'phone' ? 'Телефон' : 
+                                                                         h.field_name === 'email' ? 'Имейл' : h.field_name}
+                                                                    </span>
+                                                                    <span className="text-[8px] text-zinc-600 italic">
+                                                                        {new Date(h.created_at).toLocaleString('bg-BG', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                                                                    </span>
+                                                                </div>
+                                                                <div className="flex items-center gap-2 text-[10px] flex-wrap">
+                                                                    <span className="text-zinc-500 line-through truncate max-w-[120px]">{h.old_value || '(празно)'}</span>
+                                                                    <ChevronRight className="w-2 h-2 text-zinc-700" />
+                                                                    <span className="text-white font-bold truncate max-w-[120px]">{h.new_value}</span>
+                                                                    <span className={`ml-auto text-[8px] px-1.5 py-0.5 rounded ${h.change_source === 'admin' ? 'bg-red-900/20 text-red-500 border border-red-900/30' : 'bg-zinc-800 text-zinc-500'} uppercase font-black`}>
+                                                                        {h.change_source === 'admin' ? 'Админ' : 'Клиент'}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-4">
+                                            <h4 className="text-[10px] text-zinc-600 uppercase font-black tracking-widest flex items-center gap-2">
+                                                <Shield className="w-3.5 h-3.5 text-emerald-500" /> Сигурност & Входове ({securityLogs.length})
+                                            </h4>
+                                            <div className="bg-white/[0.02] border border-white/5 rounded-2xl overflow-hidden">
+                                                {securityLogs.length === 0 ? (
+                                                    <p className="p-8 text-center text-zinc-600 text-[10px] uppercase font-bold tracking-widest italic">Няма записи</p>
+                                                ) : (
+                                                    <div className="divide-y divide-white/5 max-h-[400px] overflow-y-auto custom-scrollbar">
+                                                        {securityLogs.map(l => (
+                                                            <div key={l.id} className="p-4 hover:bg-white/[0.02] transition-colors">
+                                                                <div className="flex items-center justify-between mb-1">
+                                                                    <span className={`text-[9px] uppercase font-black tracking-widest ${
+                                                                        l.event_type === 'login_success' ? 'text-emerald-500' :
+                                                                        l.event_type === 'login_failed' || l.event_type === 'suspicious_login' ? 'text-red-500' :
+                                                                        'text-zinc-400'
+                                                                    }`}>
+                                                                        {l.event_type === 'login_success' ? 'Влизане' :
+                                                                         l.event_type === 'login_failed' ? 'Грешна парола' :
+                                                                         l.event_type === 'suspicious_login' ? 'Съмнителна активност' : l.event_type}
+                                                                    </span>
+                                                                    <span className="text-[8px] text-zinc-600">
+                                                                        {new Date(l.created_at).toLocaleString('bg-BG', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                                                                    </span>
+                                                                </div>
+                                                                <div className="flex items-center gap-3 text-[9px] text-zinc-500 font-mono">
+                                                                    <span className="text-zinc-400">{l.ip_address}</span>
+                                                                    <span className="truncate max-w-[150px]">{l.device_info}</span>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
                                     {/* Regular Orders */}
                                     <div className="space-y-4">
                                         <h4 className="text-[10px] text-zinc-600 uppercase font-black tracking-widest flex items-center gap-2">

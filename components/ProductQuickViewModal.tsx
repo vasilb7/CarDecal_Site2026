@@ -94,7 +94,7 @@ const ProductQuickViewModal: React.FC = () => {
         const finalSearch = fromParams.toString();
         const finalPath = `${basePath}${finalSearch ? `?${finalSearch}` : ''}`;
 
-        navigate(finalPath, { replace: true });
+        navigate(finalPath, { replace: true, state: { ...backLoc?.state, noScroll: true } });
     }, [location, navigate]);
 
     const handleClose = useCallback(() => {
