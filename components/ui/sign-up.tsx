@@ -76,6 +76,7 @@ const FloatingInput = ({
                     className={`w-full bg-white/[0.03] border ${isFocused ? 'border-red-600 shadow-[0_0_25px_rgba(239,68,68,0.15)]' : 'border-white/10'} rounded-full px-6 py-4 shadow-sm outline-none text-white placeholder:text-transparent backdrop-blur-xl transition-all ${isPassword ? 'pr-14' : ''}`}
                     required={required}
                     placeholder=" "
+                    maxLength={isPassword ? 64 : undefined}
                 />
                 
                 {isPassword && (
@@ -135,6 +136,8 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
   const [showConfirm, setShowConfirm] = useState(false);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [email, setEmail] = useState('');
+  const [name, setName] = useState('');
 
   const passwordValidation = validatePassword(password);
   const passwordsMatch = password === confirmPassword;
@@ -216,6 +219,7 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
                         name="name"
                         storageKey="name"
                         required
+                        onChange={(e) => setName(e.target.value)}
                     />
 
                     {/* Email */}
@@ -225,6 +229,7 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
                         storageKey="email"
                         type="email"
                         required
+                        onChange={(e) => setEmail(e.target.value)}
                     />
 
                     {/* Phone Number */}
@@ -252,6 +257,7 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
                                 <PasswordStrengthMeter
                                     password={password}
                                     confirmPassword={confirmPassword || undefined}
+                                    userInputs={[email, name].filter(Boolean)}
                                 />
                             )}
                         </AnimatePresence>

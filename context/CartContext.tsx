@@ -180,10 +180,17 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setItems([]);
   };
 
-  // Cleanup timeouts on unmount
+  // Cleanup timeouts on unmount and listen for global clear cart event
   useEffect(() => {
+    const handleClearCartEvent = () => {
+       clearCart();
+       localStorage.removeItem('cardecal_cart');
+    };
+    window.addEventListener('clear_local_cart', handleClearCartEvent);
+
     return () => {
         Object.values(removeTimeouts.current).forEach(clearTimeout);
+        window.removeEventListener('clear_local_cart', handleClearCartEvent);
     };
   }, []);
 

@@ -9,11 +9,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 export const StealthTab: React.FC = () => {
     const { profile } = useAuth();
     const { showToast } = useToast();
-    const [stealthInfo, setStealthInfo] = useState<{ stealth_name: string; secret: string } | null>(null);
+    const [stealthInfo, setStealthInfo] = useState<{ stealth_name: string; secret: string; regeneration_confirm_msg: string } | null>(null);
     const [loading, setLoading] = useState(true);
     const [showSecret, setShowSecret] = useState(false);
     const [regenerating, setRegenerating] = useState(false);
     const [showConfirmModal, setShowConfirmModal] = useState(false);
+    const [isEditingMsg, setIsEditingMsg] = useState(false);
+    const [tempMsg, setTempMsg] = useState('');
+    const [savingMsg, setSavingMsg] = useState(false);
 
     const fetchStealthInfo = async () => {
         if (!profile?.id) return;
@@ -21,7 +24,7 @@ export const StealthTab: React.FC = () => {
         try {
             const { data, error } = await supabase
                 .from('admin_stealth_access')
-                .select('stealth_name, secret_token')
+                .select('stealth_name, secret_token, regeneration_confirm_msg')
                 .eq('profile_id', profile.id)
                 .single();
 
@@ -34,8 +37,10 @@ export const StealthTab: React.FC = () => {
             } else {
                 setStealthInfo({
                     stealth_name: data.stealth_name,
-                    secret: data.secret_token
+                    secret: data.secret_token,
+                    regeneration_confirm_msg: data.regeneration_confirm_msg || 'Старият ключ ще спре да работи веднага. Всички съществуващи връзки с него ще бъдат прекратени. Сигурни ли сте, че искате да генерирате нов секретен ключ?'
                 });
+                setTempMsg(data.regeneration_confirm_msg || '');
             }
         } catch (err) {
             console.error('Error fetching stealth info:', err);
@@ -87,6 +92,26 @@ export const StealthTab: React.FC = () => {
     const copyToClipboard = (text: string) => {
         navigator.clipboard.writeText(text);
         showToast('Копирано в клипборда!', 'success');
+    };
+
+    const handleSaveMsg = async () => {
+        if (!profile?.id) return;
+        setSavingMsg(true);
+        try {
+            const { error } = await supabase
+                .from('admin_stealth_access')
+                .update({ regeneration_confirm_msg: tempMsg })
+                .eq('profile_id', profile.id);
+            if (error) throw error;
+            setStealthInfo(prev => prev ? { ...prev, regeneration_confirm_msg: tempMsg } : null);
+            setIsEditingMsg(false);
+            showToast('Съобщението е запазено!', 'success');
+        } catch (err) {
+            console.error('Error saving msg:', err);
+            showToast('Грешка при запазване.', 'error');
+        } finally {
+            setSavingMsg(false);
+        }
     };
 
     const stealthUrl = stealthInfo ? `${window.location.origin}/s/${stealthInfo.stealth_name}/${stealthInfo.secret}` : '';
@@ -229,6 +254,39 @@ export const StealthTab: React.FC = () => {
                         <p className="text-white/60 text-xs font-black uppercase tracking-widest ml-2">High Encryption</p>
                     </div>
                 </div>
+
+                <div className="bg-[#0a0a0a] border border-white/5 p-8 rounded-[2rem] group hover:border-white/10 transition-all col-span-full">
+                    <div className="flex items-center justify-between mb-4">
+                        <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-black">Персонално съобщение за потвърждение</p>
+                        <button 
+                            onClick={() => setIsEditingMsg(!isEditingMsg)}
+                            className="text-[10px] text-red-500 hover:text-red-400 font-black uppercase tracking-widest transition-colors"
+                        >
+                            {isEditingMsg ? 'Отказ' : 'Редактирай'}
+                        </button>
+                    </div>
+                    {isEditingMsg ? (
+                        <div className="space-y-4">
+                            <textarea
+                                value={tempMsg}
+                                onChange={(e) => setTempMsg(e.target.value)}
+                                placeholder="Въведете съобщението, което ще се вижда при регенериране..."
+                                className="w-full h-32 bg-black/40 border border-white/10 rounded-2xl p-4 text-white text-sm font-medium focus:outline-none focus:border-red-600/50 transition-all resize-none"
+                            />
+                            <button
+                                onClick={handleSaveMsg}
+                                disabled={savingMsg}
+                                className="w-full py-3 bg-red-600 hover:bg-red-500 text-white font-black uppercase tracking-widest text-xs rounded-xl shadow-xl shadow-red-600/20 disabled:opacity-50 transition-all"
+                            >
+                                {savingMsg ? 'Запазване...' : 'Запази съобщението'}
+                            </button>
+                        </div>
+                    ) : (
+                        <p className="text-white/60 text-sm font-medium leading-relaxed italic">
+                            "{stealthInfo?.regeneration_confirm_msg}"
+                        </p>
+                    )}
+                </div>
             </div>
 
             <AnimatePresence>
@@ -265,11 +323,8 @@ export const StealthTab: React.FC = () => {
                                 Внимание!
                             </h3>
                             
-                            <p className="text-zinc-400 text-xs md:text-sm mb-8 leading-relaxed font-medium">
-                                Старият ключ ще <strong className="text-red-400">спре да работи веднага</strong>. 
-                                Всички съществуващи връзки с него ще бъдат прекратени.
-                                <br/><br/>
-                                Сигурни ли сте, че искате да генерирате нов секретен ключ?
+                            <p className="text-zinc-400 text-xs md:text-sm mb-8 leading-relaxed font-medium whitespace-pre-wrap">
+                                {stealthInfo.regeneration_confirm_msg}
                             </p>
 
                             <div className="flex flex-col sm:flex-row gap-3 w-full relative z-10">

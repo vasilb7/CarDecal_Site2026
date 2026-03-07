@@ -1,42 +1,55 @@
-import React, { useState, useEffect, Suspense, useRef } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { AnimatePresence, motion } from 'framer-motion';
-import ScrollToTop from './components/ScrollToTop';
-import Layout from './components/Layout';
-import HomePage from './pages/HomePage';
-import { ToastProvider } from './components/Toast/ToastProvider';
-import { useAuth } from './context/AuthContext';
-import { useSiteSettings, SiteSettingsProvider } from './context/SiteSettingsContext';
-import { UIProvider } from './context/UIContext';
-import { CartProvider } from './context/CartContext';
-import { ProductsProvider } from './context/ProductsContext';
-import { Loader2 } from 'lucide-react';
-import { CompleteRegistrationModal } from './components/ui/complete-registration';
-import ReportBugModal from './components/ReportBugModal';
-import { useToast } from './hooks/useToast';
-import { useTranslation } from 'react-i18next';
+import React, { useState, useEffect, Suspense, useRef } from "react";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+  useLocation,
+} from "react-router-dom";
+import { AnimatePresence, motion } from "framer-motion";
+import ScrollToTop from "./components/ScrollToTop";
+import Layout from "./components/Layout";
+import HomePage from "./pages/HomePage";
+import { ToastProvider } from "./components/Toast/ToastProvider";
+import { useAuth } from "./context/AuthContext";
+import {
+  useSiteSettings,
+  SiteSettingsProvider,
+} from "./context/SiteSettingsContext";
+import { UIProvider } from "./context/UIContext";
+import { CartProvider } from "./context/CartContext";
+import { ProductsProvider } from "./context/ProductsContext";
+import { Loader2 } from "lucide-react";
+import { CompleteRegistrationModal } from "./components/ui/complete-registration";
+import ReportBugModal from "./components/ReportBugModal";
+import { useToast } from "./hooks/useToast";
+import { useTranslation } from "react-i18next";
 
 // Lazy-loaded pages - only downloaded when navigated to
-const CatalogPage = React.lazy(() => import('./pages/CatalogPage'));
-const ProductDetailsPage = React.lazy(() => import('./pages/ProductDetailsPage'));
-const ContactPage = React.lazy(() => import('./pages/ContactPage'));
-const PricingPage = React.lazy(() => import('./pages/PricingPage'));
-const LoginPage = React.lazy(() => import('./pages/LoginPage'));
-const RegisterPage = React.lazy(() => import('./pages/RegisterPage'));
-const PrivacyPage = React.lazy(() => import('./pages/PrivacyPage'));
-const TermsPage = React.lazy(() => import('./pages/TermsPage'));
-const BookingPage = React.lazy(() => import('./pages/BookingPage'));
-const ProfilePage = React.lazy(() => import('./pages/ProfilePage'));
-const RecoveryPage = React.lazy(() => import('./pages/RecoveryPage'));
-const AdminPage = React.lazy(() => import('./pages/AdminPage'));
-const CartPage = React.lazy(() => import('./pages/CartPage'));
-const CheckoutPage = React.lazy(() => import('./pages/CheckoutPage'));
-const OrderSuccessPage = React.lazy(() => import('./pages/OrderSuccessPage'));
-const OrderReceiptPage = React.lazy(() => import('./pages/OrderReceiptPage'));
-const OrderDetailPage = React.lazy(() => import('./pages/OrderDetailPage'));
-const MaintenancePage = React.lazy(() => import('./pages/MaintenancePage'));
-const StealthAuthPage = React.lazy(() => import('./pages/StealthAuthPage'));
-const ProductQuickViewModal = React.lazy(() => import('./components/ProductQuickViewModal'));
+const CatalogPage = React.lazy(() => import("./pages/CatalogPage"));
+const ProductDetailsPage = React.lazy(
+  () => import("./pages/ProductDetailsPage"),
+);
+const ContactPage = React.lazy(() => import("./pages/ContactPage"));
+const PricingPage = React.lazy(() => import("./pages/PricingPage"));
+const LoginPage = React.lazy(() => import("./pages/LoginPage"));
+const RegisterPage = React.lazy(() => import("./pages/RegisterPage"));
+const PrivacyPage = React.lazy(() => import("./pages/PrivacyPage"));
+const TermsPage = React.lazy(() => import("./pages/TermsPage"));
+const BookingPage = React.lazy(() => import("./pages/BookingPage"));
+const ProfilePage = React.lazy(() => import("./pages/ProfilePage"));
+const RecoveryPage = React.lazy(() => import("./pages/RecoveryPage"));
+const AdminPage = React.lazy(() => import("./pages/AdminPage"));
+const CartPage = React.lazy(() => import("./pages/CartPage"));
+const CheckoutPage = React.lazy(() => import("./pages/CheckoutPage"));
+const OrderSuccessPage = React.lazy(() => import("./pages/OrderSuccessPage"));
+const OrderReceiptPage = React.lazy(() => import("./pages/OrderReceiptPage"));
+const OrderDetailPage = React.lazy(() => import("./pages/OrderDetailPage"));
+const MaintenancePage = React.lazy(() => import("./pages/MaintenancePage"));
+const StealthAuthPage = React.lazy(() => import("./pages/StealthAuthPage"));
+const ProductQuickViewModal = React.lazy(
+  () => import("./components/ProductQuickViewModal"),
+);
 
 function PageWrapper({ children }: { children: React.ReactNode }) {
   return (
@@ -55,29 +68,35 @@ function PageWrapper({ children }: { children: React.ReactNode }) {
 function AppContent() {
   const location = useLocation();
   const { user, loading: authLoading, isAdmin, isEditor, profile } = useAuth();
-  const { settings, loading: settingsLoading, serverTimeOffset, isMaintenanceActive } = useSiteSettings();
+  const {
+    settings,
+    loading: settingsLoading,
+    serverTimeOffset,
+    isMaintenanceActive,
+  } = useSiteSettings();
   const { showToast } = useToast();
   const { t } = useTranslation();
 
-
-
-
   // Derived state
   const isAuthenticated = !!user;
-  const isMaintenancePageAllowed = 
-    location.pathname.startsWith('/admin') || 
-    location.pathname.startsWith('/s/') ||
-    location.pathname === '/login';
+  const isMaintenancePageAllowed =
+    location.pathname.startsWith("/admin") ||
+    location.pathname.startsWith("/s/") ||
+    location.pathname === "/login";
   const isGlobalMaintenanceActive = isMaintenanceActive;
-  const isProductPage = location.pathname.startsWith('/catalog/') && location.pathname.split('/').length === 3;
-  
+  const isProductPage =
+    location.pathname.startsWith("/catalog/") &&
+    location.pathname.split("/").length === 3;
+
   // Logic to determine if we should render a background page (for modals)
   // We MUST preserve search params and existing state to prevent CatalogPage from resetting filters/scroll
-  const backgroundLocation = (location.state as any)?.backgroundLocation || 
-    (isProductPage ? { pathname: '/catalog', search: location.search, state: location.state } : null);
-  
-  // Maintenance logic handles automatically via React state
+  const backgroundLocation =
+    (location.state as any)?.backgroundLocation ||
+    (isProductPage
+      ? { pathname: "/catalog", search: location.search, state: location.state }
+      : null);
 
+  // Maintenance logic handles automatically via React state
 
   // Early return for loading - AFTER hooks
   if (authLoading || settingsLoading) {
@@ -88,8 +107,23 @@ function AppContent() {
     );
   }
 
-  if (isGlobalMaintenanceActive && !isAdmin && !isEditor && !isMaintenancePageAllowed) {
-    return <Suspense fallback={<div className="flex items-center justify-center min-h-screen bg-black"><Loader2 className="w-10 h-10 animate-spin text-red-600" /></div>}><MaintenancePage /></Suspense>;
+  if (
+    isGlobalMaintenanceActive &&
+    !isAdmin &&
+    !isEditor &&
+    !isMaintenancePageAllowed
+  ) {
+    return (
+      <Suspense
+        fallback={
+          <div className="flex items-center justify-center min-h-screen bg-black">
+            <Loader2 className="w-10 h-10 animate-spin text-red-600" />
+          </div>
+        }
+      >
+        <MaintenancePage />
+      </Suspense>
+    );
   }
 
   const LazyFallback = (
@@ -102,45 +136,193 @@ function AppContent() {
     <>
       <ScrollToTop />
       <Suspense fallback={LazyFallback}>
-      <Routes location={backgroundLocation || location}>
-        {/* Admin - Protected - Stealth redirect to home for unauthorized users */}
-        <Route path="/admin/*" element={isAdmin || isEditor ? <AdminPage /> : <Navigate to="/" replace />} />
+        <Routes location={backgroundLocation || location}>
+          {/* Admin - Protected - Stealth redirect to home for unauthorized users */}
+          <Route
+            path="/admin/*"
+            element={
+              isAdmin || isEditor ? <AdminPage /> : <Navigate to="/" replace />
+            }
+          />
 
-        {/* Auth Pages - No Header/Footer */}
-        <Route path="/login" element={<PageWrapper><LoginPage /></PageWrapper>} />
-        <Route path="/register" element={<Navigate to="/" replace />} />
-        <Route path="/recovery" element={<PageWrapper><RecoveryPage /></PageWrapper>} />
-        <Route path="/s/:name/:code" element={<PageWrapper><StealthAuthPage /></PageWrapper>} />
-        <Route path="/checkout" element={<PageWrapper><CheckoutPage /></PageWrapper>} />
-        <Route path="/order/success/:orderId" element={<PageWrapper><OrderSuccessPage /></PageWrapper>} />
-        <Route path="/order/receipt/:orderId" element={<OrderReceiptPage />} />
+          {/* Auth Pages - No Header/Footer */}
+          <Route
+            path="/login"
+            element={
+              <PageWrapper>
+                <LoginPage />
+              </PageWrapper>
+            }
+          />
+          <Route
+            path="/register"
+            element={
+              <PageWrapper>
+                <RegisterPage />
+              </PageWrapper>
+            }
+          />
+          <Route
+            path="/recovery"
+            element={
+              <PageWrapper>
+                <RecoveryPage />
+              </PageWrapper>
+            }
+          />
+          <Route
+            path="/s/:name/:code"
+            element={
+              <PageWrapper>
+                <StealthAuthPage />
+              </PageWrapper>
+            }
+          />
+          <Route
+            path="/checkout"
+            element={
+              <PageWrapper>
+                <CheckoutPage />
+              </PageWrapper>
+            }
+          />
+          <Route
+            path="/order/success/:orderId"
+            element={
+              <PageWrapper>
+                <OrderSuccessPage />
+              </PageWrapper>
+            }
+          />
+          <Route
+            path="/order/receipt/:orderId"
+            element={<OrderReceiptPage />}
+          />
 
-        {/* Regular Pages with Layout */}
-        <Route path="*" element={
-          <Layout>
-            <AnimatePresence mode="wait" initial={false}>
-              <motion.div key={(backgroundLocation || location).pathname} className="w-full">
-                <Routes location={backgroundLocation || location}>
-                  <Route path="/" element={<PageWrapper><HomePage /></PageWrapper>} />
-                  <Route path="/catalog" element={<PageWrapper><CatalogPage /></PageWrapper>} />
-                  <Route path="/catalog/category/:category" element={<PageWrapper><CatalogPage /></PageWrapper>} />
-                  <Route path="/catalog/:slug" element={<PageWrapper><ProductDetailsPage /></PageWrapper>} />
-                  <Route path="/contact" element={<PageWrapper><ContactPage /></PageWrapper>} />
-                  <Route path="/pricing" element={<PageWrapper><PricingPage /></PageWrapper>} />
-                  <Route path="/privacy" element={<PageWrapper><PrivacyPage /></PageWrapper>} />
-                  <Route path="/terms" element={<PageWrapper><TermsPage /></PageWrapper>} />
-                  <Route path="/custom-orders" element={<PageWrapper><BookingPage /></PageWrapper>} />
-                  <Route path="/cart" element={<PageWrapper><CartPage /></PageWrapper>} />
-                  <Route path="/profile" element={isAuthenticated ? <PageWrapper><ProfilePage /></PageWrapper> : <Navigate to="/login" replace />} />
-                  <Route path="/account/orders/:orderId" element={isAuthenticated ? <PageWrapper><OrderDetailPage /></PageWrapper> : <Navigate to="/login" replace />} />
-                  <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
-              </motion.div>
-            </AnimatePresence>
-            <CompleteRegistrationModal />
-          </Layout>
-        } />
-      </Routes>
+          {/* Regular Pages with Layout */}
+          <Route
+            path="*"
+            element={
+              <Layout>
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.div
+                    key={(backgroundLocation || location).pathname}
+                    className="w-full"
+                  >
+                    <Routes location={backgroundLocation || location}>
+                      <Route
+                        path="/"
+                        element={
+                          <PageWrapper>
+                            <HomePage />
+                          </PageWrapper>
+                        }
+                      />
+                      <Route
+                        path="/catalog"
+                        element={
+                          <PageWrapper>
+                            <CatalogPage />
+                          </PageWrapper>
+                        }
+                      />
+                      <Route
+                        path="/catalog/category/:category"
+                        element={
+                          <PageWrapper>
+                            <CatalogPage />
+                          </PageWrapper>
+                        }
+                      />
+                      <Route
+                        path="/catalog/:slug"
+                        element={
+                          <PageWrapper>
+                            <ProductDetailsPage />
+                          </PageWrapper>
+                        }
+                      />
+                      <Route
+                        path="/contact"
+                        element={
+                          <PageWrapper>
+                            <ContactPage />
+                          </PageWrapper>
+                        }
+                      />
+                      <Route
+                        path="/pricing"
+                        element={
+                          <PageWrapper>
+                            <PricingPage />
+                          </PageWrapper>
+                        }
+                      />
+                      <Route
+                        path="/privacy"
+                        element={
+                          <PageWrapper>
+                            <PrivacyPage />
+                          </PageWrapper>
+                        }
+                      />
+                      <Route
+                        path="/terms"
+                        element={
+                          <PageWrapper>
+                            <TermsPage />
+                          </PageWrapper>
+                        }
+                      />
+                      <Route
+                        path="/custom-orders"
+                        element={
+                          <PageWrapper>
+                            <BookingPage />
+                          </PageWrapper>
+                        }
+                      />
+                      <Route
+                        path="/cart"
+                        element={
+                          <PageWrapper>
+                            <CartPage />
+                          </PageWrapper>
+                        }
+                      />
+                      <Route
+                        path="/profile"
+                        element={
+                          isAuthenticated ? (
+                            <PageWrapper>
+                              <ProfilePage />
+                            </PageWrapper>
+                          ) : (
+                            <Navigate to="/login" replace />
+                          )
+                        }
+                      />
+                      <Route
+                        path="/account/orders/:orderId"
+                        element={
+                          isAuthenticated ? (
+                            <PageWrapper>
+                              <OrderDetailPage />
+                            </PageWrapper>
+                          ) : (
+                            <Navigate to="/login" replace />
+                          )
+                        }
+                      />
+                      <Route path="*" element={<Navigate to="/" replace />} />
+                    </Routes>
+                  </motion.div>
+                </AnimatePresence>
+                <CompleteRegistrationModal />
+              </Layout>
+            }
+          />
+        </Routes>
       </Suspense>
 
       {/* Modal Overlay Section */}

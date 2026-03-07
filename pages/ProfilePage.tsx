@@ -287,12 +287,19 @@ const SettingsTab: React.FC<{
     const [confirmPwd, setConfirmPwd] = useState('');
     const [showOld, setShowOld] = useState(false);
     const [showNew, setShowNew] = useState(false);
+    const [showConfirm, setShowConfirm] = useState(false);
     const [pwdSaving, setPwdSaving] = useState(false);
     const [showDangerZone, setShowDangerZone] = useState(false);
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 
-    // Check if the user has a password set (usually means email provider)
-    const isPasswordUser = user?.identities?.some((id: any) => id.provider === 'email');
+    const [resetModalOpen, setResetModalOpen] = useState(false);
+    const [resettingPassword, setResettingPassword] = useState(false);
+
+    // Check if the user has a password set (usually means email provider or has_password flag)
+    const isPasswordUser = 
+        user?.app_metadata?.provider === 'email' || 
+        user?.identities?.some((id: any) => id.provider === 'email') || 
+        user?.user_metadata?.has_password === true;
 
     useEffect(() => {
         setFullName(profile?.full_name || '');
@@ -367,6 +374,23 @@ const SettingsTab: React.FC<{
         }
     };
 
+    const handleResetPassword = async () => {
+        if (!user?.email) return;
+        setResettingPassword(true);
+        try {
+            const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
+                redirectTo: `${window.location.origin}/reset-password`,
+            });
+            if (error) throw error;
+            showToast('Изпратихме ти имейл с инструкции за смяна на паролата.', 'success');
+            setResetModalOpen(false);
+        } catch (e: any) {
+            showToast(translateAuthError(e), 'error');
+        } finally {
+            setResettingPassword(false);
+        }
+    };
+
     const changePassword = async () => {
         if (isPasswordUser && !oldPwd) {
             showToast('Моля, въведете старата си парола.', 'error');
@@ -378,7 +402,7 @@ const SettingsTab: React.FC<{
         }
         const pwdValidation = validatePassword(newPwd);
         if (!pwdValidation.isValid) {
-            showToast('Паролата не отговаря на изискванията. Минимум 10 символа с главна буква, малка буква, цифра и специален символ.', 'error');
+            showToast('Паролата не отговаря на изискванията. От 10 до 64 символа с главна буква, малка буква, цифра и специален символ.', 'error');
             return;
         }
 
@@ -398,7 +422,10 @@ const SettingsTab: React.FC<{
             }
 
             // Now safe to update password
-            const { error } = await supabase.auth.updateUser({ password: newPwd });
+            const { error } = await supabase.auth.updateUser({ 
+                password: newPwd,
+                data: { has_password: true }
+            });
             if (error) throw error;
             
             showToast(isPasswordUser ? 'Паролата е сменена успешно!' : 'Паролата е създадена успешно!', 'success');
@@ -446,7 +473,7 @@ const SettingsTab: React.FC<{
                 <div className={rowCls}>
                     <div className="md:w-1/3">
                         <p className={labelTitleCls}>Профилна Снимка</p>
-                        <p className={labelSubCls}>Препоръчително 400x400px</p>
+                        <p className={labelSubCls}>Препоръчително 400x400px (до 3MB)</p>
                     </div>
                     <div className="md:w-2/3 flex items-center justify-between md:justify-end gap-6">
                         <div className="relative w-16 h-16 rounded-full overflow-hidden bg-zinc-900 border border-white/10 flex-shrink-0 shadow-inner">
@@ -624,21 +651,24 @@ const SettingsTab: React.FC<{
                                 <div className="p-6 md:px-8 space-y-4 max-w-xl mx-auto border-t border-white/5">
                                     {isPasswordUser && (
                                         <div>
-                                            <label className="block text-xs font-bold text-zinc-400 mb-2 uppercase tracking-wide">Стара Парола</label>
+                                            <div className="flex items-center justify-between mb-2">
+                                                <label className="block text-xs font-bold text-zinc-400 uppercase tracking-wide">Текуща парола</label>
+                                            </div>
                                             <div className="relative">
                                                 <input
                                                     type={showOld ? 'text' : 'password'}
                                                     value={oldPwd}
                                                     onChange={e => setOldPwd(e.target.value)}
-                                                    className={`${inputCls} pr-11`}
+                                                    className={`${inputCls} pr-12`}
                                                     placeholder="Въведете текущата си парола"
+                                                    maxLength={64}
                                                 />
                                                 <button
                                                     type="button"
                                                     onClick={() => setShowOld(v => !v)}
-                                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white p-2"
+                                                    className="absolute right-1 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center text-zinc-500 hover:text-white transition-colors"
                                                 >
-                                                    {showOld ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                                    {showOld ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                                                 </button>
                                             </div>
                                         </div>
@@ -650,15 +680,16 @@ const SettingsTab: React.FC<{
                                                 type={showNew ? 'text' : 'password'}
                                                 value={newPwd}
                                                 onChange={e => setNewPwd(e.target.value)}
-                                                className={`${inputCls} pr-11`}
-                                                placeholder="Минимум 10 символа"
+                                                className={`${inputCls} pr-12`}
+                                                placeholder="От 10 до 64 символа"
+                                                maxLength={64}
                                             />
                                             <button
                                                 type="button"
                                                 onClick={() => setShowNew(v => !v)}
-                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white p-2"
+                                                className="absolute right-1 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center text-zinc-500 hover:text-white transition-colors"
                                             >
-                                                {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                                {showNew ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                                             </button>
                                         </div>
                                         <AnimatePresence>
@@ -666,19 +697,30 @@ const SettingsTab: React.FC<{
                                                 <PasswordStrengthMeter
                                                     password={newPwd}
                                                     confirmPassword={confirmPwd || undefined}
+                                                    userInputs={[profile?.email, profile?.phone, user?.user_metadata?.name, user?.email].filter(Boolean) as string[]}
                                                 />
                                             )}
                                         </AnimatePresence>
                                     </div>
                                     <div>
                                         <label className="block text-xs font-bold text-zinc-400 mb-2 uppercase tracking-wide">Потвърди Новата Парола</label>
-                                        <input
-                                            type="password"
-                                            value={confirmPwd}
-                                            onChange={e => setConfirmPwd(e.target.value)}
-                                            className={inputCls}
-                                            placeholder="Повтори новата парола"
-                                        />
+                                        <div className="relative">
+                                            <input
+                                                type={showConfirm ? 'text' : 'password'}
+                                                value={confirmPwd}
+                                                onChange={e => setConfirmPwd(e.target.value)}
+                                                className={`${inputCls} pr-12`}
+                                                placeholder="Повтори новата парола"
+                                                maxLength={64}
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowConfirm(v => !v)}
+                                                className="absolute right-1 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center text-zinc-500 hover:text-white transition-colors"
+                                            >
+                                                {showConfirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                                            </button>
+                                        </div>
                                     </div>
 
                                     {newPwd && confirmPwd && newPwd !== confirmPwd && (
@@ -697,8 +739,20 @@ const SettingsTab: React.FC<{
                                             {pwdSaving
                                                 ? <Loader2 className="w-4 h-4 animate-spin" />
                                                 : <Lock className="w-4 h-4" />}
-                                            {pwdSaving ? 'Запазване...' : (isPasswordUser ? 'Запази Новата Парола' : 'Създай Парола')}
+                                            {pwdSaving ? 'Запазване...' : (isPasswordUser ? 'Запази новата парола' : 'Създай Парола')}
                                         </button>
+                                        
+                                        {isPasswordUser && (
+                                            <div className="mt-6 text-center">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setResetModalOpen(true)}
+                                                    className="text-xs font-bold text-zinc-500 hover:text-white uppercase tracking-widest transition-colors"
+                                                >
+                                                    Забравих текущата си парола
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </motion.div>
@@ -768,6 +822,16 @@ const SettingsTab: React.FC<{
                             handleDeleteAccount();
                         }}
                         onCancel={() => setDeleteModalOpen(false)}
+                    />
+
+                    <ConfirmDialog
+                        isOpen={resetModalOpen}
+                        title="ЗАБРАВЕНА ПАРОЛА?"
+                        message="Не помниш текущата си парола? Ще ти изпратим линк за смяна на регистрирания имейл."
+                        confirmLabel={resettingPassword ? "Изпращане..." : "Изпрати линк"}
+                        isDanger={false}
+                        onConfirm={handleResetPassword}
+                        onCancel={() => setResetModalOpen(false)}
                     />
                 </div>
             </div>
@@ -860,6 +924,14 @@ const ProfilePage: React.FC = () => {
     const handleAvatarFile = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
+        
+        // 3MB limit
+        if (file.size > 3 * 1024 * 1024) {
+            showToast('Снимката е твърде голяма! Максималният размер е 3MB.', 'error');
+            if (avatarInputRef.current) avatarInputRef.current.value = '';
+            return;
+        }
+
         const reader = new FileReader();
         reader.onload = ev => {
             if (ev.target?.result) {

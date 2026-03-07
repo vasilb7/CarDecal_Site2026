@@ -57,7 +57,7 @@ const RegisterPage: React.FC = () => {
       // Frontend password validation
       const pwdValidation = validatePassword(password);
       if (!pwdValidation.isValid) {
-          showToast('Паролата не отговаря на изискванията. Минимум 10 символа с главна буква, малка буква, цифра и специален символ.', 'error');
+          showToast('Моля, изпълнете изискванията за парола по-долу.', 'error');
           setLoading(false);
           return;
       }

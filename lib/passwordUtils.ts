@@ -1,3 +1,5 @@
+import zxcvbn from 'zxcvbn';
+
 // ─── Password Validation & Strength Utilities ──────────────────────────────
 // Matches Supabase Auth password policy:
 // - Min 10 characters
@@ -18,8 +20,8 @@ export interface PasswordValidation {
 }
 
 export interface PasswordStrength {
-    score: number;       // 0-5
-    level: 'none' | 'weak' | 'medium' | 'strong';
+    score: number;       // 0-4 (zxcvbn score)
+    level: 'very_weak' | 'weak' | 'medium' | 'good' | 'strong';
     label: string;
     color: string;
     barColor: string;
@@ -31,7 +33,7 @@ export interface PasswordStrength {
  */
 export function validatePassword(password: string): PasswordValidation {
     const checks: PasswordCheck[] = [
-        { id: 'length', label: 'Минимум 10 символа', passed: password.length >= 10 },
+        { id: 'length', label: 'От 10 до 64 символа', passed: password.length >= 10 && password.length <= 64 },
         { id: 'lowercase', label: 'Малка буква (a-z)', passed: /[a-z]/.test(password) },
         { id: 'uppercase', label: 'Главна буква (A-Z)', passed: /[A-Z]/.test(password) },
         { id: 'digit', label: 'Цифра (0-9)', passed: /\d/.test(password) },
@@ -40,28 +42,39 @@ export function validatePassword(password: string): PasswordValidation {
 
     return {
         checks,
-        isValid: checks.every(c => c.passed),
+        isValid: checks.every(c => c.passed), // Must pass ALL requirements to be valid
     };
 }
 
 /**
- * Calculate password strength score and visual properties.
+ * Calculate password strength score based on zxcvbn entropy.
+ * Can take user data (email, name) to prevent easily guessable passwords.
  */
-export function getPasswordStrength(password: string): PasswordStrength {
+export function getPasswordStrength(password: string, userInputs: string[] = []): PasswordStrength {
     if (!password) {
-        return { score: 0, level: 'none', label: '', color: 'text-zinc-600', barColor: 'bg-zinc-800', percent: 0 };
+        return { score: 0, level: 'very_weak', label: '', color: 'text-zinc-600', barColor: 'bg-zinc-800', percent: 0 };
     }
 
-    const { checks } = validatePassword(password);
-    const score = checks.filter(c => c.passed).length;
+    // zxcvbn returns a score from 0 to 4
+    const result = zxcvbn(password, userInputs);
+    const score = result.score;
+    // Cap percent at 100
+    const percent = Math.min(100, Math.max(0, (score + 1) * 20)); // Map 0-4 to 20-100%
 
-    if (score <= 2) {
-        return { score, level: 'weak', label: 'Слаба', color: 'text-red-500', barColor: 'bg-red-500', percent: (score / 5) * 100 };
+    switch (score) {
+        case 0:
+            return { score, level: 'very_weak', label: 'Много слаба', color: 'text-red-600', barColor: 'bg-red-600', percent };
+        case 1:
+            return { score, level: 'weak', label: 'Слаба', color: 'text-red-400', barColor: 'bg-red-400', percent };
+        case 2:
+            return { score, level: 'medium', label: 'Средна', color: 'text-yellow-500', barColor: 'bg-yellow-500', percent };
+        case 3:
+            return { score, level: 'good', label: 'Добра', color: 'text-emerald-400', barColor: 'bg-emerald-400', percent };
+        case 4:
+            return { score, level: 'strong', label: 'Силна', color: 'text-emerald-500', barColor: 'bg-emerald-500', percent };
+        default:
+            return { score: 0, level: 'very_weak', label: 'Много слаба', color: 'text-red-600', barColor: 'bg-red-600', percent: 20 };
     }
-    if (score <= 4) {
-        return { score, level: 'medium', label: 'Средна', color: 'text-yellow-500', barColor: 'bg-yellow-500', percent: (score / 5) * 100 };
-    }
-    return { score, level: 'strong', label: 'Силна', color: 'text-emerald-500', barColor: 'bg-emerald-500', percent: 100 };
 }
 
 /**
@@ -76,7 +89,7 @@ export function translateAuthError(error: any): string {
 
     // By error code
     const codeMap: Record<string, string> = {
-        'weak_password': 'Паролата е твърде слаба. Трябва да съдържа минимум 10 символа, главна и малка буква, цифра и специален символ.',
+        'weak_password': 'Паролата е твърде слаба. Трябва да съдържа от 10 до 64 символа, главна и малка буква, цифра и специален символ.',
         'same_password': 'Новата парола не може да е същата като текущата.',
         'email_exists': 'Този имейл адрес вече е регистриран.',
         'user_already_exists': 'Потребител с този имейл вече съществува.',
@@ -102,8 +115,9 @@ export function translateAuthError(error: any): string {
     if (msg.includes('user already registered')) return 'Потребител с този имейл вече съществува.';
     if (msg.includes('invalid login credentials')) return 'Невалиден имейл или парола.';
     if (msg.includes('email rate limit')) return 'Твърде много опити. Моля, изчакайте преди да опитате отново.';
-    if (msg.includes('password') && msg.includes('weak')) return 'Паролата е твърде слаба. Минимум 10 символа с главна буква, малка буква, цифра и символ.';
-    if (msg.includes('password') && msg.includes('short')) return 'Паролата е твърде кратка. Минимум 10 символа.';
+    if (msg.includes('password') && msg.includes('weak')) return 'Паролата е твърде слаба. От 10 до 64 символа, главна, малка буква, цифра и символ.';
+    if (msg.includes('password') && msg.includes('short')) return 'Паролата е твърде кратка. Трябва да е поне 10 символа.';
+    if (msg.includes('password') && msg.includes('long')) return 'Паролата е твърде дълга. Максимум 64 символа.';
     if (msg.includes('email') && msg.includes('invalid')) return 'Моля, въведете валиден имейл адрес.';
     if (msg.includes('network') || msg.includes('fetch')) return 'Проблем с връзката. Проверете интернет свързаността си.';
     if (msg.includes('timeout')) return 'Заявката отне твърде дълго. Моля, опитайте отново.';

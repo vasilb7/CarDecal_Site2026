@@ -234,12 +234,7 @@ const ProductQuickViewModal: React.FC = () => {
             slug: product.slug
         });
         showToast(`Добавени ${finalQuantity}бр. от ${product.nameBg || product.name}`, "success");
-        
-        // Show title feedback before closing
-        setAddedFeedback(true);
-        setTimeout(() => {
-            handleClose();
-        }, 1200);
+        handleClose();
     };
 
     const fadeSlide = {

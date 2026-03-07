@@ -38,7 +38,10 @@ const Header: React.FC = () => {
         !isBannerDismissed && 
         (new Date(autoStart).getTime() > (Date.now() + serverTimeOffset));
     const isPermanentAnnouncementActive = settings.announcement_mode && !isMaintenanceOn;
-    const isAnnouncementVisible = (isMaintenanceWarningActive || isPermanentAnnouncementActive) && !isBannerDismissed;
+    const [isBarManuallyClosed, setIsBarManuallyClosed] = useState(() => {
+        return sessionStorage.getItem('ann_bar_manually_closed') === 'true';
+    });
+    const isAnnouncementVisible = (isMaintenanceWarningActive || isPermanentAnnouncementActive) && !isBannerDismissed && !isBarManuallyClosed;
 
     const [currentMsgIndex, setCurrentMsgIndex] = useState(0);
     const annMessages = (settings.announcement_text || "").split('\n').filter(m => m.trim());
@@ -272,18 +275,20 @@ const Header: React.FC = () => {
                                 )}
                             </div>
 
-                            {isMaintenanceWarningActive && (
-                                <button 
-                                    onClick={() => {
+                            <button 
+                                onClick={() => {
+                                    setIsBarManuallyClosed(true);
+                                    sessionStorage.setItem('ann_bar_manually_closed', 'true');
+                                    if (isMaintenanceWarningActive) {
                                         setIsBannerDismissed(true);
                                         sessionStorage.setItem(sessionKey, 'true');
-                                    }}
-                                    className="absolute right-2 sm:right-4 p-1 hover:opacity-70 transition-colors z-10 shrink-0"
-                                    style={{ color: settings.announcement_text_color }}
-                                >
-                                    <X className="w-3.5 h-3.5" />
-                                </button>
-                            )}
+                                    }
+                                }}
+                                className="absolute right-2 sm:right-4 p-1 hover:opacity-70 transition-colors z-10 shrink-0"
+                                style={{ color: settings.announcement_text_color }}
+                            >
+                                <X className="w-3.5 h-3.5" />
+                            </button>
                         </div>
                     </motion.div>
                 )}

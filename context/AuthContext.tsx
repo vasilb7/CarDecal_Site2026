@@ -293,6 +293,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           localStorage.removeItem(key);
         }
       });
+      
+      // 6. Dispatch event to clear local cart state
+      window.dispatchEvent(new Event("clear_local_cart"));
     } catch (error) {
       console.error("❌ Error during logout:", error);
     }

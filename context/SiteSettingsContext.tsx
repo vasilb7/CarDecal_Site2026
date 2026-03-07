@@ -182,6 +182,11 @@ export const SiteSettingsProvider: React.FC<{ children: React.ReactNode }> = ({ 
             }
 
             if (active !== isMaintenanceActive) {
+                // Предизвикваме автоматично опресняване на страницата, когато профилактиката приключи,
+                // за да заредим новия код и промените.
+                if (isMaintenanceActive === true && active === false) {
+                    window.location.reload();
+                }
                 setIsMaintenanceActive(active);
             }
         };

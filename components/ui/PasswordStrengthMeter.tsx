@@ -7,15 +7,17 @@ interface PasswordStrengthMeterProps {
     password: string;
     confirmPassword?: string;
     showChecklist?: boolean;
+    userInputs?: string[];
 }
 
 const PasswordStrengthMeter: React.FC<PasswordStrengthMeterProps> = ({
     password,
     confirmPassword,
     showChecklist = true,
+    userInputs = [],
 }) => {
     const { checks } = validatePassword(password);
-    const strength = getPasswordStrength(password);
+    const strength = getPasswordStrength(password, userInputs);
 
     if (!password) return null;
 
@@ -31,7 +33,7 @@ const PasswordStrengthMeter: React.FC<PasswordStrengthMeterProps> = ({
             <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                     <span className="text-[10px] uppercase tracking-widest font-bold text-zinc-500">
-                        Сигурност на паролата
+                        Сила на паролата
                     </span>
                     <motion.span
                         key={strength.level}
@@ -54,7 +56,11 @@ const PasswordStrengthMeter: React.FC<PasswordStrengthMeterProps> = ({
 
             {/* Checklist */}
             {showChecklist && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
+                <div className="pt-2">
+                    <span className="text-[10px] uppercase tracking-widest font-bold text-zinc-500 mb-2 block">
+                        Изисквания за парола
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
                     {checks.map((check) => (
                         <motion.div
                             key={check.id}
@@ -87,6 +93,7 @@ const PasswordStrengthMeter: React.FC<PasswordStrengthMeterProps> = ({
                             </span>
                         </motion.div>
                     ))}
+                    </div>
                 </div>
             )}
 

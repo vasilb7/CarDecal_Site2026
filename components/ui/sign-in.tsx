@@ -82,17 +82,18 @@ const FloatingInput = ({
           onChange={(e) => setValue(e.target.value)}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
-          className={`w-full bg-white/[0.03] border ${isFocused ? "border-red-600 shadow-[0_0_15px_rgba(239,68,68,0.15)]" : "border-white/10"} rounded-xl px-6 py-4 shadow-sm outline-none text-white placeholder:text-transparent backdrop-blur-md transition-all`}
+          className={`w-full bg-white/[0.03] border ${isFocused ? "border-red-600 shadow-[0_0_15px_rgba(239,68,68,0.15)]" : "border-white/10"} rounded-xl pl-6 ${Icon ? 'pr-14' : 'pr-6'} py-4 shadow-sm outline-none text-white placeholder:text-transparent backdrop-blur-md transition-all`}
           required={required}
           placeholder=" "
+          maxLength={type === 'password' ? 64 : undefined}
         />
         {Icon && (
           <button
             type="button"
             onClick={onTogglePassword}
-            className="absolute right-6 top-1/2 -translate-y-1/2 text-white/40 hover:text-white transition-colors"
+            className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center text-white/40 hover:text-white transition-colors z-20"
           >
-            <Icon size={18} />
+            <Icon size={20} />
           </button>
         )}
       </div>
@@ -287,21 +288,19 @@ export const SignInPage: React.FC<SignInPageProps> = ({
                 </motion.button>
               </div>
 
-              {/* Hide registration as per stealth requirement */}
-              {false && (
-                <div className="flex flex-col items-center gap-0.5">
-                  <span className="text-[10px] text-white/40 uppercase tracking-widest">
-                    {t("auth.dont_have_account", "Нямате акаунт?")}
-                  </span>
-                  <Link
-                    to="/register"
-                    state={location.state}
-                    className="text-[11px] text-white font-black uppercase tracking-widest border-b border-red-600/50 hover:border-red-600 hover:text-red-500 transition-all pb-0.5"
-                  >
-                    {t("auth.register_link", "Регистрирайте се")}
-                  </Link>
-                </div>
-              )}
+              {/* Registration Link */}
+              <div className="flex flex-col items-center gap-0.5 mt-2">
+                <span className="text-[10px] text-white/40 uppercase tracking-widest">
+                  {t("auth.dont_have_account", "Нямате акаунт?")}
+                </span>
+                <Link
+                  to="/register"
+                  state={location.state}
+                  className="text-[11px] text-white font-black uppercase tracking-widest border-b border-red-600/50 hover:border-red-600 hover:text-red-500 transition-all pb-0.5"
+                >
+                  {t("auth.register_link", "Създай регистрация")}
+                </Link>
+              </div>
 
               <button
                 type="button"
