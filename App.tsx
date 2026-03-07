@@ -203,7 +203,7 @@ function AppContent() {
           <Route
             path="*"
             element={
-              <Layout>
+              <Layout hideFooter={location.pathname === '/profile' || location.pathname.startsWith('/account/orders/')}>
                 <AnimatePresence mode="wait" initial={false}>
                   <motion.div
                     key={(backgroundLocation || location).pathname}
@@ -298,7 +298,7 @@ function AppContent() {
                               <ProfilePage />
                             </PageWrapper>
                           ) : (
-                            <Navigate to="/login" replace />
+                            <Navigate to="/" replace />
                           )
                         }
                       />
@@ -310,7 +310,7 @@ function AppContent() {
                               <OrderDetailPage />
                             </PageWrapper>
                           ) : (
-                            <Navigate to="/login" replace />
+                            <Navigate to="/" replace />
                           )
                         }
                       />

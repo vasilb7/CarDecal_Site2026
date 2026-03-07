@@ -31,14 +31,26 @@ interface ConfirmDialogProps {
     message: string;
     confirmLabel?: string;
     cancelLabel?: string;
-    onConfirm: () => void;
+    onConfirm: (password?: string) => void;
     onCancel: () => void;
     isDanger?: boolean;
+    requiresPassword?: boolean;
 }
 
 const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
-    isOpen, title, message, confirmLabel = 'Потвърди', cancelLabel = 'Отказ', onConfirm, onCancel, isDanger = false
+    isOpen, title, message, confirmLabel = 'Потвърди', cancelLabel = 'Отказ', onConfirm, onCancel, isDanger = false, requiresPassword = false
 }) => {
+    const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+
+    // Reset password field when modal opens/closes
+    useEffect(() => {
+        if (!isOpen) {
+            setPassword('');
+            setShowPassword(false);
+        }
+    }, [isOpen]);
+
     // Prevent background scrolling when modal is open
     useEffect(() => {
         if (isOpen) {
@@ -59,28 +71,55 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                         initial={{ opacity: 0, scale: 0.9, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                        className="bg-[#111] border border-white/10 w-full max-w-sm overflow-hidden shadow-2xl"
+                        className="bg-[#111] border border-white/10 w-full max-w-sm overflow-hidden shadow-2xl rounded-2xl"
                     >
                         <div className={`h-1 w-full ${isDanger ? 'bg-red-600' : 'bg-white/20'}`} />
                         <div className="p-6">
                             <div className="flex items-center gap-3 mb-4">
                                 {isDanger ? <AlertTriangle className="w-5 h-5 text-red-500" /> : <AlertCircle className="w-5 h-5 text-white/40" />}
-                                <h3 className="text-sm uppercase tracking-widest text-white font-bold">{title}</h3>
+                                <h3 className="text-sm uppercase tracking-widest text-white font-black">{title}</h3>
                             </div>
-                            <p className="text-zinc-400 text-sm leading-relaxed mb-8">
+                            <p className="text-zinc-400 text-sm leading-relaxed mb-6 font-medium">
                                 {message}
                             </p>
-                            <div className="flex gap-3">
+
+                            {requiresPassword && (
+                                <div className="mb-8">
+                                    <label className="block text-[10px] text-zinc-500 uppercase font-black tracking-widest mb-3">
+                                        ВЪВЕДИ ПАРОЛА ЗА ПОТВЪРЖДЕНИЕ
+                                    </label>
+                                    <div className="relative">
+                                        <input
+                                            type={showPassword ? "text" : "password"}
+                                            value={password}
+                                            onChange={(e) => setPassword(e.target.value)}
+                                            placeholder="Твоята текуща парола"
+                                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-red-500 outline-none transition-all placeholder:text-zinc-700"
+                                            autoFocus
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPassword(!showPassword)}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors"
+                                        >
+                                            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="flex gap-3 mt-4">
                                 <button
                                     onClick={onCancel}
-                                    className="flex-1 py-3 border border-white/10 text-zinc-500 text-[10px] uppercase font-bold tracking-widest hover:text-white hover:bg-white/5 transition-all"
+                                    className="flex-1 py-3 border border-white/10 text-zinc-500 text-[10px] uppercase font-black tracking-widest hover:text-white hover:bg-white/5 transition-all rounded-xl"
                                 >
                                     {cancelLabel}
                                 </button>
                                 <button
-                                    onClick={onConfirm}
-                                    className={`flex-1 py-3 font-bold text-[10px] uppercase tracking-widest transition-all ${
-                                        isDanger ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-white text-black hover:bg-zinc-200'
+                                    onClick={() => onConfirm(password)}
+                                    disabled={requiresPassword && !password}
+                                    className={`flex-1 py-3 font-black text-[10px] uppercase tracking-widest transition-all rounded-xl disabled:opacity-50 disabled:cursor-not-allowed ${
+                                        isDanger ? 'bg-red-600 text-white hover:bg-red-700 shadow-lg shadow-red-900/20' : 'bg-white text-black hover:bg-zinc-200'
                                     }`}
                                 >
                                     {confirmLabel}
@@ -268,7 +307,7 @@ const SettingsTab: React.FC<{
     user: any;
     onAvatarClick: () => void;
     onSignOut: () => void;
-    handleDeleteAccount: () => Promise<void>;
+    handleDeleteAccount: (password: string) => Promise<void>;
 }> = ({ profile, user, onAvatarClick, onSignOut, handleDeleteAccount }) => {
     const { refreshProfile } = useAuth();
     const { showToast } = useToast();
@@ -495,7 +534,7 @@ const SettingsTab: React.FC<{
                 {/* Name */}
                 <div className={rowCls}>
                     <div className="md:w-1/3">
-                        <p className={labelTitleCls}>Пълно Име</p>
+                        <p className={labelTitleCls}>Име и Фамилия</p>
                         <p className={labelSubCls}>Името, видимо в поръчките ви</p>
                     </div>
                     <div className="md:w-2/3">
@@ -820,12 +859,13 @@ const SettingsTab: React.FC<{
                     <ConfirmDialog
                         isOpen={deleteModalOpen}
                         title="ПОТВЪРДИ ИЗТРИВАНЕТО"
-                        message="Сигурен ли си, че искаш да изтриеш своя акаунт? Акаунтът ти ще бъде насрочен за изтриване след 7 дни. През този 7-дневен период можеш да го възстановиш по всяко време, просто като влезеш отново в сайта ни! Ако изминат 7 дни без да се логнеш, действието става НАПЪЛНО НЕОБРАТИМО и всички твои данни ще бъдат безвъзвратно изтрити."
+                        message="Сигурен ли си, че искаш да изтриеш своя акаунт? Акаунтът ти ще бъде насрочен за изтриване след 7 дни. През този 7-дневен период можеш да го възстановиш по всяко време, просто като влезеш отново в сайта ни! Ако изминат 7 дни без да се логнеш, действието става НАПЪЛНО НЕОБРАТИМО и всички твои данни ще бъдат безвъзвратно изтрити. За да продължиш, въведи текущата си парола."
                         confirmLabel="Да, изтрий акаунта"
                         isDanger={true}
-                        onConfirm={() => {
+                        requiresPassword={true}
+                        onConfirm={(password) => {
                             setDeleteModalOpen(false);
-                            handleDeleteAccount();
+                            handleDeleteAccount(password);
                         }}
                         onCancel={() => setDeleteModalOpen(false)}
                     />
@@ -876,10 +916,22 @@ const ProfilePage: React.FC = () => {
 
     const avatarInputRef = useRef<HTMLInputElement>(null);
 
-    const handleDeleteAccount = async () => {
-        if (!user) return;
+    const handleDeleteAccount = async (password?: string) => {
+        if (!user || !user.email) return;
         setDeleting(true);
         try {
+            // Verify password if provided (for email auth)
+            if (password) {
+                const { error: signInError } = await supabase.auth.signInWithPassword({
+                    email: user.email,
+                    password: password,
+                });
+
+                if (signInError) {
+                    throw new Error('Неправилна парола. Моля, опитайте отново за да потвърдите изтриването.');
+                }
+            }
+
             const { error } = await supabase.rpc('schedule_account_deletion', { reason: 'Потребителят пожела изтриване на акаунта (Профил)' });
 
             if (error) {
