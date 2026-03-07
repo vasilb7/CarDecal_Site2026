@@ -116,6 +116,7 @@ const RestrictedPage: React.FC = () => {
         : null;
 
     const publicReason = profile?.public_reason || 'Нарушение на Общите условия';
+    const unbanReason = profile?.unban_reason;
 
     const alreadyRequestedDeletion = !!profile?.deletion_requested_at;
 
@@ -234,12 +235,25 @@ const RestrictedPage: React.FC = () => {
                         <div className={`p-4 rounded-xl border ${isTemporary ? 'bg-amber-950/10 border-amber-600/10' : 'bg-red-950/10 border-red-600/10'}`}>
                             <div className="flex items-center gap-2 mb-2">
                                 <AlertTriangle className={`w-3.5 h-3.5 ${isTemporary ? 'text-amber-500' : 'text-red-500'}`} />
-                                <span className="text-[10px] uppercase tracking-widest font-bold text-zinc-500">Причина</span>
+                                <span className="text-[10px] uppercase tracking-widest font-bold text-zinc-500">Причина за ограничение</span>
                             </div>
                             <p className={`text-sm ${isTemporary ? 'text-amber-200/80' : 'text-red-200/80'}`}>
                                 {publicReason}
                             </p>
                         </div>
+
+                        {/* Unban Reason (if status is being restored but user is still on this page) */}
+                        {unbanReason && (
+                            <div className="p-4 rounded-xl border bg-emerald-950/10 border-emerald-600/10">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />
+                                    <span className="text-[10px] uppercase tracking-widest font-bold text-zinc-500">Бележка за възстановяване</span>
+                                </div>
+                                <p className="text-sm text-emerald-200/80">
+                                    {unbanReason}
+                                </p>
+                            </div>
+                        )}
 
                         {/* Remaining time for temp bans */}
                         {isTemporary && bannedUntilDate && (
