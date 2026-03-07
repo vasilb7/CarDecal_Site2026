@@ -3124,6 +3124,22 @@ const MaintenanceSettingsSection: React.FC = () => {
         updatePreview();
     }, [customDuration, durationUnit, isActivationMenuOpen]);
 
+    const formatPreview = (text: string) => {
+        if (!text) return "";
+        const timerPlaceholder = "{timer}";
+        if (!text.toLowerCase().includes(timerPlaceholder)) return text;
+        const parts = text.split(new RegExp(timerPlaceholder, 'i'));
+        return (
+            <span className="items-center inline-flex">
+                {parts[0]}
+                <span className="inline-flex items-center justify-center px-1.5 py-0.5 bg-[#ff0000] text-white text-[9px] font-black rounded font-mono mx-1 shrink-0 shadow-[0_0_8px_rgba(255,0,0,0.4)]">
+                    {previewTime || "..."}
+                </span>
+                {parts[1]}
+            </span>
+        );
+    };
+
 
     useEffect(() => {
         if (!loading) {
@@ -3179,6 +3195,7 @@ const MaintenanceSettingsSection: React.FC = () => {
             
             await Promise.all([
                 updateSetting('maintenance_auto_start_at', targetTime),
+                updateSetting('maintenance_message', msg),
                 updateSetting('maintenance_end_time', endTime || null as any),
                 updateSetting('maintenance_features', JSON.stringify(features))
             ]);
@@ -3281,6 +3298,7 @@ const MaintenanceSettingsSection: React.FC = () => {
         try {
             await Promise.all([
                 updateSetting('maintenance_mode', 'true'),
+                updateSetting('maintenance_message', msg),
                 updateSetting('maintenance_auto_start_at', null as any),
                 updateSetting('maintenance_end_time', endTime || null as any),
                 updateSetting('maintenance_features', JSON.stringify(features))
@@ -3403,8 +3421,24 @@ const MaintenanceSettingsSection: React.FC = () => {
                         className="px-6 py-3 bg-white/5 border border-white/10 text-white text-xs uppercase tracking-widest font-bold hover:bg-white/10 transition-all flex items-center gap-2 disabled:opacity-50"
                     >
                         {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                        Запази Текста
+                        ЗАПАЗИ ТЕКСТА
                     </button>
+
+                    {/* Banner Preview */}
+                    <div className="pt-6 border-t border-white/10">
+                        <label className="block text-[10px] uppercase tracking-[0.4em] text-zinc-600 mb-4 font-black">Преглед на предупредителната лента</label>
+                        <div className="w-full bg-black h-14 flex items-center justify-center border border-red-900/30 relative overflow-hidden group rounded-xl shadow-[0_0_20px_rgba(220,38,38,0.1)]">
+                            <div className="absolute inset-0 bg-red-600/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <span className="flex items-center gap-4 text-[11px] font-bold text-white uppercase tracking-widest relative z-10">
+                                <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse shadow-[0_0_10px_rgba(220,38,38,0.8)]" />
+                                {formatPreview(msg || "Нашият сайт е в процес на обработка. {timer}")}
+                            </span>
+                        </div>
+                        <p className="mt-3 text-[9px] text-zinc-600 uppercase tracking-widest leading-relaxed">
+                            Тази лента ще се появи автоматично на всяка страница, когато стартирате таймера за поддръжка. 
+                            Рекламната лента ще бъде скрита автоматично.
+                        </p>
+                    </div>
                 </div>
 
                 {/* Media Settings */}
@@ -3475,6 +3509,23 @@ const MaintenanceSettingsSection: React.FC = () => {
                             <h2 className="text-xl font-bold text-white uppercase tracking-[0.2em] mb-6">Активиране на поддръжка</h2>
                             
                             <div className="space-y-6">
+                                <div>
+                                    <label className="block text-[10px] uppercase tracking-widest text-zinc-500 mb-2 font-black">Съобщение в лентата (Warning Bar)</label>
+                                    <div className="relative group">
+                                        <input 
+                                            type="text"
+                                            value={msg}
+                                            onChange={e => setMsg(e.target.value)}
+                                            className="w-full bg-white/5 border border-white/10 p-4 text-white text-xs uppercase tracking-widest focus:outline-none focus:border-red-600 transition-all font-bold"
+                                            placeholder="Нашият сайт е в процес на обработка. {timer}..."
+                                        />
+                                        <div className="mt-2 px-4 py-3 bg-black/40 border border-white/5 rounded text-[10px] text-zinc-400 uppercase tracking-widest flex items-center gap-3">
+                                            <span className="text-zinc-600 font-black shrink-0">ПРЕГЛЕД:</span>
+                                            <span className="truncate">{formatPreview(msg)}</span>
+                                        </div>
+                                    </div>
+                                    <p className="mt-2 text-[9px] text-zinc-600 uppercase tracking-widest">Използвайте <span className="text-red-500 font-bold">{"{timer}"}</span> за автоматично поставяне на времето.</p>
+                                </div>
 
                                 <div>
                                     <label className="block text-[10px] uppercase tracking-widest text-zinc-500 mb-2 mt-4">Нови функции / Промени (Какво ново)</label>
