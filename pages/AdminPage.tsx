@@ -5653,7 +5653,7 @@ const ArchivedUsersTab: React.FC = () => {
     const [archived, setArchived] = useState<ArchivedUser[]>([]);
     const [scheduled, setScheduled] = useState<ScheduledUser[]>([]);
     const [loading, setLoading] = useState(true);
-    const [selectedOrders, setSelectedOrders] = useState<any[] | null>(null);
+    const [selectedArchiveUser, setSelectedArchiveUser] = useState<any | null>(null);
     const [viewingUser, setViewingUser] = useState<ScheduledUser | null>(null);
     const [viewingUserOrders, setViewingUserOrders] = useState<any[]>([]);
     const [ordersLoading, setOrdersLoading] = useState(false);
@@ -5819,13 +5819,30 @@ const ArchivedUsersTab: React.FC = () => {
                                 <td className="px-6 py-4">
                                     <p className="text-zinc-400 text-xs max-w-xs">{user.reason || 'Няма посочена причина'}</p>
                                 </td>
-                                <td className="px-6 py-4">
+                                <td className="px-6 py-4 flex gap-2">
                                     <button 
-                                        onClick={() => setSelectedOrders(user.orders_snapshot)}
+                                        onClick={() => setSelectedArchiveUser(user)}
                                         className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/5 border border-white/10 text-[10px] uppercase font-bold tracking-widest text-zinc-400 hover:text-white hover:border-white/30 transition-all"
                                     >
                                         <ShoppingBag size={12} />
                                         Виж {user.orders_snapshot?.length || 0} поръчки
+                                    </button>
+                                    <button
+                                        onClick={async () => {
+                                            if (!window.confirm("Сигурни ли сте, че искате да ИЗТРИЕТЕ ОКОНЧАТЕЛНО този запис от архива? Поръчките ще бъдат загубени безвъзвратно.")) return;
+                                            try {
+                                                const { error } = await supabase.from('deleted_users_archive').delete().eq('id', user.id);
+                                                if (error) throw error;
+                                                showToast('Записът е изтрит окончателно.', 'success');
+                                                fetchData();
+                                            } catch(err: any) {
+                                                showToast('Грешка при изтриване: ' + err.message, 'error');
+                                            }
+                                        }}
+                                        className="inline-flex items-center gap-2 px-3 py-1.5 bg-red-500/10 border border-red-500/20 text-[10px] uppercase font-bold tracking-widest text-red-500 hover:text-white hover:bg-red-500 transition-all rounded"
+                                    >
+                                        <Trash2 size={12} />
+                                        Изтрий запис
                                     </button>
                                 </td>
                             </tr>
@@ -5840,7 +5857,7 @@ const ArchivedUsersTab: React.FC = () => {
 
             {/* Orders Snapshot Modal */}
             <AnimatePresence>
-                {selectedOrders && (
+                {selectedArchiveUser && (
                     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
                         <motion.div
                             initial={{ opacity: 0, scale: 0.9 }}
@@ -5853,31 +5870,110 @@ const ArchivedUsersTab: React.FC = () => {
                                     <Receipt className="w-4 h-4 text-red-600" />
                                     Архивирана история на поръчките
                                 </h3>
-                                <button onClick={() => setSelectedOrders(null)} className="text-zinc-500 hover:text-white"><X size={20}/></button>
+                                <button onClick={() => setSelectedArchiveUser(null)} className="text-zinc-500 hover:text-white"><X size={20}/></button>
                             </div>
                             <div className="p-6 overflow-y-auto custom-scrollbar space-y-4">
-                                {!selectedOrders || selectedOrders.length === 0 ? (
+                                {!selectedArchiveUser.orders_snapshot || selectedArchiveUser.orders_snapshot.length === 0 ? (
                                     <p className="text-zinc-600 text-center py-10 uppercase tracking-widest text-xs">Няма история на поръчки</p>
                                 ) : (
-                                    selectedOrders.map((order: any, idx: number) => (
+                                    selectedArchiveUser.orders_snapshot.map((order: any, idx: number) => (
                                         <div key={idx} className="bg-white/3 border border-white/5 p-4 rounded-xl">
                                             <div className="flex justify-between items-start mb-3 pb-2 border-b border-white/5">
                                                 <div>
-                                                    <p className="text-white text-xs font-bold uppercase">Поръчка #{order.id.slice(0, 8)}</p>
+                                                    <p className="text-white text-xs font-bold uppercase">Поръчка #{order.order_number || order.id?.slice(0, 8)}</p>
                                                     <p className="text-[10px] text-zinc-500 mt-0.5">{new Date(order.created_at).toLocaleString('bg-BG')}</p>
                                                 </div>
                                                 <div className="text-right">
-                                                    <p className="text-red-500 font-black">{order.total_amount.toFixed(2)} €</p>
+                                                    <p className="text-red-500 font-black">{(order.total_amount / 1.95583).toFixed(2)} &euro; / {order.total_amount?.toFixed(2)} лв.</p>
                                                     <span className="text-[9px] uppercase tracking-widest text-zinc-600">{order.status}</span>
                                                 </div>
                                             </div>
-                                            <div className="space-y-2">
+                                            <div className="space-y-2 mb-4">
                                                 {order.items?.map((item: any, i: number) => (
                                                     <div key={i} className="flex justify-between text-[11px]">
-                                                        <span className="text-zinc-400">{item.name} x{item.quantity}</span>
-                                                        <span className="text-white">{(item.price * item.quantity).toFixed(2)} €</span>
+                                                        <span className="text-zinc-400">{item.name_bg || item.name} x{item.quantity}</span>
+                                                        <span className="text-white">{((item.price * item.quantity) / 1.95583).toFixed(2)} &euro; / {(item.price * item.quantity).toFixed(2)} лв.</span>
                                                     </div>
                                                 ))}
+                                            </div>
+                                            <div className="flex justify-end gap-2 pt-3 border-t border-white/5">
+                                                <button 
+                                                    onClick={() => {
+                                                        const printWindow = window.open('', '_blank');
+                                                        if (!printWindow) return;
+                                                        const html = `
+                                                            <html>
+                                                            <head>
+                                                                <title>Архивирана Поръчка #${order.order_number || order.id?.slice(0, 8)}</title>
+                                                                <style>
+                                                                    body { font-family: sans-serif; padding: 40px; line-height: 1.5; color: #000; max-width: 800px; margin: 0 auto; }
+                                                                    table { width: 100%; border-collapse: collapse; margin-top: 30px; }
+                                                                    th, td { border: 1px solid #ccc; padding: 12px; text-align: left; }
+                                                                    th { background-color: #f5f5f5; }
+                                                                    .total { font-weight: bold; margin-top: 20px; text-align: right; font-size: 1.2em; border-top: 2px solid #000; padding-top: 10px; }
+                                                                    .header { border-bottom: 2px solid #000; padding-bottom: 20px; margin-bottom: 20px; }
+                                                                    .warn { color: red; font-weight: bold; margin-bottom: 20px; }
+                                                                </style>
+                                                            </head>
+                                                            <body onload="setTimeout(() => { window.print(); window.close(); }, 500)">
+                                                                <div class="header">
+                                                                    <div class="warn">ВНИМАНИЕ: АРХИВИРАНА ПОРЪЧКА (ИЗТРИТ АКАУНТ)</div>
+                                                                    <h2>Поръчка #${order.order_number || order.id?.slice(0, 8)}</h2>
+                                                                    <p><strong>Дата на създаване:</strong> ${new Date(order.created_at).toLocaleString('bg-BG')}</p>
+                                                                    <p><strong>Последен статус:</strong> ${order.status}</p>
+                                                                    <p><strong>Име на клиент:</strong> ${order.shipping_details?.fullName || order.shipping_details?.name || '—'}</p>
+                                                                    <p><strong>Телефон:</strong> ${order.shipping_details?.phone || '—'}</p>
+                                                                    <p><strong>Адрес/Офис:</strong> ${order.shipping_details?.address || order.shipping_details?.econtOffice || order.shipping_details?.speedyOffice || order.shipping_details?.officeName || JSON.stringify(order.shipping_details) || '—'}</p>
+                                                                </div>
+                                                                <table>
+                                                                    <thead>
+                                                                        <tr>
+                                                                            <th>Продукт</th>
+                                                                            <th>Количество</th>
+                                                                            <th>Единицна Цена</th>
+                                                                            <th>Общо</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                        ${order.items?.map((item: any) => `
+                                                                            <tr>
+                                                                                <td>${item.name_bg || item.name}</td>
+                                                                                <td>${item.quantity}</td>
+                                                                                <td>${(item.price / 1.95583).toFixed(2)} &euro; / ${item.price?.toFixed(2)} лв.</td>
+                                                                                <td>${((item.price * item.quantity) / 1.95583).toFixed(2)} &euro; / ${(item.price * item.quantity).toFixed(2)} лв.</td>
+                                                                            </tr>
+                                                                        `).join('')}
+                                                                    </tbody>
+                                                                </table>
+                                                                <div class="total">Обща сума: ${(order.total_amount / 1.95583).toFixed(2)} &euro; / ${order.total_amount?.toFixed(2)} лв.</div>
+                                                            </body>
+                                                            </html>
+                                                        `;
+                                                        printWindow.document.write(html);
+                                                        printWindow.document.close();
+                                                    }}
+                                                    className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 text-[10px] uppercase font-bold tracking-widest text-blue-500 hover:text-white hover:bg-blue-500 transition-all rounded"
+                                                >
+                                                    <Printer size={12} /> Принтирай
+                                                </button>
+                                                <button 
+                                                    onClick={async () => {
+                                                        if (!window.confirm("Изтриване на ТАЗИ ПОРЪЧКА от архива на потребителя?")) return;
+                                                        const newOrders = selectedArchiveUser.orders_snapshot.filter((o: any) => o.id !== order.id);
+                                                        try {
+                                                            const { error } = await supabase.from('deleted_users_archive').update({ orders_snapshot: newOrders }).eq('id', selectedArchiveUser.id);
+                                                            if (error) throw error;
+                                                            showToast('Поръчката е изтрита от архива', 'success');
+                                                            setSelectedArchiveUser({ ...selectedArchiveUser, orders_snapshot: newOrders });
+                                                            fetchData();
+                                                        } catch(err: any) {
+                                                            showToast('Грешка: ' + err.message, 'error');
+                                                        }
+                                                    }}
+                                                    className="inline-flex items-center gap-2 px-3 py-1.5 bg-red-500/10 border border-red-500/20 text-[10px] uppercase font-bold tracking-widest text-red-500 hover:text-white hover:bg-red-500 transition-all rounded"
+                                                >
+                                                    <Trash2 size={12} /> Изтрий поръчка
+                                                </button>
                                             </div>
                                         </div>
                                     ))

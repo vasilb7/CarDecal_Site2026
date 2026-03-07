@@ -151,7 +151,7 @@ export async function recordFailedLogin(email: string): Promise<{ locked: boolea
 
 // ── Successful Login Recording ──
 
-export async function recordSuccessfulLogin(): Promise<{ new_ip: boolean; suspicious: boolean }> {
+export async function recordSuccessfulLogin(userId?: string | null): Promise<{ new_ip: boolean; suspicious: boolean }> {
     try {
         const ip = await getClientIp();
         const device = getDeviceFingerprint();
@@ -159,6 +159,7 @@ export async function recordSuccessfulLogin(): Promise<{ new_ip: boolean; suspic
         const { data, error } = await supabase.rpc('record_successful_login', {
             p_ip_address: ip,
             p_device_info: device,
+            p_user_id: userId || null,
         });
 
         if (error) throw error;

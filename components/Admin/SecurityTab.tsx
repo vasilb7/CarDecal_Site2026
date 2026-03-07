@@ -14,7 +14,7 @@
  * - Passwords are NEVER shown
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../../lib/supabase';
 import {
@@ -26,7 +26,7 @@ import {
     SecurityEventType,
 } from '../../lib/security';
 import {
-    Shield, Search, RefreshCw, Loader2, Filter,
+    Shield, Search, RefreshCw, Loader2, Filter, Check,
     AlertTriangle, ChevronDown, ChevronUp, Clock,
     Globe, Monitor, User, X, Eye, EyeOff,
     LogOut, ShieldAlert, Activity
@@ -59,6 +59,8 @@ export const SecurityTab: React.FC = () => {
     const [hasMore, setHasMore] = useState(true);
     const [expandedLog, setExpandedLog] = useState<string | null>(null);
     const [userEmailCache, setUserEmailCache] = useState<Record<string, string>>({});
+    const [isTypeDropdownOpen, setIsTypeDropdownOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
 
     const PAGE_SIZE = 30;
 
@@ -110,6 +112,24 @@ export const SecurityTab: React.FC = () => {
     useEffect(() => {
         loadLogs(true);
     }, [filterType, searchUserId]);
+
+    // Handle click outside for dropdown
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+                setIsTypeDropdownOpen(false);
+            }
+        };
+        const handleEsc = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') setIsTypeDropdownOpen(false);
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        document.addEventListener('keydown', handleEsc);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('keydown', handleEsc);
+        };
+    }, []);
 
     // Search by email
     const handleEmailSearch = async () => {
@@ -195,18 +215,18 @@ export const SecurityTab: React.FC = () => {
                                 onChange={e => setSearchEmail(e.target.value)}
                                 onKeyDown={e => e.key === 'Enter' && handleEmailSearch()}
                                 placeholder="user@example.com"
-                                className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-red-500/50"
+                                className="flex-1 bg-[#0a0a0a] border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-red-600/50 focus:ring-2 focus:ring-red-600/10 transition-all placeholder:text-zinc-600"
                             />
                             <button
                                 onClick={handleEmailSearch}
-                                className="px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white hover:bg-white/10 transition-colors"
+                                className="px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white hover:bg-white/10 transition-colors focus:outline-none focus:border-red-600/50"
                             >
                                 <Search className="w-4 h-4" />
                             </button>
                             {searchUserId && (
                                 <button
                                     onClick={clearSearch}
-                                    className="px-3 py-2.5 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 hover:bg-red-500/20 transition-colors"
+                                    className="px-3 py-2.5 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 hover:bg-red-500/20 transition-colors focus:outline-none"
                                 >
                                     <X className="w-4 h-4" />
                                 </button>
@@ -214,18 +234,53 @@ export const SecurityTab: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Event type filter */}
-                    <div className="w-[220px]">
+                    <div className="w-[220px] relative" ref={dropdownRef}>
                         <label className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mb-1.5 block">Тип събитие</label>
-                        <select
-                            value={filterType}
-                            onChange={e => setFilterType(e.target.value)}
-                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-red-500/50 appearance-none"
-                        >
-                            {EVENT_FILTER_OPTIONS.map(opt => (
-                                <option key={opt.value} value={opt.value}>{opt.label}</option>
-                            ))}
-                        </select>
+                        <div className="relative">
+                            <button
+                                onClick={() => setIsTypeDropdownOpen(!isTypeDropdownOpen)}
+                                className={`w-full flex items-center justify-between gap-2 bg-[#0a0a0a] border rounded-xl px-4 py-2.5 text-white text-sm transition-all focus:outline-none ${
+                                    isTypeDropdownOpen ? 'border-red-600/50 ring-2 ring-red-600/10' : 'border-white/10 hover:border-white/20'
+                                }`}
+                            >
+                                <span className="truncate font-medium">
+                                    {EVENT_FILTER_OPTIONS.find(o => o.value === filterType)?.label}
+                                </span>
+                                <ChevronDown className={`w-4 h-4 text-zinc-500 transition-transform duration-300 ${isTypeDropdownOpen ? 'rotate-180' : ''}`} />
+                            </button>
+
+                            <AnimatePresence>
+                                {isTypeDropdownOpen && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                        transition={{ duration: 0.2, ease: "easeOut" }}
+                                        className="absolute top-full left-0 right-0 mt-2 bg-[#18181b] border border-white/10 rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-50 overflow-hidden"
+                                    >
+                                        <div className="max-h-[300px] overflow-y-auto py-1.5">
+                                            {EVENT_FILTER_OPTIONS.map(opt => (
+                                                <button
+                                                    key={opt.value}
+                                                    onClick={() => {
+                                                        setFilterType(opt.value);
+                                                        setIsTypeDropdownOpen(false);
+                                                    }}
+                                                    className={`w-full flex items-center justify-between px-4 py-2.5 text-sm transition-colors ${
+                                                        filterType === opt.value
+                                                            ? 'bg-red-600/10 text-red-400 font-bold'
+                                                            : 'text-zinc-400 hover:bg-white/5 hover:text-white'
+                                                    }`}
+                                                >
+                                                    {opt.label}
+                                                    {filterType === opt.value && <Check className="w-4 h-4" />}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </div>
                     </div>
 
                     {/* IP visibility toggle */}

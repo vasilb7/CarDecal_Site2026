@@ -69,7 +69,7 @@ const LoginPage: React.FC = () => {
         }
       } else {
         // Record successful login + detect suspicious activity
-        const loginResult = await recordSuccessfulLogin();
+        const loginResult = await recordSuccessfulLogin(data?.user?.id);
         
         // Extract a friendly name
         const md = data?.user?.user_metadata || {};
