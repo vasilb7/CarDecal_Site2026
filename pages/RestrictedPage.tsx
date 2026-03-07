@@ -117,6 +117,7 @@ const RestrictedPage: React.FC = () => {
 
     const publicReason = profile?.public_reason || 'Нарушение на Общите условия';
     const unbanReason = profile?.unban_reason;
+    const moderatorNotes = profile?.moderator_notes;
 
     const alreadyRequestedDeletion = !!profile?.deletion_requested_at;
 
@@ -251,6 +252,19 @@ const RestrictedPage: React.FC = () => {
                                 </div>
                                 <p className="text-sm text-emerald-200/80">
                                     {unbanReason}
+                                </p>
+                            </div>
+                        )}
+
+                        {/* Moderator Notes */}
+                        {moderatorNotes && (
+                            <div className="p-4 rounded-xl border border-white/5 bg-white/5">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <FileText className="w-3.5 h-3.5 text-zinc-500" />
+                                    <span className="text-[10px] uppercase tracking-widest font-bold text-zinc-500">Бележки от модератор</span>
+                                </div>
+                                <p className="text-sm text-zinc-300">
+                                    {moderatorNotes}
                                 </p>
                             </div>
                         )}
