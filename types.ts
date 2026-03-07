@@ -46,6 +46,8 @@ export interface Product {
  }
 
 
+export type ModerationStatus = 'active' | 'temporarily_suspended' | 'permanently_banned';
+
 export interface UserProfile {
   id: string;
   updated_at?: string;
@@ -59,7 +61,37 @@ export interface UserProfile {
   role?: 'user' | 'editor' | 'admin';
   is_verified?: boolean;
   verified_until?: string;
+  phone?: string;
+  // Legacy ban fields (kept for backward compat)
   is_banned?: boolean;
   banned_reason?: string;
-  phone?: string;
+  // New moderation system
+  moderation_status?: ModerationStatus;
+  banned_until?: string | null;
+  public_reason?: string | null;
+  internal_reason?: string | null;
+  moderator_notes?: string | null;
+  banned_by?: string | null;
+  unbanned_by?: string | null;
+  unban_reason?: string | null;
+  deletion_requested_at?: string | null;
+  deletion_request_status?: string | null;
+  deletion_admin_notes?: string | null;
+  // Existing fields
+  deletion_scheduled_at?: string | null;
+  deletion_reason?: string | null;
+}
+
+export interface ModerationHistoryEntry {
+  id: string;
+  user_id: string;
+  action_type: 'temp_ban' | 'perm_ban' | 'unban' | 'extend_ban' | 'edit_ban' | 'convert_to_perm' | 'delete_request' | 'restore' | 'note_added';
+  admin_id: string | null;
+  admin_email: string | null;
+  public_reason: string | null;
+  internal_reason: string | null;
+  moderator_notes: string | null;
+  banned_until: string | null;
+  metadata: Record<string, any>;
+  created_at: string;
 }

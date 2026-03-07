@@ -7,7 +7,7 @@ import React, {
 } from "react";
 import { supabase } from "../lib/supabase";
 import { Session, User } from "@supabase/supabase-js";
-import { UserProfile } from "../types";
+import { UserProfile, ModerationStatus } from "../types";
 
 interface AuthContextType {
   user: User | null;
@@ -17,6 +17,8 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   isAdmin: boolean;
   isEditor: boolean;
+  isBanned: boolean;
+  moderationStatus: ModerationStatus;
   userRole: "user" | "editor" | "admin" | undefined;
   refreshProfile: () => Promise<void>;
   getSecureNow: () => Date;
@@ -305,6 +307,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const isEditor = profile?.role === "editor" || profile?.role === "admin";
   const userRole = profile?.role;
 
+  // Moderation: compute effective ban status
+  const moderationStatus: ModerationStatus = React.useMemo(() => {
+    if (!profile?.moderation_status) return 'active';
+    // Auto-expire temp bans on frontend
+    if (profile.moderation_status === 'temporarily_suspended' && profile.banned_until) {
+      const bannedUntil = new Date(profile.banned_until);
+      const now = getSecureNow();
+      if (bannedUntil <= now) return 'active';
+    }
+    return profile.moderation_status;
+  }, [profile?.moderation_status, profile?.banned_until, timeOffset]);
+
+  const isBanned = moderationStatus === 'temporarily_suspended' || moderationStatus === 'permanently_banned';
+
   return (
     <AuthContext.Provider
       value={{
@@ -315,6 +331,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         signOut,
         isAdmin,
         isEditor,
+        isBanned,
+        moderationStatus,
         userRole,
         refreshProfile,
         getSecureNow,

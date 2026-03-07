@@ -126,6 +126,18 @@ interface DBUser {
     last_ip_address: string | null;
     ip_history: string[] | null;
     admin_notes?: string | null;
+    // New moderation fields
+    moderation_status: 'active' | 'temporarily_suspended' | 'permanently_banned';
+    banned_until: string | null;
+    public_reason: string | null;
+    internal_reason: string | null;
+    moderator_notes: string | null;
+    banned_by: string | null;
+    unbanned_by: string | null;
+    unban_reason: string | null;
+    deletion_requested_at: string | null;
+    deletion_request_status: string | null;
+    deletion_admin_notes: string | null;
 }
 
 // ─── Product Edit Modal ────────────────────────────────────────────────────
@@ -853,19 +865,27 @@ const UsersTab: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [updatingId, setUpdatingId] = useState<string | null>(null);
-    const [banModal, setBanModal] = useState<DBUser | null>(null);
     const [deleteModal, setDeleteModal] = useState<DBUser | null>(null);
-    const [banReason, setBanReason] = useState('');
     const [userProfileModal, setUserProfileModal] = useState<DBUser | null>(null);
     
     // Role change confirmation
     const [roleConfirmation, setRoleConfirmation] = useState<{ user: DBUser, targetRole: 'user' | 'editor' | 'admin' } | null>(null);
 
+    // Enhanced Moderation Modal State
+    const [modModal, setModModal] = useState<{ user: DBUser, mode: 'temp_ban' | 'perm_ban' | 'unban' | 'extend' | 'convert_to_perm' | 'view_history' } | null>(null);
+    const [modPublicReason, setModPublicReason] = useState('');
+    const [modInternalReason, setModInternalReason] = useState('');
+    const [modNotes, setModNotes] = useState('');
+    const [modBannedUntil, setModBannedUntil] = useState('');
+    const [modHistory, setModHistory] = useState<any[]>([]);
+    const [modHistoryLoading, setModHistoryLoading] = useState(false);
+    const [modStatusFilter, setModStatusFilter] = useState<'all' | 'active' | 'temporarily_suspended' | 'permanently_banned'>('all');
+
     const fetchUsers = useCallback(async () => {
         setLoading(true);
         const { data, error } = await supabase
             .from('profiles')
-            .select('id,email,full_name,avatar_url,role,is_banned,banned_reason,created_at,last_login_at,last_device_info,last_ip_address,ip_history,admin_notes')
+            .select('id,email,full_name,avatar_url,role,is_banned,banned_reason,created_at,last_login_at,last_device_info,last_ip_address,ip_history,admin_notes,moderation_status,banned_until,public_reason,internal_reason,moderator_notes,banned_by,unbanned_by,unban_reason,deletion_requested_at,deletion_request_status,deletion_admin_notes')
             .is('deletion_scheduled_at', null)
             .order('created_at', { ascending: false });
         if (!error && data) setUsers(data as DBUser[]);
@@ -876,7 +896,7 @@ const UsersTab: React.FC = () => {
 
     // Prevent background scrolling when modals are open
     useEffect(() => {
-        if (banModal) {
+        if (modModal) {
             document.body.style.overflow = 'hidden';
         } else {
             document.body.style.overflow = '';
@@ -884,12 +904,14 @@ const UsersTab: React.FC = () => {
         return () => {
             document.body.style.overflow = '';
         };
-    }, [banModal]);
+    }, [modModal]);
 
-    const filtered = users.filter(u =>
-        u.email?.toLowerCase().includes(search.toLowerCase()) ||
-        u.full_name?.toLowerCase().includes(search.toLowerCase())
-    );
+    const filtered = users.filter(u => {
+        const matchesSearch = u.email?.toLowerCase().includes(search.toLowerCase()) ||
+            u.full_name?.toLowerCase().includes(search.toLowerCase());
+        if (modStatusFilter === 'all') return matchesSearch;
+        return matchesSearch && u.moderation_status === modStatusFilter;
+    });
 
     const handleRoleUpdate = (user: DBUser, targetRole: 'user' | 'editor' | 'admin') => {
         if (targetRole === 'user') {
@@ -907,26 +929,185 @@ const UsersTab: React.FC = () => {
         setRoleConfirmation(null);
     };
 
-    const toggleBan = async (user: DBUser) => {
-        if (user.is_banned) {
-            setUpdatingId(user.id);
-            await supabase.from('profiles').update({ is_banned: false, banned_reason: null }).eq('id', user.id);
-            setUsers(prev => prev.map(u => u.id === user.id ? { ...u, is_banned: false, banned_reason: null } : u));
-            setUpdatingId(null);
-        } else {
-            setBanModal(user);
+    // ─── Moderation Actions ──────────────────────────────────────────────
+    const openModModal = (user: DBUser, mode: typeof modModal extends null ? never : NonNullable<typeof modModal>['mode']) => {
+        setModPublicReason('');
+        setModInternalReason('');
+        setModNotes('');
+        setModBannedUntil('');
+        setModModal({ user, mode });
+        if (mode === 'view_history') {
+            fetchModerationHistory(user.id);
         }
     };
 
-    const confirmBan = async () => {
-        if (!banModal) return;
-        setUpdatingId(banModal.id);
-        await supabase.from('profiles').update({ is_banned: true, banned_reason: banReason || 'Нарушение на правилата' }).eq('id', banModal.id);
-        setUsers(prev => prev.map(u => u.id === banModal.id ? { ...u, is_banned: true, banned_reason: banReason } : u));
-        setBanModal(null);
-        setBanReason('');
-        setUpdatingId(null);
+    const fetchModerationHistory = async (userId: string) => {
+        setModHistoryLoading(true);
+        const { data } = await supabase
+            .from('moderation_history')
+            .select('*')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false })
+            .limit(50);
+        setModHistory(data || []);
+        setModHistoryLoading(false);
     };
+
+    const applyTempBan = async () => {
+        if (!modModal || !modBannedUntil) return;
+        setUpdatingId(modModal.user.id);
+        try {
+            const { error } = await supabase.from('profiles').update({
+                moderation_status: 'temporarily_suspended',
+                is_banned: true,
+                banned_until: new Date(modBannedUntil).toISOString(),
+                public_reason: modPublicReason || 'Нарушение на Общите условия',
+                internal_reason: modInternalReason || null,
+                moderator_notes: modNotes || null,
+                banned_by: currentUser?.id || null,
+                banned_reason: modPublicReason || 'Нарушение на Общите условия'
+            }).eq('id', modModal.user.id);
+            if (error) throw error;
+
+            await supabase.from('moderation_history').insert({
+                user_id: modModal.user.id,
+                action_type: 'temp_ban',
+                admin_id: currentUser?.id,
+                admin_email: currentUser?.email,
+                public_reason: modPublicReason || 'Нарушение на Общите условия',
+                internal_reason: modInternalReason || null,
+                moderator_notes: modNotes || null,
+                banned_until: new Date(modBannedUntil).toISOString()
+            });
+
+            setUsers(prev => prev.map(u => u.id === modModal.user.id ? {
+                ...u, moderation_status: 'temporarily_suspended', is_banned: true,
+                banned_until: new Date(modBannedUntil).toISOString(),
+                public_reason: modPublicReason, internal_reason: modInternalReason,
+            } : u));
+            showToast('Временно ограничение приложено', 'success');
+        } catch (err: any) {
+            showToast('Грешка: ' + err.message, 'error');
+        } finally {
+            setUpdatingId(null);
+            setModModal(null);
+        }
+    };
+
+    const applyPermBan = async () => {
+        if (!modModal) return;
+        setUpdatingId(modModal.user.id);
+        try {
+            const { error } = await supabase.from('profiles').update({
+                moderation_status: 'permanently_banned',
+                is_banned: true,
+                banned_until: null,
+                public_reason: modPublicReason || 'Нарушение на Общите условия',
+                internal_reason: modInternalReason || null,
+                moderator_notes: modNotes || null,
+                banned_by: currentUser?.id || null,
+                banned_reason: modPublicReason || 'Нарушение на Общите условия'
+            }).eq('id', modModal.user.id);
+            if (error) throw error;
+
+            await supabase.from('moderation_history').insert({
+                user_id: modModal.user.id,
+                action_type: modModal.mode === 'convert_to_perm' ? 'convert_to_perm' : 'perm_ban',
+                admin_id: currentUser?.id,
+                admin_email: currentUser?.email,
+                public_reason: modPublicReason || 'Нарушение на Общите условия',
+                internal_reason: modInternalReason || null,
+                moderator_notes: modNotes || null,
+            });
+
+            setUsers(prev => prev.map(u => u.id === modModal.user.id ? {
+                ...u, moderation_status: 'permanently_banned', is_banned: true,
+                banned_until: null, public_reason: modPublicReason, internal_reason: modInternalReason
+            } : u));
+            showToast('Перманентно ограничение приложено', 'success');
+        } catch (err: any) {
+            showToast('Грешка: ' + err.message, 'error');
+        } finally {
+            setUpdatingId(null);
+            setModModal(null);
+        }
+    };
+
+    const applyUnban = async () => {
+        if (!modModal) return;
+        setUpdatingId(modModal.user.id);
+        try {
+            const { error } = await supabase.from('profiles').update({
+                moderation_status: 'active',
+                is_banned: false,
+                banned_until: null,
+                public_reason: null,
+                internal_reason: null,
+                moderator_notes: null,
+                banned_by: null,
+                banned_reason: null,
+                unbanned_by: currentUser?.id,
+                unban_reason: modPublicReason || 'Възстановен от администратор'
+            }).eq('id', modModal.user.id);
+            if (error) throw error;
+
+            await supabase.from('moderation_history').insert({
+                user_id: modModal.user.id,
+                action_type: 'unban',
+                admin_id: currentUser?.id,
+                admin_email: currentUser?.email,
+                public_reason: modPublicReason || 'Възстановен от администратор',
+                moderator_notes: modNotes || null,
+            });
+
+            setUsers(prev => prev.map(u => u.id === modModal.user.id ? {
+                ...u, moderation_status: 'active', is_banned: false,
+                banned_until: null, public_reason: null, internal_reason: null
+            } : u));
+            showToast('Потребителят е възстановен', 'success');
+        } catch (err: any) {
+            showToast('Грешка: ' + err.message, 'error');
+        } finally {
+            setUpdatingId(null);
+            setModModal(null);
+        }
+    };
+
+    const extendBan = async () => {
+        if (!modModal || !modBannedUntil) return;
+        setUpdatingId(modModal.user.id);
+        try {
+            const { error } = await supabase.from('profiles').update({
+                banned_until: new Date(modBannedUntil).toISOString(),
+                public_reason: modPublicReason || modModal.user.public_reason,
+                internal_reason: modInternalReason || modModal.user.internal_reason,
+                moderator_notes: modNotes || modModal.user.moderator_notes,
+            }).eq('id', modModal.user.id);
+            if (error) throw error;
+
+            await supabase.from('moderation_history').insert({
+                user_id: modModal.user.id,
+                action_type: 'extend_ban',
+                admin_id: currentUser?.id,
+                admin_email: currentUser?.email,
+                public_reason: modPublicReason || modModal.user.public_reason,
+                internal_reason: modInternalReason || modModal.user.internal_reason,
+                moderator_notes: modNotes || null,
+                banned_until: new Date(modBannedUntil).toISOString()
+            });
+
+            setUsers(prev => prev.map(u => u.id === modModal.user.id ? {
+                ...u, banned_until: new Date(modBannedUntil).toISOString()
+            } : u));
+            showToast('Ограничението е удължено', 'success');
+        } catch (err: any) {
+            showToast('Грешка: ' + err.message, 'error');
+        } finally {
+            setUpdatingId(null);
+            setModModal(null);
+        }
+    };
+
 
     const updateAdminNotes = async (userId: string, notes: string) => {
         const { error } = await supabase
@@ -981,6 +1162,28 @@ const UsersTab: React.FC = () => {
         }
     };
 
+    // Moderation status helpers
+    const modStatusBadge = (status: string) => {
+        if (status === 'permanently_banned') return { label: 'Перманентно Огр.', cls: 'bg-red-900/40 text-red-400 border-red-900/20' };
+        if (status === 'temporarily_suspended') return { label: 'Временно Огр.', cls: 'bg-amber-900/40 text-amber-400 border-amber-900/20' };
+        return { label: 'Активен', cls: 'bg-emerald-900/30 text-emerald-400 border-emerald-900/20' };
+    };
+
+    const actionTypeLabel = (t: string) => {
+        const map: Record<string, string> = {
+            'temp_ban': 'Временно ограничение',
+            'perm_ban': 'Перманентно ограничение',
+            'unban': 'Възстановяване',
+            'extend_ban': 'Удължаване',
+            'edit_ban': 'Редактиране',
+            'convert_to_perm': 'Конвертиране в перманентно',
+            'delete_request': 'Заявка за изтриване',
+            'restore': 'Възстановяване',
+            'note_added': 'Бележка'
+        };
+        return map[t] || t;
+    };
+
     const roleColor = (role: string) => {
         if (role === 'admin') return 'text-red-400';
         if (role === 'editor') return 'text-yellow-400';
@@ -995,21 +1198,43 @@ const UsersTab: React.FC = () => {
 
     return (
         <div>
-            <div className="flex items-center justify-between gap-4 mb-6">
-                <div className="relative flex-1 max-w-md">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
-                    <input
-                        type="text"
-                        value={search}
-                        onChange={e => setSearch(e.target.value)}
-                        placeholder="Търси по email или име..."
-                        className="w-full bg-black/40 border border-white/10 text-white text-sm pl-10 pr-4 py-2.5 focus:outline-none focus:border-red-600/60"
-                    />
+            {/* Search + Filter Bar */}
+            <div className="flex flex-col gap-3 mb-6">
+                <div className="flex items-center justify-between gap-4">
+                    <div className="relative flex-1 max-w-md">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                        <input
+                            type="text"
+                            value={search}
+                            onChange={e => setSearch(e.target.value)}
+                            placeholder="Търси по email или име..."
+                            className="w-full bg-black/40 border border-white/10 text-white text-sm pl-10 pr-4 py-2.5 focus:outline-none focus:border-red-600/60"
+                        />
+                    </div>
+                    <button onClick={fetchUsers} className="px-4 py-2.5 border border-white/10 text-zinc-400 hover:text-white text-xs uppercase tracking-widest transition-colors flex items-center gap-2">
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        Обнови
+                    </button>
                 </div>
-                <button onClick={fetchUsers} className="px-4 py-2.5 border border-white/10 text-zinc-400 hover:text-white text-xs uppercase tracking-widest transition-colors flex items-center gap-2">
-                    <RefreshCw className="w-3.5 h-3.5" />
-                    Обнови
-                </button>
+
+                {/* Status Filter Pills */}
+                <div className="flex items-center gap-2 flex-wrap">
+                    {[
+                        { key: 'all', label: 'Всички', count: users.length },
+                        { key: 'active', label: 'Активни', count: users.filter(u => u.moderation_status === 'active').length },
+                        { key: 'temporarily_suspended', label: 'Временно Огр.', count: users.filter(u => u.moderation_status === 'temporarily_suspended').length },
+                        { key: 'permanently_banned', label: 'Перманентно Огр.', count: users.filter(u => u.moderation_status === 'permanently_banned').length },
+                    ].map(f => (
+                        <button
+                            key={f.key}
+                            onClick={() => setModStatusFilter(f.key as any)}
+                            className={`px-3 py-1.5 text-[10px] uppercase tracking-widest border transition-all flex items-center gap-1.5 ${modStatusFilter === f.key ? 'border-red-600/40 bg-red-600/10 text-white' : 'border-white/5 text-zinc-500 hover:text-white hover:border-white/10'}`}
+                        >
+                            {f.label}
+                            {f.count > 0 && <span className="text-[9px] opacity-60">({f.count})</span>}
+                        </button>
+                    ))}
+                </div>
             </div>
 
             {loading ? (
@@ -1018,8 +1243,15 @@ const UsersTab: React.FC = () => {
                 </div>
             ) : (
                 <div className="space-y-2">
-                    {filtered.map(u => (
-                        <div key={u.id} className={`flex flex-col md:flex-row md:items-center justify-between gap-3 p-4 border ${u.is_banned ? 'border-red-900/40 bg-red-950/10' : 'border-white/5 bg-white/2'} hover:border-white/10 transition-colors cursor-pointer group/row`} onClick={() => setUserProfileModal(u)}>
+                    {filtered.map(u => {
+                        const badge = modStatusBadge(u.moderation_status);
+                        const isActive = u.moderation_status === 'active';
+                        const isTemp = u.moderation_status === 'temporarily_suspended';
+                        const isPerm = u.moderation_status === 'permanently_banned';
+                        const hasDeletionRequest = !!u.deletion_requested_at;
+
+                        return (
+                        <div key={u.id} className={`flex flex-col md:flex-row md:items-center justify-between gap-3 p-4 border ${!isActive ? 'border-red-900/40 bg-red-950/10' : 'border-white/5 bg-white/2'} hover:border-white/10 transition-colors cursor-pointer group/row`} onClick={() => setUserProfileModal(u)}>
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 rounded-full overflow-hidden bg-zinc-900 flex-shrink-0">
                                     {u.avatar_url ? (
@@ -1031,14 +1263,20 @@ const UsersTab: React.FC = () => {
                                     )}
                                 </div>
                                 <div>
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-2 flex-wrap">
                                         <p className="text-white font-medium text-sm group-hover/row:text-red-500 transition-colors uppercase tracking-tight">{u.full_name || 'Без Име'}</p>
-                                        {u.is_banned && <span className="text-[10px] bg-red-900/40 text-red-400 px-2 py-0.5 uppercase tracking-widest">Блокиран</span>}
+                                        <span className={`text-[10px] px-2 py-0.5 uppercase tracking-widest border ${badge.cls}`}>{badge.label}</span>
+                                        {hasDeletionRequest && <span className="text-[10px] bg-purple-900/30 text-purple-400 px-2 py-0.5 uppercase tracking-widest border border-purple-900/20">Заявка изтриване</span>}
                                         {u.id === currentUser?.id && <span className="text-[10px] bg-zinc-800 text-zinc-400 px-2 py-0.5 uppercase tracking-widest">Аз</span>}
                                     </div>
                                     <p className="text-zinc-500 text-xs">{u.email}</p>
-                                    {u.is_banned && u.banned_reason && (
-                                        <p className="text-red-400/60 text-xs mt-0.5">Причина: {u.banned_reason}</p>
+                                    {!isActive && u.public_reason && (
+                                        <p className="text-red-400/60 text-xs mt-0.5">Причина: {u.public_reason}</p>
+                                    )}
+                                    {isTemp && u.banned_until && (
+                                        <p className="text-amber-500/60 text-[10px] mt-0.5">
+                                            До: {new Date(u.banned_until).toLocaleString('bg-BG', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                        </p>
                                     )}
                                     <div className="flex flex-wrap items-center gap-2 mt-1.5 pt-1.5 border-t border-white/5">
                                         {u.last_login_at && (
@@ -1048,17 +1286,17 @@ const UsersTab: React.FC = () => {
                                         )}
                                         {u.last_device_info && (
                                             <p className="text-[10px] text-zinc-400 bg-white/5 px-2 py-0.5 rounded flex items-center gap-1">
-                                                💻 {u.last_device_info}
+                                                {u.last_device_info}
                                             </p>
                                         )}
                                         {u.last_ip_address && (
                                             <p className="text-[10px] text-red-400/80 bg-red-950/20 px-2 py-0.5 rounded flex items-center gap-1 font-mono border border-red-900/10">
-                                                🌐 {u.last_ip_address}
+                                                {u.last_ip_address}
                                             </p>
                                         )}
                                         {u.ip_history && u.ip_history.length > 1 && (
                                             <p className="text-[9px] text-zinc-500 bg-zinc-900/50 px-2 py-0.5 rounded border border-white/5 hover:border-white/10 transition-colors" title={u.ip_history.join(', ')}>
-                                                📝 {u.ip_history.length} уникални IP-та
+                                                {u.ip_history.length} уникални IP-та
                                             </p>
                                         )}
                                     </div>
@@ -1108,28 +1346,90 @@ const UsersTab: React.FC = () => {
                                     ))}
                                 </div>
 
-                                {/* Ban button */}
+                                {/* Moderation Buttons */}
+                                {isActive && u.id !== currentUser?.id && (
+                                    <>
+                                        <button
+                                            disabled={updatingId === u.id}
+                                            onClick={() => openModModal(u, 'temp_ban')}
+                                            className="p-2.5 text-xs border border-amber-600/30 text-amber-400 hover:bg-amber-900/20 transition-all disabled:opacity-30 flex items-center gap-1.5"
+                                            title="Временно ограничение"
+                                        >
+                                            <Clock className="w-3.5 h-3.5" />
+                                        </button>
+                                        <button
+                                            disabled={updatingId === u.id}
+                                            onClick={() => openModModal(u, 'perm_ban')}
+                                            className="p-2.5 text-xs border border-red-600/30 text-red-400 hover:bg-red-900/20 transition-all disabled:opacity-30 flex items-center gap-1.5"
+                                            title="Перманентно ограничение"
+                                        >
+                                            <ShieldBan className="w-3.5 h-3.5" />
+                                        </button>
+                                    </>
+                                )}
+
+                                {isTemp && u.id !== currentUser?.id && (
+                                    <>
+                                        <button
+                                            disabled={updatingId === u.id}
+                                            onClick={() => openModModal(u, 'unban')}
+                                            className="p-2.5 text-xs border border-green-600/30 text-green-400 hover:bg-green-900/20 transition-all disabled:opacity-30 flex items-center gap-1.5"
+                                            title="Възстанови"
+                                        >
+                                            <UserCheck className="w-3.5 h-3.5" />
+                                        </button>
+                                        <button
+                                            disabled={updatingId === u.id}
+                                            onClick={() => openModModal(u, 'extend')}
+                                            className="p-2.5 text-xs border border-amber-600/30 text-amber-400 hover:bg-amber-900/20 transition-all disabled:opacity-30 flex items-center gap-1.5"
+                                            title="Удължи"
+                                        >
+                                            <Clock className="w-3.5 h-3.5" />
+                                        </button>
+                                        <button
+                                            disabled={updatingId === u.id}
+                                            onClick={() => openModModal(u, 'convert_to_perm')}
+                                            className="p-2.5 text-xs border border-red-600/30 text-red-400 hover:bg-red-900/20 transition-all disabled:opacity-30 flex items-center gap-1.5"
+                                            title="Конвертирай в перманентно"
+                                        >
+                                            <ShieldBan className="w-3.5 h-3.5" />
+                                        </button>
+                                    </>
+                                )}
+
+                                {isPerm && u.id !== currentUser?.id && (
+                                    <button
+                                        disabled={updatingId === u.id}
+                                        onClick={() => openModModal(u, 'unban')}
+                                        className="p-2.5 text-xs border border-green-600/30 text-green-400 hover:bg-green-900/20 transition-all disabled:opacity-30 flex items-center gap-1.5"
+                                        title="Възстанови"
+                                    >
+                                        <UserCheck className="w-3.5 h-3.5" />
+                                    </button>
+                                )}
+
+                                {/* History */}
                                 <button
-                                    disabled={updatingId === u.id || u.id === currentUser?.id}
-                                    onClick={() => toggleBan(u)}
-                                    className={`p-2.5 text-xs uppercase tracking-widest border transition-all disabled:opacity-30 flex items-center gap-1.5 ${u.is_banned ? 'border-green-600/40 text-green-400 hover:bg-green-900/20' : 'border-red-600/40 text-red-400 hover:bg-red-900/20'}`}
-                                    title={u.is_banned ? 'Разблокирай' : 'Блокирай'}
+                                    onClick={() => openModModal(u, 'view_history')}
+                                    className="p-2.5 text-xs border border-white/10 text-zinc-400 hover:text-white hover:bg-white/5 transition-all flex items-center gap-1.5"
+                                    title="История на модерация"
                                 >
-                                    {updatingId === u.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : (u.is_banned ? <UserCheck className="w-3.5 h-3.5" /> : <UserX className="w-3.5 h-3.5" />)}
+                                    <Clock className="w-3.5 h-3.5" />
                                 </button>
                                 
                                 {/* Delete Entirely button */}
                                 <button
                                     disabled={updatingId === u.id || u.id === currentUser?.id}
                                     onClick={() => setDeleteModal(u)}
-                                    className={`p-2.5 text-xs uppercase tracking-widest border transition-all disabled:opacity-30 flex items-center bg-transparent border-red-900/40 text-[#ff4444] hover:bg-red-950/60 hover:text-white hover:border-red-600/80`}
+                                    className="p-2.5 text-xs uppercase tracking-widest border transition-all disabled:opacity-30 flex items-center bg-transparent border-red-900/40 text-[#ff4444] hover:bg-red-950/60 hover:text-white hover:border-red-600/80"
                                     title="ИЗТРИЙ НАПЪЛНО И БЕЗВЪЗВРАТНО"
                                 >
                                     <Trash2 className="w-3.5 h-3.5" />
                                 </button>
                             </div>
                         </div>
-                    ))}
+                    );
+                    })}
                     <p className="text-zinc-600 text-xs mt-4">{filtered.length} от {users.length} потребители</p>
                 </div>
             )}
@@ -1144,33 +1444,186 @@ const UsersTab: React.FC = () => {
                 )}
             </AnimatePresence>
 
-
-            {/* Ban Modal */}
+            {/* ─── MODERATION MODAL ─────────────────────────────────── */}
             <AnimatePresence>
-                {banModal && (
-                    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+                {modModal && (
+                    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setModModal(null)}>
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0 }}
-                            className="bg-[#111] border border-red-600/30 w-full max-w-md p-6"
+                            onClick={e => e.stopPropagation()}
+                            className="bg-[#111] border border-white/10 rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6"
                         >
-                            <h3 className="text-lg font-bold text-white uppercase tracking-widest mb-2">Блокиране на Потребител</h3>
-                            <p className="text-zinc-400 text-sm mb-4">Потребителят <strong className="text-white">{banModal.email}</strong> ще бъде блокиран.</p>
-                            <textarea
-                                rows={3}
-                                value={banReason}
-                                onChange={e => setBanReason(e.target.value)}
-                                placeholder="Причина за блокиране (по желание)..."
-                                className="w-full bg-black/40 border border-white/10 text-white text-sm px-4 py-2.5 focus:outline-none focus:border-red-600/60 resize-none mb-4"
-                            />
-                            <div className="flex gap-3">
-                                <button onClick={() => setBanModal(null)} className="flex-1 py-3 border border-white/20 text-zinc-400 text-xs uppercase tracking-widest hover:text-white transition-colors">Отказ</button>
-                                <button onClick={confirmBan} className="flex-1 py-3 bg-red-600 text-white font-bold text-xs uppercase tracking-widest hover:bg-red-700 transition-colors flex items-center justify-center gap-2">
-                                    <ShieldBan className="w-4 h-4" />
-                                    Блокирай
+                            {/* Modal Header */}
+                            <div className="flex items-center justify-between mb-5">
+                                <div className="flex items-center gap-3">
+                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${
+                                        modModal.mode === 'view_history' ? 'bg-zinc-800 text-zinc-400' :
+                                        modModal.mode === 'unban' ? 'bg-green-900/30 text-green-400' :
+                                        modModal.mode === 'temp_ban' || modModal.mode === 'extend' ? 'bg-amber-900/30 text-amber-400' :
+                                        'bg-red-900/30 text-red-400'
+                                    }`}>
+                                        {modModal.mode === 'view_history' ? <Clock className="w-5 h-5" /> :
+                                         modModal.mode === 'unban' ? <UserCheck className="w-5 h-5" /> :
+                                         <ShieldBan className="w-5 h-5" />}
+                                    </div>
+                                    <div>
+                                        <h3 className="text-lg font-bold text-white uppercase tracking-tight">
+                                            {modModal.mode === 'temp_ban' && 'Временно Ограничение'}
+                                            {modModal.mode === 'perm_ban' && 'Перманентно Ограничение'}
+                                            {modModal.mode === 'unban' && 'Възстановяване'}
+                                            {modModal.mode === 'extend' && 'Удължаване'}
+                                            {modModal.mode === 'convert_to_perm' && 'Конвертиране в Перманентно'}
+                                            {modModal.mode === 'view_history' && 'История на Модерация'}
+                                        </h3>
+                                        <p className="text-zinc-500 text-xs">{modModal.user.email}</p>
+                                    </div>
+                                </div>
+                                <button onClick={() => setModModal(null)} className="p-2 text-zinc-500 hover:text-white transition-colors">
+                                    <X className="w-5 h-5" />
                                 </button>
                             </div>
+
+                            {/* History View */}
+                            {modModal.mode === 'view_history' ? (
+                                <div className="space-y-3">
+                                    {modHistoryLoading ? (
+                                        <div className="flex items-center justify-center py-10">
+                                            <Loader2 className="w-6 h-6 text-red-600 animate-spin" />
+                                        </div>
+                                    ) : modHistory.length === 0 ? (
+                                        <p className="text-zinc-600 text-sm text-center py-10">Няма записи в историята</p>
+                                    ) : (
+                                        <div className="space-y-2">
+                                            {modHistory.map(entry => (
+                                                <div key={entry.id} className="p-3 border border-white/5 bg-white/2 rounded-lg">
+                                                    <div className="flex items-center justify-between mb-1">
+                                                        <span className={`text-[10px] uppercase tracking-widest font-bold px-2 py-0.5 rounded ${
+                                                            entry.action_type.includes('ban') || entry.action_type === 'convert_to_perm' ? 'bg-red-900/30 text-red-400' :
+                                                            entry.action_type === 'unban' || entry.action_type === 'restore' ? 'bg-green-900/30 text-green-400' :
+                                                            'bg-zinc-800 text-zinc-400'
+                                                        }`}>
+                                                            {actionTypeLabel(entry.action_type)}
+                                                        </span>
+                                                        <span className="text-[10px] text-zinc-600">
+                                                            {new Date(entry.created_at).toLocaleString('bg-BG', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                                        </span>
+                                                    </div>
+                                                    {entry.admin_email && <p className="text-[10px] text-zinc-500">От: {entry.admin_email}</p>}
+                                                    {entry.public_reason && <p className="text-xs text-zinc-300 mt-1">{entry.public_reason}</p>}
+                                                    {entry.internal_reason && <p className="text-[10px] text-zinc-500 mt-0.5 italic">Вътрешно: {entry.internal_reason}</p>}
+                                                    {entry.banned_until && <p className="text-[10px] text-amber-400/60 mt-0.5">До: {new Date(entry.banned_until).toLocaleString('bg-BG')}</p>}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                /* Action Forms */
+                                <div className="space-y-4">
+                                    {/* Duration for temp_ban and extend */}
+                                    {(modModal.mode === 'temp_ban' || modModal.mode === 'extend') && (
+                                        <div>
+                                            <label className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold block mb-1.5">Ограничение до</label>
+                                            <input
+                                                type="datetime-local"
+                                                value={modBannedUntil}
+                                                onChange={e => setModBannedUntil(e.target.value)}
+                                                min={new Date().toISOString().slice(0, 16)}
+                                                className="w-full bg-black/40 border border-white/10 text-white text-sm px-4 py-2.5 focus:outline-none focus:border-red-600/60 rounded-lg"
+                                            />
+                                            {/* Quick duration buttons */}
+                                            <div className="flex gap-2 mt-2 flex-wrap">
+                                                {[
+                                                    { label: '1 час', hours: 1 },
+                                                    { label: '24 часа', hours: 24 },
+                                                    { label: '3 дни', hours: 72 },
+                                                    { label: '7 дни', hours: 168 },
+                                                    { label: '30 дни', hours: 720 },
+                                                    { label: '90 дни', hours: 2160 },
+                                                ].map(d => (
+                                                    <button
+                                                        key={d.label}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const dt = new Date(Date.now() + d.hours * 3600000);
+                                                            setModBannedUntil(dt.toISOString().slice(0, 16));
+                                                        }}
+                                                        className="px-2.5 py-1 text-[10px] border border-white/10 text-zinc-400 hover:text-white hover:border-white/20 transition-all rounded"
+                                                    >
+                                                        {d.label}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Public Reason */}
+                                    <div>
+                                        <label className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold block mb-1.5">
+                                            {modModal.mode === 'unban' ? 'Причина за възстановяване' : 'Публична причина'} (видима за потребителя)
+                                        </label>
+                                        <textarea
+                                            rows={2}
+                                            value={modPublicReason}
+                                            onChange={e => setModPublicReason(e.target.value)}
+                                            placeholder={modModal.mode === 'unban' ? "Причина за възстановяване..." : "Нарушение на Общите условия..."}
+                                            className="w-full bg-black/40 border border-white/10 text-white text-sm px-4 py-2.5 focus:outline-none focus:border-red-600/60 resize-none rounded-lg"
+                                        />
+                                    </div>
+
+                                    {/* Internal Reason (not for unban) */}
+                                    {modModal.mode !== 'unban' && (
+                                        <div>
+                                            <label className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold block mb-1.5">Вътрешна причина (само за администрация)</label>
+                                            <textarea
+                                                rows={2}
+                                                value={modInternalReason}
+                                                onChange={e => setModInternalReason(e.target.value)}
+                                                placeholder="Вътрешни бележки..."
+                                                className="w-full bg-black/40 border border-white/10 text-white text-sm px-4 py-2.5 focus:outline-none focus:border-red-600/60 resize-none rounded-lg"
+                                            />
+                                        </div>
+                                    )}
+
+                                    {/* Moderator Notes */}
+                                    <div>
+                                        <label className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold block mb-1.5">Бележки от модератор</label>
+                                        <textarea
+                                            rows={2}
+                                            value={modNotes}
+                                            onChange={e => setModNotes(e.target.value)}
+                                            placeholder="Допълнителни бележки..."
+                                            className="w-full bg-black/40 border border-white/10 text-white text-sm px-4 py-2.5 focus:outline-none focus:border-red-600/60 resize-none rounded-lg"
+                                        />
+                                    </div>
+
+                                    {/* Action Buttons */}
+                                    <div className="flex gap-3 pt-2">
+                                        <button onClick={() => setModModal(null)} className="flex-1 py-3 border border-white/20 text-zinc-400 text-xs uppercase tracking-widest hover:text-white transition-colors rounded-lg">Отказ</button>
+                                        <button
+                                            disabled={updatingId === modModal.user.id || ((['temp_ban', 'extend'] as string[]).includes(modModal.mode) && !modBannedUntil)}
+                                            onClick={() => {
+                                                if (modModal.mode === 'temp_ban') applyTempBan();
+                                                else if (modModal.mode === 'perm_ban' || modModal.mode === 'convert_to_perm') applyPermBan();
+                                                else if (modModal.mode === 'unban') applyUnban();
+                                                else if (modModal.mode === 'extend') extendBan();
+                                            }}
+                                            className={`flex-1 py-3 font-bold text-xs uppercase tracking-widest transition-colors flex items-center justify-center gap-2 rounded-lg disabled:opacity-40 ${
+                                                modModal.mode === 'unban' ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-red-600 text-white hover:bg-red-700'
+                                            }`}
+                                        >
+                                            {updatingId === modModal.user.id ? <Loader2 className="w-4 h-4 animate-spin" /> : (
+                                                modModal.mode === 'unban' ? <><UserCheck className="w-4 h-4" /> Възстанови</> :
+                                                modModal.mode === 'temp_ban' ? <><Clock className="w-4 h-4" /> Ограничи временно</> :
+                                                modModal.mode === 'extend' ? <><Clock className="w-4 h-4" /> Удължи</> :
+                                                <><ShieldBan className="w-4 h-4" /> Ограничи перманентно</>
+                                            )}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </motion.div>
                     </div>
                 )}
@@ -1200,6 +1653,7 @@ const UsersTab: React.FC = () => {
         </div>
     );
 };
+
 
 // ─── User Profile Modal ──────────────────────────────────────────────────
 const UserProfileModal: React.FC<{
@@ -3126,6 +3580,7 @@ const OrdersTab: React.FC = () => {
     const [showArchived, setShowArchived] = useState(false);
     const [archivedData, setArchivedData] = useState<{user: any, orders: any[]}[]>([]);
     const [archivedLoading, setArchivedLoading] = useState(false);
+    const [confirmDeleteArchived, setConfirmDeleteArchived] = useState<string | null>(null);
     const { showToast } = useToast();
 
     useEffect(() => {
@@ -3209,6 +3664,20 @@ const OrdersTab: React.FC = () => {
             showToast('Грешка при изтриване: ' + err.message, 'error');
         } finally {
             setDeletingId(null);
+        }
+    };
+
+    const confirmDeleteArchivedAction = async () => {
+        if (!confirmDeleteArchived) return;
+        const id = confirmDeleteArchived;
+        setConfirmDeleteArchived(null);
+        try {
+            const { error } = await supabase.from('deleted_users_archive').delete().eq('id', id);
+            if (error) throw error;
+            showToast('Архивът е изтрит окончателно', 'success');
+            setArchivedData(prev => prev.filter(a => a.user.id !== id));
+        } catch (err: any) {
+            showToast('Грешка при окончателно изтриване: ' + err.message, 'error');
         }
     };
 
@@ -3902,14 +4371,125 @@ const OrdersTab: React.FC = () => {
             </html>
         `;
         printWindow.document.write(html);
-        printWindow.document.close();
-        
         // Wait for images and fonts to load
         setTimeout(() => {
             printWindow.focus();
             printWindow.print();
         }, 1500);
     };
+
+    const handleAdminPrint = (order: any, archivedUser: any) => {
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) return;
+
+        const itemsHtml = order.items.map((item: any) => `
+            <tr>
+                <td style="padding: 12px; border-bottom: 1px solid #eee;">
+                    <div style="font-weight: bold; font-size: 14px;">${item.name_bg || item.name}</div>
+                    <div style="font-size: 11px; color: #666; margin-top: 4px;">
+                        ${item.variant ? `Вариант: ${item.variant}` : ''} 
+                        ${item.selectedSize ? `| Размер: ${item.selectedSize}` : ''}
+                    </div>
+                </td>
+                <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
+                <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: right;">${Number(item.price).toFixed(2)} €</td>
+                <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: right; font-weight: bold;">
+                    ${(Number(item.price) * item.quantity).toFixed(2)} €
+                </td>
+            </tr>
+        `).join('');
+
+        printWindow.document.write(`
+            <html>
+                <head>
+                    <title>ПОРЪЧКА ЗА АДМИНИСТРАЦИЯ - #${(order.id || '').slice(0, 8)}</title>
+                    <style>
+                        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&display=swap');
+                        body { font-family: 'Roboto', sans-serif; padding: 40px; color: #000; line-height: 1.6; }
+                        .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; border-bottom: 4px solid #000; padding-bottom: 20px; }
+                        .logo { font-size: 28px; font-weight: 900; letter-spacing: -1px; text-transform: uppercase; }
+                        .order-info { text-align: right; }
+                        .meta-box { background: #f9f9f9; padding: 20px; border: 1px solid #eee; }
+                        .meta-title { font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; color: #666; margin-bottom: 10px; }
+                        table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+                        th { background: #000; color: #fff; text-align: left; padding: 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+                        .total-row { display: flex; justify-content: flex-end; gap: 40px; border-top: 2px solid #000; padding-top: 20px; }
+                        .total-label { font-size: 14px; font-weight: bold; text-transform: uppercase; }
+                        .total-value { font-size: 24px; font-weight: 900; color: #dc2626; }
+                        .footer { margin-top: 60px; font-size: 10px; color: #999; border-top: 1px solid #eee; padding-top: 20px; text-align: center; }
+                        @media print { body { padding: 0; } .no-print { display: none; } }
+                    </style>
+                </head>
+                <body>
+                    <div class="header">
+                        <div class="logo">CARDECAL / <span style="color: #dc2626;">ADMIN COPY</span></div>
+                        <div class="order-info">
+                            <div style="font-weight: 900; font-size: 18px;">ПОРЪЧКА #${(order.id || '').slice(0, 8)}</div>
+                            <div style="font-size: 12px; color: #666;">${order.created_at ? new Date(order.created_at).toLocaleString('bg-BG') : '—'}</div>
+                        </div>
+                    </div>
+
+                    <div style="background: #fff5f5; border: 1px solid #feb2b2; padding: 15px; margin-bottom: 30px; border-radius: 4px;">
+                        <strong style="color: #c53030; font-size: 11px; text-transform: uppercase;">Архивирана Поръчка (Изтрит Потребител)</strong>
+                        <div style="font-size: 12px; margin-top: 5px;">Тази поръчка принадлежи на потребител, който е изтрит от системата на ${new Date(archivedUser.deleted_at).toLocaleString('bg-BG')}.</div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px;">
+                        <div class="meta-box">
+                            <div class="meta-title">Данни за Клиента (Архив)</div>
+                            <div style="font-weight: bold; font-size: 16px;">${archivedUser.full_name || '—'}</div>
+                            <div style="font-size: 14px; margin-top: 4px;">${archivedUser.email || '—'}</div>
+                            <div style="font-size: 14px;">${archivedUser.phone || '—'}</div>
+                        </div>
+                        <div class="meta-box">
+                            <div class="meta-title">Доставка</div>
+                            <div style="font-weight: bold;">${order.shipping_details?.deliveryType === 'econt' ? 'Еконт' : 'Спиди'} - ${order.shipping_details?.officeName || '—'}</div>
+                            <div style="font-size: 14px;">${order.shipping_details?.city || '—'}</div>
+                            <div style="font-size: 14px; margin-top: 10px; color: #666;">
+                                Статус при архивиране: <span style="font-weight: bold; color: #000;">${order.status}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    ${order.shipping_details?.notes ? `
+                    <div style="margin-bottom: 30px; padding: 15px; background: #f0f0f0; border-left: 4px solid #000;">
+                        <div class="meta-title" style="margin-bottom: 5px;">Бележка към поръчката</div>
+                        <div style="font-style: italic; font-size: 13px;">"${order.shipping_details.notes}"</div>
+                    </div>
+                    ` : ''}
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Артикул</th>
+                                <th style="text-align: center;">К-во</th>
+                                <th style="text-align: right;">Ед. Цена</th>
+                                <th style="text-align: right;">Общо</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${itemsHtml}
+                        </tbody>
+                    </table>
+
+                    <div class="total-row">
+                        <div style="text-align: right;">
+                            <div class="total-label">Крайна Сума (EUR)</div>
+                            <div class="total-value">${Number(order.total_amount).toFixed(2)} €</div>
+                        </div>
+                    </div>
+
+                    <div class="footer">
+                        Документът е генериран за целите на отчетността и административното обслужване на CARDECAL.BG.
+                        Всички данни са извлечени от архива за изтрити потребители съгласно GDPR.
+                    </div>
+                </body>
+            </html>
+        `);
+        printWindow.document.close();
+        printWindow.print();
+    };
+
 
 
 
@@ -3954,8 +4534,19 @@ const OrdersTab: React.FC = () => {
                 message="Сигурни ли сте, че искате да изтриете тази поръчка? Това действие е необратимо и всички данни за поръчката ще бъдат загубени."
                 confirmLabel="Изтрий Перманентно"
                 cancelLabel="Отказ"
-                onConfirm={confirmDeleteAction}
+                onConfirm={() => confirmDeleteAction()}
                 onCancel={() => setConfirmDelete(null)}
+                isDanger={true}
+            />
+
+            <ConfirmDialog 
+                isOpen={!!confirmDeleteArchived}
+                title="ОКОНЧАТЕЛНО ИЗТРИВАНЕ ОТ АРХИВ"
+                message="ВНИМАНИЕ: Това действие ще изтрие всички данни за този изтрит потребител и неговите поръчки ОКОНЧАТЕЛНО. Няма да имате никакъв достъп до тази история повече. Продължавате ли?"
+                confirmLabel="Да, Изтрий Окончателно"
+                cancelLabel="Отказ"
+                onConfirm={() => confirmDeleteArchivedAction()}
+                onCancel={() => setConfirmDeleteArchived(null)}
                 isDanger={true}
             />
 
@@ -4256,20 +4847,24 @@ const OrdersTab: React.FC = () => {
                                                             <p className="text-[10px] text-zinc-500 mt-0.5">{order.created_at ? new Date(order.created_at).toLocaleString('bg-BG') : '—'}</p>
                                                             <p className="text-[10px] text-zinc-600 mt-0.5">Клиент: {order.shipping_details?.fullName || entry.user.full_name || '—'}</p>
                                                         </div>
-                                                        <div className="text-right flex items-center gap-3">
+                                                        <div className="text-right flex items-center gap-2">
                                                             <div>
                                                                 <p className="text-red-500 font-black">{order.total_amount?.toFixed(2)} &euro;</p>
                                                                 <span className={`text-[9px] uppercase tracking-widest font-bold ${statusColor[order.status] || 'text-zinc-500'}`}>{statusLabel[order.status] || order.status}</span>
                                                             </div>
                                                             <button
-                                                                onClick={() => {
-                                                                    const fakeOrder = { ...order, items: order.items || [] } as RegularOrder;
-                                                                    handlePrint(fakeOrder);
-                                                                }}
-                                                                className="p-2 bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all rounded-lg"
-                                                                title="Печат"
+                                                                onClick={() => handlePrint(order)}
+                                                                className="p-2.5 bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all rounded-lg"
+                                                                title="Печат за Клиент"
                                                             >
-                                                                <Printer className="w-4 h-4" />
+                                                                <Printer className="w-3.5 h-3.5" />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleAdminPrint(order, entry.user)}
+                                                                className="p-2.5 bg-red-600/10 border border-red-600/20 text-red-500 hover:bg-red-600 hover:text-white transition-all rounded-lg"
+                                                                title="Печат за Архив (Admin)"
+                                                            >
+                                                                <FileText className="w-3.5 h-3.5" />
                                                             </button>
                                                         </div>
                                                     </div>
@@ -4284,6 +4879,15 @@ const OrdersTab: React.FC = () => {
                                                 </div>
                                             );
                                         })}
+                                        <div className="pt-2">
+                                            <button 
+                                                onClick={() => setConfirmDeleteArchived(entry.user.id)}
+                                                className="w-full flex items-center justify-center gap-2 py-3 bg-red-600/10 hover:bg-red-600 hover:text-white text-red-500 text-[10px] uppercase font-black tracking-widest transition-all rounded-xl border border-red-600/20"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                                ИЗТРИЙ ОКОНЧАТЕЛНО ОТ АРХИВ
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             ))}

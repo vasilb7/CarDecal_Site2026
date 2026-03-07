@@ -243,6 +243,13 @@ const Footer: React.FC = () => {
               >
                 Общи условия
               </Link>
+
+              <Link
+                to="/delivery"
+                className="text-[9px] sm:text-[9px] lg:text-[11px] font-bold uppercase tracking-[0.1em] text-black/80 hover:text-black transition-colors"
+              >
+                Доставка и връщане
+              </Link>
             </div>
 
             <button

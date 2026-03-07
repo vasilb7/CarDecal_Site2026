@@ -36,6 +36,7 @@ const LoginPage = React.lazy(() => import("./pages/LoginPage"));
 const RegisterPage = React.lazy(() => import("./pages/RegisterPage"));
 const PrivacyPage = React.lazy(() => import("./pages/PrivacyPage"));
 const TermsPage = React.lazy(() => import("./pages/TermsPage"));
+const DeliveryPage = React.lazy(() => import("./pages/DeliveryPage"));
 const BookingPage = React.lazy(() => import("./pages/BookingPage"));
 const ProfilePage = React.lazy(() => import("./pages/ProfilePage"));
 const RecoveryPage = React.lazy(() => import("./pages/RecoveryPage"));
@@ -46,6 +47,7 @@ const OrderSuccessPage = React.lazy(() => import("./pages/OrderSuccessPage"));
 const OrderReceiptPage = React.lazy(() => import("./pages/OrderReceiptPage"));
 const OrderDetailPage = React.lazy(() => import("./pages/OrderDetailPage"));
 const MaintenancePage = React.lazy(() => import("./pages/MaintenancePage"));
+const RestrictedPage = React.lazy(() => import("./pages/RestrictedPage"));
 const StealthAuthPage = React.lazy(() => import("./pages/StealthAuthPage"));
 const ProductQuickViewModal = React.lazy(
   () => import("./components/ProductQuickViewModal"),
@@ -67,7 +69,7 @@ function PageWrapper({ children }: { children: React.ReactNode }) {
 
 function AppContent() {
   const location = useLocation();
-  const { user, loading: authLoading, isAdmin, isEditor, profile } = useAuth();
+  const { user, loading: authLoading, isAdmin, isEditor, isBanned, moderationStatus, profile } = useAuth();
   const {
     settings,
     loading: settingsLoading,
@@ -104,6 +106,25 @@ function AppContent() {
       <div className="flex items-center justify-center min-h-screen bg-black text-white">
         <Loader2 className="w-10 h-10 animate-spin text-red-600" />
       </div>
+    );
+  }
+
+  // Ban/restriction check - redirect banned users (except admins)
+  const isRestricted = isAuthenticated && isBanned && !isAdmin && !isEditor;
+  const isRestrictedPagePath = location.pathname === '/restricted';
+
+  // If user is restricted and NOT on the restricted page, redirect them
+  if (isRestricted && !isRestrictedPagePath && !location.pathname.startsWith('/s/')) {
+    return (
+      <Suspense
+        fallback={
+          <div className="flex items-center justify-center min-h-screen bg-black">
+            <Loader2 className="w-10 h-10 animate-spin text-red-600" />
+          </div>
+        }
+      >
+        <RestrictedPage />
+      </Suspense>
     );
   }
 
@@ -181,9 +202,13 @@ function AppContent() {
           <Route
             path="/checkout"
             element={
-              <PageWrapper>
-                <CheckoutPage />
-              </PageWrapper>
+              isAuthenticated && isBanned ? (
+                <Navigate to="/restricted" replace />
+              ) : (
+                <PageWrapper>
+                  <CheckoutPage />
+                </PageWrapper>
+              )
             }
           />
           <Route
@@ -275,6 +300,14 @@ function AppContent() {
                         }
                       />
                       <Route
+                        path="/delivery"
+                        element={
+                          <PageWrapper>
+                            <DeliveryPage />
+                          </PageWrapper>
+                        }
+                      />
+                      <Route
                         path="/custom-orders"
                         element={
                           <PageWrapper>
@@ -294,9 +327,13 @@ function AppContent() {
                         path="/profile"
                         element={
                           isAuthenticated ? (
-                            <PageWrapper>
-                              <ProfilePage />
-                            </PageWrapper>
+                            isBanned ? (
+                              <Navigate to="/restricted" replace />
+                            ) : (
+                              <PageWrapper>
+                                <ProfilePage />
+                              </PageWrapper>
+                            )
                           ) : (
                             <Navigate to="/" replace />
                           )
@@ -306,9 +343,13 @@ function AppContent() {
                         path="/account/orders/:orderId"
                         element={
                           isAuthenticated ? (
-                            <PageWrapper>
-                              <OrderDetailPage />
-                            </PageWrapper>
+                            isBanned ? (
+                              <Navigate to="/restricted" replace />
+                            ) : (
+                              <PageWrapper>
+                                <OrderDetailPage />
+                              </PageWrapper>
+                            )
                           ) : (
                             <Navigate to="/" replace />
                           )

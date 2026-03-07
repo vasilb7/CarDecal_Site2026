@@ -1,76 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { useTranslation } from 'react-i18next';
-import { Shield, Eye, Share2, Lock, UserCheck, FileText } from 'lucide-react';
 import SEO from '../components/SEO';
 
 const PrivacyPage: React.FC = () => {
-    const { t } = useTranslation();
-
-    const sections = [
-        {
-            id: 'intro',
-            icon: Shield,
-            title: t('privacy.intro_title'),
-            content: t('privacy.intro_text'),
-            color: 'from-blue-500/20 to-transparent'
-        },
-        {
-            id: 'collect',
-            icon: Eye,
-            title: t('privacy.collect_title'),
-            content: (
-                <div className="space-y-3">
-                    <p>{t('privacy.collect_text')}</p>
-                    <ul className="grid grid-cols-1 gap-2">
-                        {[1, 2, 3].map(i => (
-                            <li key={i} className="flex items-center gap-3 bg-white/5 p-3 rounded-lg border border-white/5">
-                                <span className="w-1.5 h-1.5 rounded-full bg-red-600" />
-                                <span className="text-zinc-300 text-sm">{t(`privacy.collect_item${i}`)}</span>
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-            )
-        },
-        {
-            id: 'usage',
-            icon: UserCheck,
-            title: t('privacy.usage_title'),
-            content: (
-                <div className="space-y-3">
-                    <p>{t('privacy.usage_text')}</p>
-                    <ul className="grid grid-cols-1 gap-2">
-                        {[1, 2, 3].map(i => (
-                            <li key={i} className="flex items-center gap-3 bg-white/5 p-3 rounded-lg border border-white/5">
-                                <span className="w-1.5 h-1.5 rounded-full bg-red-600" />
-                                <span className="text-zinc-300 text-sm">{t(`privacy.usage_item${i}`)}</span>
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-            )
-        },
-        {
-            id: 'sharing',
-            icon: Share2,
-            title: t('privacy.sharing_title'),
-            content: t('privacy.sharing_text')
-        },
-        {
-            id: 'security',
-            icon: Lock,
-            title: t('privacy.security_title'),
-            content: t('privacy.security_text')
-        },
-        {
-            id: 'rights',
-            icon: FileText,
-            title: t('privacy.rights_title'),
-            content: t('privacy.rights_text')
-        }
-    ];
-
     return (
         <div className="min-h-screen bg-[#0a0a0a] text-white selection:bg-red-600/30">
             <SEO title="Поверителност" />
@@ -85,47 +17,121 @@ const PrivacyPage: React.FC = () => {
                     className="max-w-4xl mx-auto text-center"
                 >
                     <h1 className="text-4xl md:text-6xl font-black uppercase tracking-tighter mb-4 italic">
-                        {t('privacy.title').split(' ')[0]}
-                        <span className="text-red-600 block md:inline md:ml-3">{t('privacy.title').split(' ').slice(1).join(' ')}</span>
+                        ПОЛИТИКА ЗА <span className="text-red-600 block md:inline md:ml-3">ПОВЕРИТЕЛНОСТ</span>
                     </h1>
                     <div className="w-20 h-1 bg-red-600 mx-auto" />
                 </motion.div>
             </div>
 
             {/* Content Sections */}
-            <div className="max-w-4xl mx-auto px-6 pb-24 space-y-4">
-                {sections.map((section, idx) => (
-                    <motion.section
-                        key={section.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true }}
-                        transition={{ delay: idx * 0.1 }}
-                        className="group relative p-5 bg-[#111111] border border-white/5 rounded-2xl hover:border-red-600/30 transition-all duration-500"
-                    >
-                        <div className="flex flex-col md:flex-row gap-4">
-                            <div className="flex-shrink-0">
-                                <div className="w-10 h-10 bg-red-600/10 rounded-xl flex items-center justify-center border border-red-600/20 group-hover:scale-110 transition-transform">
-                                    <section.icon className="w-5 h-5 text-red-600" />
-                                </div>
-                            </div>
-                            <div className="space-y-3 flex-grow">
-                                <h2 className="text-lg font-black uppercase tracking-widest text-white group-hover:text-red-600 transition-colors">
-                                    {section.title}
-                                </h2>
-                                <div className="text-zinc-400 text-sm leading-relaxed font-medium">
-                                    {section.content}
-                                </div>
-                            </div>
-                        </div>
-                    </motion.section>
-                ))}
+            <div className="max-w-4xl mx-auto px-6 pb-24">
+                <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 }}
+                    className="bg-[#111111] border border-white/5 rounded-2xl p-6 md:p-10 text-zinc-300 space-y-6 text-sm md:text-base leading-relaxed"
+                >
+                    <p>
+                        Този документ обяснява как "КАР ДЕКАЛ" ЕООД (наричано "ние", "нас", "Търговецът", "Администраторът") събира, обработва и защитава личните данни на потребителите на Сайта, в стриктно съответствие с изискванията на Регламент (ЕС) 2016/679 (GDPR) и действащото българско законодателство (Закон за защита на личните данни).
+                    </p>
+
+                    <h2 className="text-2xl font-bold text-white mt-10 mb-2">1. КОЙ Е АДМИНИСТРАТОР НА ДАННИ</h2>
+                    <p>
+                        Администратор на личните данни е фирма "КАР ДЕКАЛ" ЕООД, регистрирана в Търговския регистър към Агенция по вписванията с ЕИК 206975040, със седалище и адрес на управление: БЪЛГАРИЯ, гр. Варна (9000), р-н Приморски, ул."Уста Генчо Кънев", 9. Лице за контакт относно защитата на данни: cardecal@abv.bg.
+                    </p>
+
+                    <h2 className="text-2xl font-bold text-white mt-10 mb-2">2. КАКВИ ДАННИ СЪБИРАМЕ И ЗАЩО ГО ПРАВИМ</h2>
+                    <p>Ние свеждаме събирането на данни до минимума, необходим за законосъобразно и качествено изпълнение на нашите услуги.</p>
+                    <ul className="list-disc pl-6 space-y-2">
+                        <li><strong className="text-white">Идентификационни данни:</strong> Име и фамилия.</li>
+                        <li><strong className="text-white">Данни за контакт и доставка:</strong> Имейл адрес, телефонен номер, физически адрес за доставка (дом/офис) или избран офис на куриерска фирма.</li>
+                        <li><strong className="text-white">Данни, свързани с поръчки и персонализация:</strong> История на поръчките ви, детайли за персонализация на продукти (включително качени от вас файлове, лога, дизайни или текстове, ако те съдържат лична информация, свързана с вас или вашия бизнес).</li>
+                        <li><strong className="text-white">Системни и технически данни:</strong> IP адрес при регистрация и правене на поръчка, тип устройство, бисквитки (Cookies), данни за часа и датата на влизане (за целите на информационната сигурност).</li>
+                        <li><strong className="text-white">Модерационни и административни данни:</strong> История на ограничения (банове), статус на акаунта, причини и бележки за наложени ограничения спрямо профили за нарушаване на Общите условия.</li>
+                    </ul>
+
+                    <h2 className="text-2xl font-bold text-white mt-10 mb-2">3. ПРАВНО ОСНОВАНИЕ И ЦЕЛИ ЗА ОБРАБОТВАНЕ</h2>
+                    <p>Обработваме вашите лични данни категоризирано на следните правни основания съгласно чл. 6 от GDPR:</p>
+                    <ul className="list-disc pl-6 space-y-2">
+                        <li><strong className="text-white">Изпълнение на договор (чл. 6, ал. 1, б. "б"):</strong> Най-честото основание. Обработваме име, адрес, телефон и имейл, за да приемем вашата поръчка, да изработим продуктите, да ви уведомяваме за статуса на поръчката и да я доставим физически. Тук спада и обслужването на потребителския ви профил в Сайта, както и обработката на евентуални рекламации.</li>
+                        <li><strong className="text-white">Законово задължение (чл. 6, ал. 1, б. "в"):</strong> Имаме задължения по българското данъчно и счетоводно законодателство (Закон за счетоводството, ДОПК, ЗДДС). Във връзка с издаването на фактури (ако са поискани) или отчитането на продажби, се изисква запазване на данни.</li>
+                        <li><strong className="text-white">Легитимен интерес (чл. 6, ал. 1, б. "е"):</strong> Използваме легитимния си интерес за важни оперативни и охранителни цели:
+                            <ul className="list-[circle] pl-6 mt-2 space-y-1 text-zinc-400">
+                                <li>Предотвратяване и разследване на измами или опити за неправомерен достъп.</li>
+                                <li>Управление на риска от "куриерски саботаж" (хора, които системно поръчват стоки с наложен платеж и не се явяват за получаването им, нанасяйки ни финансови щети).</li>
+                                <li>Налагане на ограничения (банове - временни или постоянни) на профили на основание системно нарушаване на Общите условия, агресивно поведение или качване на незаконно съдържание.</li>
+                                <li>Установяване, упражняване и защита на правни претенции на Търговеца при съдебни или извънсъдебни спорове.</li>
+                            </ul>
+                        </li>
+                    </ul>
+
+                    <h2 className="text-2xl font-bold text-white mt-10 mb-2">4. ПОЛУЧАТЕЛИ НА ДАННИ (КОЙ ИМА ДОСТЪП ДО ДАННИТЕ ВИ)</h2>
+                    <p>Ние не продаваме и не отдаваме под наем вашите данни! Споделяме информация само със строго ограничени доверени трети страни, които сключват споразумения за поверителност с нас и единствено доколкото това е необходимо за изпълнение на поръчката или законови изисквания:</p>
+                    <ul className="list-disc pl-6 space-y-2">
+                        <li><strong className="text-white">Куриерски и логистични фирми</strong> (напр. Еконт, Спиди) чрез техните API интеграции – за организиране и осъществяване на транспорт и доставка на пратките до вас, както и събиране на наложен платеж.</li>
+                        <li><strong className="text-white">Доставчици на хостинг и облачни услуги / бази данни</strong> (напр. Supabase, Vercel и др.) – за физическо и електронно съхранение на кода, базата данни и вашите файлове при прилагане на най-високи стандарти (криптиране, сигурност).</li>
+                        <li><strong className="text-white">Счетоводни къщи и одитори</strong> – за изпълнение на данъчните ни задължения и отчитане на плащанията (вкл. поръчки с наложен платеж и банков превод).</li>
+                        <li><strong className="text-white">Юристи, адвокати и държавни органи</strong> (МВР, НАП, прокуратура, съд) – но само и единствено когато това е официално изискано по законов ред или когато е абсолютно наложително за защита на правата, безопасността или собствеността на Търговеца.</li>
+                    </ul>
+
+                    <h2 className="text-2xl font-bold text-white mt-10 mb-2">5. СРОКОВЕ ЗА СЪХРАНЕНИЕ НА ДАННИ / ПОЛИТИКА ЗА ЗАДЪРЖАНЕ</h2>
+                    <p>Ние не пазим вашите данни вечно. Пазим ги само толкова, колкото е необходимо за целите, за които са събрани, или докато изтече предвиденият давностен срок:</p>
+                    <ul className="list-disc pl-6 space-y-2">
+                        <li><strong className="text-white">Счетоводни и данъчни документи:</strong> съгласно изискванията на Закона за счетоводството, документи като фактури и платежни доказателства (и свързаните с тях данни за клиенти) се съхраняват до 10 години, считано от 1 януари на отчетния период, следващ отчетния период, към който се отнасят.</li>
+                        <li><strong className="text-white">Данни за поръчки/договори с потребители:</strong> запазват се до 5 години след приключване на договора (края на общата погасителна давност по Закона за задълженията и договорите), за да можем да се защитим при възникване на гражданскоправни претенции или спорове.</li>
+                        <li><strong className="text-white">Профили на регистрирани (активни) потребители:</strong> пазят се до изтриване на профила по желание на клиента (със забележките в раздел 6 по-долу) или след продължителен период на пълна неактивност (обикновено над 5 години), след което профилът се анонимизира или изтрива.</li>
+                        <li><strong className="text-white">Качени файлове за персонализация:</strong> обикновено се изтриват регулярно (в рамките на 6 до 12 месеца след изпълнение на поръчката), тъй като заемат пространство и вече не са необходими.</li>
+                    </ul>
+
+                    <h2 className="text-2xl font-bold text-white mt-10 mb-2">6. ИЗТРИВАНЕ НА АКАУНТ И МОДЕРАЦИЯ (ОГРАНИЧАВАНИЯ/БАНОВЕ)</h2>
+                    <p>В нашата платформа вие разполагате с контрол над профила си, но с оглед защита на законните ни бизнес интереси, са въведени следните правила, с които се съгласявате:</p>
+                    <p>
+                        <strong className="text-white">6.1. Деактивиране на акаунт чрез ограничение (Бан):</strong> При сериозно или системно нарушаване на Общите условия (напр. грубо отношение, поръчване без получаване/плащане, незаконно съдържание), администраторите имат право временно или перманентно да ограничат достъпа на потребителя (т.нар. Бан).
+                    </p>
+                    <p>
+                        <strong className="text-white">6.2. Право на изтриване („правото да бъдеш забравен“):</strong> Вие имате право да изискате изтриване на вашия акаунт и лични данни чрез системата за заявки в специално предвидената страница или по имейл. Подаването на тази заявка ще прекрати публичния ви достъп до платформата.
+                    </p>
+                    <p>
+                        <strong className="text-white">6.3. Особености при изтриването (Изключения):</strong> Важно е да разберете, че <strong className="text-white">правото на изтриване не е абсолютно</strong>. Дори след подаване на заявка за изтриване на акаунт или получаване на перманентен бан:
+                    </p>
+                    <ul className="list-disc pl-6 space-y-2">
+                        <li>Ние <strong className="text-white">сме задължени по закон</strong> да продължим да пазим финансовите и логистичните данни за всички вече извършени поръчки до изтичане на давностните срокове (данъчни или за юридическа защита).</li>
+                        <li>В случай че профилът е бил набелязан заради злоумишлени действия, неплащане, "куриерски саботаж" или нарушаване на Общите условия, администраторът <strong className="text-white">ще задържи ограничен набор от данни</strong> (обикновено идентификатор на профила, имейл адрес, IP адрес, статус на модерация и телефонен номер). Това задържане е защитено от нашия легитимен интерес и продължава за неопределен разумен срок в "защитен вътрешен регистър/черен списък", <strong className="text-white">с единствената цел предотвратяване на повторна регистрация на същия нарушител и проактивна защита на бизнеса от бъдещи вреди, измами и финансови загуби.</strong> Тези задържани данни не се използват за маркетинг или други цели.</li>
+                    </ul>
+
+                    <h2 className="text-2xl font-bold text-white mt-10 mb-2">7. СИГУРНОСТ НА ДАННИТЕ</h2>
+                    <p>
+                        Вземаме сериозни мерки за сигурност. Сайта използва HTTPS/SSL криптиране за защитено прехвърляне на информация между браузъра ви и сървърите ни. Паролите за профилите ви се съхраняват еднопосочно хеширани. Достъп до базите данни в бекенда (Supabase) е строго ограничен с политики за сигурност на ниво ред (Row Level Security - RLS) и защитен достъп за администратори.
+                    </p>
+
+                    <h2 className="text-2xl font-bold text-white mt-10 mb-2">8. ВАШИТЕ ПРАВА ПО GDPR</h2>
+                    <p>Като субект на лични данни, вие имате следните права според Общия регламент:</p>
+                    <ul className="list-disc pl-6 space-y-2">
+                        <li><strong className="text-white">Право на достъп:</strong> да разберете какви ваши данни обработваме.</li>
+                        <li><strong className="text-white">Право на коригиране:</strong> да поправите грешни или непълни данни в профила си.</li>
+                        <li><strong className="text-white">Право на изтриване:</strong> ("право да бъдеш забравен"), при условията, описани в т.6.</li>
+                        <li><strong className="text-white">Право на ограничаване на обработването:</strong> при оспорване на точността на данните или правното основание.</li>
+                        <li><strong className="text-white">Право на възражение:</strong> да възразите срещу обработване въз основа на легитимен интерес (напр. можете да оспорите наложен бан, ако смятате, че е несправедлив, като представите аргументи).</li>
+                        <li><strong className="text-white">Право на преносимост:</strong> да получите данните си в структуриран формат.</li>
+                    </ul>
+                    <p>
+                        За упражняване на някое от тези права, можете да се свържете с нас на електронна поща cardecal@abv.bg. Ще ви отговорим в законовия едномесечен срок.
+                    </p>
+                    <p>
+                        Ако смятате, че правата ви са нарушени въпреки опитите да разрешим проблема с вас, имате право да подадете жалба до надзорния орган: <strong className="text-white">Комисия за защита на личните данни (КЗЛД)</strong>, гр. София 1592, бул. „Проф. Цветан Лазаров” № 2, имейл: kzld@cpdp.bg, уебсайт: www.cpdp.bg.
+                    </p>
+
+                    <h2 className="text-2xl font-bold text-white mt-10 mb-2">9. ПОЛИТИКА ЗА БИСКВИТКИ (Cookies)</h2>
+                    <p>
+                        Използваме необходими (технически) бисквитки, за да гарантираме правилното функциониране на уебсайта – за поддържане на потребителска сесия (вход в профил), съдържание на количка и навигация. Без тях Сайта не може да работи. Допълнително използваме и аналитични бисквитки за отчитане на трафика и посещенията, които събират информация анонимно. Вие можете да контролирате бисквитките чрез настройките на вашия браузър.
+                    </p>
+                </motion.div>
 
                 {/* Footer Note */}
                 <motion.div 
                     initial={{ opacity: 0 }}
                     whileInView={{ opacity: 1 }}
-                    className="text-center pt-8 border-t border-white/5"
+                    className="text-center pt-8 border-t border-white/5 mt-8"
                 >
                     <p className="text-zinc-600 text-[10px] uppercase tracking-[0.3em] font-black">
                         Последно обновено: {new Date().toLocaleDateString('bg-BG')}

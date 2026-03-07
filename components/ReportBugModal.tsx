@@ -51,17 +51,30 @@ const ReportBugModal: React.FC = () => {
             setStatus('idle');
             // Disable scroll
             document.documentElement.classList.add('scroll-locked');
+            
+            // Handle mobile back button
+            window.history.pushState({ modal: 'bug-report' }, '');
+            const handlePopState = () => {
+                setIsOpen(false);
+                setFormData(prev => ({ ...prev, category: 'other', description: '' }));
+                setScreenshot(null);
+            };
+            window.addEventListener('popstate', handlePopState);
+
+            return () => {
+                window.removeEventListener('popstate', handlePopState);
+                document.documentElement.classList.remove('scroll-locked');
+            };
         } else {
             // Re-enable scroll
             document.documentElement.classList.remove('scroll-locked');
         }
-
-        return () => {
-            document.documentElement.classList.remove('scroll-locked');
-        };
     }, [isOpen]);
 
     const handleCloseModal = () => {
+        if (window.history.state?.modal === 'bug-report') {
+            window.history.back();
+        }
         setIsOpen(false);
         setFormData({ category: 'other', description: '', email: user?.email || profile?.email || '' });
         setScreenshot(null);
