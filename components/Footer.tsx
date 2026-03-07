@@ -186,10 +186,10 @@ const Footer: React.FC = () => {
                 ПОСЛЕДВАЙ НИ
               </span>
               <div className="flex flex-col gap-3 sm:gap-[0.7vw] lg:gap-[0.8vw] items-end">
-                <RollingLink href="#" className="text-[0.95rem] sm:text-[2.8vw] lg:text-[2vw] xl:text-[1.7vw] font-black uppercase text-white leading-none inline-block">TIKTOK</RollingLink>
-                <RollingLink href="#" className="text-[0.95rem] sm:text-[2.8vw] lg:text-[2vw] xl:text-[1.7vw] font-black uppercase text-white leading-none inline-block">INSTAGRAM</RollingLink>
+                <RollingLink href="https://www.tiktok.com/@cardecal4?_r=1&_t=ZN-94RmUa0RCeE" className="text-[0.95rem] sm:text-[2.8vw] lg:text-[2vw] xl:text-[1.7vw] font-black uppercase text-white leading-none inline-block">TIKTOK</RollingLink>
+                <RollingLink href="https://www.instagram.com/cardecal1?igsh=eWd3b3FpdXN0NXRp" className="text-[0.95rem] sm:text-[2.8vw] lg:text-[2vw] xl:text-[1.7vw] font-black uppercase text-white leading-none inline-block">INSTAGRAM</RollingLink>
                 <RollingLink href="#" className="text-[0.95rem] sm:text-[2.8vw] lg:text-[2vw] xl:text-[1.7vw] font-black uppercase text-white leading-none inline-block">YOUTUBE</RollingLink>
-                <RollingLink href="#" className="text-[0.95rem] sm:text-[2.8vw] lg:text-[2vw] xl:text-[1.7vw] font-black uppercase text-white leading-none inline-block">FACEBOOK</RollingLink>
+                <RollingLink href="https://www.facebook.com/share/18yePjATNr/" className="text-[0.95rem] sm:text-[2.8vw] lg:text-[2vw] xl:text-[1.7vw] font-black uppercase text-white leading-none inline-block">FACEBOOK</RollingLink>
               </div>
             </div>
 

@@ -133,15 +133,12 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
   const navigate = useNavigate();
   const location = useLocation();
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
 
   const passwordValidation = validatePassword(password);
-  const passwordsMatch = password === confirmPassword;
-  const canSubmit = passwordValidation.isValid && passwordsMatch && confirmPassword.length > 0 && !loading;
+  const canSubmit = passwordValidation.isValid && !loading;
 
   // Detect mobile keyboard close effect properly
   React.useEffect(() => {
@@ -256,24 +253,10 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
                             {password && (
                                 <PasswordStrengthMeter
                                     password={password}
-                                    confirmPassword={confirmPassword || undefined}
                                     userInputs={[email, name].filter(Boolean)}
                                 />
                             )}
                         </AnimatePresence>
-                    </div>
-
-                    {/* Confirm Password */}
-                    <div>
-                        <FloatingInput 
-                            label={t('auth.confirm_password', 'Потвърди Парола')}
-                            name="confirmPassword"
-                            isPassword
-                            showPassword={showConfirm}
-                            onTogglePassword={() => setShowConfirm(!showConfirm)}
-                            required
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setConfirmPassword(e.target.value)}
-                        />
                     </div>
 
                     {/* Terms Agreement */}

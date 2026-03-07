@@ -54,18 +54,9 @@ const RegisterPage: React.FC = () => {
     }
 
     try {
-      // Frontend password validation
       const pwdValidation = validatePassword(password);
       if (!pwdValidation.isValid) {
           showToast('Моля, изпълнете изискванията за парола по-долу.', 'error');
-          setLoading(false);
-          return;
-      }
-
-      // Confirm password check
-      const confirmPassword = formData.get('confirmPassword') as string;
-      if (password !== confirmPassword) {
-          showToast('Паролите не съвпадат.', 'error');
           setLoading(false);
           return;
       }
