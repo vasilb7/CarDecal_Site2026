@@ -31,8 +31,18 @@ const Header: React.FC = () => {
     const [isBarManuallyClosed, setIsBarManuallyClosed] = useState(() => {
         return sessionStorage.getItem('ann_bar_manually_closed') === 'true';
     });
-    const isAnnouncementVisible = settings.announcement_mode && !isBarManuallyClosed;
 
+    const sessionKey = `ann_dismissed_${autoStart}`;
+    const [isMaintWarningDismissed, setIsMaintWarningDismissed] = useState(() => {
+        return sessionStorage.getItem(sessionKey) === 'true';
+    });
+
+    const isMaintenanceWarningActive = !!autoStart && 
+        !isMaintenanceOn && 
+        !isMaintWarningDismissed && 
+        (new Date(autoStart).getTime() > (Date.now() + serverTimeOffset));
+
+    const isAnnouncementVisible = settings.announcement_mode && !isBarManuallyClosed && !isMaintenanceWarningActive;
     const [currentMsgIndex, setCurrentMsgIndex] = useState(0);
     const annMessages = (settings.announcement_text || "").split('\n').filter(m => m.trim());
     const [manualTick, setManualTick] = useState(0);
@@ -280,6 +290,32 @@ const Header: React.FC = () => {
                                 style={{ color: settings.announcement_text_color }}
                             >
                                 <X className="w-3.5 h-3.5" />
+                            </button>
+                        </div>
+                    </motion.div>
+                )}
+
+                {isMaintenanceWarningActive && (
+                    <motion.div 
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="relative z-[101] bg-black border-b border-red-600/20"
+                    >
+                        <div className="max-w-[1440px] w-full mx-auto min-h-[32px] py-1 px-4 flex items-center justify-center relative">
+                            <span className="flex items-center justify-center gap-x-3 text-[10px] sm:text-[11px] font-bold text-white uppercase tracking-wider">
+                                <span className="w-1.5 h-1.5 rounded-full bg-[#ff0000] animate-pulse shrink-0" />
+                                {renderMessageWithTimer(settings.maintenance_message || "Сайтът ще влезе в профилактика след {timer}", true)}
+                            </span>
+                            
+                            <button 
+                                onClick={() => {
+                                    setIsMaintWarningDismissed(true);
+                                    sessionStorage.setItem(sessionKey, 'true');
+                                }}
+                                className="absolute right-2 sm:right-4 p-1 hover:opacity-70 transition-colors text-white/50 hover:text-white"
+                            >
+                                <X className="w-3 h-3" />
                             </button>
                         </div>
                     </motion.div>
