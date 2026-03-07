@@ -111,10 +111,15 @@ function AppContent() {
 
   // Ban/restriction check - redirect banned users (except admins)
   const isRestricted = isAuthenticated && isBanned && !isAdmin && !isEditor;
-  const isRestrictedPagePath = location.pathname === '/restricted';
+  const isAllowedPathForRestricted = 
+    location.pathname === '/restricted' || 
+    location.pathname.startsWith('/terms') || 
+    location.pathname.startsWith('/privacy') ||
+    location.pathname.startsWith('/contact') ||
+    location.pathname.startsWith('/s/');
 
-  // If user is restricted and NOT on the restricted page, redirect them
-  if (isRestricted && !isRestrictedPagePath && !location.pathname.startsWith('/s/')) {
+  // If user is restricted and NOT on an allowed page, show RestrictedPage
+  if (isRestricted && !isAllowedPathForRestricted) {
     return (
       <Suspense
         fallback={
