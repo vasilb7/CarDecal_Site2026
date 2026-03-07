@@ -350,7 +350,7 @@ const SettingsTab: React.FC<{
         if (!fullName.trim()) return;
         
         if (!isValidFullName(fullName)) {
-            showToast('Въведете име и фамилия (3-100 символа). Допускат се само букви, интервали и тире.', 'error');
+            showToast('Въведете име и фамилия (3-100 символа).', 'error');
             return;
         }
 
@@ -387,7 +387,7 @@ const SettingsTab: React.FC<{
         if (!userPhone.trim()) return;
 
         if (!isValidBulgarianPhone(userPhone)) { // Assuming userPhone is the variable to validate
-            showToast("Невалиден телефон! (8-15 цифри, + се допуска само в началото)", "error");
+            showToast("Невалиден телефон! (8-15 цифри)", "error");
             return;
         }
 
@@ -455,7 +455,7 @@ const SettingsTab: React.FC<{
         }
         const pwdValidation = validatePassword(newPwd);
         if (!pwdValidation.isValid) {
-            showToast('Паролата не отговаря на изискванията. От 10 до 64 символа с главна буква, малка буква, цифра и специален символ.', 'error');
+            showToast('Паролата не отговаря на изискванията. Трябва да е между 10 и 64 символа, само на английски и да съдържа главна буква, малка буква, цифра и специален символ.', 'error');
             return;
         }
 
@@ -559,7 +559,7 @@ const SettingsTab: React.FC<{
                             <div className="flex gap-2 w-full md:max-w-md ml-auto">
                                 <input
                                     value={fullName}
-                                    onChange={e => setFullName(e.target.value)}
+                                    onChange={e => setFullName(e.target.value.replace(/[0-9]/g, ''))}
                                     className={`${inputCls} flex-1`}
                                     placeholder="Вашето Име"
                                     autoFocus

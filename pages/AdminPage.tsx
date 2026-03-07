@@ -3098,7 +3098,6 @@ const MaintenanceSettingsSection: React.FC = () => {
     const [sendingEmail, setSendingEmail] = useState(false);
     
     // Timer state for the Modal
-    const [modalAnnText, setModalAnnText] = useState('Сайтът ще влезе в профилактика след {timer}');
     const [customDuration, setCustomDuration] = useState('3');
     const [durationUnit, setDurationUnit] = useState<'sec' | 'min'>('min');
     
@@ -3125,21 +3124,6 @@ const MaintenanceSettingsSection: React.FC = () => {
         updatePreview();
     }, [customDuration, durationUnit, isActivationMenuOpen]);
 
-    const formatPreview = (text: string) => {
-        if (!text) return "";
-        if (!text.toLowerCase().includes("{timer}")) return text;
-        
-        const parts = text.split(/{timer}/i);
-        return (
-            <span className="items-center inline-flex">
-                {parts[0]}
-                <span className="inline-flex items-center justify-center px-1.5 py-0.5 bg-[#ff0000] text-white text-[9px] font-black rounded font-mono mx-1 shrink-0 shadow-[0_0_8px_rgba(255,0,0,0.4)]">
-                    {previewTime || "..."}
-                </span>
-                {parts[1]}
-            </span>
-        );
-    };
 
     useEffect(() => {
         if (!loading) {
@@ -3196,8 +3180,6 @@ const MaintenanceSettingsSection: React.FC = () => {
             await Promise.all([
                 updateSetting('maintenance_auto_start_at', targetTime),
                 updateSetting('maintenance_end_time', endTime || null as any),
-                updateSetting('announcement_mode', 'true'),
-                updateSetting('announcement_text', modalAnnText),
                 updateSetting('maintenance_features', JSON.stringify(features))
             ]);
             showToast(`Таймерът е пуснат за ${val} ${unit === 'min' ? 'минути' : 'секунди'}!`, 'success');
@@ -3285,8 +3267,7 @@ const MaintenanceSettingsSection: React.FC = () => {
             await updateSetting('maintenance_mode', 'false');
             await Promise.all([
                 updateSetting('maintenance_auto_start_at', null as any),
-                updateSetting('maintenance_end_time', null as any),
-                updateSetting('announcement_mode', 'false')
+                updateSetting('maintenance_end_time', null as any)
             ]);
 
             showToast('Поддръжката и таймерите са изключени!', 'success');
@@ -3494,21 +3475,6 @@ const MaintenanceSettingsSection: React.FC = () => {
                             <h2 className="text-xl font-bold text-white uppercase tracking-[0.2em] mb-6">Активиране на поддръжка</h2>
                             
                             <div className="space-y-6">
-                                <div>
-                                    <label className="block text-[10px] uppercase tracking-widest text-zinc-500 mb-2">Съобщение за клиенти</label>
-                                    <div className="flex flex-col gap-2">
-                                        <input 
-                                            type="text"
-                                            value={modalAnnText}
-                                            onChange={e => setModalAnnText(e.target.value)}
-                                            className="w-full bg-white/5 border border-white/10 p-4 text-white text-xs uppercase tracking-widest focus:outline-none focus:border-red-600 transition-colors"
-                                            placeholder="Сайтът ще влезе в профилактика след {timer}..."
-                                        />
-                                        <div className="px-4 py-3 bg-black/40 border border-white/5 rounded text-[10px] text-zinc-500 uppercase tracking-widest italic min-h-[44px] flex items-center">
-                                            Преглед: <span className="text-zinc-300 ml-2">{formatPreview(modalAnnText)}</span>
-                                        </div>
-                                    </div>
-                                </div>
 
                                 <div>
                                     <label className="block text-[10px] uppercase tracking-widest text-zinc-500 mb-2 mt-4">Нови функции / Промени (Какво ново)</label>

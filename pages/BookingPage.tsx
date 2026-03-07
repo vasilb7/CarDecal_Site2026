@@ -200,7 +200,11 @@ const BookingPage: React.FC = () => {
     };
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        const { name, value } = e.target;
+        let { name, value } = e.target;
+        if (name === 'fullName') {
+            value = value.replace(/[0-9]/g, '');
+            e.target.value = value;
+        }
         if (name === 'description' && value.length > 500) {
             return;
         }
@@ -234,12 +238,12 @@ const BookingPage: React.FC = () => {
         e.preventDefault();
         
         if (!isValidFullName(formData.fullName)) {
-            showToast("Въведете име и фамилия (3-100 символа). Допускат се само букви, интервали и тире.", "error");
+            showToast("Въведете име и фамилия (3-100 символа).", "error");
             return;
         }
 
         if (!isValidBulgarianPhone(formData.phone)) {
-            showToast("Невалиден телефон! Въведете коректен мобилен номер (8-15 цифри).", "error");
+            showToast("Невалиден телефон! (8-15 цифри)", "error");
             return;
         }
         

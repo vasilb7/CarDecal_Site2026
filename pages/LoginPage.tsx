@@ -6,6 +6,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useToast } from '../hooks/useToast';
 import SEO from '../components/SEO';
 import { recordFailedLogin, recordSuccessfulLogin, logSecurityEvent } from '../lib/security';
+import { validatePassword } from '../lib/passwordUtils';
 
 
 
@@ -117,6 +118,12 @@ const LoginPage: React.FC = () => {
   };
 
   const handleUpdatePassword = async (password: string) => {
+    const validation = validatePassword(password);
+    if (!validation.isValid) {
+      showToast('Паролата не отговаря на изискванията. Трябва да е между 10 и 64 символа, само на английски и да съдържа главна буква, малка буква, цифра и специален символ.', "error");
+      return;
+    }
+
     setLoading(true);
     try {
       const { error } = await supabase.auth.updateUser({ password });

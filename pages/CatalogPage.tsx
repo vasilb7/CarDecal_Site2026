@@ -221,12 +221,6 @@ const CatalogPage: React.FC = () => {
     };
 
 
-    // Allow browser scroll restoration so search position is remembered
-    useEffect(() => {
-        if ('scrollRestoration' in window.history) {
-            window.history.scrollRestoration = 'auto';
-        }
-    }, []);
 
     // Scroll to top when page or filters change
     useEffect(() => {

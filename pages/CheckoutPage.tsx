@@ -103,7 +103,11 @@ const CheckoutPage: React.FC = () => {
     }, [profile, user]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        const { name, value } = e.target;
+        let { name, value } = e.target;
+        if (name === 'fullName') {
+            value = value.replace(/[0-9]/g, '');
+            e.target.value = value;
+        }
         setFormData(prev => ({ ...prev, [name]: value }));
         // Clear error when user types
         if (errors[name]) {
@@ -117,8 +121,8 @@ const CheckoutPage: React.FC = () => {
 
     const validateForm = () => {
         const newErrors: Record<string, string> = {};
-        if (!isValidFullName(formData.fullName)) newErrors.fullName = "Въведете име и фамилия (3-100 символа). Допускат се само букви, интервали и тире.";
-        if (!isValidBulgarianPhone(formData.phone)) newErrors.phone = "Невалиден телефон! (8-15 цифри, + се допуска само в началото)";
+        if (!isValidFullName(formData.fullName)) newErrors.fullName = "Въведете име и фамилия (3-100 символа).";
+        if (!isValidBulgarianPhone(formData.phone)) newErrors.phone = "Невалиден телефон! (8-15 цифри)";
         if (!formData.city.trim()) newErrors.city = "Въведете град";
         
         const activeOffice = formData.deliveryType === 'econt' ? formData.econtOffice : formData.speedyOffice;

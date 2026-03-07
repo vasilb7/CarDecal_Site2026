@@ -28,20 +28,10 @@ const Header: React.FC = () => {
     const isPastAutoStart = !!autoStart && autoStart !== 'null' && new Date(autoStart).getTime() <= (Date.now() + serverTimeOffset);
     const isMaintenanceOn = isMaintenanceActive || isPastAutoStart;
     
-    const sessionKey = `ann_dismissed_${autoStart}`;
-    const [isBannerDismissed, setIsBannerDismissed] = useState(() => {
-        return sessionStorage.getItem(sessionKey) === 'true';
-    });
-
-    const isMaintenanceWarningActive = !!autoStart && 
-        !isMaintenanceOn && 
-        !isBannerDismissed && 
-        (new Date(autoStart).getTime() > (Date.now() + serverTimeOffset));
-    const isPermanentAnnouncementActive = settings.announcement_mode && !isMaintenanceOn;
     const [isBarManuallyClosed, setIsBarManuallyClosed] = useState(() => {
         return sessionStorage.getItem('ann_bar_manually_closed') === 'true';
     });
-    const isAnnouncementVisible = (isMaintenanceWarningActive || isPermanentAnnouncementActive) && !isBannerDismissed && !isBarManuallyClosed;
+    const isAnnouncementVisible = settings.announcement_mode && !isBarManuallyClosed;
 
     const [currentMsgIndex, setCurrentMsgIndex] = useState(0);
     const annMessages = (settings.announcement_text || "").split('\n').filter(m => m.trim());
@@ -238,7 +228,7 @@ const Header: React.FC = () => {
                     >
                         <div className="max-w-[1440px] w-full mx-auto min-h-[32px] sm:min-h-[40px] py-1 px-4 flex items-center justify-center relative">
                             <div className="flex items-center justify-center gap-3 sm:gap-6 max-w-full">
-                                {annMessages.length > 1 && !isMaintenanceWarningActive && (
+                                {annMessages.length > 1 && (
                                     <button 
                                         onClick={handlePrevMsg}
                                         className="p-1 hover:opacity-100 opacity-60 transition-all z-10 shrink-0"
@@ -251,7 +241,7 @@ const Header: React.FC = () => {
                                 <div className="flex justify-center items-center min-w-0">
                                     <AnimatePresence mode="wait">
                                         <motion.div
-                                            key={isMaintenanceWarningActive ? 'maint' : `msg-${currentMsgIndex}`}
+                                            key={`msg-${currentMsgIndex}`}
                                             initial={{ opacity: 0, scale: 0.98 }}
                                             animate={{ opacity: 1, scale: 1 }}
                                             exit={{ opacity: 0, scale: 0.98 }}
@@ -262,22 +252,15 @@ const Header: React.FC = () => {
                                                 className="uppercase select-none text-center inline-block"
                                                 style={{ color: settings.announcement_text_color }}
                                             >
-                                                {isMaintenanceWarningActive ? (
-                                                    <span className="flex items-center justify-center gap-x-3 text-[10px] sm:text-[11px] font-bold">
-                                                        <span className="w-1.5 h-1.5 rounded-full bg-[#ff0000] animate-pulse shrink-0 hidden sm:block" />
-                                                        {renderMessageWithTimer(annMessages[0] || settings.announcement_text || "Профилактика!", true)}
-                                                    </span>
-                                                ) : (
-                                                    <span className="text-[10px] sm:text-[11px] uppercase tracking-wider line-clamp-1 font-medium">
-                                                        {renderMessageWithTimer(annMessages[currentMsgIndex] || "")}
-                                                    </span>
-                                                )}
+                                                <span className="text-[10px] sm:text-[11px] uppercase tracking-wider line-clamp-1 font-medium">
+                                                    {renderMessageWithTimer(annMessages[currentMsgIndex] || "")}
+                                                </span>
                                             </span>
                                         </motion.div>
                                     </AnimatePresence>
                                 </div>
 
-                                {annMessages.length > 1 && !isMaintenanceWarningActive && (
+                                {annMessages.length > 1 && (
                                     <button 
                                         onClick={handleNextMsg}
                                         className="p-1 hover:opacity-100 opacity-60 transition-all z-10 shrink-0"
@@ -292,10 +275,6 @@ const Header: React.FC = () => {
                                 onClick={() => {
                                     setIsBarManuallyClosed(true);
                                     sessionStorage.setItem('ann_bar_manually_closed', 'true');
-                                    if (isMaintenanceWarningActive) {
-                                        setIsBannerDismissed(true);
-                                        sessionStorage.setItem(sessionKey, 'true');
-                                    }
                                 }}
                                 className="absolute right-2 sm:right-4 p-1 hover:opacity-70 transition-colors z-10 shrink-0"
                                 style={{ color: settings.announcement_text_color }}

@@ -114,18 +114,11 @@ const ProductQuickViewModal: React.FC = () => {
     useEffect(() => {
         if (isVisible) {
             setIsProductModalOpen(true);
-            const scrollBarWidth = window.innerWidth - document.documentElement.clientWidth;
-            document.body.style.overflow = 'hidden';
-            document.body.style.paddingRight = `${scrollBarWidth}px`;
         } else {
             setIsProductModalOpen(false);
-            document.body.style.overflow = '';
-            document.body.style.paddingRight = '';
         }
         return () => {
             setIsProductModalOpen(false);
-            document.body.style.overflow = '';
-            document.body.style.paddingRight = '';
         };
     }, [isVisible, setIsProductModalOpen]);
 

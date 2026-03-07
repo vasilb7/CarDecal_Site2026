@@ -131,16 +131,16 @@ export const CompleteRegistrationModal = () => {
         }
     }, []);
 
-    // Disable background scrolling when modal is open
+    // Unified scroll lock handled by html class
     useEffect(() => {
         if (isOpen) {
-            document.body.style.overflow = 'hidden';
+            document.documentElement.classList.add('scroll-locked');
         } else {
-            document.body.style.overflow = '';
+            document.documentElement.classList.remove('scroll-locked');
         }
 
         return () => {
-            document.body.style.overflow = '';
+            document.documentElement.classList.remove('scroll-locked');
         };
     }, [isOpen]);
 
@@ -153,7 +153,7 @@ export const CompleteRegistrationModal = () => {
         }
 
         if (!isValidBulgarianPhone(phone)) {
-            showToast('Невалиден телефон! Въведете коректен български мобилен номер (напр. 0888 123 456).', 'error');
+            showToast('Невалиден телефон! (8-15 цифри)', 'error');
             return;
         }
 
@@ -174,7 +174,7 @@ export const CompleteRegistrationModal = () => {
             
             if (profileError) {
                 if (profileError.code === '23505') {
-                    throw new Error('Този номер вече е свързан с друг профил.');
+                    throw new Error('този телефонен номер вече е свързан с друг акаунт');
                 }
                 throw profileError;
             }
@@ -190,7 +190,7 @@ export const CompleteRegistrationModal = () => {
             if (authError) throw authError;
 
             // Successfully updated
-            showToast('Регистрацията е завършена успешно!', 'success');
+            showToast('Регистрацията е завършена успешно! Добре дошли в CarDecal.', 'success');
             
             // Clear drafts
             sessionStorage.removeItem('registration_draft_name');
@@ -255,7 +255,7 @@ export const CompleteRegistrationModal = () => {
                                     </svg>
                                 }
                                 value={name}
-                                onChange={(e: any) => setName(e.target.value)}
+                                onChange={(e: any) => setName(e.target.value.replace(/[0-9]/g, ''))}
                                 required
                             />
 

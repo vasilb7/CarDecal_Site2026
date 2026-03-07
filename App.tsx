@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Suspense, useRef } from "react";
+import React, { useState, useEffect, Suspense, useRef, useMemo } from "react";
 import {
   BrowserRouter,
   Routes,
@@ -93,11 +93,22 @@ function AppContent() {
 
   // Logic to determine if we should render a background page (for modals)
   // We MUST preserve search params and existing state to prevent CatalogPage from resetting filters/scroll
-  const backgroundLocation =
-    (location.state as any)?.backgroundLocation ||
-    (isProductPage
-      ? { pathname: "/catalog", search: location.search, state: location.state }
-      : null);
+  const backgroundLocation = useMemo(() => {
+    const stateLoc = (location.state as any)?.backgroundLocation;
+    if (stateLoc) return stateLoc;
+    
+    if (isProductPage) {
+      return { pathname: "/catalog", search: location.search, state: location.state };
+    }
+    return null;
+  }, [isProductPage, location.state, location.search]);
+
+  // Set scroll restoration to manual globally at app start
+  useEffect(() => {
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual';
+    }
+  }, []);
 
   // Maintenance logic handles automatically via React state
 

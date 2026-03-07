@@ -38,6 +38,7 @@ export function validatePassword(password: string): PasswordValidation {
         { id: 'uppercase', label: 'Главна буква (A-Z)', passed: /[A-Z]/.test(password) },
         { id: 'digit', label: 'Цифра (0-9)', passed: /\d/.test(password) },
         { id: 'symbol', label: 'Специален символ (!@#$...)', passed: /[^A-Za-z0-9]/.test(password) },
+        { id: 'language', label: 'Само на английски (без кирилица)', passed: /^[\x20-\x7E]*$/.test(password) },
     ];
 
     return {
@@ -105,7 +106,7 @@ export function translateAuthError(error: any): string {
         'over_email_send_rate_limit': 'Изпратени са твърде много имейли. Моля, изчакайте преди да опитате отново.',
         'otp_expired': 'Кодът за потвърждение е изтекъл. Моля, заявете нов.',
         'validation_failed': 'Невалидни данни. Моля, проверете въведената информация.',
-        'phone_exists': 'Този телефонен номер вече е регистриран.',
+        'phone_exists': 'този телефонен номер вече е свързан с друг акаунт',
         'conflict': 'Конфликт с друг акаунт. Моля, свържете се с поддръжката.',
     };
 

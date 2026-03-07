@@ -68,8 +68,14 @@ const FloatingInput = ({
                     type={isPassword ? (showPassword ? 'text' : 'password') : type}
                     value={value}
                     onChange={(e) => {
-                        setValue(e.target.value);
-                        if (props.onChange) props.onChange(e);
+                        const val = name === 'name' ? e.target.value.replace(/[0-9]/g, '') : e.target.value;
+                        setValue(val);
+                        if (props.onChange) {
+                            const originalValue = e.target.value;
+                            e.target.value = val;
+                            props.onChange(e);
+                            e.target.value = originalValue; // Restore just in case, though usually not needed
+                        }
                     }}
                     onFocus={() => setIsFocused(true)}
                     onBlur={() => setIsFocused(false)}
@@ -210,18 +216,18 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
                 </div>
 
                 <form className="space-y-6 pt-8" onSubmit={onSignUp}>
-                    {/* Name - Restrict to two names via label instructions */}
                     <div className="space-y-1">
                         <FloatingInput 
                             label={t('auth.name_label', 'Въведете име и Фамилия')}
                             name="name"
                             storageKey="name"
                             required
-                            onChange={(e: any) => setName(e.target.value)}
+                            onChange={(e: any) => {
+                                const val = e.target.value.replace(/[0-9]/g, '');
+                                setName(val);
+                                e.target.value = val; // Sync back to input if possible, though FloatingInput manages its own state
+                            }}
                         />
-                        <p className="px-6 text-[9px] text-white/30 uppercase tracking-widest leading-none font-bold">
-                            Допускат се само букви, интервали и тире
-                        </p>
                     </div>
 
                     {/* Email */}
@@ -234,7 +240,6 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
                         onChange={(e) => setEmail(e.target.value)}
                     />
 
-                    {/* Phone Number */}
                     <div className="space-y-1">
                         <FloatingInput 
                             label={t('auth.phone', 'Телефонен номер')}
@@ -243,9 +248,6 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
                             type="tel"
                             required
                         />
-                        <p className="px-6 text-[9px] text-white/30 uppercase tracking-widest leading-none font-bold">
-                            8 до 15 цифри, + в началото (Е.164 формат)
-                        </p>
                     </div>
 
                     {/* Password */}

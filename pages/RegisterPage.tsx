@@ -30,31 +30,48 @@ const RegisterPage: React.FC = () => {
     const phone = formData.get('phone') as string;
 
     if (!isValidFullName(fullName)) {
-        showToast('Въведете име и фамилия (3-100 символа). Допускат се само букви, интервали и тире.', "warning");
+        showToast('Въведете име и фамилия (3-100 символа).', "warning");
         setLoading(false);
         return;
     }
 
     if (!isValidBulgarianPhone(phone)) {
-        showToast("Невалиден телефон! (8-15 цифри, + се допуска само в началото)", "warning");
+        showToast("Невалиден телефон! (8-15 цифри)", "warning");
         setLoading(false);
         return;
     }
 
     const normalizedPhone = formatToE164(phone);
 
-    if (hasProfanity(fullName)) {
-        showToast(t('toast.register_profanity'), "error");
+    try {
+      // Check if phone already exists in profiles table
+      const { data: existingPhone, error: phoneCheckError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('phone', normalizedPhone)
+        .maybeSingle();
+
+      if (phoneCheckError && phoneCheckError.code !== 'PGRST116') {
+        console.error('Phone check error:', phoneCheckError);
+      }
+
+      if (existingPhone) {
+        showToast('този телефонен номер вече е свързан с друг акаунт', 'error');
         setLoading(false);
         return;
-    }
+      }
 
-    try {
       const pwdValidation = validatePassword(password);
       if (!pwdValidation.isValid) {
           showToast('Моля, изпълнете изискванията за парола по-долу.', 'error');
           setLoading(false);
           return;
+      }
+
+      if (hasProfanity(fullName)) {
+        showToast(t('toast.register_profanity'), "error");
+        setLoading(false);
+        return;
       }
 
       const { data, error } = await supabase.auth.signUp({
