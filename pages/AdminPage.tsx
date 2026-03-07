@@ -3086,9 +3086,10 @@ const MaintenanceSettingsSection: React.FC = () => {
     const { settings, loading, updateSetting, serverTimeOffset } = useSiteSettings();
     const [saving, setSaving] = useState(false);
     const [uploading, setUploading] = useState<'bg' | 'logo' | 'bg_mobile' | null>(null);
-    const [title, setTitle] = useState('');
-    const [msg, setMsg] = useState('');
-    const [endTime, setEndTime] = useState('');
+    const [title, setTitle] = useState(settings.maintenance_title);
+    const [msg, setMsg] = useState(settings.maintenance_message);
+    const [warningMsg, setWarningMsg] = useState(settings.maintenance_warning_text);
+    const [endTime, setEndTime] = useState(settings.maintenance_end_time || '');
     const [features, setFeatures] = useState<string[]>([]);
     const [newFeature, setNewFeature] = useState('');
 
@@ -3145,6 +3146,7 @@ const MaintenanceSettingsSection: React.FC = () => {
         if (!loading) {
             setTitle(settings.maintenance_title);
             setMsg(settings.maintenance_message || '');
+            setWarningMsg(settings.maintenance_warning_text || '');
             setEndTime(settings.maintenance_end_time || '');
             
             try {
@@ -3174,12 +3176,13 @@ const MaintenanceSettingsSection: React.FC = () => {
             await Promise.all([
                 updateSetting('maintenance_title', title),
                 updateSetting('maintenance_message', msg),
+                updateSetting('maintenance_warning_text', warningMsg),
                 updateSetting('maintenance_end_time', endTime || null as any),
                 updateSetting('maintenance_features', JSON.stringify(features))
             ]);
-            showToast('Настройките са запазени успешно!', 'success');
-        } catch (err) {
-            showToast('Грешка при запис на съобщението.', 'error');
+            showToast('Текстовете са запазени!', 'success');
+        } catch (err: any) {
+            showToast('Грешка: ' + err.message, 'error');
         } finally {
             setSaving(false);
         }
@@ -3195,6 +3198,7 @@ const MaintenanceSettingsSection: React.FC = () => {
             
             await Promise.all([
                 updateSetting('maintenance_auto_start_at', targetTime),
+                updateSetting('maintenance_warning_text', warningMsg),
                 updateSetting('maintenance_message', msg),
                 updateSetting('maintenance_end_time', endTime || null as any),
                 updateSetting('maintenance_features', JSON.stringify(features))
@@ -3299,6 +3303,7 @@ const MaintenanceSettingsSection: React.FC = () => {
             await Promise.all([
                 updateSetting('maintenance_mode', 'true'),
                 updateSetting('maintenance_message', msg),
+                updateSetting('maintenance_warning_text', warningMsg),
                 updateSetting('maintenance_auto_start_at', null as any),
                 updateSetting('maintenance_end_time', endTime || null as any),
                 updateSetting('maintenance_features', JSON.stringify(features))
@@ -3395,12 +3400,23 @@ const MaintenanceSettingsSection: React.FC = () => {
                     </div>
 
                     <div>
-                        <label className="block text-xs uppercase tracking-widest text-zinc-500 mb-1.5">Съобщение при поддръжка</label>
+                        <label className="block text-xs uppercase tracking-widest text-zinc-500 mb-1.5">Съобщение на цял екран (Maintenance Page)</label>
                         <textarea
                             value={msg}
                             onChange={e => setMsg(e.target.value)}
-                            className="w-full bg-black/40 border border-white/10 text-white text-sm px-4 py-2.5 focus:outline-none focus:border-red-600/60 resize-none h-24"
+                            className="w-full bg-black/40 border border-white/10 text-white text-sm px-4 py-2.5 focus:outline-none focus:border-red-600/60 resize-none h-20"
                             placeholder="Нашият сайт е в процес на профилактика..."
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-xs uppercase tracking-widest text-zinc-500 mb-1.5">Съобщение в лентата (Warning Bar)</label>
+                        <input
+                            type="text"
+                            value={warningMsg}
+                            onChange={e => setWarningMsg(e.target.value)}
+                            className="w-full bg-black/40 border border-white/10 text-white text-sm px-4 py-2.5 focus:outline-none focus:border-red-600/60 font-bold"
+                            placeholder="Сайтът ще влезе в профилактика след {timer}..."
                         />
                     </div>
 
@@ -3431,7 +3447,7 @@ const MaintenanceSettingsSection: React.FC = () => {
                             <div className="absolute inset-0 bg-red-600/5 opacity-0 group-hover:opacity-100 transition-opacity" />
                             <span className="flex items-center gap-4 text-[11px] font-bold text-white uppercase tracking-widest relative z-10">
                                 <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse shadow-[0_0_10px_rgba(220,38,38,0.8)]" />
-                                {formatPreview(msg || "Нашият сайт е в процес на обработка. {timer}")}
+                                {formatPreview(warningMsg || "Нашият сайт е в процес на обработка. {timer}")}
                             </span>
                         </div>
                         <p className="mt-3 text-[9px] text-zinc-600 uppercase tracking-widest leading-relaxed">
@@ -3514,14 +3530,14 @@ const MaintenanceSettingsSection: React.FC = () => {
                                     <div className="relative group">
                                         <input 
                                             type="text"
-                                            value={msg}
-                                            onChange={e => setMsg(e.target.value)}
+                                            value={warningMsg}
+                                            onChange={e => setWarningMsg(e.target.value)}
                                             className="w-full bg-white/5 border border-white/10 p-4 text-white text-xs uppercase tracking-widest focus:outline-none focus:border-red-600 transition-all font-bold"
                                             placeholder="Нашият сайт е в процес на обработка. {timer}..."
                                         />
                                         <div className="mt-2 px-4 py-3 bg-black/40 border border-white/5 rounded text-[10px] text-zinc-400 uppercase tracking-widest flex items-center gap-3">
                                             <span className="text-zinc-600 font-black shrink-0">ПРЕГЛЕД:</span>
-                                            <span className="truncate">{formatPreview(msg)}</span>
+                                            <span className="truncate">{formatPreview(warningMsg)}</span>
                                         </div>
                                     </div>
                                     <p className="mt-2 text-[9px] text-zinc-600 uppercase tracking-widest">Използвайте <span className="text-red-500 font-bold">{"{timer}"}</span> за автоматично поставяне на времето.</p>

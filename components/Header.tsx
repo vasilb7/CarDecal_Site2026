@@ -28,14 +28,24 @@ const Header: React.FC = () => {
     const isPastAutoStart = !!autoStart && autoStart !== 'null' && new Date(autoStart).getTime() <= (Date.now() + serverTimeOffset);
     const isMaintenanceOn = isMaintenanceActive || isPastAutoStart;
     
-    const [isBarManuallyClosed, setIsBarManuallyClosed] = useState(() => {
-        return sessionStorage.getItem('ann_bar_manually_closed') === 'true';
-    });
+    const [isBarManuallyClosed, setIsBarManuallyClosed] = useState(false);
 
-    const sessionKey = `ann_dismissed_${autoStart}`;
-    const [isMaintWarningDismissed, setIsMaintWarningDismissed] = useState(() => {
-        return sessionStorage.getItem(sessionKey) === 'true';
-    });
+    const [isMaintWarningDismissed, setIsMaintWarningDismissed] = useState(false);
+
+    // Auto-reappear after 1 hour (3600000ms)
+    useEffect(() => {
+        if (isBarManuallyClosed) {
+            const timer = setTimeout(() => setIsBarManuallyClosed(false), 3600000);
+            return () => clearTimeout(timer);
+        }
+    }, [isBarManuallyClosed]);
+
+    useEffect(() => {
+        if (isMaintWarningDismissed) {
+            const timer = setTimeout(() => setIsMaintWarningDismissed(false), 3600000);
+            return () => clearTimeout(timer);
+        }
+    }, [isMaintWarningDismissed]);
 
     const isMaintenanceWarningActive = !!autoStart && 
         !isMaintenanceOn && 
@@ -284,7 +294,6 @@ const Header: React.FC = () => {
                             <button 
                                 onClick={() => {
                                     setIsBarManuallyClosed(true);
-                                    sessionStorage.setItem('ann_bar_manually_closed', 'true');
                                 }}
                                 className="absolute right-2 sm:right-4 p-1 hover:opacity-70 transition-colors z-10 shrink-0"
                                 style={{ color: settings.announcement_text_color }}
@@ -305,13 +314,12 @@ const Header: React.FC = () => {
                         <div className="max-w-[1440px] w-full mx-auto min-h-[32px] py-1 px-4 flex items-center justify-center relative">
                             <span className="flex items-center justify-center gap-x-3 text-[10px] sm:text-[11px] font-bold text-white uppercase tracking-wider">
                                 <span className="w-1.5 h-1.5 rounded-full bg-[#ff0000] animate-pulse shrink-0" />
-                                {renderMessageWithTimer(settings.maintenance_message || "Сайтът ще влезе в профилактика след {timer}", true)}
+                                {renderMessageWithTimer(settings.maintenance_warning_text || "Сайтът ще влезе в профилактика след {timer}", true)}
                             </span>
                             
                             <button 
                                 onClick={() => {
                                     setIsMaintWarningDismissed(true);
-                                    sessionStorage.setItem(sessionKey, 'true');
                                 }}
                                 className="absolute right-2 sm:right-4 p-1 hover:opacity-70 transition-colors text-white/50 hover:text-white"
                             >

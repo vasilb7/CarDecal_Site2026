@@ -20,6 +20,7 @@ export interface SiteSettings {
     announcement_letter_spacing: string;
     maintenance_auto_start_at: string | null;
     maintenance_features: string;
+    maintenance_warning_text: string;
 }
 
 const DEFAULTS: SiteSettings = {
@@ -41,6 +42,7 @@ const DEFAULTS: SiteSettings = {
     announcement_letter_spacing: '0.15em',
     maintenance_auto_start_at: null,
     maintenance_features: '',
+    maintenance_warning_text: 'Сайтът ще влезе в профилактика след {timer}',
 };
 
 interface SiteSettingsContextType {
@@ -114,8 +116,6 @@ export const SiteSettingsProvider: React.FC<{ children: React.ReactNode }> = ({ 
                     const newData = payload.new as { key: string; value: any };
                     if (!newData || !newData.key) return;
 
-
-                    
                     setSettings(prev => {
                         const next = { ...prev };
                         const val = newData.value;
@@ -123,6 +123,8 @@ export const SiteSettingsProvider: React.FC<{ children: React.ReactNode }> = ({ 
                             next.maintenance_mode = String(val).toLowerCase() === 'true';
                         } else if (newData.key === 'announcement_mode') {
                             next.announcement_mode = String(val).toLowerCase() === 'true';
+                        } else if (newData.key === 'maintenance_warning_text') {
+                            next.maintenance_warning_text = val;
                         } else if (newData.key in next) {
                             (next as any)[newData.key] = val;
                         }
