@@ -481,6 +481,20 @@ const ProductsTab: React.FC = () => {
 
     useEffect(() => { fetchProducts(); }, [fetchProducts]);
 
+    // Realtime subscription for products
+    useEffect(() => {
+        const channel = supabase
+            .channel('admin_products_realtime')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => {
+                fetchProducts(false, true); // silent refresh
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [fetchProducts]);
+
     const availableSizes = useMemo(() => {
         const sizes = new Set<string>();
         products.forEach(p => {
@@ -910,6 +924,26 @@ const UsersTab: React.FC = () => {
     }, []);
 
     useEffect(() => { fetchUsers(); }, [fetchUsers]);
+
+    // Realtime subscription for profiles
+    useEffect(() => {
+        const channel = supabase
+            .channel('admin_users_realtime')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, (payload) => {
+                if (payload.eventType === 'INSERT') {
+                    setUsers(prev => [payload.new as DBUser, ...prev]);
+                } else if (payload.eventType === 'UPDATE') {
+                    setUsers(prev => prev.map(u => u.id === (payload.new as DBUser).id ? { ...u, ...payload.new as DBUser } : u));
+                } else if (payload.eventType === 'DELETE') {
+                    setUsers(prev => prev.filter(u => u.id !== (payload.old as any).id));
+                }
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, []);
 
     // Prevent background scrolling when modals are open
     useEffect(() => {
@@ -3554,6 +3588,18 @@ const DashboardTab: React.FC = () => {
             setLoading(false);
         };
         fetchStats();
+
+        // Realtime - re-fetch stats when profiles, products, or orders change
+        const channel = supabase
+            .channel('admin_dashboard_realtime')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => fetchStats())
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => fetchStats())
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => fetchStats())
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, []);
 
     const cards = [
@@ -6161,6 +6207,17 @@ const AdminPage: React.FC = () => {
             setNewBugsCount(bugsRes.count || 0);
         };
         fetchCounts();
+
+        // Realtime - update badge counts instantly
+        const channel = supabase
+            .channel('admin_badge_counts_realtime')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'bug_reports' }, () => fetchCounts())
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => fetchCounts())
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, [activeTab]);
 
     useEffect(() => {
