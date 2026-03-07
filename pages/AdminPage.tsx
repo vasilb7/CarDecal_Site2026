@@ -20,6 +20,7 @@ import { useToast } from '../components/Toast/ToastProvider';
 import { uploadToCloudinary } from '../lib/cloudinary-utils';
 import { BugsTab } from '../components/Admin/BugsTab';
 import { StealthTab } from '../components/Admin/StealthTab';
+import { SecurityTab } from '../components/Admin/SecurityTab';
 import SEO from '../components/SEO';
 
 // ─── Custom Confirm Dialog ──────────────────────────────────────────────────
@@ -92,7 +93,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     );
 };
 
-type AdminTab = 'dashboard' | 'homepage' | 'messages' | 'maintenance' | 'products' | 'users' | 'archived_users' | 'custom_orders' | 'orders' | 'bugs' | 'stealth';
+type AdminTab = 'dashboard' | 'homepage' | 'messages' | 'maintenance' | 'products' | 'users' | 'archived_users' | 'custom_orders' | 'orders' | 'bugs' | 'stealth' | 'security';
 
 interface DBProduct {
     id: string;
@@ -6053,6 +6054,9 @@ const AdminPage: React.FC = () => {
         ] : []),
         { id: 'maintenance' as AdminTab, label: 'Поддръжка', icon: Settings },
         { id: 'stealth' as AdminTab, label: 'Таен Вход', icon: Key },
+        ...(isAdmin ? [
+            { id: 'security' as AdminTab, label: 'Сигурност', icon: Shield }
+        ] : []),
     ];
 
     return (
@@ -6126,6 +6130,7 @@ const AdminPage: React.FC = () => {
                     {activeTab === 'archived_users' && <ArchivedUsersTab />}
                     {activeTab === 'bugs' && <BugsTab />}
                     {activeTab === 'stealth' && <StealthTab />}
+                    {activeTab === 'security' && <SecurityTab />}
                 </main>
             </div>
         </div>

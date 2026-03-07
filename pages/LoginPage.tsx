@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useToast } from '../hooks/useToast';
 import SEO from '../components/SEO';
+import { recordFailedLogin, recordSuccessfulLogin, logSecurityEvent } from '../lib/security';
 
 
 
@@ -56,13 +57,19 @@ const LoginPage: React.FC = () => {
 
       if (error) {
         console.error("Sign in error:", error.message);
-        if (error.message.includes("Invalid login credentials")) {
+        // Record failed login for rate limiting and security logs
+        const failResult = await recordFailedLogin(email);
+        
+        if (failResult.locked) {
+            showToast('Твърде много неуспешни опити. Моля, опитайте по-късно.', 'error');
+        } else if (error.message.includes("Invalid login credentials")) {
             showToast(t('toast.login_error_credentials'), "error");
         } else {
             showToast(error.message, "error");
         }
       } else {
-
+        // Record successful login + detect suspicious activity
+        const loginResult = await recordSuccessfulLogin();
         
         // Extract a friendly name
         const md = data?.user?.user_metadata || {};
@@ -71,6 +78,8 @@ const LoginPage: React.FC = () => {
 
         if (rememberMe) {
           localStorage.setItem('remember_me', 'true');
+          // Log remember-me choice
+          logSecurityEvent('remember_me_set', data?.user?.id);
         } else {
           localStorage.setItem('remember_me', 'false');
           sessionStorage.setItem('temp_session', 'true');

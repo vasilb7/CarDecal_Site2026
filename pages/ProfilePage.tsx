@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
+import { logSecurityEvent } from '../lib/security';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../components/Toast/ToastProvider';
 import SEO from '../components/SEO';
@@ -466,6 +467,9 @@ const SettingsTab: React.FC<{
                 data: { has_password: true }
             });
             if (error) throw error;
+            
+            // Log password change for security audit
+            logSecurityEvent('password_change', user?.id).catch(() => {});
             
             showToast(isPasswordUser ? 'Паролата е сменена успешно!' : 'Паролата е създадена успешно!', 'success');
             setShowPwdForm(false);
