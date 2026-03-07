@@ -69,13 +69,9 @@ export const SecurityTab: React.FC = () => {
         setLoading(true);
         const currentOffset = reset ? 0 : offset;
         const userId = searchUserId || null;
+        const eventType = filterType === 'all' ? null : filterType;
 
-        let fetchedLogs = await fetchSecurityLogs(userId, PAGE_SIZE, currentOffset);
-
-        // Client-side filter by event type
-        if (filterType !== 'all') {
-            fetchedLogs = fetchedLogs.filter(l => l.event_type === filterType);
-        }
+        let fetchedLogs = await fetchSecurityLogs(userId, PAGE_SIZE, currentOffset, eventType);
 
         if (reset) {
             setLogs(fetchedLogs);

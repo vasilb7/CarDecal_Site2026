@@ -8,7 +8,7 @@ import React, {
 import { supabase } from "../lib/supabase";
 import { Session, User } from "@supabase/supabase-js";
 import { UserProfile, ModerationStatus } from "../types";
-import { logSecurityEvent } from "../lib/security";
+import { logSecurityEvent, recordSuccessfulLogin } from "../lib/security";
 
 interface AuthContextType {
   user: User | null;
@@ -114,9 +114,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     // Listen for changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
+
+      if (event === 'SIGNED_IN' && session?.user) {
+        // Record successful login if not already done in this session
+        const recorded = sessionStorage.getItem(`login_recorded_${session.user.id}`);
+        if (!recorded) {
+            recordSuccessfulLogin(session.user.id);
+            sessionStorage.setItem(`login_recorded_${session.user.id}`, 'true');
+        }
+      }
 
       if (session?.user) {
         fetchProfile(session.user.id);

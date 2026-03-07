@@ -175,13 +175,15 @@ export async function recordSuccessfulLogin(userId?: string | null): Promise<{ n
 export async function fetchSecurityLogs(
     userId?: string | null,
     limit = 50,
-    offset = 0
+    offset = 0,
+    eventType?: string | null
 ): Promise<SecurityLog[]> {
     try {
         const { data, error } = await supabase.rpc('get_security_logs', {
             p_user_id: userId || null,
             p_limit: limit,
             p_offset: offset,
+            p_event_type: eventType || null,
         });
 
         if (error) throw error;
