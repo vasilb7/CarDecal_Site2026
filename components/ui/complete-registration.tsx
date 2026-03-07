@@ -5,7 +5,7 @@ import { supabase } from '../../lib/supabase';
 import { useTranslation } from 'react-i18next';
 import { Loader2, User, Phone } from 'lucide-react';
 import { useToast } from '../Toast/ToastProvider';
-import { isValidBulgarianPhone } from '../../lib/utils';
+import { isValidBulgarianPhone, formatToE164 } from '../../lib/utils';
 
 const FloatingInput = ({ 
     label, 
@@ -77,13 +77,7 @@ export const CompleteRegistrationModal = () => {
 
     // Използваме isValidBulgarianPhone от utils
 
-    const normalizePhone = (num: string) => {
-        let clean = num.replace(/[\s-]/g, '');
-        if (clean.startsWith('00')) clean = '+' + clean.substring(2);
-        if (clean.startsWith('0')) clean = '+359' + clean.substring(1);
-        if (!clean.startsWith('+')) clean = '+359' + clean;
-        return clean;
-    };
+
 
     useEffect(() => {
         // Correctly detect if registration is incomplete
@@ -160,7 +154,7 @@ export const CompleteRegistrationModal = () => {
         setLoading(true);
 
         try {
-            const normalizedPhone = normalizePhone(phone);
+            const normalizedPhone = formatToE164(phone);
 
             // Update profile first to check for uniqueness
             const { error: profileError } = await supabase

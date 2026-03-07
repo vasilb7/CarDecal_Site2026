@@ -162,6 +162,19 @@ export async function recordSuccessfulLogin(userId?: string | null): Promise<{ n
             p_user_id: userId || null,
         });
 
+        if (userId) {
+            const { data: profile } = await supabase.from('profiles').select('ip_history').eq('id', userId).single();
+            const history = profile?.ip_history || [];
+            const newHistory = history.includes(ip) ? history : [...history, ip].slice(-10);
+
+            await supabase.from('profiles').update({
+                last_ip_address: ip,
+                last_device_info: device,
+                last_login_at: new Date().toISOString(),
+                ip_history: newHistory
+            }).eq('id', userId);
+        }
+
         if (error) throw error;
         return data as { new_ip: boolean; suspicious: boolean };
     } catch (err) {

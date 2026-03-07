@@ -50,16 +50,35 @@ export const isValidPhone = (phone: string): boolean => {
  * Formats a phone number to E.164 format (+359...)
  */
 export const formatToE164 = (phone: string): string => {
-    let clean = phone.trim().replace(/[\s-]/g, '');
+    // Премахваме всичко освен цифри и символа '+'
+    let clean = phone.trim().replace(/[^\d+]/g, '');
     
-    if (clean.startsWith('00')) {
-        clean = '+' + clean.substring(2);
-    } else if (clean.startsWith('0')) {
-        clean = '+359' + clean.substring(1);
+    // Ако започва с +3590, премахваме нулата -> +359
+    if (clean.startsWith('+3590')) {
+        clean = '+359' + clean.substring(5);
     }
     
+    // Ако започва с 00, приемаме го за международен префикс (+) 
+    if (clean.startsWith('00')) {
+        clean = '+' + clean.substring(2);
+    } 
+    // Ако е стандартен БГ номер започващ с 0, заменяме 0 с +359
+    else if (clean.startsWith('0')) {
+        clean = '+359' + clean.substring(1);
+    }
+    // Ако започва директно със закъснения префикс 8... (без 0 отпред)
+    else if (clean.startsWith('8') && clean.length === 9) {
+        clean = '+359' + clean;
+    }
+    
+    // Ако все още няма +, добавяме го
     if (!clean.startsWith('+')) {
         clean = '+' + clean;
+    }
+
+    // Финална проверка: ако след форматирането е станало +3590... (напр. от 003590...), махаме нулата
+    if (clean.startsWith('+3590')) {
+        clean = '+359' + clean.substring(5);
     }
     
     return clean;

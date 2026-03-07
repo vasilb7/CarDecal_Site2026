@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { useToast } from '../components/Toast/ToastProvider';
 
 export const EXCHANGE_RATE = 1.95583;
 export const FREE_SHIPPING_THRESHOLD_BGN = 150;
@@ -9,6 +10,7 @@ export interface PromoCode {
   code: string;
   discount_type: 'percentage' | 'fixed_amount';
   discount_value: number;
+  min_order_amount?: number | null;
 }
 
 export interface CartItem {
@@ -50,6 +52,7 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { showToast } = useToast();
   const [items, setItems] = useState<CartItem[]>(() => {
     try {
       const saved = localStorage.getItem('cardecal_cart');
@@ -249,6 +252,14 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         window.removeEventListener('clear_local_cart', handleClearCartEvent);
     };
   }, []);
+
+  // Auto-remove promo code if requirements are no longer met
+  useEffect(() => {
+    if (appliedPromo && appliedPromo.min_order_amount && subtotal < appliedPromo.min_order_amount) {
+        removePromo();
+        showToast(`Промо кодът ${appliedPromo.code} беше премахнат, тъй като е необходима минимална поръчка от ${appliedPromo.min_order_amount} €`, 'warning');
+    }
+  }, [subtotal, appliedPromo, removePromo, showToast]);
 
   return (
     <CartContext.Provider value={{ items, activeItems, itemsCount, subtotal, discountPercentage, total, addToCart, increase, decrease, updateQuantity, remove, initiateRemove, cancelRemove, clearCart, isFreeShipping, amountToFreeShipping, appliedPromo, applyPromo, removePromo }}>

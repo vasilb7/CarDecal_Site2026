@@ -10,6 +10,7 @@ import { AvatarCropModal } from '../components/AvatarCropModal';
 import { validatePassword, translateAuthError } from '../lib/passwordUtils';
 import { isValidPhone as isValidBulgarianPhone, isValidFullName, formatToE164 } from '../lib/utils';
 import PasswordStrengthMeter from '../components/ui/PasswordStrengthMeter';
+import DevicesSection from '../components/profile/DevicesSection';
 import {
     User, Camera, LogOut, Settings, ShoppingBag,
     ChevronRight, Save, Loader2, Lock,
@@ -898,6 +899,9 @@ const SettingsTab: React.FC<{
                     />
                 </div>
             </div>
+
+            {/* Devices Section */}
+            <DevicesSection />
 
             {/* Sign out */}
             <div className="pt-4 flex justify-end">

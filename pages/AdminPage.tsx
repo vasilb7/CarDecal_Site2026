@@ -23,6 +23,7 @@ import { StealthTab } from '../components/Admin/StealthTab';
 import { SecurityTab } from '../components/Admin/SecurityTab';
 import { PromoCodesTab } from '../components/Admin/PromoCodesTab';
 import SEO from '../components/SEO';
+import { logSecurityEvent } from '../lib/security';
 
 // ─── Custom Confirm Dialog ──────────────────────────────────────────────────
 interface ConfirmDialogProps {
@@ -1046,6 +1047,7 @@ const UsersTab: React.FC = () => {
                 unban_reason: null
             } : u));
             showToast('Временно ограничение приложено', 'success');
+            await logSecurityEvent('ban_applied', modModal.user.id, { action: 'temp_ban', reason: modPublicReason || 'Нарушение на Общите условия', admin: currentUser?.email });
         } catch (err: any) {
             showToast('Грешка: ' + err.message, 'error');
         } finally {
@@ -1092,6 +1094,7 @@ const UsersTab: React.FC = () => {
                 unban_reason: null
             } : u));
             showToast('Перманентно ограничение приложено', 'success');
+            await logSecurityEvent('ban_applied', modModal.user.id, { action: modModal.mode === 'convert_to_perm' ? 'convert_to_perm' : 'perm_ban', reason: modPublicReason || 'Нарушение на Общите условия', admin: currentUser?.email });
         } catch (err: any) {
             showToast('Грешка: ' + err.message, 'error');
         } finally {
@@ -1138,6 +1141,7 @@ const UsersTab: React.FC = () => {
                 unban_reason: modPublicReason || 'Възстановен от администратор'
             } : u));
             showToast('Потребителят е възстановен', 'success');
+            await logSecurityEvent('account_unlocked', modModal.user.id, { action: 'unban', admin: currentUser?.email });
         } catch (err: any) {
             showToast('Грешка: ' + err.message, 'error');
         } finally {
@@ -1179,6 +1183,7 @@ const UsersTab: React.FC = () => {
                 unban_reason: null
             } : u));
             showToast('Ограничението е удължено', 'success');
+            await logSecurityEvent('ban_applied', modModal.user.id, { action: 'extend_ban', admin: currentUser?.email });
         } catch (err: any) {
             showToast('Грешка: ' + err.message, 'error');
         } finally {
@@ -2261,7 +2266,7 @@ const UserProfileModal: React.FC<{
                                                                     </span>
                                                                 </div>
                                                                 <div className="flex items-center gap-2 text-[10px] flex-wrap">
-                                                                    <span className="text-zinc-500 line-through truncate max-w-[120px]">{h.old_value || '(празно)'}</span>
+                                                                    <span className="text-zinc-500 truncate max-w-[120px]">{h.old_value || '(празно)'}</span>
                                                                     <ChevronRight className="w-2 h-2 text-zinc-700" />
                                                                     <span className="text-white font-bold truncate max-w-[120px]">{h.new_value}</span>
                                                                     <span className={`ml-auto text-[8px] px-1.5 py-0.5 rounded ${h.change_source === 'admin' ? 'bg-red-900/20 text-red-500 border border-red-900/30' : 'bg-zinc-800 text-zinc-500'} uppercase font-black`}>

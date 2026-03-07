@@ -9,6 +9,7 @@ import { supabase } from "../lib/supabase";
 import { Session, User } from "@supabase/supabase-js";
 import { UserProfile, ModerationStatus } from "../types";
 import { logSecurityEvent, recordSuccessfulLogin, recordProfileChange } from "../lib/security";
+import { registerDeviceSession, updateLastSeen } from "../lib/device-service";
 
 interface AuthContextType {
   user: User | null;
@@ -126,6 +127,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         const recorded = sessionStorage.getItem(`login_recorded_${session.user.id}`);
         if (!recorded) {
             recordSuccessfulLogin(session.user.id);
+            registerDeviceSession(session.user.id);
             sessionStorage.setItem(`login_recorded_${session.user.id}`, 'true');
         }
       }
@@ -181,6 +183,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     return () => {
       supabase.removeChannel(channel);
     };
+  }, [user]);
+
+  // Periodic last_seen_at heartbeat (every 5 minutes)
+  useEffect(() => {
+    if (!user) return;
+
+    const interval = setInterval(() => {
+      updateLastSeen(user.id);
+    }, 5 * 60 * 1000); // 5 minutes
+
+    return () => clearInterval(interval);
   }, [user]);
 
   // Login info is now tracked by security RPCs (record_successful_login)

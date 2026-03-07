@@ -408,11 +408,11 @@ function App() {
       <SiteSettingsProvider>
         <UIProvider>
           <ProductsProvider>
+          <ToastProvider>
             <CartProvider>
-              <ToastProvider>
                 <AppContent />
-              </ToastProvider>
             </CartProvider>
+          </ToastProvider>
           </ProductsProvider>
         </UIProvider>
       </SiteSettingsProvider>
