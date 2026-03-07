@@ -984,7 +984,8 @@ const UsersTab: React.FC = () => {
                 internal_reason: modInternalReason || null,
                 moderator_notes: modNotes || null,
                 banned_by: currentUser?.id || null,
-                banned_reason: modPublicReason || 'Нарушение на Общите условия'
+                banned_reason: modPublicReason || 'Нарушение на Общите условия',
+                unban_reason: null
             }).eq('id', modModal.user.id);
             if (error) throw error;
 
@@ -1000,9 +1001,14 @@ const UsersTab: React.FC = () => {
             });
 
             setUsers(prev => prev.map(u => u.id === modModal.user.id ? {
-                ...u, moderation_status: 'temporarily_suspended', is_banned: true,
+                ...u, 
+                moderation_status: 'temporarily_suspended', 
+                is_banned: true,
                 banned_until: new Date(modBannedUntil).toISOString(),
-                public_reason: modPublicReason, internal_reason: modInternalReason,
+                public_reason: modPublicReason || 'Нарушение на Общите условия', 
+                internal_reason: modInternalReason || null,
+                moderator_notes: modNotes || null,
+                unban_reason: null
             } : u));
             showToast('Временно ограничение приложено', 'success');
         } catch (err: any) {
@@ -1025,7 +1031,8 @@ const UsersTab: React.FC = () => {
                 internal_reason: modInternalReason || null,
                 moderator_notes: modNotes || null,
                 banned_by: currentUser?.id || null,
-                banned_reason: modPublicReason || 'Нарушение на Общите условия'
+                banned_reason: modPublicReason || 'Нарушение на Общите условия',
+                unban_reason: null
             }).eq('id', modModal.user.id);
             if (error) throw error;
 
@@ -1040,8 +1047,14 @@ const UsersTab: React.FC = () => {
             });
 
             setUsers(prev => prev.map(u => u.id === modModal.user.id ? {
-                ...u, moderation_status: 'permanently_banned', is_banned: true,
-                banned_until: null, public_reason: modPublicReason, internal_reason: modInternalReason
+                ...u, 
+                moderation_status: 'permanently_banned', 
+                is_banned: true,
+                banned_until: null, 
+                public_reason: modPublicReason || 'Нарушение на Общите условия', 
+                internal_reason: modInternalReason || null,
+                moderator_notes: modNotes || null,
+                unban_reason: null
             } : u));
             showToast('Перманентно ограничение приложено', 'success');
         } catch (err: any) {
@@ -1080,8 +1093,14 @@ const UsersTab: React.FC = () => {
             });
 
             setUsers(prev => prev.map(u => u.id === modModal.user.id ? {
-                ...u, moderation_status: 'active', is_banned: false,
-                banned_until: null, public_reason: null, internal_reason: null
+                ...u, 
+                moderation_status: 'active', 
+                is_banned: false,
+                banned_until: null, 
+                public_reason: null, 
+                internal_reason: null,
+                moderator_notes: null,
+                unban_reason: modPublicReason || 'Възстановен от администратор'
             } : u));
             showToast('Потребителят е възстановен', 'success');
         } catch (err: any) {
@@ -1101,6 +1120,7 @@ const UsersTab: React.FC = () => {
                 public_reason: modPublicReason || modModal.user.public_reason,
                 internal_reason: modInternalReason || modModal.user.internal_reason,
                 moderator_notes: modNotes || modModal.user.moderator_notes,
+                unban_reason: null
             }).eq('id', modModal.user.id);
             if (error) throw error;
 
@@ -1116,7 +1136,12 @@ const UsersTab: React.FC = () => {
             });
 
             setUsers(prev => prev.map(u => u.id === modModal.user.id ? {
-                ...u, banned_until: new Date(modBannedUntil).toISOString()
+                ...u, 
+                banned_until: new Date(modBannedUntil).toISOString(),
+                public_reason: modPublicReason || modModal.user.public_reason,
+                internal_reason: modInternalReason || modModal.user.internal_reason,
+                moderator_notes: modNotes || modModal.user.moderator_notes,
+                unban_reason: null
             } : u));
             showToast('Ограничението е удължено', 'success');
         } catch (err: any) {
