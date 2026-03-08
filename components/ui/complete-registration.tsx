@@ -79,10 +79,30 @@ export const CompleteRegistrationModal = () => {
 
 
 
+    const isPasswordUser = 
+        user?.app_metadata?.provider === 'email' || 
+        user?.identities?.some((id: any) => id.provider === 'email') || 
+        user?.user_metadata?.has_password === true;
+
     useEffect(() => {
         // Correctly detect if registration is incomplete
         const userPhone = user?.user_metadata?.phone || profile?.phone;
-        const needsCompletion = !!user && !authLoading && !userPhone;
+        const userName = user?.user_metadata?.full_name || profile?.full_name;
+        
+        // For Google/Social users without password, we only strictly need a nickname/name
+        // For standard users, we might still want phone for delivery
+        // The user specifically asked: "if they don't have password, only ask for nickname"
+        
+        let needsCompletion = false;
+        if (!user || authLoading) {
+            needsCompletion = false;
+        } else if (!isPasswordUser) {
+            // Social login - only strictly need a nickname if not present
+            needsCompletion = !userName;
+        } else {
+            // Email login - standard flow (needs name and phone for delivery)
+            needsCompletion = !userName || !userPhone;
+        }
 
         if (needsCompletion) {
             setIsOpen(true);
@@ -102,7 +122,7 @@ export const CompleteRegistrationModal = () => {
         } else {
             setIsOpen(false);
         }
-    }, [user, profile, authLoading, isInitialized]);
+    }, [user, profile, authLoading, isInitialized, isPasswordUser]);
     
     // Detect mobile keyboard close effect properly
     useEffect(() => {
@@ -146,7 +166,7 @@ export const CompleteRegistrationModal = () => {
             return;
         }
 
-        if (!isValidBulgarianPhone(phone)) {
+        if (isPasswordUser && !isValidBulgarianPhone(phone)) {
             showToast('Невалиден телефон! (8-15 цифри)', 'error');
             return;
         }
@@ -154,16 +174,21 @@ export const CompleteRegistrationModal = () => {
         setLoading(true);
 
         try {
-            const normalizedPhone = formatToE164(phone);
+            const normalizedPhone = phone ? formatToE164(phone) : null;
 
             // Update profile first to check for uniqueness
+            const updateData: any = { 
+                full_name: name.trim(), 
+                updated_at: new Date().toISOString()
+            };
+            
+            if (normalizedPhone) {
+                updateData.phone = normalizedPhone;
+            }
+
             const { error: profileError } = await supabase
                 .from('profiles')
-                .update({ 
-                    full_name: name.trim(), 
-                    phone: normalizedPhone,
-                    updated_at: new Date().toISOString()
-                })
+                .update(updateData)
                 .eq('id', user?.id);
             
             if (profileError) {
@@ -174,12 +199,17 @@ export const CompleteRegistrationModal = () => {
             }
 
             // Update auth metadata
-            const { error: authError } = await supabase.auth.updateUser({
+            const authUpdateData: any = {
                 data: {
-                    full_name: name.trim(),
-                    phone: normalizedPhone
+                    full_name: name.trim()
                 }
-            });
+            };
+            
+            if (normalizedPhone) {
+                authUpdateData.data.phone = normalizedPhone;
+            }
+
+            const { error: authError } = await supabase.auth.updateUser(authUpdateData);
 
             if (authError) throw authError;
 
@@ -203,8 +233,17 @@ export const CompleteRegistrationModal = () => {
     };
 
     // Immediate solid covering if we know we need completion
+    const userName = user?.user_metadata?.full_name || profile?.full_name;
     const userPhone = user?.user_metadata?.phone || profile?.phone;
-    const isBlocking = !!user && !authLoading && !userPhone;
+    
+    let isBlocking = false;
+    if (user && !authLoading) {
+        if (!isPasswordUser) {
+            isBlocking = !userName;
+        } else {
+            isBlocking = !userName || !userPhone;
+        }
+    }
 
     if (!isBlocking && !isOpen) return null;
 
@@ -233,7 +272,9 @@ export const CompleteRegistrationModal = () => {
                                 Завършете регистрацията
                             </h2>
                             <p className="text-zinc-400 text-sm md:text-base leading-relaxed px-2">
-                                За да продължите, моля, потвърдете Вашите имена и въведете телефонен номер за връзка относно поръчките Ви.
+                                {isPasswordUser 
+                                    ? 'За да продължите, моля, потвърдете Вашите имена и въведете телефонен номер за връзка относно поръчките Ви.'
+                                    : 'За Вашата сигурност и по-добра идентификация, моля, въведете Вашето име или псевдоним.'}
                             </p>
                         </div>
 
@@ -253,20 +294,22 @@ export const CompleteRegistrationModal = () => {
                                 required
                             />
 
-                            <FloatingInput 
-                                label="Телефонен номер"
-                                icon={
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                                        <path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z" />
-                                        <path d="M15 7a2 2 0 0 1 2 2" />
-                                        <path d="M15 3a6 6 0 0 1 6 6" />
-                                    </svg>
-                                }
-                                type="tel"
-                                value={phone}
-                                onChange={(e: any) => setPhone(e.target.value)}
-                                required
-                            />
+                            {isPasswordUser && (
+                                <FloatingInput 
+                                    label="Телефонен номер"
+                                    icon={
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z" />
+                                            <path d="M15 7a2 2 0 0 1 2 2" />
+                                            <path d="M15 3a6 6 0 0 1 6 6" />
+                                        </svg>
+                                    }
+                                    type="tel"
+                                    value={phone}
+                                    onChange={(e: any) => setPhone(e.target.value)}
+                                    required
+                                />
+                            )}
 
                             <div className="pt-4">
                                 <motion.button

@@ -340,7 +340,7 @@ const SettingsTab: React.FC<{
     const isPasswordUser = 
         user?.app_metadata?.provider === 'email' || 
         user?.identities?.some((id: any) => id.provider === 'email') || 
-        user?.user_metadata?.has_password === true;
+        profile?.has_password === true;
 
     useEffect(() => {
         setFullName(profile?.full_name || '');
@@ -481,6 +481,9 @@ const SettingsTab: React.FC<{
                 data: { has_password: true }
             });
             if (error) throw error;
+            
+            // Sync profiles table since trigger might delay
+            await supabase.from('profiles').update({ has_password: true }).eq('id', user.id);
             
             // Log password change for security audit
             logSecurityEvent('password_change', user?.id).catch(() => {});

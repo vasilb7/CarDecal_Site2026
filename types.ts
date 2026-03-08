@@ -80,6 +80,7 @@ export interface UserProfile {
   // Existing fields
   deletion_scheduled_at?: string | null;
   deletion_reason?: string | null;
+  has_password?: boolean;
 }
 
 export interface ModerationHistoryEntry {
