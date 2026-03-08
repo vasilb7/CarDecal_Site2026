@@ -39,7 +39,7 @@ const LoginPage: React.FC = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const handleSignIn = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSignIn = async (event: React.FormEvent<HTMLFormElement>, captchaToken?: string) => {
     event.preventDefault();
     setLoading(true);
     
@@ -54,6 +54,9 @@ const LoginPage: React.FC = () => {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
+        options: {
+          captchaToken
+        }
       });
 
       if (error) {

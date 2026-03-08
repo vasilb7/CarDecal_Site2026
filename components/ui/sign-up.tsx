@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Eye, EyeOff, X } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { Turnstile } from '@marsidev/react-turnstile';
 import { motion, AnimatePresence } from 'framer-motion';
 import PasswordStrengthMeter from './PasswordStrengthMeter';
 import { validatePassword } from '../../lib/passwordUtils';
@@ -16,7 +17,7 @@ const GoogleIcon = () => (
 );
 
 interface SignUpPageProps {
-  onSignUp?: (event: React.FormEvent<HTMLFormElement>) => void;
+  onSignUp?: (event: React.FormEvent<HTMLFormElement>, captchaToken?: string) => void;
   onGoogleSignUp?: () => void;
   loading?: boolean;
 }
@@ -139,6 +140,7 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
   const navigate = useNavigate();
   const location = useLocation();
   const [showPassword, setShowPassword] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string>();
   const [password, setPassword] = useState('');
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
@@ -215,7 +217,7 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
                     </motion.p>
                 </div>
 
-                <form className="space-y-6 pt-8" onSubmit={onSignUp}>
+                <form className="space-y-6 pt-8" onSubmit={(e) => onSignUp?.(e, captchaToken)}>
                     <div className="space-y-1">
                         <FloatingInput 
                             label={t('auth.name_label', 'Въведете име и Фамилия')}
@@ -297,6 +299,15 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
                                 {t('auth.privacy_link', 'Поверителността')}
                             </Link>
                         </label>
+                    </div>
+
+                    {/* Captcha */}
+                    <div className="flex justify-center py-2 scale-90 sm:scale-100">
+                        <Turnstile 
+                            siteKey="0x4AAAAAACn8KBpSOynPkBCf" 
+                            onSuccess={(token) => setCaptchaToken(token)}
+                            options={{ theme: 'dark' }}
+                        />
                     </div>
 
                     {/* Submit Button */}

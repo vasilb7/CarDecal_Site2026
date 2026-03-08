@@ -3,9 +3,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Mail, Lock, Eye, EyeOff, X, ChevronRight, Github } from "lucide-react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { Turnstile } from "@marsidev/react-turnstile";
 
 interface SignInPageProps {
-  onSignIn: (e: React.FormEvent<HTMLFormElement>) => Promise<void>;
+  onSignIn: (e: React.FormEvent<HTMLFormElement>, captchaToken?: string) => Promise<void>;
   onGoogleSignIn: () => Promise<void>;
   onResetPassword: () => void;
   isUpdatingPassword?: boolean;
@@ -114,6 +115,7 @@ export const SignInPage: React.FC<SignInPageProps> = ({
   const navigate = useNavigate();
   const location = useLocation();
   const [showPassword, setShowPassword] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string>();
 
   // Detect mobile keyboard close effect properly
   React.useEffect(() => {
@@ -204,7 +206,7 @@ export const SignInPage: React.FC<SignInPageProps> = ({
             )}
           </div>
 
-          <form className="space-y-6 pt-8" onSubmit={onSignIn}>
+          <form className="space-y-6 pt-8" onSubmit={(e) => onSignIn(e, captchaToken)}>
             {/* Email */}
             <FloatingInput
               label={t("auth.email", "Имейл адрес")}
@@ -258,6 +260,15 @@ export const SignInPage: React.FC<SignInPageProps> = ({
               >
                 {t("auth.remember_me", "Запомни ме за 30 дни")}
               </label>
+            </div>
+
+            {/* Captcha */}
+            <div className="flex justify-center py-2 scale-90 sm:scale-100">
+              <Turnstile 
+                siteKey="0x4AAAAAACn8KBpSOynPkBCf" 
+                onSuccess={(token) => setCaptchaToken(token)}
+                options={{ theme: 'dark' }}
+              />
             </div>
 
             {/* Submit Button */}

@@ -19,7 +19,7 @@ const RegisterPage: React.FC = () => {
   const { t, i18n } = useTranslation();
   const { showToast } = useToast();
 
-  const handleSignUp = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSignUp = async (event: React.FormEvent<HTMLFormElement>, captchaToken?: string) => {
     event.preventDefault();
     setLoading(true);
 
@@ -83,6 +83,7 @@ const RegisterPage: React.FC = () => {
             phone: normalizedPhone,
             role: 'user', 
           },
+          captchaToken
         },
       });
 
