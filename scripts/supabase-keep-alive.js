@@ -5,16 +5,19 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY;
-const botEmail = process.env.SUPABASE_BOT_EMAIL;
-const botPassword = process.env.SUPABASE_BOT_PASSWORD;
+// Prefer Service Role Key for administrative tasks (bypasses RLS and Captchas)
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey || !botEmail || !botPassword) {
-  console.error('Missing environment variables. Requires: VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, SUPABASE_BOT_EMAIL, SUPABASE_BOT_PASSWORD');
+if (!supabaseUrl || !supabaseKey) {
+  console.error('Missing environment variables. Requires: VITE_SUPABASE_URL and (SUPABASE_SERVICE_ROLE_KEY or VITE_SUPABASE_ANON_KEY)');
   process.exit(1);
 }
 
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+const supabase = createClient(supabaseUrl, supabaseKey, {
+  auth: {
+    persistSession: false // No need to persist session in a one-off script
+  }
+});
 
 async function keepAlive() {
   console.log('--- Supabase Keep-Alive Heartbeat ---');
