@@ -45,11 +45,25 @@ export function validatePassword(password: string): PasswordValidation {
     const strength = getPasswordStrength(password);
     const isLanguageOk = checks.find(c => c.id === 'language')?.passed ?? true;
     
+    const technicalChecks = checks.filter(c => c.id !== 'language');
+    const technicalPassed = technicalChecks.filter(c => c.passed).length;
+    const hasUpper = technicalChecks.find(c => c.id === 'uppercase')?.passed;
+    const hasSymbol = technicalChecks.find(c => c.id === 'symbol')?.passed;
+    
+    // Most Supabase projects have a policy of: 
+    // - 8+ chars
+    // - Must have 3 out of 4: lower, upper, digit, symbol
+    // OR just specific score.
+    
+    // Let's be safe and require at least ONE uppercase or symbol if the total complexity is low.
+    const hasExtraComplexity = hasUpper || hasSymbol;
+
     // Accept if:
-    // 1. Passes all checks (Ideal case)
-    // OR
-    // 2. Score is >= 2 (Medium, Good, Strong) AND length is at least 8 characters AND no cyrillic
-    const isStrongEnough = strength.score >= 2;
+    // 1. Minimum 8 chars + English
+    // AND
+    // 2. Score >= 3 (Good/Strong)
+    // OR (Score >= 2 (Medium) AND has at least 4 tech checks AND at least one Upper or Symbol)
+    const isStrongEnough = strength.score >= 3 || (strength.score >= 2 && technicalPassed >= 4 && hasExtraComplexity);
     const isBasicPolicyMet = password.length >= 8 && isLanguageOk;
 
     return {
@@ -101,7 +115,7 @@ export function translateAuthError(error: any): string {
 
     // By error code
     const codeMap: Record<string, string> = {
-        'weak_password': 'Паролата се отхвърля от системата като слаба. Моля, добавете цифра или я направете по-дълга.',
+        'weak_password': 'Паролата се отхвърля от системата като слаба. Моля, добавете ГЛАВНА буква, цифра или я направете по-дълга.',
         'same_password': 'Новата парола не може да е същата като текущата.',
         'email_exists': 'Този имейл адрес вече е регистриран.',
         'user_already_exists': 'Потребител с този имейл вече съществува.',
@@ -119,6 +133,8 @@ export function translateAuthError(error: any): string {
         'validation_failed': 'Невалидни данни. Моля, проверете въведената информация.',
         'phone_exists': 'този телефонен номер вече е свързан с друг акаунт',
         'conflict': 'Конфликт с друг акаунт. Моля, свържете се с поддръжката.',
+        'unexpected_failure': 'Възникна системна грешка. Моля, опитайте отново след малко.',
+        'database_error': 'Грешка при запис в базата данни. Моля, проверете данните си.',
     };
 
     if (code && codeMap[code]) return codeMap[code];
