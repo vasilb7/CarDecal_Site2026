@@ -180,6 +180,7 @@ export async function updateLastSeen(userId: string): Promise<boolean> {
 
 export async function fetchUserDevices(userId: string): Promise<UserDevice[]> {
     try {
+        const currentSessionId = getCurrentSessionId();
         const { data, error } = await supabase
             .from('user_devices')
             .select('*')
@@ -189,21 +190,29 @@ export async function fetchUserDevices(userId: string): Promise<UserDevice[]> {
 
         if (error) throw error;
         
-        // Deduplicate: keep only the latest session per device_label + ip pair
-        const devices = (data || []) as UserDevice[];
-        const seen = new Set<string>();
-        const uniqueDevices: UserDevice[] = [];
+        const sessions = (data || []) as UserDevice[];
+        const groupedMap = new Map<string, UserDevice>();
         
-        for (const device of devices) {
-            // Use session_id as primary key for uniqueness (each browser tab = 1 session)
-            const key = device.session_id || device.id;
-            if (!seen.has(key)) {
-                seen.add(key);
-                uniqueDevices.push(device);
+        for (const session of sessions) {
+            const groupKey = session.device_group_key || session.session_id || session.id;
+            
+            if (!groupedMap.has(groupKey)) {
+                groupedMap.set(groupKey, { ...session });
+            } else {
+                // If this session is more recently active, or is the CURRENT ONE,
+                // update the representative session for this group.
+                const existing = groupedMap.get(groupKey)!;
+                
+                const isThisCurrent = session.session_id === currentSessionId;
+                const isExistingCurrent = existing.session_id === currentSessionId;
+
+                if (isThisCurrent || (!isExistingCurrent && new Date(session.last_seen_at) > new Date(existing.last_seen_at))) {
+                    groupedMap.set(groupKey, { ...session });
+                }
             }
         }
         
-        return uniqueDevices;
+        return Array.from(groupedMap.values());
     } catch (err) {
         console.error('[DeviceService] Failed to fetch devices:', err);
         return [];
@@ -212,16 +221,26 @@ export async function fetchUserDevices(userId: string): Promise<UserDevice[]> {
 
 // ── Revoke Operations ──
 
-export async function revokeDevice(deviceId: string): Promise<boolean> {
+/**
+ * Revoke a device group or specific session.
+ * If deviceGroupKey is provided, it revokes ALL active sessions in that group.
+ */
+export async function revokeDevice(deviceId: string, groupKey?: string | null): Promise<boolean> {
     try {
-        const { error } = await supabase
+        let query = supabase
             .from('user_devices')
             .update({
                 is_active: false,
                 revoked_at: new Date().toISOString(),
-            })
-            .eq('id', deviceId);
+            });
 
+        if (groupKey) {
+            query = query.eq('device_group_key', groupKey);
+        } else {
+            query = query.eq('id', deviceId);
+        }
+
+        const { error } = await query;
         return !error;
     } catch {
         return false;

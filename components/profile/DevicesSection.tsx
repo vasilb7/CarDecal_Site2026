@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import {
     fetchUserDevices, getCurrentSessionId,
-    revokeAllOtherDevices, revokeCurrentDevice,
+    revokeAllOtherDevices, revokeCurrentDevice, revokeDevice,
     UserDevice
 } from '../../lib/device-service';
 import { relativeTimeBg } from '../../lib/device-utils';
@@ -81,7 +81,14 @@ const DeviceCard: React.FC<{
                 </div>
 
                 <div className="flex-1 min-w-0">
-                    <h4 className="text-white font-bold text-sm truncate">{device.device_label}</h4>
+                    <div className="flex items-center gap-2">
+                        <h4 className="text-white font-bold text-sm truncate">{device.device_label}</h4>
+                        {device.browser_name && (
+                            <span className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[9px] text-zinc-400 font-medium">
+                                {device.browser_name}
+                            </span>
+                        )}
+                    </div>
                     <div className="flex items-center gap-3 mt-1">
                         <div className="flex items-center gap-1 text-[10px] text-zinc-500 font-bold">
                             <Clock className="w-3 h-3" />
@@ -206,15 +213,11 @@ const DevicesSection: React.FC<DevicesSectionProps> = ({ targetUserId, isAdminVi
         }
     };
 
-    const handleRevokeSingle = async (deviceId: string) => {
+    const handleRevokeSingle = async (deviceId: string, groupKey?: string | null) => {
         setRevokingId(deviceId);
         try {
-            const { error } = await supabase
-                .from('user_devices')
-                .update({ is_active: false, revoked_at: new Date().toISOString() })
-                .eq('id', deviceId);
-
-            if (error) throw error;
+            const success = await revokeDevice(deviceId, groupKey);
+            if (!success) throw new Error();
             showToast('Сесията е прекратена.', 'success');
             // Realtime will auto-update the list
         } catch {
@@ -323,7 +326,7 @@ const DevicesSection: React.FC<DevicesSectionProps> = ({ targetUserId, isAdminVi
                                                             key={device.id}
                                                             device={device}
                                                             isCurrent={device.session_id === currentSessionId && !isAdminView}
-                                                            onRevoke={() => handleRevokeSingle(device.id)}
+                                                            onRevoke={() => handleRevokeSingle(device.id, device.device_group_key)}
                                                             revoking={revokingId === device.id}
                                                         />
                                                     ))}

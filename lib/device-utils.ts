@@ -95,13 +95,11 @@ export function detectModel(ua: string): string | null {
 // ── Device Label Generation (Bulgarian) ──
 
 export function generateDeviceLabel(browser: string, platform: string, model: string | null): string {
-    const browserPart = browser || 'Браузър';
     const platformPart = platform || 'Неизвестно';
+    let label = platformPart;
 
-    let label = `${browserPart} на ${platformPart}`;
-
-    // Add model if available and different from platform
-    if (model && model !== platform && model !== 'iPhone' && model !== 'iPad') {
+    // Add model if available and different from platform (helpful for mobile)
+    if (model && model !== platform && model !== 'iPhone' && model !== 'iPad' && model !== 'Mac') {
         label += ` \u2022 ${model}`;
     }
 
@@ -128,18 +126,26 @@ export function getDeviceInfo(): DeviceInfo {
         browser_family = 'Gecko';
     }
 
-    // Try to retrieve a persistent device ID for the same browser
-    let persistent_id = localStorage.getItem('supabase_device_id');
-    if (!persistent_id) {
-        persistent_id = Math.random().toString(36).substring(2, 15);
-        localStorage.setItem('supabase_device_id', persistent_id);
+    // Generate a hardware fingerprint (stable across browsers on same device)
+    const fingerprint = [
+        window.screen.width,
+        window.screen.height,
+        navigator.hardwareConcurrency || 0,
+        Intl.DateTimeFormat().resolvedOptions().timeZone
+    ].join('|');
+
+    // Create a physical device ID hash (simple)
+    const physical_device_id = btoa(fingerprint).substring(0, 16);
+
+    // Try to retrieve a persistent session ID for the same browser
+    let session_id = localStorage.getItem('supabase_device_id');
+    if (!session_id) {
+        session_id = Math.random().toString(36).substring(2, 15);
+        localStorage.setItem('supabase_device_id', session_id);
     }
 
-    // Grouping by OS and deviceType. We add persistent_id to distinguish 
-    // different browsers on the same device if we only have weak signals, 
-    // but the prompt allows grouping Chrome+Brave under "Windows desktop".
-    // Let's use OS + Type as a medium-confidence group key.
-    const device_group_key = `${os_name} ${deviceType}`.toLowerCase();
+    // Use physical_device_id for grouping logic
+    const device_group_key = `${os_name}-${deviceType}-${physical_device_id}`.toLowerCase();
     const grouping_confidence = 'medium'; 
 
     return { 
