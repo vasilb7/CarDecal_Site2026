@@ -106,6 +106,17 @@ const ProductQuickViewModal: React.FC = () => {
             setIsVisible(true);
             setActiveIdx(0);
             setQuantity(1);
+            
+            // Preload the main product image for faster LCP
+            const mainImage = product.cardImages?.[0] || product.coverImage || product.avatar;
+            if (mainImage && mainImage.includes('cloudinary.com')) {
+                const link = document.createElement('link');
+                link.rel = 'preload';
+                link.as = 'image';
+                link.href = getOptimizedUrl(mainImage, { width: 800 });
+                document.head.appendChild(link);
+                return () => { document.head.removeChild(link); };
+            }
         } else if (!loading) {
             // If product definitely not found, we show not found UI then eventually close
         }

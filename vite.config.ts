@@ -22,6 +22,8 @@ export default defineConfig(({ mode }) => {
       build: {
         sourcemap: false,
         minify: 'esbuild',
+        cssMinify: true,
+        target: 'es2020',
         rollupOptions: {
           output: {
             manualChunks: {
@@ -33,6 +35,14 @@ export default defineConfig(({ mode }) => {
               'supabase': ['@supabase/supabase-js'],
               // i18n
               'i18n': ['i18next', 'react-i18next'],
+              // Icons (tree-shaken but still big)
+              'icons': ['lucide-react'],
+              // Zoom library
+              'zoom': ['react-zoom-pan-pinch'],
+              // PDF generation (used only in receipt/admin, heavy)
+              'pdf': ['jspdf', 'jspdf-autotable'],
+              // Password strength  
+              'zxcvbn': ['zxcvbn'],
             },
           },
         },
