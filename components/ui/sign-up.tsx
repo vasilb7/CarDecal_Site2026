@@ -140,11 +140,13 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
   const navigate = useNavigate();
   const location = useLocation();
   const [showPassword, setShowPassword] = useState(false);
-  const [captchaToken, setCaptchaToken] = useState<string>();
-  const [password, setPassword] = useState('');
-  const [email, setEmail] = useState('');
   const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [turnstileKey, setTurnstileKey] = useState(0);
+  const [captchaToken, setCaptchaToken] = useState<string>();
+
+  const canSocialSubmit = !!captchaToken && !loading;
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -350,11 +352,16 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
 
                         <div className="flex justify-center mb-4">
                             <motion.button
-                                whileHover={{ scale: 1.1 }}
-                                whileTap={{ scale: 0.9 }}
+                                whileHover={canSocialSubmit ? { scale: 1.1 } : {}}
+                                whileTap={canSocialSubmit ? { scale: 0.9 } : {}}
                                 type="button"
                                 onClick={onGoogleSignUp}
-                                className="w-12 h-12 flex items-center justify-center rounded-full bg-white shadow-lg transition-all"
+                                disabled={!canSocialSubmit}
+                                className={`w-12 h-12 flex items-center justify-center rounded-full shadow-lg transition-all ${
+                                    canSocialSubmit 
+                                        ? "bg-white cursor-pointer" 
+                                        : "bg-zinc-800 grayscale opacity-40 cursor-not-allowed"
+                                }`}
                             >
                                 <GoogleIcon />
                             </motion.button>

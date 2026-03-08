@@ -30,10 +30,11 @@ export interface PasswordStrength {
 
 /**
  * Validate password against Supabase policy requirements.
+ * Relaxed: Allow submission if strength is not weak, even if some specific rules are missing.
  */
 export function validatePassword(password: string): PasswordValidation {
     const checks: PasswordCheck[] = [
-        { id: 'length', label: 'От 10 до 64 символа', passed: password.length >= 10 && password.length <= 64 },
+        { id: 'length', label: 'От 8 до 64 символа', passed: password.length >= 8 && password.length <= 64 },
         { id: 'lowercase', label: 'Малка буква (a-z)', passed: /[a-z]/.test(password) },
         { id: 'uppercase', label: 'Главна буква (A-Z)', passed: /[A-Z]/.test(password) },
         { id: 'digit', label: 'Цифра (0-9)', passed: /\d/.test(password) },
@@ -41,9 +42,19 @@ export function validatePassword(password: string): PasswordValidation {
         { id: 'language', label: 'Само на английски (без кирилица)', passed: /^[\x20-\x7E]*$/.test(password) },
     ];
 
+    const strength = getPasswordStrength(password);
+    const isLanguageOk = checks.find(c => c.id === 'language')?.passed ?? true;
+    
+    // Accept if:
+    // 1. Passes all checks (Ideal case)
+    // OR
+    // 2. Score is >= 2 (Medium, Good, Strong) AND length is at least 6 characters AND no cyrillic
+    const isStrongEnough = strength.score >= 2;
+    const isBasicPolicyMet = password.length >= 6 && isLanguageOk;
+
     return {
         checks,
-        isValid: checks.every(c => c.passed), // Must pass ALL requirements to be valid
+        isValid: checks.every(c => c.passed) || (isStrongEnough && isBasicPolicyMet),
     };
 }
 
@@ -90,7 +101,7 @@ export function translateAuthError(error: any): string {
 
     // By error code
     const codeMap: Record<string, string> = {
-        'weak_password': 'Паролата е твърде слаба. Трябва да съдържа от 10 до 64 символа, главна и малка буква, цифра и специален символ.',
+        'weak_password': 'Паролата е твърде слаба. Моля, използвайте по-дълга или по-сложна парола.',
         'same_password': 'Новата парола не може да е същата като текущата.',
         'email_exists': 'Този имейл адрес вече е регистриран.',
         'user_already_exists': 'Потребител с този имейл вече съществува.',
@@ -116,8 +127,8 @@ export function translateAuthError(error: any): string {
     if (msg.includes('user already registered')) return 'Потребител с този имейл вече съществува.';
     if (msg.includes('invalid login credentials')) return 'Невалиден имейл или парола.';
     if (msg.includes('email rate limit')) return 'Твърде много опити. Моля, изчакайте преди да опитате отново.';
-    if (msg.includes('password') && msg.includes('weak')) return 'Паролата е твърде слаба. От 10 до 64 символа, главна, малка буква, цифра и символ.';
-    if (msg.includes('password') && msg.includes('short')) return 'Паролата е твърде кратка. Трябва да е поне 10 символа.';
+    if (msg.includes('password') && msg.includes('weak')) return 'Паролата е твърде слаба. Използвайте по-сигурна комбинация.';
+    if (msg.includes('password') && msg.includes('short')) return 'Паролата е твърде кратка. Трябва да е поне 6 символа.';
     if (msg.includes('password') && msg.includes('long')) return 'Паролата е твърде дълга. Максимум 64 символа.';
     if (msg.includes('email') && msg.includes('invalid')) return 'Моля, въведете валиден имейл адрес.';
     if (msg.includes('network') || msg.includes('fetch')) return 'Проблем с връзката. Проверете интернет свързаността си.';
