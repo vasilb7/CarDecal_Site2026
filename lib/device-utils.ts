@@ -8,12 +8,15 @@
 // ── Types ──
 
 export interface DeviceInfo {
-    browser: string;
-    platform: string;
+    browser_name: string;
+    browser_family: string;
+    os_name: string;
     deviceType: 'mobile' | 'tablet' | 'desktop';
     model: string | null;
     label: string;
     userAgent: string;
+    device_group_key: string;
+    grouping_confidence: 'high' | 'medium' | 'low';
 }
 
 // ── Browser Detection ──
@@ -106,13 +109,47 @@ export function generateDeviceLabel(browser: string, platform: string, model: st
 
 export function getDeviceInfo(): DeviceInfo {
     const ua = navigator.userAgent;
-    const browser = detectBrowser(ua);
-    const platform = detectPlatform(ua);
+    const browser_name = detectBrowser(ua);
+    const os_name = detectPlatform(ua);
     const deviceType = detectDeviceType(ua);
     const model = detectModel(ua);
-    const label = generateDeviceLabel(browser, platform, model);
+    const label = generateDeviceLabel(browser_name, os_name, model);
 
-    return { browser, platform, deviceType, model, label, userAgent: ua };
+    // Basic heuristic for browser family
+    let browser_family = browser_name;
+    if (['Chrome', 'Edge', 'Brave', 'Vivaldi', 'Opera', 'Yandex'].includes(browser_name)) {
+        browser_family = 'Chromium';
+    } else if (browser_name === 'Safari') {
+        browser_family = 'WebKit';
+    } else if (browser_name === 'Firefox') {
+        browser_family = 'Gecko';
+    }
+
+    // Try to retrieve a persistent device ID for the same browser
+    let persistent_id = localStorage.getItem('supabase_device_id');
+    if (!persistent_id) {
+        persistent_id = Math.random().toString(36).substring(2, 15);
+        localStorage.setItem('supabase_device_id', persistent_id);
+    }
+
+    // Grouping by OS and deviceType. We add persistent_id to distinguish 
+    // different browsers on the same device if we only have weak signals, 
+    // but the prompt allows grouping Chrome+Brave under "Windows desktop".
+    // Let's use OS + Type as a medium-confidence group key.
+    const device_group_key = `${os_name} ${deviceType}`.toLowerCase();
+    const grouping_confidence = 'medium'; 
+
+    return { 
+        browser_name, 
+        browser_family,
+        os_name, 
+        deviceType, 
+        model, 
+        label, 
+        userAgent: ua,
+        device_group_key,
+        grouping_confidence
+    };
 }
 
 // ── IP Masking (for user-facing display) ──

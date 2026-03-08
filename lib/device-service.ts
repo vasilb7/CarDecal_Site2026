@@ -13,9 +13,12 @@ export interface UserDevice {
     id: string;
     user_id: string;
     session_id: string | null;
+    device_group_key: string | null;
+    grouping_confidence: 'high' | 'medium' | 'low' | null;
     device_label: string;
-    browser: string | null;
-    platform: string | null;
+    browser_name: string | null;
+    browser_family: string | null;
+    os_name: string | null;
     device_type: 'mobile' | 'tablet' | 'desktop';
     model: string | null;
     ip_address: string | null;
@@ -63,12 +66,25 @@ export async function registerDeviceSession(userId: string, sessionId?: string |
                         ip_address: ip,
                         ip_masked: maskedIp,
                         device_label: device.label,
-                        browser: device.browser,
-                        platform: device.platform,
+                        browser_name: device.browser_name,
+                        browser_family: device.browser_family,
+                        os_name: device.os_name,
                         device_type: device.deviceType,
                         model: device.model,
+                        device_group_key: device.device_group_key,
+                        grouping_confidence: device.grouping_confidence,
                     })
                     .eq('id', existing.id);
+                
+                // Also update the main profile metadata for admin view
+                await supabase
+                    .from('profiles')
+                    .update({
+                        last_ip_address: ip,
+                        last_device_info: device.label,
+                        last_login_at: new Date().toISOString()
+                    })
+                    .eq('id', userId);
                 return;
             }
         }
@@ -78,15 +94,28 @@ export async function registerDeviceSession(userId: string, sessionId?: string |
             user_id: userId,
             session_id: sessionId,
             device_label: device.label,
-            browser: device.browser,
-            platform: device.platform,
+            browser_name: device.browser_name,
+            browser_family: device.browser_family,
+            os_name: device.os_name,
             device_type: device.deviceType,
             model: device.model,
+            device_group_key: device.device_group_key,
+            grouping_confidence: device.grouping_confidence,
             ip_address: ip,
             ip_masked: maskedIp,
             user_agent_raw: device.userAgent,
             is_active: true,
         });
+
+        // Also update the main profile metadata
+        await supabase
+            .from('profiles')
+            .update({
+                last_ip_address: ip,
+                last_device_info: device.label,
+                last_login_at: new Date().toISOString()
+            })
+            .eq('id', userId);
     } catch (err) {
         console.error('[DeviceService] Failed to register device session:', err);
     }
@@ -225,5 +254,26 @@ export async function revokeCurrentDevice(userId: string): Promise<void> {
             .eq('session_id', currentSessionId);
     } catch (err) {
         console.error('[DeviceService] Failed to revoke current device:', err);
+    }
+}
+
+/**
+ * Revoke ALL sessions for a specific user (admin action).
+ */
+export async function revokeAllUserDevices(userId: string): Promise<boolean> {
+    try {
+        const { error } = await supabase
+            .from('user_devices')
+            .update({
+                is_active: false,
+                revoked_at: new Date().toISOString(),
+            })
+            .eq('user_id', userId)
+            .eq('is_active', true);
+
+        return !error;
+    } catch (err) {
+        console.error('[DeviceService] Failed to revoke all user devices:', err);
+        return false;
     }
 }

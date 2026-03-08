@@ -106,6 +106,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       };
       syncTime();
       if (session?.user) {
+        registerDeviceSession(session.user.id);
         fetchProfile(session.user.id);
       } else {
         setLoading(false);

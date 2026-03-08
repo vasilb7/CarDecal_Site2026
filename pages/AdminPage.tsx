@@ -16,6 +16,7 @@ import {
     FileText, BoxSelect, LayoutGrid, ClipboardCheck, Boxes, FileJson, Clock, Bug,
     Banknote, TrendingUp, Key, ChevronRight, History, Ticket
 } from 'lucide-react';
+import { revokeAllUserDevices } from '../lib/device-service';
 import { useToast } from '../components/Toast/ToastProvider';
 import { uploadToCloudinary } from '../lib/cloudinary-utils';
 import { BugsTab } from '../components/Admin/BugsTab';
@@ -24,6 +25,7 @@ import { SecurityTab } from '../components/Admin/SecurityTab';
 import { PromoCodesTab } from '../components/Admin/PromoCodesTab';
 import SEO from '../components/SEO';
 import { logSecurityEvent } from '../lib/security';
+import DevicesSection from '../components/profile/DevicesSection';
 
 // ─── Custom Confirm Dialog ──────────────────────────────────────────────────
 interface ConfirmDialogProps {
@@ -1047,6 +1049,7 @@ const UsersTab: React.FC = () => {
                 unban_reason: null
             } : u));
             showToast('Временно ограничение приложено', 'success');
+            await revokeAllUserDevices(modModal.user.id);
             await logSecurityEvent('ban_applied', modModal.user.id, { action: 'temp_ban', reason: modPublicReason || 'Нарушение на Общите условия', admin: currentUser?.email });
         } catch (err: any) {
             showToast('Грешка: ' + err.message, 'error');
@@ -1094,6 +1097,7 @@ const UsersTab: React.FC = () => {
                 unban_reason: null
             } : u));
             showToast('Перманентно ограничение приложено', 'success');
+            await revokeAllUserDevices(modModal.user.id);
             await logSecurityEvent('ban_applied', modModal.user.id, { action: modModal.mode === 'convert_to_perm' ? 'convert_to_perm' : 'perm_ban', reason: modPublicReason || 'Нарушение на Общите условия', admin: currentUser?.email });
         } catch (err: any) {
             showToast('Грешка: ' + err.message, 'error');
@@ -2315,6 +2319,14 @@ const UserProfileModal: React.FC<{
                                                 )}
                                             </div>
                                         </div>
+                                    </div>
+
+                                    {/* Active Devices Integration */}
+                                    <div className="mb-12">
+                                        <DevicesSection 
+                                            targetUserId={user.id} 
+                                            isAdminView={true} 
+                                        />
                                     </div>
                                     {/* Regular Orders */}
                                     <div className="space-y-4">

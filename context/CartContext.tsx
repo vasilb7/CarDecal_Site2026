@@ -45,6 +45,8 @@ interface CartContextType {
   isFreeShipping: boolean;
   amountToFreeShipping: number;
   appliedPromo: PromoCode | null;
+  isPromoValid: boolean;
+  promoError: string | null;
   applyPromo: (promo: PromoCode) => void;
   removePromo: () => void;
 }
@@ -121,8 +123,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     discountedTotal -= autoDiscountValue;
   }
 
-  // Apply promo code on top if available
-  if (appliedPromo) {
+  // Apply promo code on top if available and valid
+  const isPromoValid = !!appliedPromo && (!appliedPromo.min_order_amount || subtotal >= appliedPromo.min_order_amount);
+  const promoError = (appliedPromo && appliedPromo.min_order_amount && subtotal < appliedPromo.min_order_amount) 
+    ? `Добавете още ${(appliedPromo.min_order_amount - subtotal).toFixed(2)} € за да използвате този код` 
+    : null;
+
+  if (isPromoValid && appliedPromo) {
     if (appliedPromo.discount_type === 'percentage') {
        const pbDis = discountedTotal * (appliedPromo.discount_value / 100);
        finalDiscountValue += pbDis;
@@ -253,16 +260,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  // Auto-remove promo code if requirements are no longer met
-  useEffect(() => {
-    if (appliedPromo && appliedPromo.min_order_amount && subtotal < appliedPromo.min_order_amount) {
-        removePromo();
-        showToast(`Промо кодът ${appliedPromo.code} беше премахнат, тъй като е необходима минимална поръчка от ${appliedPromo.min_order_amount} €`, 'warning');
-    }
-  }, [subtotal, appliedPromo, removePromo, showToast]);
+  // No longer auto-removing promo code - user wants it to stick around even if invalid
 
   return (
-    <CartContext.Provider value={{ items, activeItems, itemsCount, subtotal, discountPercentage, total, addToCart, increase, decrease, updateQuantity, remove, initiateRemove, cancelRemove, clearCart, isFreeShipping, amountToFreeShipping, appliedPromo, applyPromo, removePromo }}>
+    <CartContext.Provider value={{ items, activeItems, itemsCount, subtotal, discountPercentage, total, addToCart, increase, decrease, updateQuantity, remove, initiateRemove, cancelRemove, clearCart, isFreeShipping, amountToFreeShipping, appliedPromo, isPromoValid, promoError, applyPromo, removePromo }}>
       {children}
     </CartContext.Provider>
   );

@@ -32,8 +32,8 @@ const DeviceIcon: React.FC<{ deviceType: string; platform: string; className?: s
 
 // ── Platform Color Helper ──
 
-function getPlatformColor(platform: string | null): string {
-    switch (platform) {
+function getPlatformColor(os_name: string | null): string {
+    switch (os_name) {
         case 'iPhone':
         case 'iPad':
         case 'macOS': return 'text-blue-400 bg-blue-500/10 border-blue-500/20';
@@ -53,7 +53,7 @@ const DeviceCard: React.FC<{
     onRevoke?: () => void;
     revoking?: boolean;
 }> = ({ device, isCurrent, onRevoke, revoking }) => {
-    const colorCls = getPlatformColor(device.platform);
+    const colorCls = getPlatformColor(device.os_name);
 
     return (
         <motion.div
@@ -82,7 +82,7 @@ const DeviceCard: React.FC<{
                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center border shrink-0 ${colorCls}`}>
                     <DeviceIcon
                         deviceType={device.device_type}
-                        platform={device.platform || ''}
+                        platform={device.os_name || ''}
                     />
                 </div>
 
@@ -148,9 +148,16 @@ const DeviceCard: React.FC<{
 
 // ── Main DevicesSection Component ──
 
-const DevicesSection: React.FC = () => {
-    const { user, signOut } = useAuth();
+interface DevicesSectionProps {
+    targetUserId?: string;
+    isAdminView?: boolean;
+}
+
+const DevicesSection: React.FC<DevicesSectionProps> = ({ targetUserId, isAdminView }) => {
+    const { user: currentUser, signOut } = useAuth();
     const { showToast } = useToast();
+
+    const userId = targetUserId || currentUser?.id;
 
     const [devices, setDevices] = useState<UserDevice[]>([]);
     const [loading, setLoading] = useState(true);
@@ -160,11 +167,11 @@ const DevicesSection: React.FC = () => {
     const [signingOutCurrent, setSigningOutCurrent] = useState(false);
 
     const loadDevices = useCallback(async () => {
-        if (!user) return;
+        if (!userId) return;
         setLoading(true);
         try {
             const [fetchedDevices, sessionId] = await Promise.all([
-                fetchUserDevices(user.id),
+                fetchUserDevices(userId),
                 getCurrentSessionId()
             ]);
             setDevices(fetchedDevices);
@@ -174,7 +181,7 @@ const DevicesSection: React.FC = () => {
         } finally {
             setLoading(false);
         }
-    }, [user]);
+    }, [userId, showToast]);
 
     useEffect(() => {
         loadDevices();
@@ -185,10 +192,10 @@ const DevicesSection: React.FC = () => {
     const otherDevices = devices.filter(d => d.session_id !== currentSessionId);
 
     const handleRevokeAll = async () => {
-        if (!user) return;
+        if (!userId) return;
         setRevokingAll(true);
         try {
-            const success = await revokeAllOtherDevices(user.id);
+            const success = await revokeAllOtherDevices(userId);
             if (success) {
                 showToast('Излезе успешно от всички други устройства.', 'success');
                 await loadDevices();
@@ -221,10 +228,10 @@ const DevicesSection: React.FC = () => {
     };
 
     const handleSignOutCurrent = async () => {
-        if (!user) return;
+        if (!currentUser) return;
         setSigningOutCurrent(true);
         try {
-            await revokeCurrentDevice(user.id);
+            await revokeCurrentDevice(currentUser.id);
             await signOut();
         } catch {
             showToast('Грешка при излизане.', 'error');
@@ -232,7 +239,9 @@ const DevicesSection: React.FC = () => {
         }
     };
 
-    const cardWrapCls = 'bg-[#0a0a0a] border border-white/10 rounded-3xl overflow-hidden shadow-2xl';
+    const cardWrapCls = isAdminView 
+        ? 'bg-[#0f0f0f] border border-white/5 rounded-2xl overflow-hidden' 
+        : 'bg-[#0a0a0a] border border-white/10 rounded-3xl overflow-hidden shadow-2xl';
 
     return (
         <div className={`${cardWrapCls} p-6 md:p-8`}>
@@ -245,7 +254,9 @@ const DevicesSection: React.FC = () => {
                     <div>
                         <h3 className="text-base font-bold text-white">Устройства</h3>
                         <p className="text-xs text-zinc-600 mt-0.5">
-                            Тук можеш да видиш къде е активен профилът ти и да управляваш сесиите си.
+                            {isAdminView 
+                                ? 'Активни сесии и устройства на потребителя.'
+                                : 'Тук можеш да видиш къде е активен профилът ти и да управляваш сесиите си.'}
                         </p>
                     </div>
                 </div>
@@ -269,47 +280,34 @@ const DevicesSection: React.FC = () => {
                 </div>
             ) : (
                 <div className="space-y-6 mt-6">
-                    {/* Current Device */}
-                    {currentDevice ? (
+                    {/* Current Device - only if it's the current user themselves */}
+                    {currentDevice && !isAdminView && (
                         <div>
                             <DeviceCard
                                 device={currentDevice}
                                 isCurrent={true}
                             />
                         </div>
-                    ) : (
-                        /* Fallback if current device not found in DB yet */
-                        <div className="bg-[#0f0f0f] border border-emerald-500/20 rounded-2xl p-5">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
-                                    <Monitor className="w-5 h-5" />
-                                </div>
-                                <div>
-                                    <p className="text-white font-bold text-sm">Текущо устройство</p>
-                                    <p className="text-[10px] text-emerald-500 uppercase font-bold tracking-widest mt-0.5">
-                                        Активно сега
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
                     )}
 
-                    {/* Other Devices */}
-                    {otherDevices.length > 0 && (
+                    {/* Devices list */}
+                    {(isAdminView ? devices : otherDevices).length > 0 && (
                         <div>
-                            <div className="flex items-center justify-between mb-4">
-                                <h4 className="text-[10px] text-zinc-500 uppercase font-black tracking-widest">
-                                    Други активни устройства ({otherDevices.length})
-                                </h4>
-                            </div>
+                            {!isAdminView && (
+                                <div className="flex items-center justify-between mb-4">
+                                    <h4 className="text-[10px] text-zinc-500 uppercase font-black tracking-widest">
+                                        Други активни устройства ({otherDevices.length})
+                                    </h4>
+                                </div>
+                            )}
                             <div className="space-y-3">
                                 <AnimatePresence mode="popLayout">
-                                    {otherDevices.map(device => (
+                                    {(isAdminView ? devices : otherDevices).map(device => (
                                         <DeviceCard
                                             key={device.id}
                                             device={device}
-                                            isCurrent={false}
-                                            onRevoke={() => handleRevokeSingle(device.id)}
+                                            isCurrent={device.session_id === currentSessionId && !isAdminView}
+                                            onRevoke={isAdminView || device.session_id !== currentSessionId ? () => handleRevokeSingle(device.id) : undefined}
                                             revoking={revokingId === device.id}
                                         />
                                     ))}
@@ -319,50 +317,49 @@ const DevicesSection: React.FC = () => {
                     )}
 
                     {/* Empty state */}
-                    {otherDevices.length === 0 && (
+                    {devices.length === 0 && (
                         <div className="flex flex-col items-center justify-center py-8 text-center">
                             <div className="w-14 h-14 rounded-2xl bg-white/[0.03] border border-white/5 flex items-center justify-center mb-4">
                                 <CheckCircle2 className="w-7 h-7 text-emerald-500/60" />
                             </div>
                             <p className="text-zinc-500 text-xs uppercase font-bold tracking-widest">
-                                Няма други активни устройства.
-                            </p>
-                            <p className="text-zinc-700 text-[10px] mt-1 max-w-xs">
-                                Профилът ти е активен само на това устройство.
+                                Няма активни устройства.
                             </p>
                         </div>
                     )}
 
-                    {/* Actions */}
-                    <div className="pt-4 border-t border-white/5 space-y-3">
-                        {otherDevices.length > 0 && (
+                    {/* Actions - Hide for Admin unless we want full control */}
+                    {!isAdminView && (
+                        <div className="pt-4 border-t border-white/5 space-y-3">
+                            {otherDevices.length > 0 && (
+                                <button
+                                    onClick={handleRevokeAll}
+                                    disabled={revokingAll}
+                                    className="w-full flex items-center justify-center gap-2 py-3.5 bg-red-600/10 border border-red-600/20 text-red-400 hover:bg-red-600 hover:text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all disabled:opacity-50"
+                                >
+                                    {revokingAll ? (
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                    ) : (
+                                        <LogOut className="w-4 h-4" />
+                                    )}
+                                    Излез от всички други устройства
+                                </button>
+                            )}
+
                             <button
-                                onClick={handleRevokeAll}
-                                disabled={revokingAll}
-                                className="w-full flex items-center justify-center gap-2 py-3.5 bg-red-600/10 border border-red-600/20 text-red-400 hover:bg-red-600 hover:text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all disabled:opacity-50"
+                                onClick={handleSignOutCurrent}
+                                disabled={signingOutCurrent}
+                                className="w-full flex items-center justify-center gap-2 py-3.5 bg-white/[0.03] border border-white/5 text-zinc-400 hover:text-white hover:bg-white/10 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all disabled:opacity-50"
                             >
-                                {revokingAll ? (
+                                {signingOutCurrent ? (
                                     <Loader2 className="w-4 h-4 animate-spin" />
                                 ) : (
                                     <LogOut className="w-4 h-4" />
                                 )}
-                                Излез от всички други устройства
+                                Излез от това устройство
                             </button>
-                        )}
-
-                        <button
-                            onClick={handleSignOutCurrent}
-                            disabled={signingOutCurrent}
-                            className="w-full flex items-center justify-center gap-2 py-3.5 bg-white/[0.03] border border-white/5 text-zinc-400 hover:text-white hover:bg-white/10 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all disabled:opacity-50"
-                        >
-                            {signingOutCurrent ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
-                                <LogOut className="w-4 h-4" />
-                            )}
-                            Излез от това устройство
-                        </button>
-                    </div>
+                        </div>
+                    )}
                 </div>
             )}
         </div>

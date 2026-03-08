@@ -64,7 +64,7 @@ const ShippingMethodCard = ({
 );
 
 const CheckoutPage: React.FC = () => {
-    const { activeItems, subtotal, total, discountPercentage, clearCart, isFreeShipping, amountToFreeShipping, appliedPromo, applyPromo, removePromo } = useCart();
+    const { activeItems, subtotal, total, discountPercentage, clearCart, isFreeShipping, amountToFreeShipping, appliedPromo, isPromoValid, promoError, applyPromo, removePromo } = useCart();
     const { user, profile, loading: authLoading } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
@@ -583,16 +583,22 @@ const CheckoutPage: React.FC = () => {
                                 {/* Promo Code Input */}
                                 <div className="mb-4 pb-4 border-b border-white/5">
                                     {appliedPromo ? (
-                                        <div className="flex items-center justify-between bg-white/[0.03] border border-white/10 rounded-xl p-3">
+                                        <div className={`flex items-center justify-between border rounded-xl p-3 transition-colors ${isPromoValid ? 'bg-green-500/5 border-green-500/20' : 'bg-red-500/5 border-red-500/20'}`}>
                                             <div className="flex items-center gap-2">
-                                                <div className="w-6 h-6 rounded-md bg-green-500/10 flex items-center justify-center">
-                                                    <CheckCircle2 size={12} className="text-green-500" />
+                                                <div className={`w-6 h-6 rounded-md flex items-center justify-center ${isPromoValid ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
+                                                    {isPromoValid ? <CheckCircle2 size={12} className="text-green-500" /> : <AlertCircle size={12} className="text-red-500" />}
                                                 </div>
                                                 <div>
-                                                    <span className="text-white text-xs">{appliedPromo.code}</span>
-                                                    <p className="text-[9px] text-green-500 font-bold capitalize mt-0.5">
-                                                        {appliedPromo.discount_type === 'percentage' ? `-${appliedPromo.discount_value}% отстъпка` : `-${appliedPromo.discount_value} € отстъпка`}
-                                                    </p>
+                                                    <span className={`text-xs font-bold ${isPromoValid ? 'text-white' : 'text-red-400'}`}>{appliedPromo.code}</span>
+                                                    {isPromoValid ? (
+                                                        <p className="text-[9px] text-green-500 font-bold capitalize mt-0.5">
+                                                            {appliedPromo.discount_type === 'percentage' ? `-${appliedPromo.discount_value}% отстъпка` : `-${appliedPromo.discount_value} € отстъпка`}
+                                                        </p>
+                                                    ) : (
+                                                        <p className="text-[9px] text-red-500/70 font-bold lowercase mt-0.5">
+                                                            {promoError}
+                                                        </p>
+                                                    )}
                                                 </div>
                                             </div>
                                             <button onClick={removePromo} className="p-2 text-zinc-500 hover:text-red-500 transition-colors">
@@ -632,7 +638,7 @@ const CheckoutPage: React.FC = () => {
                                         <span>-{(subtotal * (discountPercentage / 100)).toFixed(2)} €</span>
                                     </div>
                                 )}
-                                {appliedPromo && (
+                                {appliedPromo && isPromoValid && (
                                     <div className="flex justify-between text-green-500 text-[11px]">
                                         <span>Отстъпка (Код {appliedPromo.code})</span>
                                         <span>
