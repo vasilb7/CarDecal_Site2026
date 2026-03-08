@@ -1,26 +1,24 @@
 import React, { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Mail, Lock, Eye, EyeOff, X, ChevronRight, Github } from "lucide-react";
-import { useNavigate, Link, useLocation } from "react-router-dom";
+import { motion } from "framer-motion";
+import { Lock, X } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Turnstile } from "@marsidev/react-turnstile";
 
 interface SignInPageProps {
-  onSignIn: (e: React.FormEvent<HTMLFormElement>, captchaToken?: string) => Promise<void>;
+  onSignIn?: (e: React.FormEvent<HTMLFormElement>, captchaToken?: string) => Promise<void>;
   onGoogleSignIn: () => Promise<void>;
-  onResetPassword: () => void;
+  onResetPassword?: () => void;
   isUpdatingPassword?: boolean;
   onUpdatePassword?: (password: string) => Promise<void>;
   loading: boolean;
   stealthMessage?: string | null;
 }
 
-// ──── Sub-components ────
-
 const GoogleIcon = () => (
   <svg
-    width="20"
-    height="20"
+    width="24"
+    height="24"
     viewBox="0 0 24 24"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
@@ -44,130 +42,27 @@ const GoogleIcon = () => (
   </svg>
 );
 
-const FloatingInput = ({
-  label,
-  name,
-  type = "text",
-  required = false,
-  icon: Icon,
-  onTogglePassword,
-  onChange,
-  ...props
-}: any) => {
-  const [isFocused, setIsFocused] = useState(false);
-  const [value, setValue] = useState("");
-
-  return (
-    <div className="relative group">
-      <motion.label
-        initial={false}
-        animate={{
-          y: isFocused || value ? -38 : 0,
-          x: isFocused || value ? -4 : 0,
-          scale: isFocused || value ? 0.82 : 1,
-          color: isFocused
-            ? "#ef4444"
-            : value
-              ? "rgba(255,255,255,0.6)"
-              : "rgba(255,255,255,0.4)",
-        }}
-        className="absolute left-6 top-3.5 pointer-events-none transition-all duration-300 z-10 px-1 text-sm"
-      >
-        {label}
-      </motion.label>
-      <div
-        className={`relative transition-all duration-300 ${isFocused ? "scale-[1.01]" : ""}`}
-      >
-        <input
-          name={name}
-          type={type}
-          value={value}
-          onChange={(e) => {
-            let finalVal = e.target.value;
-            if (type === 'password' || name === 'password') {
-              // Strictly ASCII printable only
-              finalVal = finalVal.replace(/[^\x20-\x7E]/g, '');
-            }
-            setValue(finalVal);
-            e.target.value = finalVal;
-            if (onChange) {
-                onChange(e);
-            }
-          }}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
-          className={`w-full bg-white/[0.03] border ${isFocused ? "border-red-600 shadow-[0_0_15px_rgba(239,68,68,0.15)]" : "border-white/10"} rounded-xl pl-6 ${Icon ? 'pr-14' : 'pr-6'} py-4 shadow-sm outline-none text-white placeholder:text-transparent backdrop-blur-md transition-all`}
-          required={required}
-          placeholder=" "
-          maxLength={type === 'password' ? 64 : undefined}
-        />
-        {Icon && (
-          <button
-            type="button"
-            onClick={onTogglePassword}
-            className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center text-white/40 hover:text-white transition-colors z-20"
-          >
-            <Icon size={20} />
-          </button>
-        )}
-      </div>
-    </div>
-  );
-};
-
 export const SignInPage: React.FC<SignInPageProps> = ({
-  onSignIn,
   onGoogleSignIn,
-  onResetPassword,
-  isUpdatingPassword,
-  onUpdatePassword,
   loading,
   stealthMessage,
 }) => {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const navigate = useNavigate();
-  const location = useLocation();
-  const [showPassword, setShowPassword] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string>();
   const [turnstileKey, setTurnstileKey] = useState(0);
 
   const canSocialSubmit = !!captchaToken && !loading;
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const handleGoogleClick = async () => {
+    if (!canSocialSubmit) return;
     try {
-      await onSignIn(e, captchaToken);
+      await onGoogleSignIn();
     } finally {
       setCaptchaToken(undefined);
       setTurnstileKey((prev) => prev + 1);
     }
   };
-
-  // Detect mobile keyboard close effect properly
-  React.useEffect(() => {
-    if (typeof window !== "undefined" && window.visualViewport) {
-      let isKeyboardOpen = false;
-      const handleViewportResize = () => {
-        const currentHeight =
-          window.visualViewport?.height || window.innerHeight;
-        const screenHeight = window.innerHeight;
-        if (currentHeight < screenHeight * 0.75) {
-          isKeyboardOpen = true;
-        } else if (currentHeight > screenHeight * 0.9 && isKeyboardOpen) {
-          isKeyboardOpen = false;
-          if (document.activeElement instanceof HTMLElement) {
-            document.activeElement.blur();
-          }
-        }
-      };
-      window.visualViewport.addEventListener("resize", handleViewportResize);
-      return () =>
-        window.visualViewport?.removeEventListener(
-          "resize",
-          handleViewportResize,
-        );
-    }
-  }, []);
 
   return (
     <div className="flex w-full min-h-screen bg-[#111] overflow-hidden font-sans selection:bg-red-500/30 text-white">
@@ -200,22 +95,22 @@ export const SignInPage: React.FC<SignInPageProps> = ({
         </motion.div>
 
         {/* Form Container */}
-        <div className="max-w-md w-full mx-auto flex flex-col justify-center pt-24 sm:pt-0">
-          <div className="mb-0 text-center lg:text-left">
+        <div className="max-w-md w-full mx-auto flex flex-col justify-center pt-24 sm:pt-0 pb-12">
+          <div className="mb-10 text-center">
             <motion.h1
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="text-[24px] sm:text-[36px] font-black text-white leading-tight mb-1 uppercase tracking-tighter"
+              className="text-[28px] sm:text-[42px] font-black text-white leading-tight mb-2 uppercase tracking-tighter"
             >
-              {t("auth.login_title", "Добре Дошли")}
+              ВХОД / РЕГИСТРАЦИЯ
             </motion.h1>
             {stealthMessage ? (
               <motion.p
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className="text-red-500 text-[10px] sm:text-xs font-black uppercase tracking-widest flex items-center justify-center lg:justify-start gap-2"
+                className="text-red-500 text-[10px] sm:text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2"
               >
                 <Lock size={12} className="text-red-600" />
                 {stealthMessage}
@@ -225,71 +120,16 @@ export const SignInPage: React.FC<SignInPageProps> = ({
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className="text-white/40 text-[10px] sm:text-xs font-bold uppercase tracking-widest"
+                className="text-white/40 text-[11px] sm:text-sm font-bold tracking-widest leading-relaxed"
               >
-                {t("auth.login_subtitle", "Достъп до вашия профил и поръчки")}
+                За по-голяма сигурност и удобство, платформата използва само вход чрез Google.
               </motion.p>
             )}
           </div>
 
-          <form className="space-y-6 pt-8" onSubmit={handleSubmit}>
-            {/* Email */}
-            <FloatingInput
-              label={t("auth.email", "Имейл адрес")}
-              name="email"
-              type="email"
-              required
-            />
-
-            {/* Password */}
-            <div className="relative">
-              <FloatingInput
-                label={t("auth.password", "Парола")}
-                name="password"
-                type={showPassword ? "text" : "password"}
-                icon={showPassword ? EyeOff : Eye}
-                onTogglePassword={() => setShowPassword(!showPassword)}
-                required
-              />
-              <div className="flex justify-end mt-0.5 px-4">
-                <Link
-                  to="/recovery"
-                  className="text-[10px] font-bold text-white/40 hover:text-red-500 uppercase tracking-widest transition-colors"
-                >
-                  {t("auth.forgot_password", "Забравена парола?")}
-                </Link>
-              </div>
-            </div>
-
-            {/* Remember Me */}
-            <div className="flex items-center gap-3 px-2">
-              <label className="relative flex items-center cursor-pointer group">
-                <input
-                  type="checkbox"
-                  name="rememberMe"
-                  id="rememberMe"
-                  className="peer sr-only"
-                />
-                <div className="w-5 h-5 border-2 border-white/20 bg-white/5 transition-all duration-300 peer-checked:bg-white peer-checked:border-white group-hover:border-white/40 flex items-center justify-center peer-checked:[&_svg]:opacity-100">
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    className="w-3.5 h-3.5 stroke-black stroke-[4] opacity-0 transition-opacity duration-200"
-                  >
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                </div>
-              </label>
-              <label
-                htmlFor="rememberMe"
-                className="text-[11px] font-bold text-white/50 uppercase tracking-widest cursor-pointer select-none hover:text-white transition-colors"
-              >
-                {t("auth.remember_me", "Запомни ме за 30 дни")}
-              </label>
-            </div>
-
+          <div className="space-y-8 flex flex-col items-center">
             {/* Captcha */}
-            <div className="flex justify-center py-2 scale-90 sm:scale-100">
+            <div className="flex justify-center scale-90 sm:scale-100 min-h-[65px]">
               <Turnstile 
                 key={turnstileKey}
                 siteKey="0x4AAAAAACn8KBpSOynPkBCf" 
@@ -298,70 +138,26 @@ export const SignInPage: React.FC<SignInPageProps> = ({
               />
             </div>
 
-            {/* Submit Button */}
+            {/* Google Button */}
             <motion.button
-              whileHover={canSocialSubmit ? { scale: 1.01 } : {}}
+              whileHover={canSocialSubmit ? { scale: 1.02, y: -2 } : {}}
               whileTap={canSocialSubmit ? { scale: 0.98 } : {}}
-              type="submit"
+              onClick={handleGoogleClick}
               disabled={!canSocialSubmit}
-              className={`w-full font-black py-4 rounded-full mt-1 text-base uppercase tracking-[0.1em] shadow-xl transition-all ${
+              className={`w-full flex items-center justify-center gap-4 py-5 rounded-2xl text-base sm:text-lg font-black uppercase tracking-[0.1em] shadow-2xl transition-all duration-300 ${
                 canSocialSubmit 
-                  ? "bg-red-600 text-white shadow-red-600/20 hover:bg-red-500 active:scale-95 cursor-pointer" 
-                  : "bg-zinc-800 text-zinc-500 shadow-none cursor-not-allowed"
+                  ? "bg-white text-black hover:bg-zinc-100 hover:shadow-[0_0_30px_rgba(255,255,255,0.3)] cursor-pointer" 
+                  : "bg-zinc-800 text-zinc-500 shadow-none cursor-not-allowed grayscale-[50%]"
               }`}
             >
-              {t("auth.sign_in", "Вход")}
+              <GoogleIcon />
+              <span>Продължи с Google</span>
             </motion.button>
-
-            {/* Social Buttons Section - Ultra Compact */}
-            <div className="flex flex-col items-center pt-2">
-              <span className="text-[9px] text-white/20 uppercase tracking-[0.2em] mb-2">
-                {t("auth.or_sign_in_with", "Или използвайте за вход")}
-              </span>
-
-              <div className="flex justify-center mb-4">
-                <motion.button
-                  whileHover={canSocialSubmit ? { scale: 1.1 } : {}}
-                  whileTap={canSocialSubmit ? { scale: 0.9 } : {}}
-                  type="button"
-                  onClick={onGoogleSignIn}
-                  disabled={!canSocialSubmit}
-                  className={`w-12 h-12 flex items-center justify-center rounded-full shadow-lg transition-all ${
-                    canSocialSubmit 
-                      ? "bg-white cursor-pointer" 
-                      : "bg-zinc-800 grayscale opacity-40 cursor-not-allowed"
-                  }`}
-                >
-                  <GoogleIcon />
-                </motion.button>
-              </div>
-
-              {/* Registration Link */}
-              <div className="flex flex-col items-center gap-0.5 mt-2">
-                <span className="text-[10px] text-white/40 uppercase tracking-widest">
-                  {t("auth.dont_have_account", "Нямате акаунт?")}
-                </span>
-                <Link
-                  to="/register"
-                  state={location.state}
-                  className="text-[11px] text-white font-black uppercase tracking-widest border-b border-red-600/50 hover:border-red-600 hover:text-red-500 transition-all pb-0.5"
-                >
-                  {t("auth.register_link", "Създай регистрация")}
-                </Link>
-              </div>
-
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  window.dispatchEvent(new Event("open-bug-report"));
-                }}
-                className="text-[9px] text-white/30 hover:text-white uppercase tracking-widest mt-4 transition-colors flex items-center gap-1"
-              >
-                Проблем с влизането?
-              </button>
-            </div>
-          </form>
+            
+            <p className="text-center text-[10px] text-zinc-500 font-medium max-w-[280px]">
+              Продължавайки, вие се съгласявате с нашите Общи условия и Политика за поверителност. Не съхраняваме ваши пароли или чувствителни данни за достъп.
+            </p>
+          </div>
         </div>
       </div>
 

@@ -2,116 +2,17 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SignUpPage } from '../components/ui/sign-up';
 import { supabase } from '../lib/supabase';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { hasProfanity } from '../lib/profanity';
 import { useToast } from '../hooks/useToast';
-import { validatePassword, translateAuthError } from '../lib/passwordUtils';
-import { isValidPhone as isValidBulgarianPhone, isValidFullName, formatToE164 } from '../lib/utils';
 import SEO from '../components/SEO';
 
-
 const RegisterPage: React.FC = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const from = (location.state as any)?.from || '/';
-  
   const [loading, setLoading] = useState(false);
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { showToast } = useToast();
-
-  const handleSignUp = async (event: React.FormEvent<HTMLFormElement>, captchaToken?: string) => {
-    event.preventDefault();
-
-    if (!captchaToken) {
-        showToast('Моля, изчакайте проверката за сигурност.', 'warning');
-        return;
-    }
-
-    setLoading(true);
-
-    const formData = new FormData(event.currentTarget);
-    const email = formData.get('email') as string;
-    const password = formData.get('password') as string;
-    const fullName = formData.get('name') as string;
-    const phone = formData.get('phone') as string;
-
-    if (!isValidFullName(fullName)) {
-        showToast('Въведете име и фамилия (3-100 символа).', "warning");
-        setLoading(false);
-        return;
-    }
-
-    if (!isValidBulgarianPhone(phone)) {
-        showToast("Невалиден телефон! (8-15 цифри)", "warning");
-        setLoading(false);
-        return;
-    }
-
-    const normalizedPhone = formatToE164(phone);
-
-    try {
-      // Check if phone already exists in profiles table
-      const { data: existingPhone, error: phoneCheckError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('phone', normalizedPhone)
-        .maybeSingle();
-
-      if (phoneCheckError && phoneCheckError.code !== 'PGRST116') {
-        console.error('Phone check error:', phoneCheckError);
-      }
-
-      if (existingPhone) {
-        showToast('този телефонен номер вече е свързан с друг акаунт', 'error');
-        setLoading(false);
-        return;
-      }
-
-      const pwdValidation = validatePassword(password);
-      if (!pwdValidation.isValid) {
-          showToast('Моля, изпълнете изискванията за парола по-долу.', 'error');
-          setLoading(false);
-          return;
-      }
-
-      if (hasProfanity(fullName)) {
-        showToast(t('toast.register_profanity'), "error");
-        setLoading(false);
-        return;
-      }
-
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: fullName.trim(),
-            phone: normalizedPhone,
-            role: 'user', 
-          },
-          captchaToken
-        },
-      });
-
-      if (error) {
-        if (error.message.includes("captcha verification process failed")) {
-          showToast("Неуспешна проверка за сигурност. Моля, опитайте отново.", "error");
-        } else {
-          showToast(translateAuthError(error), 'error');
-        }
-      } else {
-        showToast(t('toast.register_success'), 'success');
-        navigate(from, { replace: true });
-      }
-    } catch (err: any) {
-      showToast(translateAuthError(err), 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleGoogleSignUp = async () => {
     try {
+      setLoading(true);
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -120,7 +21,8 @@ const RegisterPage: React.FC = () => {
       });
       if (error) throw error;
     } catch (err: any) {
-      showToast(err.message || t('toast.register_error_generic'), "error");
+      showToast(err.message || t('toast.register_error_generic', 'Възникна грешка при регистрация. Моля, опитайте отново.'), "error");
+      setLoading(false);
     }
   };
 
@@ -128,7 +30,6 @@ const RegisterPage: React.FC = () => {
     <>
       <SEO title="Регистрация" />
       <SignUpPage
-        onSignUp={handleSignUp}
         onGoogleSignUp={handleGoogleSignUp}
         loading={loading}
       />
