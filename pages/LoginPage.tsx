@@ -41,6 +41,12 @@ const LoginPage: React.FC = () => {
 
   const handleSignIn = async (event: React.FormEvent<HTMLFormElement>, captchaToken?: string) => {
     event.preventDefault();
+
+    if (!captchaToken) {
+        showToast('Моля, изчакайте проверката за сигурност.', 'warning');
+        return;
+    }
+
     setLoading(true);
     
     const formData = new FormData(event.currentTarget);
@@ -68,6 +74,8 @@ const LoginPage: React.FC = () => {
             showToast('Твърде много неуспешни опити. Моля, опитайте по-късно.', 'error');
         } else if (error.message.includes("Invalid login credentials")) {
             showToast(t('toast.login_error_credentials'), "error");
+        } else if (error.message.includes("captcha verification process failed")) {
+            showToast("Неуспешна проверка за сигурност. Моля, опитайте отново.", "error");
         } else {
             showToast(error.message, "error");
         }

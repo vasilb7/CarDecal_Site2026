@@ -144,6 +144,17 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
   const [password, setPassword] = useState('');
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
+  const [turnstileKey, setTurnstileKey] = useState(0);
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    try {
+      await onSignUp?.(e, captchaToken);
+    } finally {
+      setCaptchaToken(undefined);
+      setTurnstileKey((prev) => prev + 1);
+    }
+  };
 
   const passwordValidation = validatePassword(password);
   const canSubmit = passwordValidation.isValid && !loading;
@@ -217,7 +228,7 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
                     </motion.p>
                 </div>
 
-                <form className="space-y-6 pt-8" onSubmit={(e) => onSignUp?.(e, captchaToken)}>
+                <form className="space-y-6 pt-8" onSubmit={handleSubmit}>
                     <div className="space-y-1">
                         <FloatingInput 
                             label={t('auth.name_label', 'Въведете име и Фамилия')}
@@ -304,6 +315,7 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
                     {/* Captcha */}
                     <div className="flex justify-center py-2 scale-90 sm:scale-100">
                         <Turnstile 
+                            key={turnstileKey}
                             siteKey="0x4AAAAAACn8KBpSOynPkBCf" 
                             onSuccess={(token) => setCaptchaToken(token)}
                             options={{ theme: 'dark' }}

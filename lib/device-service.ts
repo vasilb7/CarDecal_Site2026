@@ -8,7 +8,6 @@
 import { supabase } from './supabase';
 import { getClientIp } from './security';
 import { getDeviceInfo, maskIpForUser } from './device-utils';
-import fpPromise from '@fingerprintjs/fingerprintjs';
 
 export interface UserDevice {
     id: string;
@@ -153,7 +152,22 @@ export async function fetchUserDevices(userId: string): Promise<UserDevice[]> {
             .order('last_seen_at', { ascending: false });
 
         if (error) throw error;
-        return (data || []) as UserDevice[];
+        
+        // Deduplicate devices to avoid showing hundreds of orphaned sessions
+        // that were generated due to previous tracking glitches.
+        const devices = (data || []) as UserDevice[];
+        const seen = new Set<string>();
+        const uniqueDevices: UserDevice[] = [];
+        
+        for (const device of devices) {
+            const key = `${device.device_label}|${device.ip_address}`;
+            if (!seen.has(key)) {
+                seen.add(key);
+                uniqueDevices.push(device);
+            }
+        }
+        
+        return uniqueDevices;
     } catch (err) {
         console.error('[DeviceService] Failed to fetch devices:', err);
         return [];
@@ -161,16 +175,18 @@ export async function fetchUserDevices(userId: string): Promise<UserDevice[]> {
 }
 
 /**
- * Get the current session's fingerprint.
+ * Get the current session's persistent ID.
  */
 export async function getCurrentSessionId(): Promise<string | null> {
     try {
-        const fp = await fpPromise.load();
-        const result = await fp.get();
-        return result.visitorId;
+        let deviceId = localStorage.getItem('supabase_device_id');
+        if (!deviceId) {
+            deviceId = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 15);
+            localStorage.setItem('supabase_device_id', deviceId);
+        }
+        return deviceId;
     } catch {
-        // Fallback to local storage persistent_id if FingerprintJS is blocked
-        return localStorage.getItem('supabase_device_id') || null;
+        return null; // Fallback if localStorage is inaccessible
     }
 }
 

@@ -116,6 +116,17 @@ export const SignInPage: React.FC<SignInPageProps> = ({
   const location = useLocation();
   const [showPassword, setShowPassword] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string>();
+  const [turnstileKey, setTurnstileKey] = useState(0);
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    try {
+      await onSignIn(e, captchaToken);
+    } finally {
+      setCaptchaToken(undefined);
+      setTurnstileKey((prev) => prev + 1);
+    }
+  };
 
   // Detect mobile keyboard close effect properly
   React.useEffect(() => {
@@ -206,7 +217,7 @@ export const SignInPage: React.FC<SignInPageProps> = ({
             )}
           </div>
 
-          <form className="space-y-6 pt-8" onSubmit={(e) => onSignIn(e, captchaToken)}>
+          <form className="space-y-6 pt-8" onSubmit={handleSubmit}>
             {/* Email */}
             <FloatingInput
               label={t("auth.email", "Имейл адрес")}
@@ -265,6 +276,7 @@ export const SignInPage: React.FC<SignInPageProps> = ({
             {/* Captcha */}
             <div className="flex justify-center py-2 scale-90 sm:scale-100">
               <Turnstile 
+                key={turnstileKey}
                 siteKey="0x4AAAAAACn8KBpSOynPkBCf" 
                 onSuccess={(token) => setCaptchaToken(token)}
                 options={{ theme: 'dark' }}

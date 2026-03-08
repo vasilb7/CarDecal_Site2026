@@ -22,6 +22,9 @@ export interface DeviceInfo {
 // ── Browser Detection ──
 
 export function detectBrowser(ua: string): string {
+    // Brave detection via navigator object (synchronous)
+    if (typeof navigator !== 'undefined' && (navigator as any)?.brave) return 'Brave';
+    
     // Order matters: check more specific strings first
     if (ua.includes('SamsungBrowser')) return 'Samsung Internet';
     if (ua.includes('YaBrowser')) return 'Yandex';

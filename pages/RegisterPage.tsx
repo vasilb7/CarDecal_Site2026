@@ -21,6 +21,12 @@ const RegisterPage: React.FC = () => {
 
   const handleSignUp = async (event: React.FormEvent<HTMLFormElement>, captchaToken?: string) => {
     event.preventDefault();
+
+    if (!captchaToken) {
+        showToast('Моля, изчакайте проверката за сигурност.', 'warning');
+        return;
+    }
+
     setLoading(true);
 
     const formData = new FormData(event.currentTarget);
@@ -88,7 +94,11 @@ const RegisterPage: React.FC = () => {
       });
 
       if (error) {
-        showToast(translateAuthError(error), 'error');
+        if (error.message.includes("captcha verification process failed")) {
+          showToast("Неуспешна проверка за сигурност. Моля, опитайте отново.", "error");
+        } else {
+          showToast(translateAuthError(error), 'error');
+        }
       } else {
         showToast(t('toast.register_success'), 'success');
         navigate(from, { replace: true });
