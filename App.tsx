@@ -26,31 +26,52 @@ import UnbanNotification from "./components/UnbanNotification";
 import { useToast } from "./hooks/useToast";
 import { useTranslation } from "react-i18next";
 
+// Custom lazy loader to handle "dynamically imported module" errors (e.g., after a new deploy clears old chunks)
+const lazyWithRetry = (componentImport: () => Promise<any>) =>
+  React.lazy(async () => {
+    const pageHasAlreadyBeenForceRefreshed = JSON.parse(
+      window.sessionStorage.getItem('retry-lazy-load') || 'false'
+    );
+    try {
+      const component = await componentImport();
+      window.sessionStorage.setItem('retry-lazy-load', 'false');
+      return component;
+    } catch (error) {
+      if (!pageHasAlreadyBeenForceRefreshed) {
+        window.sessionStorage.setItem('retry-lazy-load', 'true');
+        window.location.reload();
+        // Return a promise that never resolves while the page is reloading
+        return new Promise<any>(() => {});
+      }
+      throw error;
+    }
+  });
+
 // Lazy-loaded pages - only downloaded when navigated to
-const CatalogPage = React.lazy(() => import("./pages/CatalogPage"));
-const ProductDetailsPage = React.lazy(
+const CatalogPage = lazyWithRetry(() => import("./pages/CatalogPage"));
+const ProductDetailsPage = lazyWithRetry(
   () => import("./pages/ProductDetailsPage"),
 );
-const ContactPage = React.lazy(() => import("./pages/ContactPage"));
-const PricingPage = React.lazy(() => import("./pages/PricingPage"));
-const LoginPage = React.lazy(() => import("./pages/LoginPage"));
-const RegisterPage = React.lazy(() => import("./pages/RegisterPage"));
-const PrivacyPage = React.lazy(() => import("./pages/PrivacyPage"));
-const TermsPage = React.lazy(() => import("./pages/TermsPage"));
-const DeliveryPage = React.lazy(() => import("./pages/DeliveryPage"));
-const BookingPage = React.lazy(() => import("./pages/BookingPage"));
-const ProfilePage = React.lazy(() => import("./pages/ProfilePage"));
-const RecoveryPage = React.lazy(() => import("./pages/RecoveryPage"));
-const AdminPage = React.lazy(() => import("./pages/AdminPage"));
-const CartPage = React.lazy(() => import("./pages/CartPage"));
-const CheckoutPage = React.lazy(() => import("./pages/CheckoutPage"));
-const OrderSuccessPage = React.lazy(() => import("./pages/OrderSuccessPage"));
-const OrderReceiptPage = React.lazy(() => import("./pages/OrderReceiptPage"));
-const OrderDetailPage = React.lazy(() => import("./pages/OrderDetailPage"));
-const MaintenancePage = React.lazy(() => import("./pages/MaintenancePage"));
-const RestrictedPage = React.lazy(() => import("./pages/RestrictedPage"));
-const StealthAuthPage = React.lazy(() => import("./pages/StealthAuthPage"));
-const ProductQuickViewModal = React.lazy(
+const ContactPage = lazyWithRetry(() => import("./pages/ContactPage"));
+const PricingPage = lazyWithRetry(() => import("./pages/PricingPage"));
+const LoginPage = lazyWithRetry(() => import("./pages/LoginPage"));
+const RegisterPage = lazyWithRetry(() => import("./pages/RegisterPage"));
+const PrivacyPage = lazyWithRetry(() => import("./pages/PrivacyPage"));
+const TermsPage = lazyWithRetry(() => import("./pages/TermsPage"));
+const DeliveryPage = lazyWithRetry(() => import("./pages/DeliveryPage"));
+const BookingPage = lazyWithRetry(() => import("./pages/BookingPage"));
+const ProfilePage = lazyWithRetry(() => import("./pages/ProfilePage"));
+const RecoveryPage = lazyWithRetry(() => import("./pages/RecoveryPage"));
+const AdminPage = lazyWithRetry(() => import("./pages/AdminPage"));
+const CartPage = lazyWithRetry(() => import("./pages/CartPage"));
+const CheckoutPage = lazyWithRetry(() => import("./pages/CheckoutPage"));
+const OrderSuccessPage = lazyWithRetry(() => import("./pages/OrderSuccessPage"));
+const OrderReceiptPage = lazyWithRetry(() => import("./pages/OrderReceiptPage"));
+const OrderDetailPage = lazyWithRetry(() => import("./pages/OrderDetailPage"));
+const MaintenancePage = lazyWithRetry(() => import("./pages/MaintenancePage"));
+const RestrictedPage = lazyWithRetry(() => import("./pages/RestrictedPage"));
+const StealthAuthPage = lazyWithRetry(() => import("./pages/StealthAuthPage"));
+const ProductQuickViewModal = lazyWithRetry(
   () => import("./components/ProductQuickViewModal"),
 );
 
