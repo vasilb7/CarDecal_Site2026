@@ -202,7 +202,7 @@ export async function revokeAllOtherDevices(userId: string): Promise<boolean> {
         const currentSessionId = await getCurrentSessionId();
 
         // Mark all other sessions as inactive in our table
-        const query = supabase
+        let query = supabase
             .from('user_devices')
             .update({
                 is_active: false,
@@ -213,10 +213,14 @@ export async function revokeAllOtherDevices(userId: string): Promise<boolean> {
 
         // Exclude current session if we have its ID
         if (currentSessionId) {
-            query.neq('session_id', currentSessionId);
+            query = query.neq('session_id', currentSessionId);
         }
 
-        await query;
+        const { error } = await query;
+        if (error) {
+            console.error('[DeviceService] error in query:', error);
+            throw error;
+        }
 
         // Use Supabase Auth to sign out other sessions
         // Unfortunately Supabase JS client doesn't have scope:'others'
@@ -239,7 +243,7 @@ export async function revokeCurrentDevice(userId: string): Promise<void> {
         const currentSessionId = await getCurrentSessionId();
         if (!currentSessionId) return;
 
-        await supabase
+        const { error } = await supabase
             .from('user_devices')
             .update({
                 is_active: false,
@@ -247,6 +251,8 @@ export async function revokeCurrentDevice(userId: string): Promise<void> {
             })
             .eq('user_id', userId)
             .eq('session_id', currentSessionId);
+            
+        if (error) throw error;
     } catch (err) {
         console.error('[DeviceService] Failed to revoke current device:', err);
     }
