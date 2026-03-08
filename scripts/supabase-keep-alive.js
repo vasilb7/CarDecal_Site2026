@@ -21,30 +21,23 @@ async function keepAlive() {
   console.log('Timestamp:', new Date().toISOString());
   
   try {
-    // 1. Log in the bot
-    const { data, error: loginError } = await supabase.auth.signInWithPassword({
-      email: botEmail,
-      password: botPassword,
-    });
+    // Perform a simple query to a public or active table to ensure DB activity
+    // Reading data is enough to keep the project active and avoids Turnstile/Captcha issues with Auth
+    const { data, error } = await supabase
+      .from('products') 
+      .select('id')
+      .limit(1);
 
-    if (loginError) throw loginError;
-    console.log('✅ Successfully logged in as bot:', data.user?.email);
+    if (error) {
+      // If 'products' fails (e.g. RLS or table renamed), try another one or just log the error
+      console.warn('⚠️ Query to products failed:', error.message);
+      
+      // Fallback to a common system query if needed
+      const { error: healthError } = await supabase.from('profiles').select('id').limit(1);
+      if (healthError) throw healthError;
+    } 
 
-    // 2. Perform a simple query to ensure DB activity
-    // We'll just try to count products or something public
-    const { count, error: queryError } = await supabase
-      .from('products') // Assuming 'products' exists based on the codebase
-      .select('*', { count: 'exact', head: true });
-
-    if (queryError) {
-      console.warn('⚠️ Query error (might be RLS), but login was successful:', queryError.message);
-    } else {
-      console.log('✅ DB Activity recorded. Product count:', count);
-    }
-
-    // 3. Log out (optional but clean)
-    await supabase.auth.signOut();
-    console.log('👋 Successfully logged out.');
+    console.log('✅ DB Activity recorded successfully.');
     console.log('--- Heartbeat Complete ---');
 
   } catch (err) {
