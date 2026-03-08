@@ -69,13 +69,19 @@ const FloatingInput = ({
                     type={isPassword ? (showPassword ? 'text' : 'password') : type}
                     value={value}
                     onChange={(e) => {
-                        const val = name === 'name' ? e.target.value.replace(/[0-9]/g, '') : e.target.value;
-                        setValue(val);
+                        let finalVal = e.target.value;
+                        if (name === 'name') {
+                            finalVal = finalVal.replace(/[0-9]/g, '');
+                        } else if (isPassword) {
+                            // Strictly allow only ASCII printable characters (English/Symbols)
+                            finalVal = finalVal.replace(/[^\x20-\x7E]/g, '');
+                        }
+                        
+                        setValue(finalVal);
+                        e.target.value = finalVal;
+                        
                         if (props.onChange) {
-                            const originalValue = e.target.value;
-                            e.target.value = val;
                             props.onChange(e);
-                            e.target.value = originalValue; // Restore just in case, though usually not needed
                         }
                     }}
                     onFocus={() => setIsFocused(true)}
@@ -142,6 +148,7 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
   const [showPassword, setShowPassword] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [turnstileKey, setTurnstileKey] = useState(0);
   const [captchaToken, setCaptchaToken] = useState<string>();
@@ -159,7 +166,10 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
   };
 
   const passwordValidation = validatePassword(password);
-  const canSubmit = passwordValidation.isValid && !loading;
+  
+  // Checks if all fields are technically filled for enabling the UI
+  const hasRequiredFields = !!name && !!email && !!phone && !!password;
+  const canSubmit = hasRequiredFields && passwordValidation.isValid && !!captchaToken && !loading;
 
   // Detect mobile keyboard close effect properly
   React.useEffect(() => {
@@ -262,6 +272,7 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
                             storageKey="phone"
                             type="tel"
                             required
+                            onChange={(e: any) => setPhone(e.target.value)}
                         />
                     </div>
 

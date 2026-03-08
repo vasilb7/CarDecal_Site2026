@@ -51,6 +51,8 @@ const FloatingInput = ({
   required = false,
   icon: Icon,
   onTogglePassword,
+  onChange,
+  ...props
 }: any) => {
   const [isFocused, setIsFocused] = useState(false);
   const [value, setValue] = useState("");
@@ -80,7 +82,18 @@ const FloatingInput = ({
           name={name}
           type={type}
           value={value}
-          onChange={(e) => setValue(e.target.value)}
+          onChange={(e) => {
+            let finalVal = e.target.value;
+            if (type === 'password' || name === 'password') {
+              // Strictly ASCII printable only
+              finalVal = finalVal.replace(/[^\x20-\x7E]/g, '');
+            }
+            setValue(finalVal);
+            e.target.value = finalVal;
+            if (onChange) {
+                onChange(e);
+            }
+          }}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
           className={`w-full bg-white/[0.03] border ${isFocused ? "border-red-600 shadow-[0_0_15px_rgba(239,68,68,0.15)]" : "border-white/10"} rounded-xl pl-6 ${Icon ? 'pr-14' : 'pr-6'} py-4 shadow-sm outline-none text-white placeholder:text-transparent backdrop-blur-md transition-all`}
@@ -287,10 +300,15 @@ export const SignInPage: React.FC<SignInPageProps> = ({
 
             {/* Submit Button */}
             <motion.button
-              whileHover={{ scale: 1.01 }}
-              whileTap={{ scale: 0.98 }}
+              whileHover={canSocialSubmit ? { scale: 1.01 } : {}}
+              whileTap={canSocialSubmit ? { scale: 0.98 } : {}}
               type="submit"
-              className="w-full bg-red-600 text-white font-black py-4 rounded-full mt-1 text-base uppercase tracking-[0.1em] shadow-xl shadow-red-600/20 transition-all hover:bg-red-500 active:scale-95"
+              disabled={!canSocialSubmit}
+              className={`w-full font-black py-4 rounded-full mt-1 text-base uppercase tracking-[0.1em] shadow-xl transition-all ${
+                canSocialSubmit 
+                  ? "bg-red-600 text-white shadow-red-600/20 hover:bg-red-500 active:scale-95 cursor-pointer" 
+                  : "bg-zinc-800 text-zinc-500 shadow-none cursor-not-allowed"
+              }`}
             >
               {t("auth.sign_in", "Вход")}
             </motion.button>
@@ -347,8 +365,8 @@ export const SignInPage: React.FC<SignInPageProps> = ({
         </div>
       </div>
 
-      {/* Right Side - Square Hero Section */}
-      <div className="hidden lg:block lg:w-[100vh] relative overflow-hidden h-screen bg-black">
+      {/* Right Side - Image Section */}
+      <div className="hidden lg:block lg:w-1/2 relative overflow-hidden h-screen bg-black">
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}

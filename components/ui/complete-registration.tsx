@@ -161,8 +161,8 @@ export const CompleteRegistrationModal = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (name.trim().split(' ').length < 2) {
-            showToast(t('toast.register_full_name_required', 'Моля, въведете две имена!'), "warning");
+        if (name.trim().length < 2) {
+            showToast(t('toast.register_name_too_short', 'Името трябва да е поне 2 символа!'), "warning");
             return;
         }
 

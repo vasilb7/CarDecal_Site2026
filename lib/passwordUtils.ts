@@ -38,7 +38,7 @@ export function validatePassword(password: string): PasswordValidation {
         { id: 'lowercase', label: 'Малка буква (a-z)', passed: /[a-z]/.test(password) },
         { id: 'uppercase', label: 'Главна буква (A-Z)', passed: /[A-Z]/.test(password) },
         { id: 'digit', label: 'Цифра (0-9)', passed: /\d/.test(password) },
-        { id: 'symbol', label: 'Специален символ (!@#$...)', passed: /[^A-Za-z0-9]/.test(password) },
+        { id: 'symbol', label: 'Специален символ (@#$...)', passed: /[^A-Za-z0-9]/.test(password) },
         { id: 'language', label: 'Само на английски (без кирилица)', passed: /^[\x20-\x7E]*$/.test(password) },
     ];
 
@@ -48,13 +48,13 @@ export function validatePassword(password: string): PasswordValidation {
     // Accept if:
     // 1. Passes all checks (Ideal case)
     // OR
-    // 2. Score is >= 2 (Medium, Good, Strong) AND length is at least 6 characters AND no cyrillic
+    // 2. Score is >= 2 (Medium, Good, Strong) AND length is at least 8 characters AND no cyrillic
     const isStrongEnough = strength.score >= 2;
-    const isBasicPolicyMet = password.length >= 6 && isLanguageOk;
+    const isBasicPolicyMet = password.length >= 8 && isLanguageOk;
 
     return {
         checks,
-        isValid: checks.every(c => c.passed) || (isStrongEnough && isBasicPolicyMet),
+        isValid: isStrongEnough && isBasicPolicyMet,
     };
 }
 
@@ -101,7 +101,7 @@ export function translateAuthError(error: any): string {
 
     // By error code
     const codeMap: Record<string, string> = {
-        'weak_password': 'Паролата е твърде слаба. Моля, използвайте по-дълга или по-сложна парола.',
+        'weak_password': 'Паролата се отхвърля от системата като слаба. Моля, добавете цифра или я направете по-дълга.',
         'same_password': 'Новата парола не може да е същата като текущата.',
         'email_exists': 'Този имейл адрес вече е регистриран.',
         'user_already_exists': 'Потребител с този имейл вече съществува.',

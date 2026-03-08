@@ -16,9 +16,9 @@ export const isValidFullName = (name: string): boolean => {
     const trimmed = name.trim();
     if (trimmed.length < 3 || trimmed.length > 100) return false;
     
-    // Check for at least two parts (first and last name)
+    // Allow single name (nickname) or more. At least 1 non-empty part.
     const parts = trimmed.split(/\s+/).filter(p => p.length > 0);
-    if (parts.length < 2) return false;
+    if (parts.length < 1) return false;
 
     // Regex for: Letters (Latin & Cyrillic), spaces, hyphens, apostrophes
     const nameRegex = /^[a-zA-Zа-яА-ЯёЁіІєЄїЇґҐ\s\-']+$/;

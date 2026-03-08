@@ -724,7 +724,11 @@ const SettingsTab: React.FC<{
                                                 <input
                                                     type={showOld ? 'text' : 'password'}
                                                     value={oldPwd}
-                                                    onChange={e => setOldPwd(e.target.value)}
+                                                    onChange={e => {
+                                                        const val = e.target.value.replace(/[^\x20-\x7E]/g, '');
+                                                        setOldPwd(val);
+                                                        e.target.value = val;
+                                                    }}
                                                     className={`${inputCls} pr-12`}
                                                     placeholder="Въведете текущата си парола"
                                                     maxLength={64}
@@ -745,7 +749,11 @@ const SettingsTab: React.FC<{
                                             <input
                                                 type={showNew ? 'text' : 'password'}
                                                 value={newPwd}
-                                                onChange={e => setNewPwd(e.target.value)}
+                                                onChange={e => {
+                                                    const val = e.target.value.replace(/[^\x20-\x7E]/g, '');
+                                                    setNewPwd(val);
+                                                    e.target.value = val;
+                                                }}
                                                 className={`${inputCls} pr-12`}
                                                 placeholder="От 10 до 64 символа"
                                                 maxLength={64}
@@ -774,7 +782,11 @@ const SettingsTab: React.FC<{
                                             <input
                                                 type={showConfirm ? 'text' : 'password'}
                                                 value={confirmPwd}
-                                                onChange={e => setConfirmPwd(e.target.value)}
+                                                onChange={e => {
+                                                    const val = e.target.value.replace(/[^\x20-\x7E]/g, '');
+                                                    setConfirmPwd(val);
+                                                    e.target.value = val;
+                                                }}
                                                 className={`${inputCls} pr-12`}
                                                 placeholder="Повтори новата парола"
                                                 maxLength={64}
