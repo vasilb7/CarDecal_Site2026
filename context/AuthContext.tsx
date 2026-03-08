@@ -9,7 +9,7 @@ import { supabase } from "../lib/supabase";
 import { Session, User } from "@supabase/supabase-js";
 import { UserProfile, ModerationStatus } from "../types";
 import { logSecurityEvent, recordSuccessfulLogin, recordProfileChange } from "../lib/security";
-import { registerDeviceSession, updateLastSeen } from "../lib/device-service";
+import { registerDeviceSession, updateLastSeen, subscribeToDeviceRevocation } from "../lib/device-service";
 
 interface AuthContextType {
   user: User | null;
@@ -195,17 +195,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     };
   }, [user]);
 
-  // Periodic last_seen_at heartbeat (every 5 minutes)
+  // Realtime device revocation listener - instant sign out when session is revoked
+  useEffect(() => {
+    if (!user) return;
+
+    const unsubscribe = subscribeToDeviceRevocation(user.id, () => {
+      // Session was revoked remotely! Sign out immediately.
+      signOut();
+    });
+
+    return unsubscribe;
+  }, [user]);
+
+  // Periodic last_seen_at heartbeat (every 2 minutes) - fallback safety net
   useEffect(() => {
     if (!user) return;
 
     const interval = setInterval(async () => {
       const isActive = await updateLastSeen(user.id);
       if (!isActive) {
-        // The session was revoked remotely. Sign out immediately.
         signOut();
       }
-    }, 5 * 60 * 1000); // 5 minutes
+    }, 2 * 60 * 1000); // 2 minutes
 
     return () => clearInterval(interval);
   }, [user]);

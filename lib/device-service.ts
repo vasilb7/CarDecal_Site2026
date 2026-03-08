@@ -3,6 +3,7 @@
  * ======================
  * Manages user_devices records in Supabase.
  * Tracks device sessions, updates last_seen_at, and handles sign-out actions.
+ * Uses Realtime subscriptions for instant revocation across devices.
  */
 
 import { supabase } from './supabase';
@@ -30,11 +31,27 @@ export interface UserDevice {
     last_seen_at: string;
 }
 
-/**
- * Register or update the current device session.
- * Called on login and periodically to keep last_seen_at fresh.
- * Return false if the session is found to be revoked (preventing auto-relogin).
- */
+// ── Session ID Management ──
+
+let cachedSessionId: string | null = null;
+
+export function getCurrentSessionId(): string | null {
+    if (cachedSessionId) return cachedSessionId;
+    try {
+        let deviceId = localStorage.getItem('supabase_device_id');
+        if (!deviceId) {
+            deviceId = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 15);
+            localStorage.setItem('supabase_device_id', deviceId);
+        }
+        cachedSessionId = deviceId;
+        return deviceId;
+    } catch {
+        return null;
+    }
+}
+
+// ── Register Device Session ──
+
 export async function registerDeviceSession(userId: string, sessionId?: string | null, isExplicitLogin = false): Promise<boolean> {
     try {
         const device = getDeviceInfo();
@@ -42,10 +59,9 @@ export async function registerDeviceSession(userId: string, sessionId?: string |
         const maskedIp = maskIpForUser(ip);
 
         if (!sessionId) {
-            sessionId = await getCurrentSessionId();
+            sessionId = getCurrentSessionId();
         }
 
-        // Check if this exact session already exists
         if (sessionId) {
             const { data: existingList } = await supabase
                 .from('user_devices')
@@ -59,11 +75,9 @@ export async function registerDeviceSession(userId: string, sessionId?: string |
 
             if (existing) {
                 if (!existing.is_active && !isExplicitLogin) {
-                    // Session was revoked and this is not a manual login. Deny registration.
                     return false;
                 }
 
-                // Update last_seen_at AND set active if it's an explicit login
                 await supabase
                     .from('user_devices')
                     .update({
@@ -78,7 +92,7 @@ export async function registerDeviceSession(userId: string, sessionId?: string |
                         model: device.model,
                         device_group_key: device.device_group_key,
                         grouping_confidence: device.grouping_confidence,
-                        is_active: true, // reactivate if it was an explicit login
+                        is_active: true,
                         revoked_at: null
                     })
                     .eq('id', existing.id);
@@ -95,7 +109,6 @@ export async function registerDeviceSession(userId: string, sessionId?: string |
             }
         }
 
-        // Insert new device session
         await supabase.from('user_devices').insert({
             user_id: userId,
             session_id: sessionId,
@@ -113,7 +126,6 @@ export async function registerDeviceSession(userId: string, sessionId?: string |
             is_active: true,
         });
 
-        // Also update the main profile metadata
         await supabase
             .from('profiles')
             .update({
@@ -126,20 +138,18 @@ export async function registerDeviceSession(userId: string, sessionId?: string |
         return true;
     } catch (err) {
         console.error('[DeviceService] Failed to register device session:', err);
-        return true; // fail-open to not block users on DB error
+        return true;
     }
 }
 
-/**
- * Update last_seen_at for the current session.
- * Returns false if the session is marked as inactive (revoked).
- */
+// ── Update Last Seen ──
+
 export async function updateLastSeen(userId: string): Promise<boolean> {
     try {
-        const sessionId = await getCurrentSessionId();
+        const sessionId = getCurrentSessionId();
         if (!sessionId) return true;
 
-        const { data, error } = await supabase
+        const { data } = await supabase
             .from('user_devices')
             .select('is_active')
             .eq('user_id', userId)
@@ -149,7 +159,7 @@ export async function updateLastSeen(userId: string): Promise<boolean> {
             .maybeSingle();
             
         if (data && data.is_active === false) {
-            return false; // Revoked!
+            return false;
         }
 
         await supabase
@@ -166,9 +176,8 @@ export async function updateLastSeen(userId: string): Promise<boolean> {
     }
 }
 
-/**
- * Fetch all active devices for the current user.
- */
+// ── Fetch Devices ──
+
 export async function fetchUserDevices(userId: string): Promise<UserDevice[]> {
     try {
         const { data, error } = await supabase
@@ -180,14 +189,14 @@ export async function fetchUserDevices(userId: string): Promise<UserDevice[]> {
 
         if (error) throw error;
         
-        // Deduplicate devices to avoid showing hundreds of orphaned sessions
-        // that were generated due to previous tracking glitches.
+        // Deduplicate: keep only the latest session per device_label + ip pair
         const devices = (data || []) as UserDevice[];
         const seen = new Set<string>();
         const uniqueDevices: UserDevice[] = [];
         
         for (const device of devices) {
-            const key = `${device.device_label}|${device.ip_address}`;
+            // Use session_id as primary key for uniqueness (each browser tab = 1 session)
+            const key = device.session_id || device.id;
             if (!seen.has(key)) {
                 seen.add(key);
                 uniqueDevices.push(device);
@@ -201,25 +210,8 @@ export async function fetchUserDevices(userId: string): Promise<UserDevice[]> {
     }
 }
 
-/**
- * Get the current session's persistent ID.
- */
-export async function getCurrentSessionId(): Promise<string | null> {
-    try {
-        let deviceId = localStorage.getItem('supabase_device_id');
-        if (!deviceId) {
-            deviceId = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 15);
-            localStorage.setItem('supabase_device_id', deviceId);
-        }
-        return deviceId;
-    } catch {
-        return null; // Fallback if localStorage is inaccessible
-    }
-}
+// ── Revoke Operations ──
 
-/**
- * Revoke a specific device session.
- */
 export async function revokeDevice(deviceId: string): Promise<boolean> {
     try {
         const { error } = await supabase
@@ -236,15 +228,10 @@ export async function revokeDevice(deviceId: string): Promise<boolean> {
     }
 }
 
-/**
- * Revoke all sessions except the current one.
- * Also triggers Supabase signOut({ scope: 'others' }).
- */
 export async function revokeAllOtherDevices(userId: string): Promise<boolean> {
     try {
-        const currentSessionId = await getCurrentSessionId();
+        const currentSessionId = getCurrentSessionId();
 
-        // Mark all other sessions as inactive in our table
         let query = supabase
             .from('user_devices')
             .update({
@@ -254,22 +241,12 @@ export async function revokeAllOtherDevices(userId: string): Promise<boolean> {
             .eq('user_id', userId)
             .eq('is_active', true);
 
-        // Exclude current session if we have its ID
         if (currentSessionId) {
             query = query.neq('session_id', currentSessionId);
         }
 
         const { error } = await query;
-        if (error) {
-            console.error('[DeviceService] error in query:', error);
-            throw error;
-        }
-
-        // Use Supabase Auth to sign out other sessions
-        // Unfortunately Supabase JS client doesn't have scope:'others'
-        // But we can mark them in our table. The real auth tokens will
-        // expire naturally or on next refresh.
-        // For true session revocation, we'd need an Edge Function with admin API.
+        if (error) throw error;
 
         return true;
     } catch (err) {
@@ -278,15 +255,12 @@ export async function revokeAllOtherDevices(userId: string): Promise<boolean> {
     }
 }
 
-/**
- * Mark the current device as revoked (used before sign out).
- */
 export async function revokeCurrentDevice(userId: string): Promise<void> {
     try {
-        const currentSessionId = await getCurrentSessionId();
+        const currentSessionId = getCurrentSessionId();
         if (!currentSessionId) return;
 
-        const { error } = await supabase
+        await supabase
             .from('user_devices')
             .update({
                 is_active: false,
@@ -294,16 +268,11 @@ export async function revokeCurrentDevice(userId: string): Promise<void> {
             })
             .eq('user_id', userId)
             .eq('session_id', currentSessionId);
-            
-        if (error) throw error;
     } catch (err) {
         console.error('[DeviceService] Failed to revoke current device:', err);
     }
 }
 
-/**
- * Revoke ALL sessions for a specific user (admin action).
- */
 export async function revokeAllUserDevices(userId: string): Promise<boolean> {
     try {
         const { error } = await supabase
@@ -320,4 +289,43 @@ export async function revokeAllUserDevices(userId: string): Promise<boolean> {
         console.error('[DeviceService] Failed to revoke all user devices:', err);
         return false;
     }
+}
+
+// ── Realtime Subscription ──
+
+/**
+ * Subscribe to changes on user_devices for the current user's session.
+ * When the current session is revoked (is_active set to false), the callback fires.
+ * Returns an unsubscribe function.
+ */
+export function subscribeToDeviceRevocation(
+    userId: string,
+    onRevoked: () => void
+): () => void {
+    const sessionId = getCurrentSessionId();
+    if (!sessionId) return () => {};
+    
+    const channel = supabase
+        .channel(`device-revoke:${sessionId}`)
+        .on(
+            'postgres_changes',
+            {
+                event: 'UPDATE',
+                schema: 'public',
+                table: 'user_devices',
+                filter: `user_id=eq.${userId}`,
+            },
+            (payload) => {
+                const newRecord = payload.new as any;
+                // If the updated record is for our session and is_active is now false
+                if (newRecord.session_id === sessionId && newRecord.is_active === false) {
+                    onRevoked();
+                }
+            }
+        )
+        .subscribe();
+
+    return () => {
+        supabase.removeChannel(channel);
+    };
 }
