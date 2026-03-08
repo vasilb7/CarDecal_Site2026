@@ -33,8 +33,9 @@ export interface UserDevice {
 /**
  * Register or update the current device session.
  * Called on login and periodically to keep last_seen_at fresh.
+ * Return false if the session is found to be revoked (preventing auto-relogin).
  */
-export async function registerDeviceSession(userId: string, sessionId?: string | null): Promise<void> {
+export async function registerDeviceSession(userId: string, sessionId?: string | null, isExplicitLogin = false): Promise<boolean> {
     try {
         const device = getDeviceInfo();
         const ip = await getClientIp();
@@ -46,16 +47,23 @@ export async function registerDeviceSession(userId: string, sessionId?: string |
 
         // Check if this exact session already exists
         if (sessionId) {
-            const { data: existing } = await supabase
+            const { data: existingList } = await supabase
                 .from('user_devices')
-                .select('id')
+                .select('id, is_active')
                 .eq('user_id', userId)
                 .eq('session_id', sessionId)
-                .eq('is_active', true)
-                .maybeSingle();
+                .order('created_at', { ascending: false })
+                .limit(1);
+                
+            const existing = existingList?.[0];
 
             if (existing) {
-                // Update last_seen_at for existing session
+                if (!existing.is_active && !isExplicitLogin) {
+                    // Session was revoked and this is not a manual login. Deny registration.
+                    return false;
+                }
+
+                // Update last_seen_at AND set active if it's an explicit login
                 await supabase
                     .from('user_devices')
                     .update({
@@ -70,10 +78,11 @@ export async function registerDeviceSession(userId: string, sessionId?: string |
                         model: device.model,
                         device_group_key: device.device_group_key,
                         grouping_confidence: device.grouping_confidence,
+                        is_active: true, // reactivate if it was an explicit login
+                        revoked_at: null
                     })
                     .eq('id', existing.id);
                 
-                // Also update the main profile metadata for admin view
                 await supabase
                     .from('profiles')
                     .update({
@@ -82,7 +91,7 @@ export async function registerDeviceSession(userId: string, sessionId?: string |
                         last_login_at: new Date().toISOString()
                     })
                     .eq('id', userId);
-                return;
+                return true;
             }
         }
 
@@ -113,20 +122,35 @@ export async function registerDeviceSession(userId: string, sessionId?: string |
                 last_login_at: new Date().toISOString()
             })
             .eq('id', userId);
+            
+        return true;
     } catch (err) {
         console.error('[DeviceService] Failed to register device session:', err);
+        return true; // fail-open to not block users on DB error
     }
 }
 
 /**
  * Update last_seen_at for the current session.
- * Called periodically (e.g. every 5 minutes) to keep the session alive.
+ * Returns false if the session is marked as inactive (revoked).
  */
-export async function updateLastSeen(userId: string): Promise<void> {
+export async function updateLastSeen(userId: string): Promise<boolean> {
     try {
         const sessionId = await getCurrentSessionId();
+        if (!sessionId) return true;
 
-        if (!sessionId) return;
+        const { data, error } = await supabase
+            .from('user_devices')
+            .select('is_active')
+            .eq('user_id', userId)
+            .eq('session_id', sessionId)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+            
+        if (data && data.is_active === false) {
+            return false; // Revoked!
+        }
 
         await supabase
             .from('user_devices')
@@ -134,8 +158,11 @@ export async function updateLastSeen(userId: string): Promise<void> {
             .eq('user_id', userId)
             .eq('session_id', sessionId)
             .eq('is_active', true);
+            
+        return true;
     } catch (err) {
         console.error('[DeviceService] Failed to update last_seen:', err);
+        return true;
     }
 }
 

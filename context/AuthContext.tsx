@@ -106,8 +106,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       };
       syncTime();
       if (session?.user) {
-        registerDeviceSession(session.user.id);
-        fetchProfile(session.user.id);
+        registerDeviceSession(session.user.id).then((isActive) => {
+          if (!isActive) {
+            supabase.auth.signOut().then(() => {
+              setSession(null);
+              setUser(null);
+              setLoading(false);
+            });
+            return;
+          }
+          fetchProfile(session.user.id);
+        });
       } else {
         setLoading(false);
       }
@@ -128,7 +137,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         const recorded = sessionStorage.getItem(`login_recorded_${session.user.id}`);
         if (!recorded) {
             recordSuccessfulLogin(session.user.id);
-            registerDeviceSession(session.user.id);
+            registerDeviceSession(session.user.id, null, true); // true for explicitLogin
             sessionStorage.setItem(`login_recorded_${session.user.id}`, 'true');
         }
       }
@@ -190,8 +199,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     if (!user) return;
 
-    const interval = setInterval(() => {
-      updateLastSeen(user.id);
+    const interval = setInterval(async () => {
+      const isActive = await updateLastSeen(user.id);
+      if (!isActive) {
+        // The session was revoked remotely. Sign out immediately.
+        signOut();
+      }
     }, 5 * 60 * 1000); // 5 minutes
 
     return () => clearInterval(interval);
