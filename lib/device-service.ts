@@ -8,6 +8,7 @@
 import { supabase } from './supabase';
 import { getClientIp } from './security';
 import { getDeviceInfo, maskIpForUser } from './device-utils';
+import fpPromise from '@fingerprintjs/fingerprintjs';
 
 export interface UserDevice {
     id: string;
@@ -41,10 +42,7 @@ export async function registerDeviceSession(userId: string, sessionId?: string |
         const maskedIp = maskIpForUser(ip);
 
         if (!sessionId) {
-            const { data: { session } } = await supabase.auth.getSession();
-            sessionId = session?.access_token
-                ? session.access_token.slice(-16)  // Use last 16 chars as session fingerprint
-                : null;
+            sessionId = await getCurrentSessionId();
         }
 
         // Check if this exact session already exists
@@ -127,10 +125,7 @@ export async function registerDeviceSession(userId: string, sessionId?: string |
  */
 export async function updateLastSeen(userId: string): Promise<void> {
     try {
-        const { data: { session } } = await supabase.auth.getSession();
-        const sessionId = session?.access_token
-            ? session.access_token.slice(-16)
-            : null;
+        const sessionId = await getCurrentSessionId();
 
         if (!sessionId) return;
 
@@ -170,12 +165,12 @@ export async function fetchUserDevices(userId: string): Promise<UserDevice[]> {
  */
 export async function getCurrentSessionId(): Promise<string | null> {
     try {
-        const { data: { session } } = await supabase.auth.getSession();
-        return session?.access_token
-            ? session.access_token.slice(-16)
-            : null;
+        const fp = await fpPromise.load();
+        const result = await fp.get();
+        return result.visitorId;
     } catch {
-        return null;
+        // Fallback to local storage persistent_id if FingerprintJS is blocked
+        return localStorage.getItem('supabase_device_id') || null;
     }
 }
 
