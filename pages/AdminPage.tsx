@@ -143,6 +143,7 @@ interface DBUser {
     deletion_requested_at: string | null;
     deletion_request_status: string | null;
     deletion_admin_notes: string | null;
+    deletion_scheduled_at?: string | null;
 }
 
 // ─── Product Edit Modal ────────────────────────────────────────────────────
@@ -920,8 +921,7 @@ const UsersTab: React.FC = () => {
         setLoading(true);
         const { data, error } = await supabase
             .from('profiles')
-            .select('id,email,full_name,avatar_url,role,is_banned,banned_reason,created_at,last_login_at,last_device_info,last_ip_address,ip_history,admin_notes,moderation_status,banned_until,public_reason,internal_reason,moderator_notes,banned_by,unbanned_by,unban_reason,deletion_requested_at,deletion_request_status,deletion_admin_notes')
-            .is('deletion_scheduled_at', null)
+            .select('id,email,full_name,avatar_url,role,is_banned,banned_reason,created_at,last_login_at,last_device_info,last_ip_address,ip_history,admin_notes,moderation_status,banned_until,public_reason,internal_reason,moderator_notes,banned_by,unbanned_by,unban_reason,deletion_requested_at,deletion_request_status,deletion_admin_notes,deletion_scheduled_at')
             .order('created_at', { ascending: false });
         if (!error && data) setUsers(data as DBUser[]);
         setLoading(false);
@@ -1356,7 +1356,11 @@ const UsersTab: React.FC = () => {
                                     <div className="flex items-center gap-2 flex-wrap">
                                         <p className="text-white font-medium text-sm group-hover/row:text-red-500 transition-colors uppercase tracking-tight">{u.full_name || 'Без Име'}</p>
                                         <span className={`text-[10px] px-2 py-0.5 uppercase tracking-widest border ${badge.cls}`}>{badge.label}</span>
-                                        {hasDeletionRequest && <span className="text-[10px] bg-purple-900/30 text-purple-400 px-2 py-0.5 uppercase tracking-widest border border-purple-900/20">Заявка изтриване</span>}
+                                        {u.deletion_scheduled_at && (() => {
+                                            const daysLeft = Math.ceil((new Date(u.deletion_scheduled_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                                            return <span className="text-[10px] bg-red-900/30 text-red-500 px-2 py-0.5 uppercase tracking-widest border border-red-900/40">Изтриване след {Math.max(0, daysLeft)} дни</span>;
+                                        })()}
+                                        {hasDeletionRequest && !u.deletion_scheduled_at && <span className="text-[10px] bg-purple-900/30 text-purple-400 px-2 py-0.5 uppercase tracking-widest border border-purple-900/20">Заявка изтриване</span>}
                                         {u.id === currentUser?.id && <span className="text-[10px] bg-zinc-800 text-zinc-400 px-2 py-0.5 uppercase tracking-widest">Аз</span>}
                                     </div>
                                     <p className="text-zinc-500 text-xs">{u.email}</p>
@@ -1437,7 +1441,17 @@ const UsersTab: React.FC = () => {
                                 </div>
 
                                 {/* Moderation Buttons */}
-                                {isActive && u.id !== currentUser?.id && (
+                                {u.id !== currentUser?.id && (
+                                    <button
+                                        onClick={() => setDeleteModal(u)}
+                                        className="p-2.5 text-xs text-red-500 hover:text-white uppercase tracking-widest border border-red-500/20 bg-red-950/20 hover:bg-red-600 transition-all flex items-center gap-2 font-bold"
+                                        title="Незабавно ИЗТРИВАНЕ на акаунта (всички данни)"
+                                    >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                        {u.deletion_scheduled_at && <span>Ускори </span>}
+                                    </button>
+                                )}
+                                {isActive && u.id !== currentUser?.id && !u.deletion_scheduled_at && (
                                     <>
                                         <button
                                             disabled={updatingId === u.id}
@@ -5943,6 +5957,32 @@ const ArchivedUsersTab: React.FC = () => {
         setOrdersLoading(false);
     };
 
+    const speedUpDeletion = async (userId: string) => {
+        if (!window.confirm("Сигурни ли сте, че искате да ИЗТРИЕТЕ НАПЪЛНО този акаунт СЕГА? Всички данни ще бъдат премахнати безвъзвратно.")) return;
+        setLoading(true);
+        try {
+            // Storage cleanup (copied from UsersTab logic for consistency)
+            const { data: userOrders } = await supabase.from('custom_orders').select('images').eq('user_id', userId);
+            const imagesToDelete: string[] = [];
+            if (userOrders) userOrders.forEach(o => o.images?.forEach((img: string) => imagesToDelete.push(img)));
+            if (imagesToDelete.length > 0) await supabase.storage.from('custom_orders').remove(imagesToDelete);
+
+            const { data: avatarFiles } = await supabase.storage.from('avatars').list(userId);
+            if (avatarFiles && avatarFiles.length > 0) {
+                const avatarPaths = avatarFiles.map(f => `${userId}/${f.name}`);
+                await supabase.storage.from('avatars').remove(avatarPaths);
+            }
+
+            const { error } = await supabase.rpc('delete_user_entirely', { target_user_id: userId });
+            if (error) throw error;
+            showToast('Акаунтът е изтрит напълно.', 'success');
+            fetchData();
+        } catch (err: any) {
+            showToast('Грешка при изтриване: ' + err.message, 'error');
+        }
+        setLoading(false);
+    };
+
     useEffect(() => {
         fetchData();
     }, []);
@@ -5998,6 +6038,12 @@ const ArchivedUsersTab: React.FC = () => {
                                             className="px-4 py-2 bg-green-600/10 border border-green-600/20 text-green-500 text-[10px] uppercase font-black tracking-widest hover:bg-green-600 hover:text-white transition-all rounded-xl"
                                         >
                                             Отмени
+                                        </button>
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); speedUpDeletion(u.id); }}
+                                            className="px-4 py-2 bg-red-600/10 border border-red-600/20 text-red-500 text-[10px] uppercase font-black tracking-widest hover:bg-red-600 hover:text-white transition-all rounded-xl"
+                                        >
+                                            Ускори
                                         </button>
                                         <button
                                             onClick={(e) => { e.stopPropagation(); openUserProfile(u); }}
@@ -6297,13 +6343,19 @@ const ArchivedUsersTab: React.FC = () => {
                                 </div>
                             </div>
 
-                            {/* Footer Actions */}
-                            <div className="p-4 border-t border-white/5 flex items-center justify-between">
-                                <button onClick={() => { cancelDeletion(viewingUser.id); setViewingUser(null); }}
-                                    className="px-6 py-2.5 bg-green-600/10 border border-green-600/20 text-green-500 text-[10px] uppercase font-black tracking-widest hover:bg-green-600 hover:text-white transition-all rounded-xl">
-                                    Отмени изтриването
-                                </button>
-                                <button onClick={() => setViewingUser(null)}
+                             {/* Footer Actions */}
+                             <div className="p-4 border-t border-white/5 flex flex-wrap gap-2 items-center justify-between">
+                                 <div className="flex gap-2">
+                                     <button onClick={() => { cancelDeletion(viewingUser.id); setViewingUser(null); }}
+                                         className="px-6 py-2.5 bg-green-600/10 border border-green-600/20 text-green-500 text-[10px] uppercase font-black tracking-widest hover:bg-green-600 hover:text-white transition-all rounded-xl">
+                                         Отмени
+                                     </button>
+                                     <button onClick={() => { speedUpDeletion(viewingUser.id); setViewingUser(null); }}
+                                         className="px-6 py-2.5 bg-red-600 text-white text-[10px] uppercase font-black tracking-widest hover:bg-red-700 transition-all rounded-xl">
+                                         Ускори изтриването
+                                     </button>
+                                 </div>
+                                 <button onClick={() => setViewingUser(null)}
                                     className="px-6 py-2.5 bg-white/5 border border-white/10 text-zinc-400 text-[10px] uppercase font-black tracking-widest hover:text-white transition-all rounded-xl">
                                     Затвори
                                 </button>

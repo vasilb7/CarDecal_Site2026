@@ -61,7 +61,7 @@ const TermsPage = lazyWithRetry(() => import("./pages/TermsPage"));
 const DeliveryPage = lazyWithRetry(() => import("./pages/DeliveryPage"));
 const BookingPage = lazyWithRetry(() => import("./pages/BookingPage"));
 const ProfilePage = lazyWithRetry(() => import("./pages/ProfilePage"));
-const RecoveryPage = lazyWithRetry(() => import("./pages/RecoveryPage"));
+
 const AdminPage = lazyWithRetry(() => import("./pages/AdminPage"));
 const CartPage = lazyWithRetry(() => import("./pages/CartPage"));
 const CheckoutPage = lazyWithRetry(() => import("./pages/CheckoutPage"));
@@ -221,14 +221,7 @@ function AppContent() {
               </PageWrapper>
             }
           />
-          <Route
-            path="/recovery"
-            element={
-              <PageWrapper>
-                <RecoveryPage />
-              </PageWrapper>
-            }
-          />
+
           <Route
             path="/s/:name/:code"
             element={

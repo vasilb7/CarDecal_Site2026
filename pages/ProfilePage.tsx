@@ -7,9 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { useToast } from '../components/Toast/ToastProvider';
 import SEO from '../components/SEO';
 import { AvatarCropModal } from '../components/AvatarCropModal';
-import { validatePassword, translateAuthError } from '../lib/passwordUtils';
 import { isValidPhone as isValidBulgarianPhone, isValidFullName, formatToE164 } from '../lib/utils';
-import PasswordStrengthMeter from '../components/ui/PasswordStrengthMeter';
 import DevicesSection from '../components/profile/DevicesSection';
 import {
     User, Camera, LogOut, Settings, ShoppingBag,
@@ -322,14 +320,6 @@ const SettingsTab: React.FC<{
     const [phoneSaving, setPhoneSaving] = useState(false);
     const [phoneEditing, setPhoneEditing] = useState(false);
 
-    const [showPwdForm, setShowPwdForm] = useState(false);
-    const [oldPwd, setOldPwd] = useState('');
-    const [newPwd, setNewPwd] = useState('');
-    const [confirmPwd, setConfirmPwd] = useState('');
-    const [showOld, setShowOld] = useState(false);
-    const [showNew, setShowNew] = useState(false);
-    const [showConfirm, setShowConfirm] = useState(false);
-    const [pwdSaving, setPwdSaving] = useState(false);
     const [showDangerZone, setShowDangerZone] = useState(false);
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 
@@ -337,10 +327,7 @@ const SettingsTab: React.FC<{
     const [resettingPassword, setResettingPassword] = useState(false);
 
     // Check if the user has a password set (usually means email provider or has_password flag)
-    const isPasswordUser = 
-        user?.app_metadata?.provider === 'email' || 
-        user?.identities?.some((id: any) => id.provider === 'email') || 
-        profile?.has_password === true;
+    const isPasswordUser = false;
 
     useEffect(() => {
         setFullName(profile?.full_name || '');
@@ -428,77 +415,7 @@ const SettingsTab: React.FC<{
         }
     };
 
-    const handleResetPassword = async () => {
-        if (!user?.email) return;
-        setResettingPassword(true);
-        try {
-            const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
-                redirectTo: `${window.location.origin}/reset-password`,
-            });
-            if (error) throw error;
-            showToast('Изпратихме ти имейл с инструкции за смяна на паролата.', 'success');
-            setResetModalOpen(false);
-        } catch (e: any) {
-            showToast(translateAuthError(e), 'error');
-        } finally {
-            setResettingPassword(false);
-        }
-    };
-
-    const changePassword = async () => {
-        if (isPasswordUser && !oldPwd) {
-            showToast('Моля, въведете старата си парола.', 'error');
-            return;
-        }
-        if (!newPwd || newPwd !== confirmPwd) {
-            showToast('Паролите не съвпадат.', 'error');
-            return;
-        }
-        const pwdValidation = validatePassword(newPwd);
-        if (!pwdValidation.isValid) {
-            showToast('Паролата не отговаря на изискванията. Трябва да е между 10 и 64 символа, само на английски и да съдържа главна буква, малка буква, цифра и специален символ.', 'error');
-            return;
-        }
-
-        setPwdSaving(true);
-        try {
-            // Security: Re-authenticate with old password before allowing change
-            if (isPasswordUser) {
-                const { error: signInError } = await supabase.auth.signInWithPassword({
-                    email: user.email,
-                    password: oldPwd,
-                });
-                if (signInError) {
-                    showToast('Старата парола е грешна!', 'error');
-                    setPwdSaving(false);
-                    return;
-                }
-            }
-
-            // Now safe to update password
-            const { error } = await supabase.auth.updateUser({ 
-                password: newPwd,
-                data: { has_password: true }
-            });
-            if (error) throw error;
-            
-            // Sync profiles table since trigger might delay
-            await supabase.from('profiles').update({ has_password: true }).eq('id', user.id);
-            
-            // Log password change for security audit
-            logSecurityEvent('password_change', user?.id).catch(() => {});
-            
-            showToast(isPasswordUser ? 'Паролата е сменена успешно!' : 'Паролата е създадена успешно!', 'success');
-            setShowPwdForm(false);
-            setOldPwd('');
-            setNewPwd('');
-            setConfirmPwd('');
-        } catch (e: any) {
-            showToast(translateAuthError(e), 'error');
-        } finally {
-            setPwdSaving(false);
-        }
-    };
+    const changePassword = async () => {}; // No longer used
 
     const inputCls =
         'w-full bg-white/5 border border-white/10 text-white text-sm px-4 py-3 rounded-xl focus:outline-none focus:border-red-600/60 transition-colors shadow-inner placeholder-zinc-600';
@@ -680,171 +597,12 @@ const SettingsTab: React.FC<{
             {/* Security Section */}
             <div className={cardWrapCls}>
                 
-                {/* Password Accordion */}
-                <div className="border-b border-white/5">
-                    <button
-                        onClick={() => {
-                            const nextState = !showPwdForm;
-                            setShowPwdForm(nextState);
-                            if (nextState) setShowDangerZone(false);
-                        }}
-                        className="w-full flex items-center justify-between text-left p-6 md:px-8 group/btn hover:bg-white/[0.02] transition-colors"
-                    >
-                        <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-zinc-400 group-hover/btn:text-white group-hover/btn:bg-white/10 transition-all border border-white/5 group-hover/btn:border-white/10">
-                                <KeyRound className="w-5 h-5" />
-                            </div>
-                            <div>
-                                <span className="text-base font-bold text-white group-hover/btn:text-red-400 transition-colors block">
-                                    {isPasswordUser ? 'Смяна на парола' : 'Създаване на парола'}
-                                </span>
-                                <span className={labelSubCls}>Управление на сигурността</span>
-                            </div>
-                        </div>
-                        <ChevronRight
-                            className={`w-5 h-5 text-zinc-600 transition-transform group-hover/btn:text-white ${showPwdForm ? 'rotate-90' : ''}`}
-                        />
-                    </button>
-
-                    <AnimatePresence>
-                        {showPwdForm && (
-                            <motion.div
-                                initial={{ opacity: 0, height: 0 }}
-                                animate={{ opacity: 1, height: 'auto' }}
-                                exit={{ opacity: 0, height: 0 }}
-                                className="overflow-hidden bg-black/40"
-                            >
-                                <div className="p-6 md:px-8 space-y-4 max-w-xl mx-auto border-t border-white/5">
-                                    {isPasswordUser && (
-                                        <div>
-                                            <div className="flex items-center justify-between mb-2">
-                                                <label className="block text-xs font-bold text-zinc-400 uppercase tracking-wide">Текуща парола</label>
-                                            </div>
-                                            <div className="relative">
-                                                <input
-                                                    type={showOld ? 'text' : 'password'}
-                                                    value={oldPwd}
-                                                    onChange={e => {
-                                                        const val = e.target.value.replace(/[^\x20-\x7E]/g, '');
-                                                        setOldPwd(val);
-                                                        e.target.value = val;
-                                                    }}
-                                                    className={`${inputCls} pr-12`}
-                                                    placeholder="Въведете текущата си парола"
-                                                    maxLength={64}
-                                                />
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setShowOld(v => !v)}
-                                                    className="absolute right-1 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center text-zinc-500 hover:text-white transition-colors"
-                                                >
-                                                    {showOld ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                                                </button>
-                                            </div>
-                                        </div>
-                                    )}
-                                    <div>
-                                        <label className="block text-xs font-bold text-zinc-400 mb-2 uppercase tracking-wide">{isPasswordUser ? 'Нова Парола' : 'Парола'}</label>
-                                        <div className="relative">
-                                            <input
-                                                type={showNew ? 'text' : 'password'}
-                                                value={newPwd}
-                                                onChange={e => {
-                                                    const val = e.target.value.replace(/[^\x20-\x7E]/g, '');
-                                                    setNewPwd(val);
-                                                    e.target.value = val;
-                                                }}
-                                                className={`${inputCls} pr-12`}
-                                                placeholder="От 10 до 64 символа"
-                                                maxLength={64}
-                                            />
-                                            <button
-                                                type="button"
-                                                onClick={() => setShowNew(v => !v)}
-                                                className="absolute right-1 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center text-zinc-500 hover:text-white transition-colors"
-                                            >
-                                                {showNew ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                                            </button>
-                                        </div>
-                                        <AnimatePresence>
-                                            {newPwd && (
-                                                <PasswordStrengthMeter
-                                                    password={newPwd}
-                                                    confirmPassword={confirmPwd || undefined}
-                                                    userInputs={[profile?.email, profile?.phone, user?.user_metadata?.name, user?.email].filter(Boolean) as string[]}
-                                                />
-                                            )}
-                                        </AnimatePresence>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-bold text-zinc-400 mb-2 uppercase tracking-wide">Потвърди Новата Парола</label>
-                                        <div className="relative">
-                                            <input
-                                                type={showConfirm ? 'text' : 'password'}
-                                                value={confirmPwd}
-                                                onChange={e => {
-                                                    const val = e.target.value.replace(/[^\x20-\x7E]/g, '');
-                                                    setConfirmPwd(val);
-                                                    e.target.value = val;
-                                                }}
-                                                className={`${inputCls} pr-12`}
-                                                placeholder="Повтори новата парола"
-                                                maxLength={64}
-                                            />
-                                            <button
-                                                type="button"
-                                                onClick={() => setShowConfirm(v => !v)}
-                                                className="absolute right-1 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center text-zinc-500 hover:text-white transition-colors"
-                                            >
-                                                {showConfirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    {newPwd && confirmPwd && newPwd !== confirmPwd && (
-                                        <p className="text-red-400 text-xs flex items-center gap-1.5 pt-1">
-                                            <AlertTriangle className="w-3.5 h-3.5" />
-                                            Паролите не съвпадат
-                                        </p>
-                                    )}
-
-                                    <div className="pt-2">
-                                        <button
-                                            onClick={changePassword}
-                                            disabled={pwdSaving || !newPwd || !confirmPwd || newPwd !== confirmPwd || !validatePassword(newPwd).isValid || (isPasswordUser && !oldPwd)}
-                                            className="w-full py-4 bg-gradient-to-r from-red-600 to-red-800 text-white font-black text-[13px] uppercase tracking-widest hover:from-red-500 hover:to-red-700 rounded-xl transition-all shadow-lg shadow-red-900/20 disabled:opacity-40 flex items-center justify-center gap-2"
-                                        >
-                                            {pwdSaving
-                                                ? <Loader2 className="w-4 h-4 animate-spin" />
-                                                : <Lock className="w-4 h-4" />}
-                                            {pwdSaving ? 'Запазване...' : (isPasswordUser ? 'Запази новата парола' : 'Създай Парола')}
-                                        </button>
-                                        
-                                        {isPasswordUser && (
-                                            <div className="mt-6 text-center">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setResetModalOpen(true)}
-                                                    className="text-xs font-bold text-zinc-500 hover:text-white uppercase tracking-widest transition-colors"
-                                                >
-                                                    Забравих текущата си парола
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-                </div>
-
                 {/* Danger Zone Accordion */}
                 <div>
                     <button
                         onClick={() => {
                             const nextState = !showDangerZone;
                             setShowDangerZone(nextState);
-                            if (nextState) setShowPwdForm(false);
                         }}
                         className="w-full flex items-center justify-between text-left p-6 md:px-8 group/btn hover:bg-red-950/10 transition-colors"
                     >
@@ -892,26 +650,18 @@ const SettingsTab: React.FC<{
                     <ConfirmDialog
                         isOpen={deleteModalOpen}
                         title="ПОТВЪРДИ ИЗТРИВАНЕТО"
-                        message="Сигурен ли си, че искаш да изтриеш своя акаунт? Акаунтът ти ще бъде насрочен за изтриване след 7 дни. През този 7-дневен период можеш да го възстановиш по всяко време, просто като влезеш отново в сайта ни! Ако изминат 7 дни без да се логнеш, действието става НАПЪЛНО НЕОБРАТИМО и всички твои данни ще бъдат безвъзвратно изтрити. За да продължиш, въведи текущата си парола."
+                        message="Сигурен ли си, че искаш да изтриеш своя акаунт? Акаунтът ти ще бъде насрочен за изтриване след 7 дни. През този 7-дневен период можеш да го възстановиш по всяко време, просто като влезеш отново в сайта ни чрез Google! Ако изминат 7 дни без да се логнеш, действието става НАПЪЛНО НЕОБРАТИМО и всички твои данни ще бъдат безвъзвратно изтрити."
                         confirmLabel="Да, изтрий акаунта"
                         isDanger={true}
-                        requiresPassword={true}
-                        onConfirm={(password) => {
+                        requiresPassword={false}
+                        onConfirm={() => {
                             setDeleteModalOpen(false);
-                            handleDeleteAccount(password);
+                            handleDeleteAccount();
                         }}
                         onCancel={() => setDeleteModalOpen(false)}
                     />
 
-                    <ConfirmDialog
-                        isOpen={resetModalOpen}
-                        title="ЗАБРАВЕНА ПАРОЛА?"
-                        message="Не помниш текущата си парола? Ще ти изпратим линк за смяна на регистрирания имейл."
-                        confirmLabel={resettingPassword ? "Изпращане..." : "Изпрати линк"}
-                        isDanger={false}
-                        onConfirm={handleResetPassword}
-                        onCancel={() => setResetModalOpen(false)}
-                    />
+
                 </div>
             </div>
 
