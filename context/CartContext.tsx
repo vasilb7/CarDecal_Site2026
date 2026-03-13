@@ -261,10 +261,41 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  // Real-time promo validation
+  // Real-time promo validation & Immediate check on mount/change
   useEffect(() => {
     if (!appliedPromo?.id) return;
 
+    // 1. Immediate validation check
+    const verifyPromo = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('promo_codes')
+          .select('is_active, valid_until, max_uses, current_uses')
+          .eq('id', appliedPromo.id)
+          .single();
+
+        if (error || !data) {
+          removePromo();
+          showToast(`купон : ${appliedPromo.code} изтече`, 'error');
+          return;
+        }
+
+        const now = new Date();
+        const isExpired = data.valid_until && new Date(data.valid_until) < now;
+        const isLimitReached = data.max_uses && data.current_uses >= data.max_uses;
+
+        if (!data.is_active || isExpired || isLimitReached) {
+          removePromo();
+          showToast(`купон : ${appliedPromo.code} изтече`, 'error');
+        }
+      } catch (err) {
+        console.error('Promo verification failed:', err);
+      }
+    };
+
+    verifyPromo();
+
+    // 2. Continuous real-time monitoring
     const channel = supabase
       .channel(`promo-watch-${appliedPromo.id}`)
       .on(
@@ -278,7 +309,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         (payload) => {
           if (payload.eventType === 'DELETE') {
             removePromo();
-            showToast(`Купон: ${appliedPromo.code} изтече`, 'error');
+            showToast(`купон : ${appliedPromo.code} изтече`, 'error');
           } else if (payload.eventType === 'UPDATE') {
             const newPromo = payload.new as any;
             const now = new Date();
@@ -287,7 +318,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
             
             if (!newPromo.is_active || isExpired || isLimitReached) {
               removePromo();
-              showToast(`Купон: ${appliedPromo.code} изтече`, 'error');
+              showToast(`купон : ${appliedPromo.code} изтече`, 'error');
             }
           }
         }
