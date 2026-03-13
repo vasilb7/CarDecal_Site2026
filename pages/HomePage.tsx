@@ -316,7 +316,7 @@ const HomePage: React.FC = () => {
                 mediaLoaded ? "opacity-30" : "opacity-0"
               }`}
             >
-              <source src={siteSettings.hero_media_url} type="video/mp4" />
+              <source src={getOptimizedUrl(siteSettings.hero_media_url)} type="video/mp4" />
             </video>
           ) : (
             <div className={`w-full h-full transition-opacity duration-1000 ${mediaLoaded ? "opacity-30" : "opacity-0"}`}>

@@ -2497,6 +2497,8 @@ const HeroMediaSection: React.FC = () => {
 
         const isVideo = file.type.startsWith('video/');
         const isImage = file.type.startsWith('image/');
+        const fileSizeMB = file.size / (1024 * 1024);
+
         if (!isVideo && !isImage) {
             setError('Позволени са само видео (mp4, webm) или снимка (jpg, png, webp).');
             return;
@@ -2507,26 +2509,31 @@ const HeroMediaSection: React.FC = () => {
         setSuccess('');
 
         try {
-            // Always upload to the SAME filename to replace old and avoid storage bloat
-            const ext = file.name.split('.').pop();
+            let publicUrl = '';
             const mediaType = isVideo ? 'video' : 'image';
-            const fixedFileName = isVideo ? 'hero_video.mp4' : `hero_image.${ext}`;
-            const storagePath = `hero/${fixedFileName}`;
 
-            // Upsert (overwrite) in storage
-            const { error: uploadError } = await supabase.storage
-                .from('site-media')
-                .upload(storagePath, file, { upsert: true, contentType: file.type });
+            // High optimization for heavy videos (> 5MB) using Cloudinary
+            if (isVideo && fileSizeMB > 5) {
+                showToast(`Размерът на видеото е ${fileSizeMB.toFixed(1)}MB. Стартираме автоматично оптимизиране и компресия...`, 'info');
+                publicUrl = await uploadToCloudinary(file, 'hero', 'video');
+            } else {
+                // Regular upload for smaller files or images to Supabase
+                const ext = file.name.split('.').pop();
+                const fixedFileName = isVideo ? 'hero_video.mp4' : `hero_image.${ext}`;
+                const storagePath = `hero/${fixedFileName}`;
 
-            if (uploadError) throw uploadError;
+                const { error: uploadError } = await supabase.storage
+                    .from('site-media')
+                    .upload(storagePath, file, { upsert: true, contentType: file.type });
 
-            // Get public URL
-            const { data: urlData } = supabase.storage
-                .from('site-media')
-                .getPublicUrl(storagePath);
+                if (uploadError) throw uploadError;
 
-            // Add cache buster (timestamp) to the URL to force browser refresh
-            const publicUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+                const { data: urlData } = supabase.storage
+                    .from('site-media')
+                    .getPublicUrl(storagePath);
+                
+                publicUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+            }
 
             // Save to site_settings
             await updateSetting('hero_media_url', publicUrl);

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../Toast/ToastProvider';
-import { Plus, Trash2, Ticket, CheckCircle2, XCircle, RefreshCw } from 'lucide-react';
+import { Plus, Trash2, Ticket, CheckCircle2, XCircle, RefreshCw, Edit2, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export const PromoCodesTab = () => {
@@ -20,6 +20,7 @@ export const PromoCodesTab = () => {
     const [validUntil, setValidUntil] = useState('');
     const [conditionType, setConditionType] = useState<'none' | 'new_users' | 'loyal_customers'>('none');
     const [conditionValue, setConditionValue] = useState<number | ''>('');
+    const [editingId, setEditingId] = useState<string | null>(null);
 
     const fetchCodes = async () => {
         setLoading(true);
@@ -59,7 +60,7 @@ export const PromoCodesTab = () => {
         setNewCode(result);
     };
 
-    const handleCreate = async (e: React.FormEvent) => {
+    const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newCode || discountValue === '') {
             showToast('Въведете код и стойност на отстъпката.', 'warning');
@@ -67,7 +68,7 @@ export const PromoCodesTab = () => {
         }
 
         try {
-            const { error } = await supabase.from('promo_codes').insert({
+            const payload = {
                 code: newCode.toUpperCase(),
                 discount_type: discountType,
                 discount_value: Number(discountValue),
@@ -77,11 +78,26 @@ export const PromoCodesTab = () => {
                 valid_until: validUntil || null,
                 condition_type: conditionType,
                 condition_value: conditionValue === '' ? null : Number(conditionValue)
-            });
+            };
+
+            let error;
+            if (editingId) {
+                const { error: updateError } = await supabase
+                    .from('promo_codes')
+                    .update(payload)
+                    .eq('id', editingId);
+                error = updateError;
+            } else {
+                const { error: insertError } = await supabase
+                    .from('promo_codes')
+                    .insert(payload);
+                error = insertError;
+            }
 
             if (error) throw error;
-            showToast('Успешно създаден промо код.', 'success');
+            showToast(editingId ? 'Успешно обновен промо код.' : 'Успешно създаден промо код.', 'success');
             setIsAdding(false);
+            setEditingId(null);
             
             // Reset form
             setNewCode('');
@@ -99,9 +115,47 @@ export const PromoCodesTab = () => {
             if (err.code === '23505') {
                 showToast('Този код вече съществува.', 'error');
             } else {
-                showToast('Грешка при създаване: ' + err.message, 'error');
+                showToast('Грешка: ' + err.message, 'error');
             }
         }
+    };
+
+    const startEditing = (code: any) => {
+        setEditingId(code.id);
+        setNewCode(code.code);
+        setDiscountType(code.discount_type);
+        setDiscountValue(code.discount_value);
+        setMaxUses(code.max_uses ?? '');
+        setMaxUsesPerUser(code.max_uses_per_user ?? '');
+        setMinOrderAmount(code.min_order_amount ?? '');
+        
+        // Format date for datetime-local input (YYYY-MM-DDTHH:MM)
+        if (code.valid_until) {
+            const date = new Date(code.valid_until);
+            const formatted = date.toISOString().slice(0, 16);
+            setValidUntil(formatted);
+        } else {
+            setValidUntil('');
+        }
+        
+        setConditionType(code.condition_type);
+        setConditionValue(code.condition_value ?? '');
+        setIsAdding(true);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const cancelEditing = () => {
+        setIsAdding(false);
+        setEditingId(null);
+        setNewCode('');
+        setDiscountType('percentage');
+        setDiscountValue('');
+        setMaxUses('');
+        setMaxUsesPerUser('');
+        setMinOrderAmount('');
+        setValidUntil('');
+        setConditionType('none');
+        setConditionValue('');
     };
 
     const toggleStatus = async (id: string, currentStatus: boolean) => {
@@ -130,7 +184,17 @@ export const PromoCodesTab = () => {
     if (loading) return <div className="text-white">Зареждане на промо кодовете...</div>;
 
     const inputClasses = "w-full bg-[#111] border border-white/10 rounded-xl px-4 py-3 text-white focus:border-red-600 focus:outline-none transition-all placeholder:text-zinc-600";
-    const labelClasses = "block text-[10px] font-black uppercase text-zinc-500 mb-1.5 ml-1 tracking-widest";
+    const labelClasses = "flex items-center gap-1.5 text-[10px] font-black uppercase text-zinc-500 mb-1.5 ml-1 tracking-widest";
+
+    const InfoTooltip = ({ text }: { text: string }) => (
+        <div className="group relative inline-block">
+            <Info size={12} className="text-zinc-600 cursor-help hover:text-red-500 transition-colors" />
+            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-zinc-800 text-[10px] text-zinc-200 rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity shadow-xl border border-white/10 z-50 normal-case font-medium tracking-normal text-center">
+                {text}
+                <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-zinc-800"></div>
+            </div>
+        </div>
+    );
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
@@ -143,7 +207,7 @@ export const PromoCodesTab = () => {
                     <p className="text-xs text-zinc-500 uppercase mt-1">Управление на кодове за отстъпка</p>
                 </div>
                 <button
-                    onClick={() => setIsAdding(!isAdding)}
+                    onClick={() => isAdding ? cancelEditing() : setIsAdding(true)}
                     className="bg-red-600 hover:bg-red-500 text-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-[0_0_20px_rgba(220,38,38,0.2)] hover:shadow-[0_0_30px_rgba(220,38,38,0.4)] transition-all flex items-center gap-2"
                 >
                     {isAdding ? <XCircle size={16} /> : <Plus size={16} />}
@@ -159,12 +223,17 @@ export const PromoCodesTab = () => {
                         exit={{ opacity: 0, height: 0 }}
                         className="overflow-hidden"
                     >
-                        <form onSubmit={handleCreate} className="bg-[#111] p-6 lg:p-8 rounded-[2rem] border border-red-600/20 shadow-[0_0_50px_rgba(255,0,0,0.05)] space-y-6">
-                            <h3 className="text-xs font-black uppercase text-zinc-400 border-b border-white/5 pb-4 mb-6">Създаване на нов код</h3>
+                        <form onSubmit={handleSave} className="bg-[#111] p-6 lg:p-8 rounded-[2rem] border border-red-600/20 shadow-[0_0_50px_rgba(255,0,0,0.05)] space-y-6">
+                            <h3 className="text-xs font-black uppercase text-zinc-400 border-b border-white/5 pb-4 mb-6">
+                                {editingId ? `Редактиране на код: ${newCode}` : 'Създаване на нов код'}
+                            </h3>
                             
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
-                                    <label className={labelClasses}>Код (напр. SUMMER20)</label>
+                                    <label className={labelClasses}>
+                                        Код (напр. SUMMER20)
+                                        <InfoTooltip text="Уникален код, който клиентите въвеждат при плащане." />
+                                    </label>
                                     <div className="flex gap-2">
                                         <input
                                             type="text"
@@ -181,7 +250,10 @@ export const PromoCodesTab = () => {
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label className={labelClasses}>Тип отстъпка</label>
+                                        <label className={labelClasses}>
+                                            Тип отстъпка
+                                            <InfoTooltip text="Изберте дали отстъпката да е процент от сумата или фиксирана сума в евро." />
+                                        </label>
                                         <select
                                             value={discountType}
                                             onChange={(e) => setDiscountType(e.target.value as any)}
@@ -192,7 +264,10 @@ export const PromoCodesTab = () => {
                                         </select>
                                     </div>
                                     <div>
-                                        <label className={labelClasses}>Стойност</label>
+                                        <label className={labelClasses}>
+                                            Стойност
+                                            <InfoTooltip text="Размерът на отстъпката (число)." />
+                                        </label>
                                         <input
                                             type="number"
                                             min="0.01" step="0.01"
@@ -208,7 +283,10 @@ export const PromoCodesTab = () => {
 
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t border-white/5">
                                 <div>
-                                    <label className={labelClasses}>Макс. брой използвания (общо)</label>
+                                    <label className={labelClasses}>
+                                        Макс. брой използвания (общо)
+                                        <InfoTooltip text="Колко пъти общо може да бъде използван този код от всички клиенти." />
+                                    </label>
                                     <input
                                         type="number" min="1"
                                         value={maxUses}
@@ -218,7 +296,10 @@ export const PromoCodesTab = () => {
                                     />
                                 </div>
                                 <div>
-                                    <label className={labelClasses}>Използвания на човек</label>
+                                    <label className={labelClasses}>
+                                        Използвания на човек
+                                        <InfoTooltip text="Колко пъти един и същ човек (един имейл) може да ползва този код." />
+                                    </label>
                                     <input
                                         type="number" min="1"
                                         value={maxUsesPerUser}
@@ -228,7 +309,10 @@ export const PromoCodesTab = () => {
                                     />
                                 </div>
                                 <div>
-                                    <label className={labelClasses}>Мин. стойност на поръчката (€)</label>
+                                    <label className={labelClasses}>
+                                        Мин. стойност на поръчката (€)
+                                        <InfoTooltip text="Минималната сума в количката, за да се задейства отстъпката." />
+                                    </label>
                                     <input
                                         type="number" min="0" step="0.01"
                                         value={minOrderAmount}
@@ -241,7 +325,10 @@ export const PromoCodesTab = () => {
 
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t border-white/5">
                                 <div>
-                                    <label className={labelClasses}>Валиден до (крайна дата)</label>
+                                    <label className={labelClasses}>
+                                        Валиден до (крайна дата)
+                                        <InfoTooltip text="Дата и час, след които кодът автоматично ще се деактивира." />
+                                    </label>
                                     <input
                                         type="datetime-local"
                                         value={validUntil}
@@ -250,7 +337,10 @@ export const PromoCodesTab = () => {
                                     />
                                 </div>
                                 <div>
-                                    <label className={labelClasses}>Условие</label>
+                                    <label className={labelClasses}>
+                                        Условие
+                                        <InfoTooltip text="Специфично условие за клиента, който прилага кода." />
+                                    </label>
                                     <select
                                         value={conditionType}
                                         onChange={(e) => setConditionType(e.target.value as any)}
@@ -263,7 +353,10 @@ export const PromoCodesTab = () => {
                                 </div>
                                 {conditionType === 'loyal_customers' && (
                                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                                        <label className={labelClasses}>Мин. брой предишни поръчки</label>
+                                        <label className={labelClasses}>
+                                            Мин. брой предишни поръчки
+                                            <InfoTooltip text="Клиентът трябва да има поне този брой успешни поръчки, за да ползва кода." />
+                                        </label>
                                         <input
                                             type="number" min="1"
                                             value={conditionValue}
@@ -278,7 +371,7 @@ export const PromoCodesTab = () => {
 
                             <div className="flex justify-end pt-6">
                                 <button type="submit" className="bg-red-600 hover:bg-red-500 text-white px-8 py-4 rounded-xl text-xs font-black uppercase tracking-widest shadow-[0_0_20px_rgba(220,38,38,0.2)] transition-all">
-                                    Създай код
+                                    {editingId ? 'Запази промените' : 'Създай код'}
                                 </button>
                             </div>
                         </form>
@@ -312,8 +405,12 @@ export const PromoCodesTab = () => {
                                             <div className="flex items-center gap-3">
                                                 <div className="flex flex-col">
                                                     <span className="text-white font-black text-sm tracking-wider">{c.code}</span>
-                                                    <span className={`text-[9px] uppercase tracking-widest font-bold mt-1 ${c.is_active ? 'text-green-500' : 'text-red-500'}`}>
-                                                        {c.is_active ? 'Активен' : 'Спрян'}
+                                                    <span className={`text-[9px] uppercase tracking-widest font-bold mt-1 ${
+                                                        !c.is_active ? 'text-red-500' : 
+                                                        (c.valid_until && new Date(c.valid_until) < new Date()) ? 'text-orange-500' : 'text-green-500'
+                                                    }`}>
+                                                        {!c.is_active ? 'Спрян' : 
+                                                         (c.valid_until && new Date(c.valid_until) < new Date()) ? 'Изтекъл' : 'Активен'}
                                                     </span>
                                                 </div>
                                             </div>
@@ -348,6 +445,13 @@ export const PromoCodesTab = () => {
                                         </td>
                                         <td className="p-4">
                                             <div className="flex justify-end gap-2">
+                                                <button
+                                                    onClick={() => startEditing(c)}
+                                                    className="p-2 rounded-xl bg-zinc-800 border border-zinc-700 hover:bg-white hover:border-white text-zinc-400 hover:text-black transition-all"
+                                                    title="Редактирай"
+                                                >
+                                                    <Edit2 size={16} />
+                                                </button>
                                                 <button
                                                     onClick={() => toggleStatus(c.id, c.is_active)}
                                                     className={`p-2 rounded-xl border transition-all ${c.is_active ? 'bg-red-600/10 border-red-600/20 hover:bg-red-600/20 text-red-500' : 'bg-green-600/10 border-green-600/20 hover:bg-green-600/20 text-green-500'}`}

@@ -335,7 +335,7 @@ const BookingPage: React.FC = () => {
     }
 
     return (
-        <div className="min-h-screen bg-[#080808] pb-24 relative overflow-hidden font-sans">
+        <div className="min-h-screen bg-[#080808] pb-10 relative overflow-hidden font-sans">
             <SEO title="Индивидуални Проекти" />
             <style dangerouslySetInnerHTML={{ __html: `
                 .custom-number-input::-webkit-inner-spin-button, 

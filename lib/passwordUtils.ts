@@ -29,46 +29,29 @@ export interface PasswordStrength {
 }
 
 /**
- * Validate password against Supabase policy requirements.
- * Relaxed: Allow submission if strength is not weak, even if some specific rules are missing.
+ * Validate password requirements.
+ * Relaxed: Allow submission if minimum length (8) and language (Latin) are met.
+ * We guide the user for more, but don't block them.
  */
 export function validatePassword(password: string): PasswordValidation {
     const checks: PasswordCheck[] = [
-        { id: 'length', label: 'От 8 до 64 символа', passed: password.length >= 8 && password.length <= 64 },
-        { id: 'lowercase', label: 'Малка буква (a-z)', passed: /[a-z]/.test(password) },
-        { id: 'uppercase', label: 'Главна буква (A-Z)', passed: /[A-Z]/.test(password) },
-        { id: 'digit', label: 'Цифра (0-9)', passed: /\d/.test(password) },
-        { id: 'symbol', label: 'Специален символ (@#$...)', passed: /[^A-Za-z0-9]/.test(password) },
-        { id: 'language', label: 'Само на английски (без кирилица)', passed: /^[\x20-\x7E]*$/.test(password) },
+        { id: 'length', label: 'Минимум 8 символа', passed: password.length >= 8 },
+        { id: 'language', label: 'Само на латиница (без кирилица)', passed: /^[\x20-\x7E]*$/.test(password) },
+        { id: 'lowercase', label: 'Препоръчително: Малка буква (a-z)', passed: /[a-z]/.test(password) },
+        { id: 'uppercase', label: 'Препоръчително: Главна буква (A-Z)', passed: /[A-Z]/.test(password) },
+        { id: 'digit', label: 'Препоръчително: Цифра (0-9)', passed: /\d/.test(password) },
+        { id: 'symbol', label: 'Препоръчително: Специален символ (@#$...)', passed: /[^A-Za-z0-9]/.test(password) },
     ];
 
-    const strength = getPasswordStrength(password);
     const isLanguageOk = checks.find(c => c.id === 'language')?.passed ?? true;
-    
-    const technicalChecks = checks.filter(c => c.id !== 'language');
-    const technicalPassed = technicalChecks.filter(c => c.passed).length;
-    const hasUpper = technicalChecks.find(c => c.id === 'uppercase')?.passed;
-    const hasSymbol = technicalChecks.find(c => c.id === 'symbol')?.passed;
-    
-    // Most Supabase projects have a policy of: 
-    // - 8+ chars
-    // - Must have 3 out of 4: lower, upper, digit, symbol
-    // OR just specific score.
-    
-    // Let's be safe and require at least ONE uppercase or symbol if the total complexity is low.
-    const hasExtraComplexity = hasUpper || hasSymbol;
+    const isLengthOk = password.length >= 8;
 
-    // Accept if:
-    // 1. Minimum 8 chars + English
-    // AND
-    // 2. Score >= 3 (Good/Strong)
-    // OR (Score >= 2 (Medium) AND has at least 4 tech checks AND at least one Upper or Symbol)
-    const isStrongEnough = strength.score >= 3 || (strength.score >= 2 && technicalPassed >= 4 && hasExtraComplexity);
-    const isBasicPolicyMet = password.length >= 8 && isLanguageOk;
+    // We only block if length is < 8 or contains Cyrillic/Illegal chars
+    const isValid = isLengthOk && isLanguageOk;
 
     return {
         checks,
-        isValid: isStrongEnough && isBasicPolicyMet,
+        isValid,
     };
 }
 

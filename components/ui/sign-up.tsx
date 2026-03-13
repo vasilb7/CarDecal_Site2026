@@ -78,8 +78,14 @@ const FloatingInput = ({
                             e.target.value = originalValue;
                         }
                     }}
-                    onFocus={() => setIsFocused(true)}
-                    onBlur={() => setIsFocused(false)}
+                    onFocus={(e) => {
+                        setIsFocused(true);
+                        props.onFocus?.(e);
+                    }}
+                    onBlur={(e) => {
+                        setIsFocused(false);
+                        props.onBlur?.(e);
+                    }}
                     className={`w-full bg-white/[0.03] border ${isFocused ? 'border-red-600 shadow-[0_0_25px_rgba(239,68,68,0.15)]' : 'border-white/10'} rounded-full px-6 py-4 shadow-sm outline-none text-white placeholder:text-transparent backdrop-blur-xl transition-all ${isPassword ? 'pr-14' : ''}`}
                     required={required}
                     placeholder=" "
@@ -144,241 +150,214 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
   const [password, setPassword] = useState('');
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
+  const [isPasswordFocused, setIsPasswordFocused] = useState(false);
 
   const canSubmit = password.length >= 8 && !loading;
 
   return (
-    <div className="flex w-full min-h-screen bg-[#111] overflow-hidden font-sans selection:bg-red-500/30 text-white">
-        {/* Left Side - Form Section */}
-        <div className="flex-1 flex flex-col justify-center px-4 sm:px-12 lg:px-20 py-4 sm:py-12 relative overflow-y-auto">
-            
-            {/* Mobile Close Button */}
-            <button 
-                onClick={() => navigate('/')}
-                className="absolute top-6 right-6 lg:hidden w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-all z-20"
-            >
-                <X size={20} />
-            </button>
+    <div className="fixed inset-0 w-full h-full bg-[#080808] overflow-y-auto font-sans selection:bg-red-500/30 text-white custom-scrollbar-hidden">
+        {/* Background Glows for depth */}
+        <div className="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] bg-red-600/5 rounded-full blur-[120px] pointer-events-none" />
+        <div className="fixed bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-red-600/5 rounded-full blur-[120px] pointer-events-none" />
 
-            {/* Logo */}
-            <motion.div 
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="mb-4 absolute top-6 left-6 sm:left-12 lg:left-20 z-20"
-            >
-                <div className="flex items-center gap-2 sm:gap-3">
-                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-white flex items-center justify-center shadow-[0_0_15px_rgba(255,255,255,0.3)]">
-                        <span className="text-black font-black text-lg sm:text-xl leading-none">CD</span>
-                    </div>
-                    <span className="text-xl sm:text-2xl font-bold tracking-tight text-white">CarDecal</span>
-                </div>
-            </motion.div>
-
-            {/* Form Container */}
-            <div className="max-w-md w-full mx-auto flex flex-col justify-center pt-24 sm:pt-0">
-                <div className="mb-0 text-center lg:text-left">
-                    <motion.h1 
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.1 }}
-                        className="text-[24px] sm:text-[36px] font-black text-white leading-tight mb-1 uppercase tracking-tighter"
-                    >
-                        {t('auth.register_title', 'Създай акаунт')}
-                    </motion.h1>
-                    <motion.p 
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.2 }}
-                        className="text-white/40 text-[10px] sm:text-xs font-bold uppercase tracking-widest max-w-sm mx-auto lg:mx-0"
-                    >
-                        {t('auth.register_subtitle', 'Регистрирайте се за индивидуални дизайни и история на поръчките')}
-                    </motion.p>
-                </div>
-
-                <form className="space-y-6 pt-8" onSubmit={(e) => onSignUp?.(e, captchaToken)}>
-                    <div className="space-y-1">
-                        <FloatingInput 
-                            label={t('auth.name_label', 'Въведете име и Фамилия')}
-                            name="name"
-                            storageKey="name"
-                            required
-                            onChange={(e: any) => {
-                                const val = e.target.value.replace(/[0-9]/g, '');
-                                setName(val);
-                            }}
-                        />
-                    </div>
-
-                    {/* Email */}
-                    <FloatingInput 
-                        label={t('auth.email', 'Имейл адрес')}
-                        name="email"
-                        storageKey="email"
-                        type="email"
-                        required
-                        onChange={(e: any) => setEmail(e.target.value)}
-                    />
-
-                    <div className="space-y-1">
-                        <FloatingInput 
-                            label={t('auth.phone', 'Телефонен номер')}
-                            name="phone"
-                            storageKey="phone"
-                            type="tel"
-                            required
-                        />
-                    </div>
-
-                    {/* Password */}
-                    <div>
-                        <FloatingInput 
-                            label={t('auth.password', 'Парола')}
-                            name="password"
-                            isPassword
-                            showPassword={showPassword}
-                            onTogglePassword={() => setShowPassword(!showPassword)}
-                            required
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
-                        />
-                        <AnimatePresence>
-                            {password && (
-                                <PasswordStrengthMeter
-                                    password={password}
-                                    userInputs={[email, name].filter(Boolean)}
-                                />
-                            )}
-                        </AnimatePresence>
-                    </div>
-
-                    {/* Terms Agreement */}
-                    <div className="flex items-start gap-4 px-2">
-                        <label className="relative flex items-center cursor-pointer group mt-0.5">
-                            <input
-                                id="terms"
-                                name="terms"
-                                type="checkbox"
-                                required
-                                className="peer sr-only"
-                            />
-                            <div className="w-5 h-5 border-2 border-white/20 bg-white/5 transition-all duration-300 peer-checked:bg-white peer-checked:border-white group-hover:border-white/40 flex items-center justify-center shrink-0 peer-checked:[&_svg]:opacity-100">
-                                <svg viewBox="0 0 24 24" fill="none" className="w-3.5 h-3.5 stroke-black stroke-[4] opacity-0 transition-opacity duration-200">
-                                    <polyline points="20 6 9 17 4 12" />
-                                </svg>
-                            </div>
-                        </label>
-                        <label htmlFor="terms" className="text-[10px] sm:text-xs text-white/40 leading-relaxed uppercase tracking-widest cursor-pointer select-none">
-                            {t('auth.agree_to_terms', 'Съгласявам се с')}
-                            <Link to="/terms" target="_blank" className="text-white hover:text-red-500 underline underline-offset-2 mx-1">
-                                {t('auth.terms_link', 'Общите условия')}
-                            </Link>
-                            и
-                            <Link to="/privacy" target="_blank" className="text-white hover:text-red-500 underline underline-offset-2 ml-1">
-                                {t('auth.privacy_link', 'Поверителността')}
-                            </Link>
-                        </label>
-                    </div>
-
-                    {/* Captcha */}
-                    <div className="flex justify-center py-2 scale-90 sm:scale-100">
-                        <Turnstile 
-                            siteKey="0x4AAAAAACn8KBpSOynPkBCf" 
-                            onSuccess={(token) => setCaptchaToken(token)}
-                            options={{ theme: 'dark' }}
-                        />
-                    </div>
-
-                    {/* Submit Button */}
-                    <motion.button
-                        whileHover={canSubmit ? { scale: 1.01 } : {}}
-                        whileTap={canSubmit ? { scale: 0.98 } : {}}
-                        type="submit"
-                        disabled={!canSubmit}
-                        className={`w-full font-black py-4 rounded-full mt-1 text-base uppercase tracking-[0.1em] shadow-xl transition-all ${
-                            canSubmit 
-                                ? 'bg-red-600 text-white shadow-red-600/20 hover:bg-red-500 active:scale-95 cursor-pointer' 
-                                : 'bg-zinc-800 text-zinc-500 shadow-none cursor-not-allowed'
-                        }`}
-                    >
-                        {loading ? (
-                            <span className="flex items-center justify-center gap-2">
-                                <svg className="animate-spin w-5 h-5" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
-                                Регистриране...
-                            </span>
-                        ) : t('auth.create_account', 'Регистрация')}
-                    </motion.button>
-
-                    {/* Social Buttons Section - Ultra Compact */}
-                    <div className="flex flex-col items-center pt-2">
-                        <span className="text-[9px] text-white/20 uppercase tracking-[0.2em] mb-2">
-                            {t('auth.or_sign_up_with', 'Или се регистрирайте чрез')}
-                        </span>
-
-                        <div className="flex justify-center mb-4">
-                            <motion.button
-                                whileHover={{ scale: 1.1 }}
-                                whileTap={{ scale: 0.9 }}
-                                type="button"
-                                onClick={onGoogleSignUp}
-                                className="w-12 h-12 flex items-center justify-center rounded-full bg-white shadow-lg transition-all"
-                            >
-                                <GoogleIcon />
-                            </motion.button>
-                        </div>
-
-                        {/* Bottom Links Grouped */}
-                        <div className="flex flex-col items-center gap-0.5">
-                            <span className="text-[10px] text-white/40 uppercase tracking-widest">
-                                {t('auth.already_have_account', 'Имате акаунт?')}
-                            </span>
-                            <Link 
-                                to="/login" 
-                                state={location.state}
-                                className="text-[11px] text-white font-black uppercase tracking-widest border-b border-red-600/50 hover:border-red-600 hover:text-red-500 transition-all pb-0.5"
-                            >
-                                {t('auth.sign_in_link', 'Влезте тук')}
-                            </Link>
-
-                            <button
-                                type="button"
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    window.dispatchEvent(new Event('open-bug-report'));
-                                }}
-                                className="text-[9px] text-white/30 hover:text-white uppercase tracking-widest mt-4 transition-colors flex items-center gap-1"
-                            >
-                                Проблем при регистрация?
-                            </button>
-                        </div>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        {/* Right Side - Image Section */}
-        <div className="hidden lg:block lg:w-1/2 relative overflow-hidden h-screen bg-black">
-            <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 1.2 }}
-                className="w-full h-full relative"
-            >
-                {/* Background Image */}
-                <img 
-                    src="/Sign/regbg.jpeg" 
-                    alt="Registration background"
-                    className="w-full h-full object-cover"
-                />
-
-                <div className="absolute inset-0 bg-black/10 z-0" />
-
+        {/* Main Content Section */}
+        <div className="min-h-full w-full flex items-center justify-center p-6 sm:p-12">
+            <div className="w-full max-w-md relative z-10 py-12">
                 {/* Close Button */}
                 <button 
                     onClick={() => navigate('/')}
-                    className="absolute top-8 right-8 w-12 h-12 rounded-full bg-white/90 backdrop-blur-md flex items-center justify-center text-[#333] shadow-lg hover:bg-white transition-all transform hover:rotate-90 z-20"
+                    className="absolute -top-4 -right-2 sm:-right-4 w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-all z-20"
                 >
-                    <X size={24} />
+                    <X size={20} />
                 </button>
-            </motion.div>
+
+                {/* Logo */}
+                <motion.div 
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="flex flex-col items-center mb-10"
+                >
+                    <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center shadow-[0_0_20px_rgba(255,255,255,0.2)] mb-4">
+                        <span className="text-black font-black text-2xl leading-none">CD</span>
+                    </div>
+                    <span className="text-2xl font-bold tracking-tight text-white mb-2">CarDecal</span>
+                    <div className="h-1 w-12 bg-red-600 rounded-full" />
+                </motion.div>
+
+                {/* Form Container */}
+                <div className="w-full">
+                    <div className="text-center mb-8">
+                        <motion.h1 
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.1 }}
+                            className="text-[24px] sm:text-[36px] font-black text-white leading-tight mb-1 uppercase tracking-tighter"
+                        >
+                            {t('auth.register_title', 'Създай акаунт')}
+                        </motion.h1>
+                        <motion.p 
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.2 }}
+                            className="text-white/40 text-[10px] sm:text-xs font-bold uppercase tracking-widest max-w-sm mx-auto lg:mx-0"
+                        >
+                            {t('auth.register_subtitle', 'Регистрирайте се за индивидуални дизайни и история на поръчките')}
+                        </motion.p>
+                    </div>
+
+                    <form className="space-y-6 pt-8" onSubmit={(e) => onSignUp?.(e, captchaToken)}>
+                        <div className="space-y-1">
+                            <FloatingInput 
+                                label={t('auth.name_label', 'Въведете име и Фамилия')}
+                                name="name"
+                                storageKey="name"
+                                required
+                                onChange={(e: any) => {
+                                    const val = e.target.value.replace(/[0-9]/g, '');
+                                    setName(val);
+                                }}
+                            />
+                        </div>
+
+                        <FloatingInput 
+                            label={t('auth.email', 'Имейл адрес')}
+                            name="email"
+                            storageKey="email"
+                            type="email"
+                            required
+                            onChange={(e: any) => setEmail(e.target.value)}
+                        />
+
+                        <div className="space-y-1">
+                            <FloatingInput 
+                                label={t('auth.phone', 'Телефонен номер')}
+                                name="phone"
+                                storageKey="phone"
+                                type="tel"
+                                required
+                            />
+                        </div>
+
+                        <div>
+                            <FloatingInput 
+                                label={t('auth.password', 'Парола')}
+                                name="password"
+                                isPassword
+                                showPassword={showPassword}
+                                onTogglePassword={() => setShowPassword(!showPassword)}
+                                required
+                                onFocus={() => setIsPasswordFocused(true)}
+                                onBlur={() => setIsPasswordFocused(false)}
+                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+                            />
+                            <AnimatePresence>
+                                {password && isPasswordFocused && (
+                                    <PasswordStrengthMeter
+                                        password={password}
+                                        userInputs={[email, name].filter(Boolean)}
+                                    />
+                                )}
+                            </AnimatePresence>
+                        </div>
+
+                        <div className="flex items-start gap-4 px-2">
+                            <label className="relative flex items-center cursor-pointer group mt-0.5">
+                                <input
+                                    id="terms"
+                                    name="terms"
+                                    type="checkbox"
+                                    required
+                                    className="peer sr-only"
+                                />
+                                <div className="w-5 h-5 border-2 border-white/20 bg-white/5 transition-all duration-300 peer-checked:bg-white peer-checked:border-white group-hover:border-white/40 flex items-center justify-center shrink-0 peer-checked:[&_svg]:opacity-100">
+                                    <svg viewBox="0 0 24 24" fill="none" className="w-3.5 h-3.5 stroke-black stroke-[4] opacity-0 transition-opacity duration-200">
+                                        <polyline points="20 6 9 17 4 12" />
+                                    </svg>
+                                </div>
+                            </label>
+                            <label htmlFor="terms" className="text-[10px] sm:text-xs text-white/40 leading-relaxed uppercase tracking-widest cursor-pointer select-none">
+                                {t('auth.agree_to_terms', 'Съгласявам се с')}
+                                <Link to="/terms" target="_blank" className="text-white hover:text-red-500 underline underline-offset-2 mx-1">
+                                    {t('auth.terms_link', 'Общите условия')}
+                                </Link>
+                                и
+                                <Link to="/privacy" target="_blank" className="text-white hover:text-red-500 underline underline-offset-2 ml-1">
+                                    {t('auth.privacy_link', 'Поверителността')}
+                                </Link>
+                            </label>
+                        </div>
+
+                        <div className="flex justify-center py-2 scale-90 sm:scale-100">
+                            <Turnstile 
+                                siteKey="0x4AAAAAACn8KBpSOynPkBCf" 
+                                onSuccess={(token) => setCaptchaToken(token)}
+                                options={{ theme: 'dark' }}
+                            />
+                        </div>
+
+                        <motion.button
+                            whileHover={canSubmit ? { scale: 1.01 } : {}}
+                            whileTap={canSubmit ? { scale: 0.98 } : {}}
+                            type="submit"
+                            disabled={!canSubmit}
+                            className={`w-full font-black py-4 rounded-full mt-1 text-base uppercase tracking-[0.1em] shadow-xl transition-all ${
+                                canSubmit 
+                                    ? 'bg-red-600 text-white shadow-red-600/20 hover:bg-red-500 active:scale-95 cursor-pointer' 
+                                    : 'bg-zinc-800 text-zinc-500 shadow-none cursor-not-allowed'
+                            }`}
+                        >
+                            {loading ? (
+                                <span className="flex items-center justify-center gap-2">
+                                    <svg className="animate-spin w-5 h-5" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+                                    Регистриране...
+                                </span>
+                            ) : t('auth.create_account', 'Регистрация')}
+                        </motion.button>
+
+                        <div className="flex flex-col items-center pt-2">
+                            <span className="text-[9px] text-white/20 uppercase tracking-[0.2em] mb-2">
+                                {t('auth.or_sign_up_with', 'Или се регистрирайте чрез')}
+                            </span>
+
+                            <div className="flex justify-center mb-4">
+                                <motion.button
+                                    whileHover={{ scale: 1.1 }}
+                                    whileTap={{ scale: 0.9 }}
+                                    type="button"
+                                    onClick={onGoogleSignUp}
+                                    className="w-12 h-12 flex items-center justify-center rounded-full bg-white shadow-lg transition-all"
+                                >
+                                    <GoogleIcon />
+                                </motion.button>
+                            </div>
+
+                            <div className="flex flex-col items-center gap-0.5">
+                                <span className="text-[10px] text-white/40 uppercase tracking-widest">
+                                    {t('auth.already_have_account', 'Имате акаунт?')}
+                                </span>
+                                <Link 
+                                    to="/login" 
+                                    state={location.state}
+                                    className="text-[11px] text-white font-black uppercase tracking-widest border-b border-red-600/50 hover:border-red-600 hover:text-red-500 transition-all pb-0.5"
+                                >
+                                    {t('auth.sign_in_link', 'Влезте тук')}
+                                </Link>
+
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        window.dispatchEvent(new Event('open-bug-report'));
+                                    }}
+                                    className="text-[9px] text-white/30 hover:text-white uppercase tracking-widest mt-4 transition-colors flex items-center gap-1"
+                                >
+                                    Проблем при регистрация?
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
   );

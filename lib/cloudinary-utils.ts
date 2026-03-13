@@ -17,17 +17,21 @@ async function generateSignature(params: Record<string, any>, secret: string): P
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-export async function uploadToCloudinary(file: File, folder: string = 'general'): Promise<string> {
+export async function uploadToCloudinary(file: File, folder: string = 'general', resourceType: 'image' | 'video' | 'auto' = 'auto'): Promise<string> {
   if (!cloudinaryConfig.apiKey || !cloudinaryConfig.apiSecret || !cloudinaryConfig.cloudName) {
     console.error('Missing Cloudinary config:', cloudinaryConfig);
     throw new Error('Липсва Cloudinary конфигурация (API Key/Secret). Моля, рестартирайте локалния сървър (npm run dev)!');
   }
 
   const timestamp = Math.round(new Date().getTime() / 1000);
-  const params = {
+  const params: any = {
     folder,
     timestamp,
   };
+
+  if (resourceType !== 'auto') {
+    params.resource_type = resourceType;
+  }
 
   const signature = await generateSignature(params, cloudinaryConfig.apiSecret);
 
@@ -37,9 +41,12 @@ export async function uploadToCloudinary(file: File, folder: string = 'general')
   formData.append('timestamp', timestamp.toString());
   formData.append('signature', signature);
   formData.append('folder', folder);
+  if (resourceType !== 'auto') {
+    formData.append('resource_type', resourceType);
+  }
 
   const response = await fetch(
-    `https://api.cloudinary.com/v1_1/${cloudinaryConfig.cloudName}/image/upload`,
+    `https://api.cloudinary.com/v1_1/${cloudinaryConfig.cloudName}/${resourceType === 'auto' ? 'upload' : resourceType + '/upload'}`,
     {
       method: 'POST',
       body: formData,

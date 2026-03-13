@@ -110,7 +110,7 @@ const LoginPage: React.FC = () => {
   const handleUpdatePassword = async (password: string) => {
     const validation = validatePassword(password);
     if (!validation.isValid) {
-      showToast('Паролата не отговаря на изискванията. Трябва да е между 10 и 64 символа, само на английски и да съдържа главна буква, малка буква, цифра и специален символ.', "error");
+      showToast('Паролата трябва да е поне 8 символа и само на латиница.', "error");
       return;
     }
 

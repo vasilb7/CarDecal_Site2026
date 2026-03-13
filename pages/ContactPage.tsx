@@ -8,7 +8,7 @@ const ContactPage: React.FC = () => {
     const { t } = useTranslation();
 
     return (
-        <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center px-4 py-24 relative overflow-hidden mt-16 lg:mt-0">
+        <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center px-4 pt-24 pb-8 relative overflow-hidden mt-16 lg:mt-0">
             <SEO title="Контакти" />
             
             {/* Subtle Ambient Background Effects */}
