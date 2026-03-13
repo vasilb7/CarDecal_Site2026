@@ -179,6 +179,19 @@ const CheckoutPage: React.FC = () => {
             // Client-side quick checks (RPC or triggers will do strictly later during order)
             if (data.max_uses && data.current_uses >= data.max_uses) throw new Error('Лимитът за използване на този код е достигнат.');
 
+            // Check personal usage limit by email
+            if (formData.email) {
+                const { count } = await supabase
+                    .from('promo_code_uses')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('promo_code_id', data.id)
+                    .eq('email', formData.email);
+                
+                if (count && data.max_uses_per_user && count >= data.max_uses_per_user) {
+                    throw new Error('Вече сте използвали този промо код.');
+                }
+            }
+
             applyPromo(data);
             showToast('Промо кодът е приложен успешно!', 'success');
             setPromoInput('');
