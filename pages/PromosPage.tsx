@@ -7,6 +7,7 @@ import SEO from '../components/SEO';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../lib/utils';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 
 const PromosPage: React.FC = () => {
   const [coupons, setCoupons] = useState<CouponData[]>([]);
@@ -14,18 +15,39 @@ const PromosPage: React.FC = () => {
   const [activeIndex, setActiveIndex] = useState(0);
   const { t } = useTranslation();
   const { appliedPromo } = useCart();
+  const { user } = useAuth();
 
   useEffect(() => {
     const fetchCoupons = async () => {
       try {
-        const { data, error } = await supabase
+        setLoading(true);
+        // 1. Fetch all active promo codes
+        const { data: allPromos, error: promoError } = await supabase
           .from('promo_codes')
           .select('*')
           .eq('is_active', true)
           .order('created_at', { ascending: false });
 
-        if (error) throw error;
-        setCoupons(data || []);
+        if (promoError) throw promoError;
+
+        // 2. If user is logged in or has an email session, filter out already used ones
+        const userEmail = user?.email || sessionStorage.getItem('last_user_email');
+        
+        if (userEmail && allPromos && allPromos.length > 0) {
+            const { data: usedRecords } = await supabase
+                .from('promo_code_uses')
+                .select('promo_code_id')
+                .eq('email', userEmail);
+            
+            if (usedRecords) {
+                const usedIds = new Set(usedRecords.map(r => r.promo_code_id));
+                const filteredPromos = allPromos.filter(p => !usedIds.has(p.id));
+                setCoupons(filteredPromos);
+                return;
+            }
+        }
+
+        setCoupons(allPromos || []);
       } catch (err) {
         console.error('Error fetching promo codes:', err);
       } finally {
@@ -34,7 +56,7 @@ const PromosPage: React.FC = () => {
     };
 
     fetchCoupons();
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     if (activeIndex >= coupons.length && coupons.length > 0) {
