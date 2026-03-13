@@ -68,12 +68,11 @@ const PromosPage: React.FC = () => {
       
       {/* Royal Background Pattern Overlay */}
       <div 
-        className="fixed inset-0 z-0 opacity-[0.05] pointer-events-none mix-blend-overlay"
+        className="fixed inset-0 z-0 opacity-[0.12] pointer-events-none"
         style={{ 
           backgroundImage: "url('/royal.png')", 
           backgroundRepeat: "repeat",
           backgroundSize: "300px",
-          filter: "brightness(0.5) contrast(1.2)"
         }}
       />
       

@@ -276,14 +276,10 @@ const CheckoutPage: React.FC = () => {
             
             {/* Minimalist Header */}
             <header className="h-20 sm:h-24 sticky top-0 bg-black/80 backdrop-blur-xl border-b border-white/5 z-50">
-                <div className="max-w-[1200px] mx-auto h-full px-4 sm:px-6 flex items-center justify-between">
-                    <Link to="/" className="flex items-center gap-3 group">
-                        <img src="/LOGO.png" alt="CarDecal" className="h-8 sm:h-10 w-auto opacity-90 group-hover:opacity-100 transition-opacity" />
+                <div className="max-w-[1200px] mx-auto h-full px-4 sm:px-6 flex items-center justify-center">
+                    <Link to="/" className="flex items-center group">
+                        <img src="/LOGO.webp" alt="CarDecal" className="h-8 sm:h-10 w-auto opacity-90 group-hover:opacity-100 transition-opacity" />
                     </Link>
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-green-500/5 border border-green-500/10 rounded-full">
-                        <ShieldCheck className="w-3.5 h-3.5 text-green-500" />
-                        <span className="text-[10px] font-black uppercase tracking-widest text-green-500/80">ОФИЦИАЛЕН CHECKOUT</span>
-                    </div>
                 </div>
             </header>
 
@@ -400,7 +396,7 @@ const CheckoutPage: React.FC = () => {
                                             </div>
 
                                             <div>
-                                                <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500 mb-2 block ml-1">Бележка към поръчката (Опционално)</label>
+                                                <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500 mb-2 block ml-1">Бележка към поръчката (Пожелание)</label>
                                                 <textarea 
                                                     name="notes" value={formData.notes} onChange={handleInputChange} maxLength={300}
                                                     className="w-full h-24 bg-[#0d0d0d] border border-white/[0.08] text-white text-base px-4 py-3 rounded-xl focus:outline-none focus:border-red-600 transition-all placeholder:text-zinc-600 font-medium resize-none shadow-inner" 

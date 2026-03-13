@@ -11,14 +11,16 @@ import { useUI } from '../context/UIContext';
 import { CartIcon } from './CartIcon';
 import { CartDrawer } from './CartDrawer';
 
+import { cn } from '../lib/utils';
+
 const Header: React.FC = () => {
     const { t } = useTranslation();
+    const location = useLocation();
     const { user, profile, signOut, isAdmin, isEditor } = useAuth();
     const { showToast } = useToast();
     const { clearCart } = useCart();
     const navigate = useNavigate();
     const { settings, serverTimeOffset, isMaintenanceActive } = useSiteSettings();
-    const location = useLocation();
     const { isMobileNavOpen: isMenuOpen, setIsMobileNavOpen: setIsMenuOpen } = useUI();
     const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
     const [isBannerVisible, setIsBannerVisible] = useState(true);
@@ -71,6 +73,16 @@ const Header: React.FC = () => {
         setCurrentMsgIndex(prev => (prev + 1) % annMessages.length);
         setManualTick(curr => curr + 1);
     };
+
+    const [isScrolled, setIsScrolled] = useState(false);
+
+    useEffect(() => {
+        const handleScroll = () => {
+            setIsScrolled(window.scrollY > 20);
+        };
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
 
     const handlePrevMsg = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -353,7 +365,12 @@ const Header: React.FC = () => {
                 )}
             </AnimatePresence>
 
-            <header className="sticky top-0 z-[100] w-full bg-background/95 backdrop-blur-md border-b border-white/5 pt-[env(safe-area-inset-top)]">
+            <header className={cn(
+                "sticky top-0 z-[100] w-full border-b border-white/5 pt-[env(safe-area-inset-top)] transition-colors duration-500",
+                (location.pathname === '/contact' || location.pathname === '/promos') && !isScrolled
+                    ? "bg-transparent" 
+                    : "bg-background/95 backdrop-blur-md"
+            )}>
                 <div className="container mx-auto px-4 sm:px-6 flex items-center justify-between relative h-20 sm:h-24">
                     <Link 
                         to="/" 

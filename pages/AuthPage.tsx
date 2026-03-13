@@ -1,0 +1,591 @@
+import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import { supabase } from '../lib/supabase';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { useToast } from '../hooks/useToast';
+import { recordFailedLogin, recordSuccessfulLogin, logSecurityEvent } from '../lib/security';
+import { validatePassword, translateAuthError } from '../lib/passwordUtils';
+import { isValidPhone as isValidBulgarianPhone, isValidFullName, formatToE164 } from '../lib/utils';
+import { hasProfanity } from '../lib/profanity';
+import { Turnstile } from '@marsidev/react-turnstile';
+import { Eye, EyeOff, Loader2, CheckCircle2 } from 'lucide-react';
+
+const GoogleIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-1 .67-2.28 1.07-3.71 1.07-2.85 0-5.27-1.92-6.13-4.51H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+    <path d="M5.87 14.13c-.22-.67-.35-1.39-.35-2.13s.13-1.46.35-2.13V7.03H2.18c-.77 1.58-1.21 3.35-1.21 5.22 0 1.87.44 3.64 1.21 5.22l3.69-2.84z" fill="#FBBC05" />
+    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.03l3.69 2.13c.86-2.59 3.28-4.51 6.13-4.51z" fill="#EA4335" />
+  </svg>
+);
+
+const SupabaseLogo = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-red-600">
+    {/* Abstract logo resembling Supabase's shape but in Red (for CarDecal) */}
+    <path d="M12.0001 2.5L2.50012 11.5L12.0001 20.5V14.5H21.5001L12.0001 2.5Z" fill="currentColor"/>
+  </svg>
+);
+
+const SupabaseInput = ({ label, type = "text", name, required, value, onChange, icon: Icon, onToggleIcon }: any) => {
+  return (
+    <div className="flex flex-col space-y-2 w-full group">
+      <label htmlFor={name} className="text-[13px] font-medium text-zinc-400 group-focus-within:text-red-500 transition-colors">
+        {label}
+      </label>
+      <div className="relative flex items-center h-[56px]">
+        <input
+          type={type}
+          id={name}
+          name={name}
+          required={required}
+          value={value}
+          onChange={onChange}
+          className={`w-full h-full px-5 bg-neutral-800 rounded-xl text-sm outline-none shadow-inner border border-neutral-700/50 focus:border-red-600 transition-all text-white placeholder-neutral-500 ${Icon ? 'pr-14' : ''}`}
+        />
+        {Icon && (
+          <div className="absolute right-2 inset-y-0 flex items-center">
+            <button
+              type="button"
+              onClick={onToggleIcon}
+              className="w-10 h-10 flex items-center justify-center rounded-full text-neutral-400 hover:text-white hover:bg-white/5 transition-all outline-none"
+            >
+              <div key={type} className="animate-eye flex items-center justify-center">
+                <Icon size={20} />
+              </div>
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Password Rules specific to match exactly the layout
+const PasswordRules = ({ password }: { password: string }) => {
+  const rules = [
+    { label: "Главна буква", test: /[A-Z]/ },
+    { label: "Малка буква", test: /[a-z]/ },
+    { label: "Цифра", test: /[0-9]/ },
+    { label: "Специален символ (напр. !?<>@#$%)", test: /[^A-Za-z0-9]/ },
+    { label: "8 или повече символа", test: /.{8,}/ },
+  ];
+
+  return (
+    <div className="flex flex-col space-y-1.5 mt-3 mb-6">
+      {rules.map((rule, idx) => {
+        const passed = rule.test.test(password);
+        return (
+          <div key={idx} className="flex items-center gap-2">
+            {passed ? (
+               <div className="w-[14px] h-[14px] rounded-full bg-zinc-500 flex items-center justify-center">
+                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-950">
+                   <polyline points="20 6 9 17 4 12"></polyline>
+                 </svg>
+               </div>
+            ) : (
+               <div className="w-[14px] h-[14px] rounded-full border-[1.5px] border-zinc-500"></div>
+            )}
+            <span className="text-[13px] text-zinc-500">{rule.label}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+export default function AuthPage() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { t } = useTranslation();
+  const { showToast } = useToast();
+
+  const [view, setView] = useState<'login' | 'register' | 'recovery'>('login');
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string>();
+  
+  // Login Fields
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+
+  // Register Fields
+  const [regName, setRegName] = useState("");
+  const [regPhone, setRegPhone] = useState("");
+  const [regEmail, setRegEmail] = useState("");
+  const [regPassword, setRegPassword] = useState("");
+
+  // Recovery Fields
+  const [recoveryEmail, setRecoveryEmail] = useState("");
+  const [recoverySent, setRecoverySent] = useState(false);
+
+  useEffect(() => {
+    if (location.pathname === '/register') setView('register');
+    else if (location.pathname === '/recovery') setView('recovery');
+    else setView('login');
+  }, [location.pathname]);
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>, setter: (v: string) => void) => {
+    const val = e.target.value;
+    if (/[а-яА-Я]/.test(val)) {
+      e.target.value = val.replace(/[а-яА-Я]/g, '');
+    }
+    setter(e.target.value);
+  };
+
+  // Quote/Benefits rotation
+  const loginQuotes = [
+    "Успехът е сумата от малки усилия, повтаряни ден след ден.",
+    "Постоянството е тайната на всяко голямо постижение.",
+    "Дисциплината е мостът между целите и техните резултати.",
+    "Твоето бъдеще се създава от това, което правиш днес.",
+    "Нищо в света не може да замени постоянството.",
+    " Пътят към върха изисква вяра и неуморна работа.",
+    "Бъди по-добра версия на себе си всеки изминал ден.",
+    "Големите неща започват с малки, но сигурни стъпки.",
+    "Търпението и трудът винаги се отплащат.",
+    "Твоят потенциал е безграничен, когато действаш.",
+  ];
+
+  const registerBenefits = [
+    "Направи първата крачка към своята нова цел.",
+    "Открий възможностите, които те очакват тук.",
+    "Присъедини се към общност, стремяща се към успех.",
+    "Твоят напредък е наш основен приоритет.",
+    "Започни своето пътешествие към промяната сега.",
+    "Постави началото на нещо значимо и трайно.",
+    "Всяка голяма промяна започва с едно решение.",
+    "Изгради навиците, които ще те направят победител.",
+    "Влез в света на високите стандарти и качество.",
+    "Днес е идеалният ден да поставиш ново начало.",
+  ];
+
+  const [quoteIndex, setQuoteIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setQuoteIndex((prev) => (prev + 1) % 10);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleOAuth = async () => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: window.location.origin }
+      });
+      if (error) throw error;
+    } catch (error: any) {
+      showToast(translateAuthError(error), "error");
+    }
+  };
+
+  const onSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setLoading(true);
+    
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: loginEmail, password: loginPassword, options: { captchaToken }
+      });
+
+      if (error) {
+        const failResult = await recordFailedLogin(loginEmail);
+        if (failResult.locked) {
+            showToast('Твърде много неуспешни опити. Моля, опитайте по-късно.', 'error');
+        } else if (error.message.includes("Invalid login credentials")) {
+            showToast(t('toast.login_error_credentials', 'Невалидни данни за вход.'), "error");
+        } else {
+            showToast(error.message, "error");
+        }
+      } else {
+        recordSuccessfulLogin(data?.user?.id).catch(console.error);
+        const md = data?.user?.user_metadata || {};
+        const name = md.full_name || md.name || md.first_name || (data?.user?.email?.split('@')[0]) || '';
+        showToast(t('toast.login_success', 'Добре дошли, {{name}}!', { name: name || '!' }), 'success');
+        
+        sessionStorage.setItem('temp_session', 'true');
+        const from = (location.state as any)?.from || '/';
+        navigate(from, { replace: true });
+      }
+    } catch (err: any) {
+      showToast(t('toast.login_error_generic', 'Грешка при вход.'), "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setLoading(true);
+
+    if (!isValidFullName(regName)) {
+        showToast('Въведете име и фамилия (3-100 символа).', "warning");
+        setLoading(false);
+        return;
+    }
+    if (!isValidBulgarianPhone(regPhone)) {
+        showToast("Невалиден телефон! (8-15 цифри)", "warning");
+        setLoading(false);
+        return;
+    }
+    const normalizedPhone = formatToE164(regPhone);
+
+    try {
+      const { data: existingPhone } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('phone', normalizedPhone)
+        .maybeSingle();
+
+      if (existingPhone) {
+        showToast('Този телефонен номер вече е свързан с друг акаунт', 'error');
+        setLoading(false);
+        return;
+      }
+
+      const pwdValidation = validatePassword(regPassword);
+      if (!pwdValidation.isValid) {
+          showToast('Моля, изпълнете изискванията за парола по-долу.', 'error');
+          setLoading(false);
+          return;
+      }
+      if (hasProfanity(regName)) {
+        showToast(t('toast.register_profanity', 'Името съдържа забранени думи.'), "error");
+        setLoading(false);
+        return;
+      }
+
+      const { error } = await supabase.auth.signUp({
+        email: regEmail, password: regPassword,
+        options: {
+          data: { full_name: regName.trim(), phone: normalizedPhone, role: 'user' },
+          captchaToken
+        },
+      });
+
+      if (error) {
+        showToast(translateAuthError(error), 'error');
+      } else {
+        showToast(t('toast.register_success', 'Регистрацията е успешна! Моля, потвърдете имейла си.'), 'success');
+        const from = (location.state as any)?.from || '/';
+        navigate(from, { replace: true });
+      }
+    } catch (err: any) {
+      showToast(translateAuthError(err), 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onRecover = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(recoveryEmail, {
+        redirectTo: `${window.location.origin}/reset-password`,
+        captchaToken,
+      });
+
+      if (error) {
+        showToast(translateAuthError(error), 'error');
+      } else {
+        setRecoverySent(true);
+      }
+    } catch (err: any) {
+      showToast(err.message || 'Възникна грешка при изпращането на имейла', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-[100dvh] w-full flex bg-zinc-950 text-zinc-200 font-sans antialiased overflow-x-hidden relative">
+      
+      {/* Left Column (Forms) */}
+      <div className="w-full lg:w-[560px] xl:w-[600px] flex flex-col pt-8 sm:pt-12 pb-12 px-6 sm:px-12 xl:px-16 overflow-y-auto relative z-10 mx-auto lg:mx-0 shadow-2xl bg-zinc-950 border-r border-zinc-900">
+        
+        {/* CD CARDECAL Gradient Logo */}
+        <div className="flex items-center gap-3 mb-12 cursor-pointer transition-opacity hover:opacity-80" onClick={() => navigate('/')}>
+          <div className="w-8 h-8 rounded bg-gradient-to-br from-red-600 to-red-900 flex items-center justify-center shadow-lg shadow-red-600/20">
+            <span className="text-white font-bold text-sm tracking-widest pl-[1px]">CD</span>
+          </div>
+          <span className="font-semibold text-[20px] text-white uppercase tracking-[0.05em]">CARDECAL</span>
+        </div>
+
+        <div className="flex-1 w-full max-w-[420px] mx-auto flex flex-col justify-center">
+
+        {view === 'login' && (
+          <div className="w-full fade-in">
+            <h1 className="text-[24px] font-semibold text-white mb-1 tracking-tight">Добре дошли отново</h1>
+            <p className="text-[14px] text-zinc-500 mb-8">Влезте във вашия профил</p>
+
+            <button
+              type="button"
+              onClick={handleOAuth}
+              className="w-full bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-zinc-600 text-zinc-200 flex items-center justify-center gap-2 py-2 rounded-md transition-colors text-[14px] font-medium"
+            >
+              <GoogleIcon />
+              Продължи с Google
+            </button>
+
+            <div className="flex items-center my-6">
+              <div className="flex-1 h-[1px] bg-zinc-800"></div>
+              <span className="px-3 text-zinc-500 text-[12px]">или</span>
+              <div className="flex-1 h-[1px] bg-zinc-800"></div>
+            </div>
+
+            <form onSubmit={onSignIn} className="space-y-4">
+              <SupabaseInput 
+                label="Имейл"
+                name="email"
+                type="email"
+                value={loginEmail}
+                onChange={(e: any) => setLoginEmail(e.target.value)}
+                required
+              />
+              
+              <SupabaseInput 
+                label="Парола"
+                name="password"
+                type={showPassword ? "text" : "password"}
+                icon={showPassword ? EyeOff : Eye}
+                onToggleIcon={() => setShowPassword(!showPassword)}
+                onChange={(e: any) => handlePasswordChange(e, setLoginPassword)}
+                value={loginPassword}
+                required
+              />
+
+              <div className="flex justify-start">
+                <button type="button" onClick={() => { setView('recovery'); window.history.pushState({}, '', '/recovery'); }} className="text-[13px] text-zinc-500 hover:text-zinc-200 transition-colors">
+                  Забравена парола?
+                </button>
+              </div>
+
+              <div className="flex justify-center mt-2 min-h-[65px] w-full overflow-hidden">
+                <Turnstile siteKey="0x4AAAAAACn8KBpSOynPkBCf" onSuccess={(token) => setCaptchaToken(token)} options={{ theme: 'dark', size: 'flexible' }} />
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center py-2 rounded-md transition-colors text-[14px] font-medium disabled:opacity-50"
+              >
+                {loading ? <Loader2 size={18} className="animate-spin" /> : "Вход"}
+              </button>
+            </form>
+
+            <div className="mt-6 text-center text-[14px] text-zinc-500">
+              Нямате профил?{' '}
+              <button onClick={() => { setView('register'); window.history.pushState({}, '', '/register'); }} className="text-white hover:underline">
+                Регистрация
+              </button>
+            </div>
+          </div>
+        )}
+
+        {view === 'register' && (
+          <div className="w-full fade-in">
+            <h1 className="text-[24px] font-semibold text-white mb-1 tracking-tight">Създай профил</h1>
+            <p className="text-[14px] text-zinc-500 mb-8">Регистрирайте нов профил</p>
+
+            <button
+              type="button"
+              onClick={handleOAuth}
+              className="w-full bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-zinc-600 text-zinc-200 flex items-center justify-center gap-2 py-2 rounded-md transition-colors text-[14px] font-medium"
+            >
+              <GoogleIcon />
+              Продължи с Google
+            </button>
+
+            <div className="flex items-center my-6">
+              <div className="flex-1 h-[1px] bg-zinc-800"></div>
+              <span className="px-3 text-zinc-500 text-[12px]">или</span>
+              <div className="flex-1 h-[1px] bg-zinc-800"></div>
+            </div>
+
+            <form onSubmit={onSignUp} className="space-y-4">
+              <SupabaseInput label="Име и Фамилия" name="name" value={regName} onChange={(e: any) => setRegName(e.target.value)} required />
+              <SupabaseInput label="Телефон" name="phone" type="tel" value={regPhone} onChange={(e: any) => setRegPhone(e.target.value)} required />
+              <SupabaseInput label="Имейл" name="email" type="email" value={regEmail} onChange={(e: any) => setRegEmail(e.target.value)} required />
+              
+              <SupabaseInput 
+                label="Парола"
+                name="password"
+                type={showPassword ? "text" : "password"}
+                icon={showPassword ? EyeOff : Eye}
+                onToggleIcon={() => setShowPassword(!showPassword)}
+                onChange={(e: any) => handlePasswordChange(e, setRegPassword)}
+                value={regPassword}
+                required
+              />
+
+              {regPassword.length > 0 && <PasswordRules password={regPassword} />}
+
+              <div className="flex justify-center mt-2 min-h-[65px] w-full overflow-hidden">
+                <Turnstile siteKey="0x4AAAAAACn8KBpSOynPkBCf" onSuccess={(token) => setCaptchaToken(token)} options={{ theme: 'dark', size: 'flexible' }} />
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center py-2 rounded-md transition-colors text-[14px] font-medium disabled:opacity-50"
+              >
+                {loading ? <Loader2 size={18} className="animate-spin" /> : "Регистрация"}
+              </button>
+            </form>
+
+            <div className="mt-6 text-center text-[14px] text-zinc-500">
+              Вече имате профил?{' '}
+              <button onClick={() => { setView('login'); window.history.pushState({}, '', '/login'); }} className="text-white hover:underline">
+                Вход
+              </button>
+            </div>
+            
+          </div>
+        )}
+
+        {view === 'recovery' && (
+          <div className="w-full fade-in">
+            {!recoverySent ? (
+              <>
+                <h1 className="text-[24px] font-semibold text-white mb-1 tracking-tight">Възстановяване</h1>
+                <p className="text-[14px] text-zinc-500 mb-8">Въведете вашия имейл, за да получите инструкции</p>
+
+                <form onSubmit={onRecover} className="space-y-4">
+                  <SupabaseInput 
+                    label="Имейл"
+                    name="email"
+                    type="email"
+                    value={recoveryEmail}
+                    onChange={(e: any) => setRecoveryEmail(e.target.value)}
+                    required
+                  />
+                  
+                  <div className="flex justify-center mt-2 min-h-[65px] w-full overflow-hidden">
+                    <Turnstile siteKey="0x4AAAAAACn8KBpSOynPkBCf" onSuccess={(token) => setCaptchaToken(token)} options={{ theme: 'dark', size: 'flexible' }} />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center py-2 rounded-md transition-colors text-[14px] font-medium disabled:opacity-50"
+                  >
+                    {loading ? <Loader2 size={18} className="animate-spin" /> : "Изпрати инструкции"}
+                  </button>
+                </form>
+
+                <div className="mt-6 text-center text-[14px] text-zinc-500">
+                   <button onClick={() => { setView('login'); window.history.pushState({}, '', '/login'); }} className="text-white hover:underline">
+                     Назад към Вход
+                   </button>
+                </div>
+              </>
+            ) : (
+              <div className="text-center">
+                <div className="w-16 h-16 bg-red-500/10 border border-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <CheckCircle2 size={32} className="text-red-500" />
+                </div>
+                <h2 className="text-[20px] font-semibold text-white mb-2">
+                    Проверете имейла си
+                </h2>
+                <p className="text-[14px] text-zinc-500 mb-8">
+                    Изпратихме линк за възстановяване до <br/><span className="text-zinc-200">{recoveryEmail}</span>
+                </p>
+                <button 
+                    onClick={() => setView('login')}
+                    className="w-full bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-zinc-600 text-zinc-200 flex items-center justify-center py-2 rounded-md transition-colors text-[14px] font-medium"
+                >
+                    Назад към Вход
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        </div>
+
+        {/* Global Footer in left column - for login and register */}
+        {(view === 'login' || view === 'register') && (
+          <div className="mt-12 w-full max-w-[420px] mx-auto text-left text-[12px] text-zinc-500 leading-relaxed">
+            Продължавайки се съгласявате с <a href="/terms" target="_blank" className="hover:text-white underline transition-colors">Общите условия</a> и{' '}
+            <a href="/privacy" target="_blank" className="hover:text-white underline transition-colors">Политиката за поверителност</a> на CarDecal, както и да получавате периодични имейли с обновления.
+          </div>
+        )}
+
+      </div>
+
+      {/* Right Column (Image/Photo Area) */}
+      <div className="hidden lg:flex lg:flex-1 relative overflow-hidden bg-[#280905]">
+        
+        {/* Royal Background Pattern Overlay - Same as PromosPage */}
+        <div 
+          className="absolute inset-0 z-0 opacity-[0.12] pointer-events-none"
+          style={{ 
+            backgroundImage: "url('/royal.png')", 
+            backgroundRepeat: "repeat",
+            backgroundSize: "300px",
+          }}
+        />
+        
+        {/* Gradients */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/20" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#280905] via-transparent to-transparent z-10" />
+
+        {/* Content Overlay */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center p-12 text-center z-20">
+          <div className="mb-8 p-6 rounded-full bg-black/30 backdrop-blur-md border border-white/5 shadow-2xl animate-float">
+            <img src="/crown.png" alt="Crown" className="w-[100px] h-auto object-contain filter drop-shadow-[0_0_15px_rgba(255,0,0,0.5)]" />
+          </div>
+          
+          <div className="max-w-md space-y-6">
+            <div className="h-[100px] flex items-center justify-center">
+              <h2 key={quoteIndex} className="text-3xl font-medium text-white tracking-tight leading-loose slide-up-fade italic font-serif">
+                "{view === 'register' ? registerBenefits[quoteIndex] : loginQuotes[quoteIndex]}"
+              </h2>
+            </div>
+            <div className="flex gap-2 justify-center">
+              {[...Array(10)].map((_, i) => (
+                <div 
+                  key={i} 
+                  className={`h-1.5 rounded-full transition-all duration-700 ease-in-out ${i === quoteIndex ? 'w-10 bg-red-600 shadow-[0_0_8px_rgba(220,38,38,0.8)]' : 'w-3 bg-white/10'}`}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <style>{`
+        .fade-in {
+          animation: fadeIn 0.3s ease-in-out;
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(5px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes eyeToggle {
+          0% { transform: scale(0.5) rotate(-30deg); opacity: 0; }
+          100% { transform: scale(1) rotate(0); opacity: 1; }
+        }
+        .animate-eye {
+          animation: eyeToggle 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+        .animate-float {
+          animation: float 6s ease-in-out infinite;
+        }
+        @keyframes float {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-20px); }
+        }
+        .slide-up-fade {
+          animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes slideUpFade {
+          from { opacity: 0; transform: translateY(10px); filter: blur(4px); }
+          to { opacity: 1; transform: translateY(0); filter: blur(0); }
+        }
+      `}</style>
+    </div>
+  );
+}

@@ -30,12 +30,12 @@ export interface PasswordStrength {
 
 /**
  * Validate password requirements.
- * Relaxed: Allow submission if minimum length (8) and language (Latin) are met.
+ * Relaxed: Allow submission if minimum length (6) and language (Latin) are met.
  * We guide the user for more, but don't block them.
  */
 export function validatePassword(password: string): PasswordValidation {
     const checks: PasswordCheck[] = [
-        { id: 'length', label: 'Минимум 8 символа', passed: password.length >= 8 },
+        { id: 'length', label: 'Минимум 6 символа', passed: password.length >= 6 },
         { id: 'language', label: 'Само на латиница (без кирилица)', passed: /^[\x20-\x7E]*$/.test(password) },
         { id: 'lowercase', label: 'Препоръчително: Малка буква (a-z)', passed: /[a-z]/.test(password) },
         { id: 'uppercase', label: 'Препоръчително: Главна буква (A-Z)', passed: /[A-Z]/.test(password) },
@@ -44,9 +44,9 @@ export function validatePassword(password: string): PasswordValidation {
     ];
 
     const isLanguageOk = checks.find(c => c.id === 'language')?.passed ?? true;
-    const isLengthOk = password.length >= 8;
+    const isLengthOk = password.length >= 6;
 
-    // We only block if length is < 8 or contains Cyrillic/Illegal chars
+    // We only block if length is < 6 or contains Cyrillic/Illegal chars
     const isValid = isLengthOk && isLanguageOk;
 
     return {

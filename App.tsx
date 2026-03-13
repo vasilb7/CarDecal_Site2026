@@ -55,8 +55,7 @@ const ProductDetailsPage = lazyWithRetry(
 const ContactPage = lazyWithRetry(() => import("./pages/ContactPage"));
 const AboutPage = lazyWithRetry(() => import("./pages/AboutPage"));
 const PricingPage = lazyWithRetry(() => import("./pages/PricingPage"));
-const LoginPage = lazyWithRetry(() => import("./pages/LoginPage"));
-const RegisterPage = lazyWithRetry(() => import("./pages/RegisterPage"));
+const AuthPage = lazyWithRetry(() => import("./pages/AuthPage"));
 const PrivacyPage = lazyWithRetry(() => import("./pages/PrivacyPage"));
 const TermsPage = lazyWithRetry(() => import("./pages/TermsPage"));
 const DeliveryPage = lazyWithRetry(() => import("./pages/DeliveryPage"));
@@ -206,12 +205,12 @@ function AppContent() {
             }
           />
 
-          {/* Auth Pages - No Header/Footer */}
+          {/* Unified Auth Page for Login, Register, Recovery */}
           <Route
             path="/login"
             element={
               <PageWrapper>
-                <LoginPage />
+                <AuthPage />
               </PageWrapper>
             }
           />
@@ -219,7 +218,15 @@ function AppContent() {
             path="/register"
             element={
               <PageWrapper>
-                <RegisterPage />
+                <AuthPage />
+              </PageWrapper>
+            }
+          />
+          <Route
+            path="/recovery"
+            element={
+              <PageWrapper>
+                <AuthPage />
               </PageWrapper>
             }
           />

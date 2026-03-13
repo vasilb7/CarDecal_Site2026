@@ -8,17 +8,16 @@ const ContactPage: React.FC = () => {
     const { t } = useTranslation();
 
     return (
-        <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-start px-4 pt-24 md:pt-32 pb-24 relative overflow-hidden mt-16 lg:mt-0">
+        <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-start px-4 pt-16 md:pt-28 pb-24 relative overflow-hidden">
             <SEO title="Контакти" />
             
             {/* Royal Background Pattern Overlay */}
             <div 
-                className="fixed inset-0 z-0 opacity-[0.05] pointer-events-none mix-blend-overlay"
+                className="fixed inset-0 z-0 opacity-[0.12] pointer-events-none"
                 style={{ 
                     backgroundImage: "url('/royal.png')", 
                     backgroundRepeat: "repeat",
                     backgroundSize: "300px",
-                    filter: "brightness(0.5) contrast(1.2)"
                 }}
             />
 
@@ -30,11 +29,11 @@ const ContactPage: React.FC = () => {
                     transition={{ duration: 0.8 }}
                     className="text-center mb-12 md:mb-16"
                 >
-                    <h1 className="text-5xl md:text-6xl lg:text-7xl font-serif text-white tracking-tight mb-4 drop-shadow-md">
+                    <h1 className="text-4xl md:text-5xl lg:text-7xl font-serif text-white tracking-tight mb-3 drop-shadow-md">
                         {t('contact.title', 'Свържете се с нас')}
                     </h1>
-                    <p className="text-white/60 text-lg md:text-xl font-light max-w-2xl mx-auto px-4">
-                        Ние сме изцяло онлайн базиран бизнес, посветен на това да предоставим най-доброто качество, където и да се намирате.
+                    <p className="text-white/60 text-lg md:text-xl font-light max-w-2xl mx-auto px-2">
+                    Въпроси? Обадете ни се или ни пишете!
                     </p>
                 </motion.div>
 
