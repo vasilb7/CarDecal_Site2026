@@ -56,6 +56,22 @@ const PromosPage: React.FC = () => {
     };
 
     fetchCoupons();
+
+    // Subscribe to real-time changes
+    const channel = supabase
+      .channel('promo-updates')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'promo_codes' },
+        () => {
+          fetchCoupons();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   useEffect(() => {

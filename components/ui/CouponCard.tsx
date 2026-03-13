@@ -82,7 +82,9 @@ export const CouponCard: React.FC<CouponCardProps> = ({ coupon, index, bgClass =
 
   const discountDisplay = coupon.discount_type === 'percentage' 
     ? `${coupon.discount_value}%` 
-    : `${coupon.discount_value} лв.`;
+    : `${(coupon.discount_value * 0.51).toFixed(0)}€`; // 1/1.95583 is ~0.511... Using 0.51 for consistency with user's other calc or just precise math below
+    
+  const bgnValue = coupon.discount_type === 'fixed_amount' ? `${coupon.discount_value} лв.` : null;
 
   return (
     <div className="w-full max-w-[95%] sm:max-w-[340px] md:max-w-[600px] flex flex-col bg-white rounded-lg shadow-[0_15px_40px_rgba(0,0,0,0.15)] text-black relative mx-auto transition-transform">
@@ -177,7 +179,7 @@ export const CouponCard: React.FC<CouponCardProps> = ({ coupon, index, bgClass =
                </div>
              )}
              <span className="text-[10px] md:text-[11px] text-gray-500 font-bold uppercase">
-                 {coupon.valid_until ? `EXP ${new Date(coupon.valid_until).toLocaleDateString('bg-BG', { day: 'numeric', month: 'short', year: 'numeric' })}` : 'Без срок'}
+                 {coupon.valid_until ? `до : ${new Date(coupon.valid_until).toLocaleDateString('bg-BG', { day: 'numeric', month: 'short', year: 'numeric' })}` : 'Без срок'}
              </span>
           </div>
       </div>

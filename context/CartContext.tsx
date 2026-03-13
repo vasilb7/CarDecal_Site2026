@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { useToast } from '../components/Toast/ToastProvider';
+import { supabase } from '../lib/supabase';
 
 export const EXCHANGE_RATE = 1.95583;
 export const FREE_SHIPPING_THRESHOLD_BGN = 150;
@@ -236,15 +237,15 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('cardecal_promo');
   };
 
-  const applyPromo = (promo: PromoCode) => {
+  const applyPromo = React.useCallback((promo: PromoCode) => {
     setAppliedPromo(promo);
     localStorage.setItem('cardecal_promo', JSON.stringify(promo));
-  };
+  }, []);
 
-  const removePromo = () => {
+  const removePromo = React.useCallback(() => {
     setAppliedPromo(null);
     localStorage.removeItem('cardecal_promo');
-  };
+  }, []);
 
   // Cleanup timeouts on unmount and listen for global clear cart event
   useEffect(() => {
@@ -259,6 +260,44 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         window.removeEventListener('clear_local_cart', handleClearCartEvent);
     };
   }, []);
+
+  // Real-time promo validation
+  useEffect(() => {
+    if (!appliedPromo?.id) return;
+
+    const channel = supabase
+      .channel(`promo-watch-${appliedPromo.id}`)
+      .on(
+        'postgres_changes',
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'promo_codes', 
+          filter: `id=eq.${appliedPromo.id}` 
+        },
+        (payload) => {
+          if (payload.eventType === 'DELETE') {
+            removePromo();
+            showToast(`Купон: ${appliedPromo.code} изтече`, 'error');
+          } else if (payload.eventType === 'UPDATE') {
+            const newPromo = payload.new as any;
+            const now = new Date();
+            const isExpired = newPromo.valid_until && new Date(newPromo.valid_until) < now;
+            const isLimitReached = newPromo.max_uses && newPromo.current_uses >= newPromo.max_uses;
+            
+            if (!newPromo.is_active || isExpired || isLimitReached) {
+              removePromo();
+              showToast(`Купон: ${appliedPromo.code} изтече`, 'error');
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [appliedPromo?.id, appliedPromo?.code, showToast, removePromo]);
 
   // No longer auto-removing promo code - user wants it to stick around even if invalid
 
