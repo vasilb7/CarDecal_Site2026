@@ -13,6 +13,7 @@ import { supabase } from '../lib/supabase';
 import { useToast } from '../components/Toast/ToastProvider';
 import { isValidPhone as isValidBulgarianPhone, isValidFullName, formatToE164 } from '../lib/utils';
 import { Ticket, X as XIcon } from 'lucide-react';
+import { logPromoCodeUsage } from '../lib/promo-utils';
 import SEO from '../components/SEO';
 
 // --- Sub-components for better organization ---
@@ -175,7 +176,7 @@ const CheckoutPage: React.FC = () => {
                 throw new Error(`Този код изисква минимална поръчка от ${data.min_order_amount} €`);
             }
 
-            // Client-side quick checks (RPC will do strictly later)
+            // Client-side quick checks (RPC or triggers will do strictly later during order)
             if (data.max_uses && data.current_uses >= data.max_uses) throw new Error('Лимитът за използване на този код е достигнат.');
 
             applyPromo(data);
@@ -209,13 +210,16 @@ const CheckoutPage: React.FC = () => {
 
             if (appliedPromo) {
                 try {
-                    await supabase.rpc('use_promo_code', {
-                        p_code: appliedPromo.code,
-                        p_user_id: user?.id || null,
-                        p_email: formData.email || '',
-                        p_order_id: data.id
-                    });
-                } catch(e) { /* ignore tracking error on checkout if it fails */ }
+                    // Update: Log usage only when order is actually submitted
+                    await logPromoCodeUsage(
+                        appliedPromo.id, 
+                        user?.id, 
+                        formData.email, 
+                        data.id
+                    );
+                } catch(e) { 
+                    console.error("Tracking error on checkout:", e);
+                }
             }
 
             if (user && saveForFuture) {

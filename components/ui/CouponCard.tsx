@@ -78,9 +78,6 @@ export const CouponCard: React.FC<CouponCardProps> = ({ coupon, index, bgClass =
       discount_value: coupon.discount_value,
       min_order_amount: coupon.min_order_amount
     });
-
-    // Log the usage to Supabase
-    logPromoCodeUsage(coupon.id, user?.id, user?.email).catch(err => console.error("Tracking error:", err));
   };
 
   const discountDisplay = coupon.discount_type === 'percentage' 
