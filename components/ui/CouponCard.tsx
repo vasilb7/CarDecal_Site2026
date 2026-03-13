@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Copy, Check, Share2, Info, Star } from 'lucide-react';
+import { Copy, Check, Share2, Info, Star, Activity } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useTranslation } from 'react-i18next';
+import { useCart } from '../../context/CartContext';
+import { useAuth } from '../../context/AuthContext';
+import { logPromoCodeUsage } from '../../lib/promo-utils';
 
 export interface CouponData {
   id: string;
@@ -22,14 +25,53 @@ interface CouponCardProps {
 }
 
 export const CouponCard: React.FC<CouponCardProps> = ({ coupon, index, bgClass = "bg-[#280905]" }) => {
-  const [copied, setCopied] = useState(false);
-  const { t } = useTranslation();
+  const { appliedPromo, applyPromo } = useCart();
+  const { user } = useAuth();
+
+  const [copied, setCopied] = useState(() => {
+    try {
+      const savedCopied = localStorage.getItem('cardecal_copied_coupons');
+      if (savedCopied) {
+        const parsed = JSON.parse(savedCopied);
+        return parsed.includes(coupon.code);
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  });
+
+  const isApplied = appliedPromo?.code === coupon.code;
+  const isActive = isApplied || copied;
 
   const handleCopy = (e: React.MouseEvent) => {
     e.stopPropagation();
     navigator.clipboard.writeText(coupon.code);
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    
+    // Save to localStorage so it persists on refresh
+    try {
+      const savedCopied = localStorage.getItem('cardecal_copied_coupons');
+      let codes = savedCopied ? JSON.parse(savedCopied) : [];
+      if (!codes.includes(coupon.code)) {
+        codes.push(coupon.code);
+        localStorage.setItem('cardecal_copied_coupons', JSON.stringify(codes));
+      }
+    } catch (err) {
+      console.error('Failed to save copied coupon:', err);
+    }
+    
+    // Also apply it to the cart immediately
+    applyPromo({
+      id: coupon.id,
+      code: coupon.code,
+      discount_type: coupon.discount_type,
+      discount_value: coupon.discount_value,
+      min_order_amount: coupon.min_order_amount
+    });
+
+    // Log the usage to Supabase
+    logPromoCodeUsage(coupon.id, user?.id, user?.email).catch(err => console.error("Tracking error:", err));
   };
 
   const discountDisplay = coupon.discount_type === 'percentage' 
@@ -37,7 +79,7 @@ export const CouponCard: React.FC<CouponCardProps> = ({ coupon, index, bgClass =
     : `${coupon.discount_value} лв.`;
 
   return (
-    <div className="w-full max-w-[340px] md:max-w-[600px] flex flex-col bg-white rounded-lg shadow-[0_15px_40px_rgba(0,0,0,0.15)] text-black relative mx-auto transition-transform">
+    <div className="w-full max-w-[95%] sm:max-w-[340px] md:max-w-[600px] flex flex-col bg-white rounded-lg shadow-[0_15px_40px_rgba(0,0,0,0.15)] text-black relative mx-auto transition-transform">
       {/* Top Section */}
       <div className="p-4 md:p-6 flex flex-row items-center justify-between pb-4">
          <div className="flex flex-col gap-1 items-start">
@@ -46,10 +88,34 @@ export const CouponCard: React.FC<CouponCardProps> = ({ coupon, index, bgClass =
                  cardecal
              </div>
              <div className="flex flex-row gap-2 mt-2">
-                 <div className="flex items-center gap-1 bg-gray-50 px-2 py-1 rounded text-[10px] md:text-[11px] font-bold text-[#6a80a8] border border-gray-100 uppercase tracking-wider">
-                     <Check className="w-3 h-3 text-[#10b981]" />
-                     Проверен днес
-                 </div>
+                 <motion.div 
+                    initial={false}
+                    animate={{ 
+                        scale: isActive ? [1, 1.1, 1] : 1,
+                        backgroundColor: isActive ? 'rgba(16, 185, 129, 0.1)' : 'rgba(249, 250, 251, 1)'
+                    }}
+                    className={cn(
+                        "flex items-center gap-1 px-2 py-1 rounded text-[10px] md:text-[11px] font-bold border uppercase tracking-wider transition-colors",
+                        isActive ? "text-[#10b981] border-[#10b981]/20" : "text-gray-400 border-gray-100"
+                    )}
+                 >
+                    <AnimatePresence mode="wait">
+                        <motion.div
+                            key={copied ? 'activated' : (isApplied ? 'active' : 'inactive')}
+                            initial={{ opacity: 0, y: 5 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -5 }}
+                            className="flex items-center gap-1"
+                        >
+                            {isActive ? (
+                                <Activity className="w-3 h-3 animate-pulse" />
+                            ) : (
+                                <div className="w-1.5 h-1.5 rounded-full bg-gray-300" />
+                            )}
+                            {copied ? "Активиран" : (isApplied ? "Активен" : "Неактивен")}
+                        </motion.div>
+                    </AnimatePresence>
+                 </motion.div>
              </div>
          </div>
          <div className="flex items-baseline gap-1 text-[#E6501B]">
@@ -99,7 +165,7 @@ export const CouponCard: React.FC<CouponCardProps> = ({ coupon, index, bgClass =
              <div className="flex items-center gap-1.5 md:gap-2">
                 <Info className="w-3 h-3 text-gray-400" />
                 <span className="text-[9px] md:text-[10px] text-gray-400 uppercase font-medium">
-                    {coupon.min_order_amount ? `Минимална поръчка: ${coupon.min_order_amount} лв.` : '122 от 130 купона използвани'}
+                    {coupon.min_order_amount ? `Мин. поръчка: ${Math.round(coupon.min_order_amount * 0.51)}eur/${coupon.min_order_amount}bgn.` : '122 от 130 купона използвани'}
                 </span>
              </div>
              <span className="text-[10px] md:text-[11px] text-gray-500 font-bold uppercase">

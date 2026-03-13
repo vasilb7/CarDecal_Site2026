@@ -297,11 +297,11 @@ const HomePage: React.FC = () => {
     <div className="bg-background">
       <SEO title="Начало" />
       {/* Hero Section */}
-      <div className="relative min-h-[100svh] flex flex-col items-center justify-center overflow-hidden bg-[#280905] pt-[calc(env(safe-area-inset-top)+theme(spacing.4))] md:pt-0">
+      <div className="relative min-h-[100svh] flex flex-col items-center justify-center overflow-hidden bg-black pt-[calc(env(safe-area-inset-top)+theme(spacing.4))] md:pt-0">
         {/* Background Overlay Layer */}
         <div className="absolute inset-0 z-0">
-          <div className="absolute inset-0 bg-gradient-to-b from-[#280905]/80 via-transparent to-[#280905] z-10" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(40,9,5,0.8)_100%)] z-10" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-transparent to-black z-10" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.8)_100%)] z-10" />
 
           {siteSettings?.hero_media_url &&
           siteSettings.hero_media_type === "video" ? (
@@ -460,7 +460,7 @@ const HomePage: React.FC = () => {
         </div>
 
         {/* Bottom Fade */}
-        <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-[#280905] to-transparent z-20" />
+        <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-background to-transparent z-20" />
       </div>
 
       {/* Featured Products */}

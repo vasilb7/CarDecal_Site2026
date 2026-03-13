@@ -30,45 +30,7 @@ const RollingLink: React.FC<RollingLinkProps> = ({ to, href, className, children
 };
 
 const Footer: React.FC = () => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [isHovered, setIsHovered] = useState(false);
   const location = useLocation();
-
-  // Auto-scanning logic for mobile/touch devices (moves mask horizontally)
-  useEffect(() => {
-    // ONLY run the auto-scan animation on touch devices (where hover is not supported)
-    if (!window.matchMedia("(hover: none)").matches) return;
-
-    let frameId: number;
-    let startTime = Date.now();
-    
-    const animateMask = () => {
-      if (!isHovered && containerRef.current) {
-        const time = (Date.now() - startTime) / 1000;
-        const rect = containerRef.current.getBoundingClientRect();
-        // Smooth horizontal scan
-        const x = (Math.sin(time * 0.4) * 0.35 + 0.5) * rect.width;
-        const y = rect.height * 0.5;
-        containerRef.current.style.setProperty('--mouse-x', `${x}px`);
-        containerRef.current.style.setProperty('--mouse-y', `${y}px`);
-      }
-      frameId = requestAnimationFrame(animateMask);
-    };
-    
-    frameId = requestAnimationFrame(animateMask);
-    return () => cancelAnimationFrame(frameId);
-  }, [isHovered]);
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    // Block manual interaction on touch devices to match "блокирай интеракцията" request
-    if (window.matchMedia("(hover: none)").matches) return;
-    if (!containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    containerRef.current.style.setProperty('--mouse-x', `${x}px`);
-    containerRef.current.style.setProperty('--mouse-y', `${y}px`);
-  };
 
   let topBgClass = "bg-background";
   const path = location.pathname;
@@ -86,26 +48,44 @@ const Footer: React.FC = () => {
   }
 
   return (
-    <footer className={`${topBgClass} pt-8 sm:pt-12 lg:pt-20 pb-0 w-full relative z-10`}>
+    <footer className={`${topBgClass} pt-0 pb-0 w-full relative z-10 overflow-hidden -mt-1`}>
+      {/* Royal Background Pattern Overlay - Footer Transition */}
+      <div 
+        className="absolute inset-x-0 top-0 h-64 z-0 opacity-[0.05] pointer-events-none mix-blend-overlay"
+        style={{ 
+          backgroundImage: "url('/royal.png')", 
+          backgroundRepeat: "repeat",
+          backgroundSize: "300px",
+          filter: "brightness(0.5) contrast(1.2)"
+        }}
+      />
+      
       {/* ── OUTER RED WRAP ── */}
       <div className="bg-[#ff0000] rounded-t-[2rem] sm:rounded-t-[2.5rem] lg:rounded-t-[4rem] px-2 pt-2 sm:px-3 sm:pt-3 lg:px-4 lg:pt-4 flex flex-col relative w-full overflow-hidden pb-6">
 
         {/* ── INNER DARK BOX ── */}
-        <div
-          ref={containerRef}
-          onMouseMove={handleMouseMove}
-          onMouseEnter={() => setIsHovered(true)}
-          onMouseLeave={() => setIsHovered(false)}
-          className="
+        <div className="
           bg-[#1b1c18] relative w-full overflow-hidden
           rounded-[1.7rem] sm:rounded-[2.2rem] lg:rounded-[3.5rem]
-          min-h-[500px] sm:min-h-0 sm:aspect-[4/3] lg:aspect-[21/9] flex flex-col items-center justify-start
-          cursor-crosshair
+          min-h-[500px] sm:min-h-0 sm:aspect-[4/3] lg:aspect-[21/9] flex flex-col items-center justify-center
         ">
 
-          {/* ── HUGE CENTER TEXT ── */}
-          <div className="pt-8 sm:pt-0 sm:absolute sm:top-[10%] lg:top-[14%]
-            left-0 right-0 flex flex-col items-center pointer-events-none z-10 w-full relative scale-[0.9] xs:scale-100">
+          {/* ── LOGO — Independent Container ── */}
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="absolute top-[8%] sm:top-[10%] lg:top-[8%] left-0 right-0 flex justify-center pointer-events-none z-20"
+          >
+            <img 
+              src="/LOGO.webp" 
+              alt="CarDecal Logo" 
+              className="h-12 sm:h-20 lg:h-28 w-auto object-contain"
+            />
+          </motion.div>
+
+          {/* ── HUGE CENTER TEXT — Independent Container ── */}
+          <div className="absolute top-[28%] sm:top-[25%] lg:top-[30%]
+            left-0 right-0 flex flex-col items-center pointer-events-none z-10 w-full scale-[0.9] xs:scale-100">
             <div className="font-black uppercase tracking-tighter
               drop-shadow-[0_20px_40px_rgba(0,0,0,0.7)] flex flex-col items-center">
 
@@ -123,80 +103,36 @@ const Footer: React.FC = () => {
             </div>
           </div>
 
-          {/* Car Image Area */}
-          <div className="absolute
-            bottom-[32%] sm:bottom-[10%] lg:bottom-[-10%] xl:bottom-[-25%]
-            left-1/2 -translate-x-1/2 z-20 pointer-events-none
-            w-[100%] sm:w-[95%] lg:w-[68%] xl:w-[88%]">
-            <img
-              src={window.innerWidth <= 768 ? "/Footer/2026_mobile.webp" : "/Footer/2026.webp"}
-              alt="Car"
-              loading="lazy"
-              decoding="async"
-              className="w-full h-auto object-contain drop-shadow-[0_-5px_60px_rgba(0,0,0,0.9)] origin-bottom"
-            />
-          </div>
-
-          {/* ── SPOTLIGHT MASK ── */}
-          <div
-            className="absolute inset-0 z-30 pointer-events-none transition-opacity duration-1000 ease-in-out"
-            style={{
-              // Always visible on mobile (auto-animated), reactive on desktop
-              opacity: 1, 
-              WebkitMaskImage: 'radial-gradient(circle 280px at var(--mouse-x, 50%) var(--mouse-y, 50%), black 25%, transparent 100%)',
-              maskImage: 'radial-gradient(circle 280px at var(--mouse-x, 50%) var(--mouse-y, 50%), black 25%, transparent 100%)',
-            }}
-          >
-            {/* The RED car inside the mask */}
-            <div className="absolute
-              bottom-[32%] sm:bottom-[10%] lg:bottom-[-10%] xl:bottom-[-25%]
-              left-1/2 -translate-x-1/2 pointer-events-none
-              w-[100%] sm:w-[95%] lg:w-[68%] xl:w-[88%] mix-blend-screen">
-              <img
-                src={window.innerWidth <= 768 ? "/Footer/2026red_mobile.webp" : "/Footer/2026red.webp"}
-                alt="Car Red"
-                loading="lazy"
-                decoding="async"
-                className="w-full h-auto object-contain drop-shadow-[0_0_100px_rgba(220,38,38,0.4)] origin-bottom"
-              />
-            </div>
-          </div>
-
           {/* ── MENUS — bottom section ── */}
-          <div className="relative mt-auto sm:mt-0 sm:absolute
-            sm:bottom-[5%] lg:bottom-[7%] xl:bottom-[9%]
-            left-0 right-0 z-40
-            px-6 sm:px-8 lg:px-14 xl:px-24 mb-16 sm:mb-0
-            flex flex-row justify-between sm:justify-between items-start sm:items-end gap-4">
+          <div className="relative w-full z-40 px-6 sm:px-12 lg:px-24 xl:px-40 pb-12 sm:pb-8 lg:pb-12 mt-auto sm:mt-0 sm:absolute sm:bottom-[15%]
+            flex flex-row justify-between items-start gap-8">
 
             {/* Страници */}
-            <div className="flex flex-col items-start text-left">
-              <span className="text-[9px] sm:text-[9px] lg:text-[11px]
-                text-white/40 font-black tracking-[0.2em] mb-4 sm:mb-2 lg:mb-4">
+            <div className="flex flex-col items-start text-left flex-1">
+              <span className="text-[10px] sm:text-[10px] lg:text-[12px]
+                text-white/40 font-black tracking-[0.2em] mb-6 sm:mb-4">
                 СТРАНИЦИ
               </span>
-              <div className="flex flex-col gap-3 sm:gap-[0.7vw] lg:gap-[0.8vw] items-start">
-                <RollingLink to="/catalog"  className="text-[0.95rem] sm:text-[2.8vw] lg:text-[2vw] xl:text-[1.7vw] font-black uppercase text-white leading-none inline-block">КАТАЛОГ</RollingLink>
-                <RollingLink to="/promos"   className="text-[0.95rem] sm:text-[2.8vw] lg:text-[2vw] xl:text-[1.7vw] font-black uppercase text-white leading-none inline-block">ПРОМОЦИИ</RollingLink>
-                <RollingLink to="/about"    className="text-[0.95rem] sm:text-[2.8vw] lg:text-[2vw] xl:text-[1.7vw] font-black uppercase text-white leading-none inline-block">ЗА НАС</RollingLink>
-                <RollingLink to="/custom-orders" className="text-[0.95rem] sm:text-[2.8vw] lg:text-[2vw] xl:text-[1.7vw] font-black uppercase text-white leading-none inline-block">ПОРЪЧКИ</RollingLink>
-                <RollingLink to="/contact"  className="text-[0.95rem] sm:text-[2.8vw] lg:text-[2vw] xl:text-[1.7vw] font-black uppercase text-white leading-none inline-block">КОНТАКТИ</RollingLink>
+              <div className="flex flex-col gap-4 sm:gap-[0.8vw] lg:gap-[1vw] items-start">
+                <RollingLink to="/catalog"  className="text-lg sm:text-[2.2vw] lg:text-[1.8vw] xl:text-[1.5vw] font-black uppercase text-white leading-none inline-block">КАТАЛОГ</RollingLink>
+                <RollingLink to="/promos"   className="text-lg sm:text-[2.2vw] lg:text-[1.8vw] xl:text-[1.5vw] font-black uppercase text-white leading-none inline-block">ПРОМОЦИИ</RollingLink>
+                <RollingLink to="/about"    className="text-lg sm:text-[2.2vw] lg:text-[1.8vw] xl:text-[1.5vw] font-black uppercase text-white leading-none inline-block">ЗА НАС</RollingLink>
+                <RollingLink to="/custom-orders" className="text-lg sm:text-[2.2vw] lg:text-[1.8vw] xl:text-[1.5vw] font-black uppercase text-white leading-none inline-block">ПОРЪЧКИ</RollingLink>
+                <RollingLink to="/contact"  className="text-lg sm:text-[2.2vw] lg:text-[1.8vw] xl:text-[1.5vw] font-black uppercase text-white leading-none inline-block">КОНТАКТИ</RollingLink>
               </div>
             </div>
 
-
-
             {/* Социални */}
-            <div className="flex flex-col items-end text-right">
-              <span className="text-[9px] sm:text-[9px] lg:text-[11px]
-                text-white/40 font-black tracking-[0.2em] mb-4 sm:mb-2 lg:mb-4">
+            <div className="flex flex-col items-end text-right flex-1">
+              <span className="text-[10px] sm:text-[10px] lg:text-[12px]
+                text-white/40 font-black tracking-[0.2em] mb-6 sm:mb-4">
                 ПОСЛЕДВАЙ НИ
               </span>
-              <div className="flex flex-col gap-3 sm:gap-[0.7vw] lg:gap-[0.8vw] items-end">
-                <RollingLink href="https://www.tiktok.com/@cardecal4?_r=1&_t=ZN-94RmUa0RCeE" target="_blank" rel="noopener noreferrer" className="text-[0.95rem] sm:text-[2.8vw] lg:text-[2vw] xl:text-[1.7vw] font-black uppercase text-white leading-none inline-block">TIKTOK</RollingLink>
-                <RollingLink href="https://www.instagram.com/cardecal1?igsh=eWd3b3FpdXN0NXRp" target="_blank" rel="noopener noreferrer" className="text-[0.95rem] sm:text-[2.8vw] lg:text-[2vw] xl:text-[1.7vw] font-black uppercase text-white leading-none inline-block">INSTAGRAM</RollingLink>
-                <RollingLink href="https://youtube.com/@cardecal?si=NT1sZsww7fp8cKIR" target="_blank" rel="noopener noreferrer" className="text-[0.95rem] sm:text-[2.8vw] lg:text-[2vw] xl:text-[1.7vw] font-black uppercase text-white leading-none inline-block">YOUTUBE</RollingLink>
-                <RollingLink href="https://www.facebook.com/share/18yePjATNr/" target="_blank" rel="noopener noreferrer" className="text-[0.95rem] sm:text-[2.8vw] lg:text-[2vw] xl:text-[1.7vw] font-black uppercase text-white leading-none inline-block">FACEBOOK</RollingLink>
+              <div className="flex flex-col gap-4 sm:gap-[0.8vw] lg:gap-[1vw] items-end">
+                <RollingLink href="https://www.tiktok.com/@cardecal4?_r=1&_t=ZN-94RmUa0RCeE" target="_blank" rel="noopener noreferrer" className="text-lg sm:text-[2.2vw] lg:text-[1.8vw] xl:text-[1.5vw] font-black uppercase text-white leading-none inline-block">TIKTOK</RollingLink>
+                <RollingLink href="https://www.instagram.com/cardecal1?igsh=eWd3b3FpdXN0NXRp" target="_blank" rel="noopener noreferrer" className="text-lg sm:text-[2.2vw] lg:text-[1.8vw] xl:text-[1.5vw] font-black uppercase text-white leading-none inline-block">INSTAGRAM</RollingLink>
+                <RollingLink href="https://youtube.com/@cardecal?si=NT1sZsww7fp8cKIR" target="_blank" rel="noopener noreferrer" className="text-lg sm:text-[2.2vw] lg:text-[1.8vw] xl:text-[1.5vw] font-black uppercase text-white leading-none inline-block">YOUTUBE</RollingLink>
+                <RollingLink href="https://www.facebook.com/share/18yePjATNr/" target="_blank" rel="noopener noreferrer" className="text-lg sm:text-[2.2vw] lg:text-[1.8vw] xl:text-[1.5vw] font-black uppercase text-white leading-none inline-block">FACEBOOK</RollingLink>
               </div>
             </div>
 
