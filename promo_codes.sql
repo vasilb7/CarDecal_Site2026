@@ -83,6 +83,8 @@ BEGIN
 
     -- 2. Check global usage limit
     IF v_promo.max_uses IS NOT NULL AND v_promo.current_uses >= v_promo.max_uses THEN
+        -- Safely deactivate if somehow it was still active
+        UPDATE promo_codes SET is_active = false WHERE id = v_promo.id;
         RETURN FALSE;
     END IF;
 
@@ -100,11 +102,11 @@ BEGIN
 
     -- 4. Check conditions (New Users / Loyal Customers)
     IF v_promo.condition_type != 'none' THEN
-        -- Count existing successful orders
+        -- Count ONLY COMPLETED orders (User explicitly requested "трябва да е завършена")
         SELECT count(*) INTO v_order_count
         FROM orders
         WHERE ((user_id IS NOT NULL AND user_id = p_user_id) OR (shipping_details->>'email' = p_email))
-          AND status != 'cancelled';
+          AND status = 'completed';
 
         IF v_promo.condition_type = 'new_users' AND v_order_count > 0 THEN
             RETURN FALSE;
@@ -115,8 +117,15 @@ BEGIN
         END IF;
     END IF;
 
-    -- 5. Record usage
-    UPDATE promo_codes SET current_uses = current_uses + 1 WHERE id = v_promo.id;
+    -- 5. Record usage and update status if max exceeded
+    UPDATE promo_codes 
+    SET 
+        current_uses = current_uses + 1,
+        is_active = CASE 
+            WHEN max_uses IS NOT NULL AND (current_uses + 1) >= max_uses THEN false 
+            ELSE is_active 
+        END
+    WHERE id = v_promo.id;
     
     INSERT INTO promo_code_uses (promo_code_id, user_id, email, order_id)
     VALUES (v_promo.id, p_user_id, p_email, p_order_id);

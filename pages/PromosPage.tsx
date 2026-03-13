@@ -39,7 +39,7 @@ const PromosPage: React.FC = () => {
                 .from('orders')
                 .select('*', { count: 'exact', head: true })
                 .or(`user_id.eq.${user?.id || '00000000-0000-0000-0000-000000000000'},shipping_details->>email.eq.${userEmail}`)
-                .neq('status', 'cancelled');
+                .eq('status', 'completed');
             orderCount = count || 0;
         }
 
