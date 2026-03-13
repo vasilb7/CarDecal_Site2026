@@ -630,13 +630,13 @@ const CheckoutPage: React.FC = () => {
                                 </div>
                                 {discountPercentage > 0 && (
                                     <div className="flex justify-between text-red-500">
-                                        <span>Отстъпка (Количество)</span>
+                                        <span>Отстъпка количество ({discountPercentage}%)</span>
                                         <span>-{(subtotal * (discountPercentage / 100)).toFixed(2)} €</span>
                                     </div>
                                 )}
                                 {appliedPromo && isPromoValid && (
                                     <div className="flex justify-between text-green-500 text-[11px]">
-                                        <span>Отстъпка (Код {appliedPromo.code})</span>
+                                        <span>Промо код ({appliedPromo.code}) {appliedPromo.discount_type === 'percentage' ? `-${appliedPromo.discount_value}%` : `-${appliedPromo.discount_value}€`}</span>
                                         <span>
                                             -{appliedPromo.discount_type === 'percentage' ? 
                                                 ((subtotal - subtotal * (discountPercentage / 100)) * (appliedPromo.discount_value / 100)).toFixed(2) : 
