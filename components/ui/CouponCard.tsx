@@ -7,6 +7,8 @@ import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
 import { logPromoCodeUsage } from '../../lib/promo-utils';
 
+import { useToast } from '../Toast/ToastProvider';
+
 export interface CouponData {
   id: string;
   code: string;
@@ -25,8 +27,9 @@ interface CouponCardProps {
 }
 
 export const CouponCard: React.FC<CouponCardProps> = ({ coupon, index, bgClass = "bg-[#280905]" }) => {
-  const { appliedPromo, applyPromo } = useCart();
+  const { appliedPromo, applyPromo, subtotal } = useCart();
   const { user } = useAuth();
+  const { showToast } = useToast();
 
   const [copied, setCopied] = useState(() => {
     try {
@@ -61,6 +64,12 @@ export const CouponCard: React.FC<CouponCardProps> = ({ coupon, index, bgClass =
       console.error('Failed to save copied coupon:', err);
     }
     
+    if (coupon.min_order_amount && subtotal < coupon.min_order_amount) {
+      showToast('Копиран успешно! Ако не сте достигнали минималната сума, купонът няма да бъде активиран.', 'warning');
+    } else {
+      showToast('Промо кодът е копиран успешно!', 'success');
+    }
+
     // Also apply it to the cart immediately
     applyPromo({
       id: coupon.id,

@@ -539,7 +539,7 @@ const CheckoutPage: React.FC = () => {
                                 {activeItems.map(item => (
                                     <div key={item.id} className="flex gap-4 group">
                                         <div className="w-16 h-16 bg-black border border-white/5 rounded-2xl overflow-hidden shrink-0">
-                                            <img src={item.image} alt={item.name} className="w-full h-full object-cover grayscale tracking-tight group-hover:grayscale-0 group-hover:scale-110 transition-all duration-300" />
+                                            <img src={item.image} alt={item.name} className="w-full h-full object-contain group-hover:scale-110 transition-all duration-300" />
                                         </div>
                                         <div className="flex-1 min-w-0 py-1">
                                             <div className="flex justify-between items-start gap-2">
@@ -569,7 +569,7 @@ const CheckoutPage: React.FC = () => {
                                     />
                                 </div>
                                 {isFreeShipping && (
-                                    <p className="text-[8px] text-green-500 uppercase font-bold text-center mt-2 tracking-widest">Вие се възползвате от безплатен куриер! 🎉</p>
+                                    <p className="text-[8px] text-green-500 uppercase font-bold text-center mt-2 tracking-widest">Вие се възползвате от безплатна доставка!</p>
                                 )}
                             </div>
 

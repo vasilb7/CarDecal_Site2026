@@ -99,15 +99,24 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, isPriority = false }
 
   );
 
+  const handlePrefetch = () => {
+    // Prefetch JS chunk
+    import('./ProductQuickViewModal');
+    // Preload main image
+    const mainImage = product.cardImages?.[0] || product.coverImage || product.avatar;
+    if (mainImage && typeof window !== 'undefined') {
+        const img = new Image();
+        img.src = getOptimizedUrl(mainImage, { width: 800 });
+    }
+  };
+
   const location = useLocation();
 
   return (
     <div 
         className="group relative h-full"
-        onMouseEnter={() => {
-            // Prefetch the modal chunk on hover
-            import('./ProductQuickViewModal');
-        }}
+        onMouseEnter={handlePrefetch}
+        onTouchStart={handlePrefetch}
     >
         <Link 
             to={`/catalog/${product.slug}`} 

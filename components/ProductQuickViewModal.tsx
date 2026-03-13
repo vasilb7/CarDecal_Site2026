@@ -73,6 +73,7 @@ const ProductQuickViewModal: React.FC = () => {
     const [isShareOpen, setIsShareOpen] = useState(false);
     const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
     const [addedFeedback, setAddedFeedback] = useState(false);
+    const [isAdding, setIsAdding] = useState(false);
 
     const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -106,6 +107,8 @@ const ProductQuickViewModal: React.FC = () => {
             setIsVisible(true);
             setActiveIdx(0);
             setQuantity(1);
+            setIsAdding(false);
+            setAddedFeedback(false);
             
             // Preload the main product image for faster LCP
             const mainImage = product.cardImages?.[0] || product.coverImage || product.avatar;
@@ -224,7 +227,8 @@ const ProductQuickViewModal: React.FC = () => {
     const mainSrc = images[activeIdx] || '';
 
     const handleAddToCart = () => {
-        if (!product) return;
+        if (!product || isAdding) return;
+        setIsAdding(true);
         const finalQuantity = Math.max(1, quantity);
         addToCart({
             id: `${product.slug}-${activeIdx}`,
@@ -238,7 +242,12 @@ const ProductQuickViewModal: React.FC = () => {
             slug: product.slug
         });
         showToast(`Добавени ${finalQuantity}бр. от ${product.nameBg || product.name}`, "success");
-        handleClose();
+        setAddedFeedback(true);
+        
+        // Use timeout to let cart update completely before unmounting
+        setTimeout(() => {
+            handleClose();
+        }, 100);
     };
 
     const fadeSlide = {
