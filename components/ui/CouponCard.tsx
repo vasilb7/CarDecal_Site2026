@@ -18,6 +18,8 @@ export interface CouponData {
   valid_until?: string;
   is_active: boolean;
   min_order_amount?: number;
+  condition_type?: 'none' | 'new_users' | 'loyal_customers';
+  condition_value?: number;
 }
 
 interface CouponCardProps {
@@ -46,6 +48,7 @@ export const CouponCard: React.FC<CouponCardProps> = ({ coupon, index, bgClass =
 
   const isApplied = appliedPromo?.code === coupon.code;
   const isActive = isApplied || copied;
+  const isLoyal = coupon.condition_type === 'loyal_customers';
 
   const handleCopy = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -82,17 +85,23 @@ export const CouponCard: React.FC<CouponCardProps> = ({ coupon, index, bgClass =
 
   const discountDisplay = coupon.discount_type === 'percentage' 
     ? `${coupon.discount_value}%` 
-    : `${(coupon.discount_value * 0.51).toFixed(0)}€`; // 1/1.95583 is ~0.511... Using 0.51 for consistency with user's other calc or just precise math below
+    : `${(coupon.discount_value * 0.51).toFixed(0)}€`;
     
-  const bgnValue = coupon.discount_type === 'fixed_amount' ? `${coupon.discount_value} лв.` : null;
-
   return (
-    <div className="w-full max-w-[95%] sm:max-w-[340px] md:max-w-[600px] flex flex-col bg-white rounded-lg shadow-[0_15px_40px_rgba(0,0,0,0.15)] text-black relative mx-auto transition-transform">
+    <div className={cn(
+        "w-full max-w-[95%] sm:max-w-[340px] md:max-w-[600px] flex flex-col rounded-lg shadow-[0_15px_40px_rgba(0,0,0,0.15)] relative mx-auto transition-all duration-500",
+        isLoyal 
+            ? "bg-[#111] text-white border border-[#C5A059]/30 shadow-[0_20px_50px_rgba(197,160,89,0.1)]" 
+            : "bg-white text-black"
+    )}>
       {/* Top Section */}
       <div className="p-4 md:p-6 flex flex-row items-center justify-between pb-4">
          <div className="flex flex-col gap-1 items-start">
              {/* Logo String */}
-             <div className="font-playfair italic font-bold text-2xl md:text-4xl text-[#C3110C] tracking-tight leading-none">
+             <div className={cn(
+                 "font-playfair italic font-bold text-2xl md:text-4xl tracking-tight leading-none",
+                 isLoyal ? "text-[#C5A059]" : "text-[#C3110C]"
+             )}>
                  cardecal
              </div>
              <div className="flex flex-row gap-2 mt-2">
@@ -100,11 +109,15 @@ export const CouponCard: React.FC<CouponCardProps> = ({ coupon, index, bgClass =
                     initial={false}
                     animate={{ 
                         scale: isActive ? [1, 1.1, 1] : 1,
-                        backgroundColor: isActive ? 'rgba(16, 185, 129, 0.1)' : 'rgba(249, 250, 251, 1)'
+                        backgroundColor: isActive 
+                            ? (isLoyal ? 'rgba(197, 160, 89, 0.2)' : 'rgba(16, 185, 129, 0.1)') 
+                            : (isLoyal ? 'rgba(255, 255, 255, 0.05)' : 'rgba(249, 250, 251, 1)')
                     }}
                     className={cn(
                         "flex items-center gap-1 px-2 py-1 rounded text-[10px] md:text-[11px] font-bold border uppercase tracking-wider transition-colors",
-                        isActive ? "text-[#10b981] border-[#10b981]/20" : "text-gray-400 border-gray-100"
+                        isActive 
+                            ? (isLoyal ? "text-[#C5A059] border-[#C5A059]/40" : "text-[#10b981] border-[#10b981]/20") 
+                            : (isLoyal ? "text-zinc-500 border-white/5" : "text-gray-400 border-gray-100")
                     )}
                  >
                     <AnimatePresence mode="wait">
@@ -116,17 +129,26 @@ export const CouponCard: React.FC<CouponCardProps> = ({ coupon, index, bgClass =
                             className="flex items-center gap-1"
                         >
                             {isActive ? (
-                                <Activity className="w-3 h-3 animate-pulse" />
+                                <Activity className={cn("w-3 h-3 animate-pulse", isLoyal ? "text-[#C5A059]" : "text-[#10b981]")} />
                             ) : (
-                                <div className="w-1.5 h-1.5 rounded-full bg-gray-300" />
+                                <div className={cn("w-1.5 h-1.5 rounded-full", isLoyal ? "bg-zinc-700" : "bg-gray-300")} />
                             )}
                             {copied ? "Активиран" : (isApplied ? "Активен" : "Неактивен")}
                         </motion.div>
                     </AnimatePresence>
                  </motion.div>
+                 {isLoyal && (
+                     <div className="flex items-center gap-1 px-2 py-1 rounded text-[10px] md:text-[11px] font-black border border-[#C5A059]/20 bg-[#C5A059]/10 text-[#C5A059] uppercase tracking-widest">
+                         <Star size={10} className="fill-[#C5A059]" />
+                         Royal Loyalty
+                     </div>
+                 )}
              </div>
          </div>
-         <div className="flex items-baseline gap-1 text-[#E6501B]">
+         <div className={cn(
+             "flex items-baseline gap-1",
+             isLoyal ? "text-[#C5A059]" : "text-[#E6501B]"
+         )}>
              <span className="text-4xl md:text-6xl font-black tracking-tighter leading-none">{discountDisplay}</span>
              <span className="text-lg md:text-2xl font-bold uppercase">Off</span>
          </div>
@@ -134,11 +156,11 @@ export const CouponCard: React.FC<CouponCardProps> = ({ coupon, index, bgClass =
 
       {/* Perforated Divider */}
       <div className="relative h-6 flex items-center w-full">
-         {/* Left Notch */}
          <div className={cn("absolute left-[-10px] w-5 h-5 rounded-full z-10", bgClass)} />
-         {/* Dotted Line */}
-         <div className="flex-1 w-full border-t-[2px] border-dashed border-gray-200 mx-3" />
-         {/* Right Notch */}
+         <div className={cn(
+             "flex-1 w-full border-t-[2px] border-dashed mx-3",
+             isLoyal ? "border-white/10" : "border-gray-200"
+         )} />
          <div className={cn("absolute right-[-10px] w-5 h-5 rounded-full z-10", bgClass)} />
       </div>
 
@@ -146,39 +168,58 @@ export const CouponCard: React.FC<CouponCardProps> = ({ coupon, index, bgClass =
       <div className="p-4 md:p-6 pt-2">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-3 md:mb-2 md:gap-4 gap-1">
              <div className="flex items-center gap-1">
-                 <div className="w-4 h-4 rounded-full border border-[#10b981] flex items-center justify-center">
-                    <Check className="w-3 h-3 text-[#10b981]" />
+                 <div className={cn(
+                     "w-4 h-4 rounded-full border flex items-center justify-center",
+                     isLoyal ? "border-[#C5A059] bg-[#C5A059]/5" : "border-[#10b981] bg-[#10b981]/5"
+                 )}>
+                    <Check className={cn("w-3 h-3", isLoyal ? "text-[#C5A059]" : "text-[#10b981]")} />
                  </div>
-                 <span className="text-[10px] md:text-xs font-bold text-[#10b981] uppercase tracking-wide">Сертифициран купон</span>
+                 <span className={cn(
+                     "text-[10px] md:text-xs font-bold uppercase tracking-wide",
+                     isLoyal ? "text-[#C5A059]" : "text-[#10b981]"
+                 )}>
+                     {isLoyal ? "Елитен Лоялен Клиент" : "Сертифициран купон"}
+                 </span>
              </div>
-             <span className="text-[9px] md:text-[10px] text-gray-400 uppercase tracking-widest self-end md:self-auto">КОД №{coupon.id.slice(0, 5)}</span>
+             <span className="text-[9px] md:text-[10px] text-zinc-500 uppercase tracking-widest self-end md:self-auto">КОД №{coupon.id.slice(0, 5)}</span>
           </div>
 
           <div className="flex flex-col md:flex-row gap-2 mt-4 items-stretch h-auto md:h-14">
-             <div className="flex-1 relative bg-[#F0F2F5] border border-gray-200 rounded flex items-center px-4 overflow-hidden h-14 md:h-full justify-center group">
-                 <span className="font-mono text-xl md:text-2xl font-black text-gray-700 tracking-[0.2em]">{coupon.code}</span>
+             <div className={cn(
+                 "flex-1 relative border rounded flex items-center px-4 overflow-hidden h-14 md:h-full justify-center group transition-colors",
+                 isLoyal ? "bg-white/5 border-white/10" : "bg-[#F0F2F5] border-gray-200"
+             )}>
+                 <span className={cn(
+                     "font-mono text-xl md:text-2xl font-black tracking-[0.2em]",
+                     isLoyal ? "text-[#C5A059]" : "text-gray-700"
+                 )}>{coupon.code}</span>
+                 {isLoyal && (
+                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#C5A059]/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                 )}
              </div>
              <button 
                 onClick={handleCopy}
                 className={cn(
-                  "w-full md:w-auto px-6 font-bold uppercase tracking-widest text-sm text-white rounded transition-colors h-14 md:h-full flex items-center justify-center shrink-0 shadow-[0_4px_10px_rgba(239,68,68,0.3)]", 
-                  copied ? "bg-[#740A03] hover:bg-[#280905] shadow-[0_4px_10px_rgba(116,10,3,0.3)]" : "bg-[#C3110C] hover:bg-[#740A03]"
+                  "w-full md:w-auto px-6 font-bold uppercase tracking-widest text-sm text-white rounded transition-all h-14 md:h-full flex items-center justify-center shrink-0", 
+                  isLoyal 
+                    ? (copied ? "bg-[#C5A059] text-black" : "bg-gradient-to-br from-[#C5A059] to-[#8C6B2D] hover:brightness-110 shadow-[0_4px_20px_rgba(197,160,89,0.3)]")
+                    : (copied ? "bg-[#740A03] hover:bg-[#280905] shadow-[0_4px_10px_rgba(116,10,3,0.3)]" : "bg-[#C3110C] hover:bg-[#740A03] shadow-[0_4px_10px_rgba(239,68,68,0.3)]")
                 )}
              >
-                 {copied ? "КОПИРАНО!" : "ВЗЕМИ КУПОН"}
+                 {copied ? (isLoyal ? "КОПИРАН!" : "КОПИРАНО!") : "ВЗЕМИ КУПОН"}
              </button>
           </div>
 
           <div className="flex flex-row items-center justify-between mt-4 md:mt-5">
              {coupon.min_order_amount && (
                <div className="flex items-center gap-1.5 md:gap-2">
-                  <Info className="w-3 h-3 text-gray-400" />
-                  <span className="text-[9px] md:text-[10px] text-gray-400 uppercase font-medium">
+                  <Info className="w-3 h-3 text-zinc-500" />
+                  <span className="text-[9px] md:text-[10px] text-zinc-500 uppercase font-medium">
                       Мин. поръчка: {Math.round(coupon.min_order_amount * 0.51)}eur/{coupon.min_order_amount}bgn.
                   </span>
                </div>
              )}
-             <span className="text-[10px] md:text-[11px] text-gray-500 font-bold uppercase">
+             <span className="text-[10px] md:text-[11px] text-zinc-500 font-bold uppercase">
                  {coupon.valid_until ? `до : ${new Date(coupon.valid_until).toLocaleDateString('bg-BG', { day: 'numeric', month: 'short', year: 'numeric' })}` : 'Без срок'}
              </span>
           </div>

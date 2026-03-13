@@ -179,6 +179,30 @@ const CheckoutPage: React.FC = () => {
             // Client-side quick checks (RPC or triggers will do strictly later during order)
             if (data.max_uses && data.current_uses >= data.max_uses) throw new Error('Лимитът за използване на този код е достигнат.');
 
+            // Verify Conditions (New User / Loyal Customer)
+            if (data.condition_type !== 'none') {
+                const userEmailForCheck = user?.email || formData.email;
+                if (!userEmailForCheck) {
+                    throw new Error('Моля, въведете имейл, за да приложите този тип купон.');
+                }
+
+                const { count: orderCount } = await supabase
+                    .from('orders')
+                    .select('*', { count: 'exact', head: true })
+                    .or(`user_id.eq.${user?.id || '00000000-0000-0000-0000-000000000000'},shipping_details->>email.eq.${userEmailForCheck}`)
+                    .neq('status', 'cancelled');
+
+                const actualCount = orderCount || 0;
+
+                if (data.condition_type === 'new_users' && actualCount > 0) {
+                    throw new Error('Този купон е само за нови клиенти.');
+                }
+
+                if (data.condition_type === 'loyal_customers' && actualCount < (data.condition_value || 0)) {
+                    throw new Error(`Този купон изисква поне ${data.condition_value} предишни поръчки. В момента имате ${actualCount}.`);
+                }
+            }
+
             // Check personal usage limit by email
             if (formData.email) {
                 const { count } = await supabase

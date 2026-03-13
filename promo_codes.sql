@@ -63,11 +63,14 @@ CREATE OR REPLACE FUNCTION use_promo_code(p_code VARCHAR, p_user_id UUID, p_emai
 RETURNS BOOLEAN
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
 DECLARE
     v_promo RECORD;
     v_user_uses INTEGER;
+    v_order_count INTEGER;
 BEGIN
+    -- 1. Get the promo code details
     SELECT * INTO v_promo
     FROM promo_codes
     WHERE code = upper(p_code) AND is_active = true
@@ -78,10 +81,12 @@ BEGIN
         RETURN FALSE;
     END IF;
 
+    -- 2. Check global usage limit
     IF v_promo.max_uses IS NOT NULL AND v_promo.current_uses >= v_promo.max_uses THEN
         RETURN FALSE;
     END IF;
 
+    -- 3. Check personal usage limit
     IF v_promo.max_uses_per_user IS NOT NULL THEN
         SELECT count(*) INTO v_user_uses
         FROM promo_code_uses
@@ -93,6 +98,24 @@ BEGIN
         END IF;
     END IF;
 
+    -- 4. Check conditions (New Users / Loyal Customers)
+    IF v_promo.condition_type != 'none' THEN
+        -- Count existing successful orders
+        SELECT count(*) INTO v_order_count
+        FROM orders
+        WHERE ((user_id IS NOT NULL AND user_id = p_user_id) OR (shipping_details->>'email' = p_email))
+          AND status != 'cancelled';
+
+        IF v_promo.condition_type = 'new_users' AND v_order_count > 0 THEN
+            RETURN FALSE;
+        END IF;
+
+        IF v_promo.condition_type = 'loyal_customers' AND v_order_count < COALESCE(v_promo.condition_value, 0) THEN
+            RETURN FALSE;
+        END IF;
+    END IF;
+
+    -- 5. Record usage
     UPDATE promo_codes SET current_uses = current_uses + 1 WHERE id = v_promo.id;
     
     INSERT INTO promo_code_uses (promo_code_id, user_id, email, order_id)

@@ -30,10 +30,24 @@ const PromosPage: React.FC = () => {
 
         if (promoError) throw promoError;
 
-        // 2. If user is logged in or has an email session, filter out already used ones
+        // 2. Fetch order count for filtering (if logged in or has session)
         const userEmail = user?.email || sessionStorage.getItem('last_user_email');
-        
-        if (userEmail && allPromos && allPromos.length > 0) {
+        let orderCount = 0;
+
+        if (userEmail) {
+            const { count } = await supabase
+                .from('orders')
+                .select('*', { count: 'exact', head: true })
+                .or(`user_id.eq.${user?.id || '00000000-0000-0000-0000-000000000000'},shipping_details->>email.eq.${userEmail}`)
+                .neq('status', 'cancelled');
+            orderCount = count || 0;
+        }
+
+        // 3. Filter coupons based on conditions
+        let filteredPromos = allPromos || [];
+
+        // Filter by usage (already used)
+        if (userEmail && filteredPromos.length > 0) {
             const { data: usedRecords } = await supabase
                 .from('promo_code_uses')
                 .select('promo_code_id')
@@ -41,13 +55,18 @@ const PromosPage: React.FC = () => {
             
             if (usedRecords) {
                 const usedIds = new Set(usedRecords.map(r => r.promo_code_id));
-                const filteredPromos = allPromos.filter(p => !usedIds.has(p.id));
-                setCoupons(filteredPromos);
-                return;
+                filteredPromos = filteredPromos.filter(p => !usedIds.has(p.id));
             }
         }
 
-        setCoupons(allPromos || []);
+        // Filter by logical conditions (New User / Loyal)
+        filteredPromos = filteredPromos.filter(p => {
+            if (p.condition_type === 'new_users' && orderCount > 0) return false;
+            if (p.condition_type === 'loyal_customers' && orderCount < (p.condition_value || 0)) return false;
+            return true;
+        });
+
+        setCoupons(filteredPromos);
       } catch (err) {
         console.error('Error fetching promo codes:', err);
       } finally {
