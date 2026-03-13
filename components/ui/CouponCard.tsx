@@ -65,9 +65,9 @@ export const CouponCard: React.FC<CouponCardProps> = ({ coupon, index, bgClass =
     }
     
     if (coupon.min_order_amount && subtotal < coupon.min_order_amount) {
-      showToast('Копиран успешно! Ако не сте достигнали минималната сума, купонът няма да бъде активиран.', 'warning');
+      showToast(`Купон ${coupon.code} ще бъде активиран след като достигнете мин. ${coupon.min_order_amount} BGN (${(coupon.min_order_amount / 1.95583).toFixed(2)} EUR)`, 'warning');
     } else {
-      showToast('Промо кодът е копиран успешно!', 'success');
+      showToast(`Активиран купон: ${coupon.code}`, 'success');
     }
 
     // Also apply it to the cart immediately
