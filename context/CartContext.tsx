@@ -48,6 +48,7 @@ interface CartContextType {
   appliedPromo: PromoCode | null;
   isPromoValid: boolean;
   promoError: string | null;
+  promoDiscountAmount: number;
   applyPromo: (promo: PromoCode) => void;
   removePromo: () => void;
 }
@@ -130,7 +131,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     ? `Добавете още ${(appliedPromo.min_order_amount - subtotal).toFixed(2)} € за да използвате този код` 
     : null;
 
+  let promoDiscountAmount = 0;
   if (isPromoValid && appliedPromo) {
+    const totalBeforePromo = discountedTotal;
     if (appliedPromo.discount_type === 'percentage') {
        const pbDis = discountedTotal * (appliedPromo.discount_value / 100);
        finalDiscountValue += pbDis;
@@ -141,6 +144,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     // Prevent negative total
     if (discountedTotal < 0) discountedTotal = 0;
+    promoDiscountAmount = totalBeforePromo - discountedTotal;
   }
 
   const total = discountedTotal;
@@ -295,9 +299,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     verifyPromo();
 
-    // 2. Continuous real-time monitoring
+    // 2. Real-time monitor for status changes (Now works thanks to RLS policy update)
     const channel = supabase
-      .channel(`promo-watch-${appliedPromo.id}`)
+      .channel(`promo-monitor-${appliedPromo.id}`)
       .on(
         'postgres_changes',
         { 
@@ -307,16 +311,17 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
           filter: `id=eq.${appliedPromo.id}` 
         },
         (payload) => {
+          console.log('Promo real-time update:', payload);
           if (payload.eventType === 'DELETE') {
             removePromo();
             showToast(`купон : ${appliedPromo.code} изтече`, 'error');
           } else if (payload.eventType === 'UPDATE') {
-            const newPromo = payload.new as any;
+            const up = payload.new as any;
             const now = new Date();
-            const isExpired = newPromo.valid_until && new Date(newPromo.valid_until) < now;
-            const isLimitReached = newPromo.max_uses && newPromo.current_uses >= newPromo.max_uses;
+            const isExpired = up.valid_until && new Date(up.valid_until) < now;
+            const isLimitReached = up.max_uses && up.current_uses >= up.max_uses;
             
-            if (!newPromo.is_active || isExpired || isLimitReached) {
+            if (up.is_active === false || isExpired || isLimitReached) {
               removePromo();
               showToast(`купон : ${appliedPromo.code} изтече`, 'error');
             }
@@ -333,7 +338,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // No longer auto-removing promo code - user wants it to stick around even if invalid
 
   return (
-    <CartContext.Provider value={{ items, activeItems, itemsCount, subtotal, discountPercentage, total, addToCart, increase, decrease, updateQuantity, remove, initiateRemove, cancelRemove, clearCart, isFreeShipping, amountToFreeShipping, appliedPromo, isPromoValid, promoError, applyPromo, removePromo }}>
+    <CartContext.Provider value={{ items, activeItems, itemsCount, subtotal, discountPercentage, total, addToCart, increase, decrease, updateQuantity, remove, initiateRemove, cancelRemove, clearCart, isFreeShipping, amountToFreeShipping, appliedPromo, isPromoValid, promoError, promoDiscountAmount, applyPromo, removePromo }}>
       {children}
     </CartContext.Provider>
   );

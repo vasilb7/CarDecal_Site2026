@@ -65,7 +65,7 @@ const ShippingMethodCard = ({
 );
 
 const CheckoutPage: React.FC = () => {
-    const { activeItems, subtotal, total, discountPercentage, clearCart, isFreeShipping, amountToFreeShipping, appliedPromo, isPromoValid, promoError, applyPromo, removePromo } = useCart();
+    const { activeItems, subtotal, total, discountPercentage, clearCart, isFreeShipping, amountToFreeShipping, appliedPromo, isPromoValid, promoError, promoDiscountAmount, applyPromo, removePromo } = useCart();
     const { user, profile, loading: authLoading } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
@@ -211,6 +211,8 @@ const CheckoutPage: React.FC = () => {
                 user_id: user?.id,
                 items: activeItems,
                 total_amount: total,
+                promo_code_id: appliedPromo?.id,
+                promo_discount_amount: promoDiscountAmount,
                 shipping_details: {
                     ...formData,
                     officeName: formData.deliveryType === 'econt' ? formData.econtOffice : formData.speedyOffice
@@ -221,19 +223,7 @@ const CheckoutPage: React.FC = () => {
 
             if (error) throw error;
 
-            if (appliedPromo) {
-                try {
-                    // Update: Log usage only when order is actually submitted
-                    await logPromoCodeUsage(
-                        appliedPromo.id, 
-                        user?.id, 
-                        formData.email, 
-                        data.id
-                    );
-                } catch(e) { 
-                    console.error("Tracking error on checkout:", e);
-                }
-            }
+            // Usage logging is now handled automatically by database trigger for atomicity
 
             if (user && saveForFuture) {
                 await supabase.from('profiles').update({

@@ -31,10 +31,10 @@ CREATE TABLE promo_code_uses (
 ALTER TABLE promo_codes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE promo_code_uses ENABLE ROW LEVEL SECURITY;
 
--- Всички потребители могат да четат активните кодове (за да могат да ги прилагат в количката)
+-- All users can read promo codes (necessary for real-time monitoring of status changes)
 CREATE POLICY "Public read promo codes" 
 ON promo_codes FOR SELECT 
-USING (is_active = true);
+USING (true);
 
 -- Администратори и редактори имат пълен достъп
 CREATE POLICY "Admins full access promo codes"
@@ -49,10 +49,14 @@ USING (
     EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role IN ('admin', 'editor'))
 );
 
--- Потребителите могат да виждат собствените си използвания
+-- Потребителите могат да виждат собствените си използвания (по ID или имейл)
 CREATE POLICY "Users can see own promo uses"
 ON promo_code_uses FOR SELECT
-USING (auth.uid() = user_id);
+USING (
+    auth.uid() = user_id 
+    OR 
+    (email IS NOT NULL AND email = (SELECT email FROM auth.users WHERE id = auth.uid()))
+);
 
 -- Функция за прилагане на код и проверка на условията при поръчка (за по-надеждно отброяване)
 CREATE OR REPLACE FUNCTION use_promo_code(p_code VARCHAR, p_user_id UUID, p_email VARCHAR, p_order_id UUID)

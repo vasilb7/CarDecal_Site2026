@@ -980,10 +980,19 @@ const UsersTab: React.FC = () => {
 
     const confirmRoleUpdate = async (userId: string, role: 'user' | 'editor' | 'admin') => {
         setUpdatingId(userId);
-        await supabase.from('profiles').update({ role }).eq('id', userId);
-        setUsers(prev => prev.map(u => u.id === userId ? { ...u, role } : u));
-        setUpdatingId(null);
-        setRoleConfirmation(null);
+        try {
+            const { error } = await supabase.from('profiles').update({ role }).eq('id', userId);
+            if (error) throw error;
+            
+            setUsers(prev => prev.map(u => u.id === userId ? { ...u, role } : u));
+            showToast(`Ролята е променена на ${role === 'admin' ? 'Администратор' : role === 'editor' ? 'Редактор' : 'Потребител'}`, 'success');
+        } catch (err: any) {
+            console.error('Role update error:', err);
+            showToast(`Грешка при промяна на роля: ${err.message}`, 'error');
+        } finally {
+            setUpdatingId(null);
+            setRoleConfirmation(null);
+        }
     };
 
     // ─── Moderation Actions ──────────────────────────────────────────────

@@ -348,7 +348,7 @@ CREATE TABLE IF NOT EXISTS "public"."profiles" (
     "last_full_name" "text",
     "deletion_scheduled_at" timestamp with time zone,
     "deletion_reason" "text",
-    CONSTRAINT "profiles_role_check" CHECK (("role" = ANY (ARRAY['user'::"text", 'editor'::"text", 'admin'::"text"])))
+    CONSTRAINT "profiles_role_check" CHECK (("role" = ANY (ARRAY['user'::"text", 'admin'::"text", 'editor'::"text"])))
 );
 
 

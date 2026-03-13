@@ -127,21 +127,54 @@ USING (
 -- ==========================================
 -- SECUREMENT OF USER ROLE
 -- ==========================================
-CREATE OR REPLACE FUNCTION check_role_update() RETURNS trigger AS $$
+-- Robust get_user_role with search_path
+CREATE OR REPLACE FUNCTION public.get_user_role() 
+RETURNS text 
+LANGUAGE plpgsql 
+SECURITY DEFINER 
+SET search_path = public
+AS $$
 BEGIN
-  -- If non-admin is trying to change their role
-  IF (
-    NEW.role IS DISTINCT FROM OLD.role
-    AND public.get_user_role() IS DISTINCT FROM 'admin'
-  ) THEN
-    RAISE EXCEPTION 'Not authorized to change role';
-  END IF;
-  RETURN NEW;
+  RETURN (SELECT role FROM public.profiles WHERE id = auth.uid());
 END;
-$$ LANGUAGE plpgsql;
+$$;
+
+-- Robust check_role_update with better conditions and search_path
+CREATE OR REPLACE FUNCTION public.check_role_update() 
+RETURNS trigger 
+LANGUAGE plpgsql 
+SECURITY DEFINER 
+SET search_path = public
+AS $$
+DECLARE
+  v_caller_role text;
+BEGIN
+  -- Get role of the person making the change
+  v_caller_role := public.get_user_role();
+
+  -- Allow if role is NOT being changed
+  IF NEW.role IS NOT DISTINCT FROM OLD.role THEN
+    RETURN NEW;
+  END IF;
+
+  -- Allow if superuser/SQL Editor (auth.uid() is null)
+  IF auth.uid() IS NULL THEN
+    RETURN NEW;
+  END IF;
+
+  -- Allow only if caller is admin
+  IF v_caller_role = 'admin' THEN
+    RETURN NEW;
+  END IF;
+
+  -- Otherwise block
+  RAISE EXCEPTION 'Недостатъчни права за промяна на роля. Вашият ранг е: %, ID: %', COALESCE(v_caller_role, 'потребител'), auth.uid();
+END;
+$$;
 
 DROP TRIGGER IF EXISTS enforce_role_security ON public.profiles;
 CREATE TRIGGER enforce_role_security
 BEFORE UPDATE ON public.profiles
 FOR EACH ROW
 EXECUTE FUNCTION check_role_update();
+
