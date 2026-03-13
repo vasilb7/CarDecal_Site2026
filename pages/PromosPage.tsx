@@ -142,26 +142,23 @@ const PromosPage: React.FC = () => {
           {/* Unified Premium Navigation Toggle (All Devices) */}
           {coupons.length > 1 && (
             <div className="absolute -top-[20px] left-0 right-0 flex justify-center items-center z-[60] pointer-events-none">
-              <motion.button 
-                whileTap={{ scale: 0.95 }}
-                whileHover={{ scale: 1.05 }}
-                onClick={activeIndex === 0 ? handleNext : handlePrev} 
-                className="pointer-events-auto flex items-center justify-center transition-all duration-300 group"
-              >
-                {/* Outer Pill Shape */}
-                <div className="bg-[#1a1a1a] p-1.5 rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.1)] border border-black/50">
-                  {/* Inner Pill Shape */}
-                  <div className="bg-[#0f0f0f] px-10 py-4 rounded-full flex items-center justify-center border border-white/5 shadow-inner">
-                    <span className="text-[#C5A059] flex items-center justify-center transition-all duration-300">
-                      {activeIndex === 0 ? (
-                        <ChevronRight size={24} className="stroke-[3]" />
-                      ) : (
-                        <ChevronLeft size={24} className="stroke-[3]" />
-                      )}
-                    </span>
-                  </div>
-                </div>
-              </motion.button>
+              <div className="bg-[#1a1a1a] p-1.5 rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.1)] border border-black/50 pointer-events-auto flex items-center gap-1">
+                <motion.button 
+                  whileTap={{ scale: 0.95 }}
+                  onClick={handlePrev} 
+                  className="bg-[#0f0f0f] w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center border border-white/5 shadow-inner hover:border-[#C5A059]/30 transition-colors group"
+                >
+                  <ChevronLeft size={24} className="text-[#C5A059] stroke-[3]" />
+                </motion.button>
+                <div className="h-4 w-px bg-white/10 mx-1" />
+                <motion.button 
+                  whileTap={{ scale: 0.95 }}
+                  onClick={handleNext} 
+                  className="bg-[#0f0f0f] w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center border border-white/5 shadow-inner hover:border-[#C5A059]/30 transition-colors group"
+                >
+                  <ChevronRight size={24} className="text-[#C5A059] stroke-[3]" />
+                </motion.button>
+              </div>
             </div>
           )}
         </div>
