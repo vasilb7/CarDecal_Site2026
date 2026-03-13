@@ -2619,6 +2619,7 @@ const IndividualProjectsSection: React.FC = () => {
     const [uploadingNew, setUploadingNew] = useState(false);
     const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
+    const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(null);
 
     const fetchProjects = useCallback(async () => {
         try {
@@ -2855,7 +2856,17 @@ const IndividualProjectsSection: React.FC = () => {
                             onDrop={(e) => handleDrop(e, idx)}
                             onDragEnd={handleDragEnd}
                             className={`bg-[#050505] border ${draggedIndex === idx ? 'border-red-600 opacity-50 scale-95' : selectedIds.includes(project.id) ? 'border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.2)]' : 'border-white/10'} rounded-xl overflow-hidden group flex flex-col hover:border-red-600/30 transition-all duration-300 cursor-grab active:cursor-grabbing relative`}
-                            onClick={() => setSelectedIds(prev => prev.includes(project.id) ? prev.filter(i => i !== project.id) : [...prev, project.id])}
+                            onClick={(e) => {
+                                if (e.shiftKey && lastSelectedIndex !== null) {
+                                    const start = Math.min(idx, lastSelectedIndex);
+                                    const end = Math.max(idx, lastSelectedIndex);
+                                    const rangeIds = projects.slice(start, end + 1).map(p => p.id);
+                                    setSelectedIds(prev => Array.from(new Set([...prev, ...rangeIds])));
+                                } else {
+                                    setSelectedIds(prev => prev.includes(project.id) ? prev.filter(i => i !== project.id) : [...prev, project.id]);
+                                }
+                                setLastSelectedIndex(idx);
+                            }}
                         >
                             <div className="relative aspect-video flex items-center justify-center overflow-hidden p-2 pointer-events-none">
                                 <img src={project.image_url} alt="" className="max-w-full max-h-full object-contain pointer-events-none drop-shadow-[0_10px_20px_rgba(0,0,0,0.8)]" />
@@ -2882,7 +2893,15 @@ const IndividualProjectsSection: React.FC = () => {
                                         type="button"
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            setSelectedIds(prev => prev.includes(project.id) ? prev.filter(i => i !== project.id) : [...prev, project.id]);
+                                            if (e.shiftKey && lastSelectedIndex !== null) {
+                                                const start = Math.min(idx, lastSelectedIndex);
+                                                const end = Math.max(idx, lastSelectedIndex);
+                                                const rangeIds = projects.slice(start, end + 1).map(p => p.id);
+                                                setSelectedIds(prev => Array.from(new Set([...prev, ...rangeIds])));
+                                            } else {
+                                                setSelectedIds(prev => prev.includes(project.id) ? prev.filter(i => i !== project.id) : [...prev, project.id]);
+                                            }
+                                            setLastSelectedIndex(idx);
                                         }}
                                         className={`w-6 h-6 flex items-center justify-center rounded border transition-colors ${selectedIds.includes(project.id) ? 'bg-red-600 border-red-500 text-white' : 'bg-black/50 border-white/30 text-transparent hover:border-red-500 hover:text-white/50'}`}
                                     >
@@ -3815,6 +3834,7 @@ const OrdersTab: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
+    const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(null);
     const [bulkUpdating, setBulkUpdating] = useState(false);
     const [showArchived, setShowArchived] = useState(false);
     const [archivedData, setArchivedData] = useState<{user: any, orders: any[]}[]>([]);
@@ -3968,12 +3988,6 @@ const OrdersTab: React.FC = () => {
         }
     };
 
-    const toggleSelectOrder = (id: string) => {
-        setSelectedOrders(prev => 
-            prev.includes(id) ? prev.filter(oid => oid !== id) : [...prev, id]
-        );
-    };
-
     const filteredOrders = useMemo(() => {
         return orders.filter(order => {
             const matchesSearch = 
@@ -3986,6 +4000,20 @@ const OrdersTab: React.FC = () => {
             return matchesSearch && matchesStatus;
         });
     }, [orders, searchTerm, statusFilter]);
+
+    const toggleSelectOrder = (id: string, index: number, isShift?: boolean) => {
+        if (isShift && lastSelectedIndex !== null) {
+            const start = Math.min(index, lastSelectedIndex);
+            const end = Math.max(index, lastSelectedIndex);
+            const rangeIds = filteredOrders.slice(start, end + 1).map(o => o.id);
+            setSelectedOrders(prev => Array.from(new Set([...prev, ...rangeIds])));
+        } else {
+            setSelectedOrders(prev => 
+                prev.includes(id) ? prev.filter(oid => oid !== id) : [...prev, id]
+            );
+        }
+        setLastSelectedIndex(index);
+    };
 
     const handleExport = () => {
         try {
@@ -4891,15 +4919,19 @@ const OrdersTab: React.FC = () => {
                 </AnimatePresence>
             
             <div className="space-y-4">
-                {filteredOrders.map(order => (
-                    <div key={order.id} className={`bg-black/40 border transition-all p-6 rounded-xl hover:border-white/20 ${selectedOrders.includes(order.id) ? 'border-red-600/40 bg-red-600/5' : 'border-white/5'}`}>
+                {filteredOrders.map((order, idx) => (
+                    <div 
+                        key={order.id} 
+                        className={`bg-black/40 border transition-all p-6 rounded-xl hover:border-white/20 cursor-pointer ${selectedOrders.includes(order.id) ? 'border-red-600/40 bg-red-600/5' : 'border-white/5'}`}
+                        onClick={(e) => toggleSelectOrder(order.id, idx, e.shiftKey)}
+                    >
                         <div className="flex flex-col lg:flex-row gap-8">
                             {/* Checkbox Column */}
-                            <div className="lg:pt-2 flex items-start">
+                            <div className="lg:pt-2 flex items-start" onClick={(e) => e.stopPropagation()}>
                                 <input 
                                     type="checkbox"
                                     checked={selectedOrders.includes(order.id)}
-                                    onChange={() => toggleSelectOrder(order.id)}
+                                    onChange={(e) => toggleSelectOrder(order.id, idx, (e.nativeEvent as MouseEvent).shiftKey)}
                                     className="w-5 h-5 rounded border-white/10 bg-black/40 text-red-600 focus:ring-red-600 cursor-pointer"
                                 />
                             </div>
@@ -4988,7 +5020,7 @@ const OrdersTab: React.FC = () => {
                             </div>
 
                             {/* Right Side: Actions */}
-                            <div className="lg:w-48 space-y-4 border-l-0 lg:border-l border-white/5 lg:pl-8">
+                            <div className="lg:w-48 space-y-4 border-l-0 lg:border-l border-white/5 lg:pl-8" onClick={(e) => e.stopPropagation()}>
                                 <div>
                                     <h4 className="text-[10px] text-zinc-500 uppercase tracking-widest mb-3 font-bold">Статус</h4>
                                     <select 
@@ -5165,6 +5197,7 @@ const CustomOrdersTab: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
+    const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(null);
     const [bulkUpdating, setBulkUpdating] = useState(false);
     const [showArchived, setShowArchived] = useState(false);
     const [archivedData, setArchivedData] = useState<{user: any, orders: any[]}[]>([]);
@@ -5287,12 +5320,6 @@ const CustomOrdersTab: React.FC = () => {
         }
     };
 
-    const toggleSelectOrder = (id: string) => {
-        setSelectedOrders(prev => 
-            prev.includes(id) ? prev.filter(oid => oid !== id) : [...prev, id]
-        );
-    };
-
     const filteredOrders = useMemo(() => {
         return orders.filter(order => {
             const fullName = `${order.first_name || ''} ${order.last_name || ''}`.toLowerCase();
@@ -5306,6 +5333,20 @@ const CustomOrdersTab: React.FC = () => {
             return matchesSearch && matchesStatus;
         });
     }, [orders, searchTerm, statusFilter]);
+
+    const toggleSelectOrder = (id: string, index: number, isShift?: boolean) => {
+        if (isShift && lastSelectedIndex !== null) {
+            const start = Math.min(index, lastSelectedIndex);
+            const end = Math.max(index, lastSelectedIndex);
+            const rangeIds = filteredOrders.slice(start, end + 1).map(o => o.id);
+            setSelectedOrders(prev => Array.from(new Set([...prev, ...rangeIds])));
+        } else {
+            setSelectedOrders(prev => 
+                prev.includes(id) ? prev.filter(oid => oid !== id) : [...prev, id]
+            );
+        }
+        setLastSelectedIndex(index);
+    };
 
     const handleUpdateStatus = async (id: string, newStatus: string) => {
         const { error } = await supabase
@@ -5657,14 +5698,18 @@ const CustomOrdersTab: React.FC = () => {
                 </AnimatePresence>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {filteredOrders.map(order => (
-                    <div key={order.id} className={`bg-black/40 border transition-all p-5 relative group flex gap-4 ${selectedOrders.includes(order.id) ? 'border-red-600/40 bg-red-600/5' : 'border-white/10'}`}>
+                {filteredOrders.map((order, idx) => (
+                    <div 
+                        key={order.id} 
+                        className={`bg-black/40 border transition-all p-5 relative group flex gap-4 cursor-pointer ${selectedOrders.includes(order.id) ? 'border-red-600/40 bg-red-600/5' : 'border-white/10'}`}
+                        onClick={(e) => toggleSelectOrder(order.id, idx, e.shiftKey)}
+                    >
                         {/* Checkbox */}
-                        <div className="pt-1 select-none">
+                        <div className="pt-1 select-none" onClick={(e) => e.stopPropagation()}>
                             <input 
                                 type="checkbox"
                                 checked={selectedOrders.includes(order.id)}
-                                onChange={() => toggleSelectOrder(order.id)}
+                                onChange={(e) => toggleSelectOrder(order.id, idx, (e.nativeEvent as MouseEvent).shiftKey)}
                                 className="w-5 h-5 rounded border-white/10 bg-black/40 text-red-600 focus:ring-red-600 cursor-pointer"
                             />
                         </div>
@@ -5693,7 +5738,7 @@ const CustomOrdersTab: React.FC = () => {
                                 <p className="text-xs text-zinc-400">Дата: <span className="text-white">{new Date(order.created_at).toLocaleString('bg-BG')}</span></p>
                             </div>
                             
-                            <div className="mt-3 flex items-center gap-3">
+                            <div className="mt-3 flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
                                 <span className="text-[10px] text-zinc-500 uppercase font-black">Статус:</span>
                                 <select 
                                     value={order.status || 'pending'} 
@@ -5730,7 +5775,7 @@ const CustomOrdersTab: React.FC = () => {
                             </div>
                         </div>
 
-                        <div className="space-y-2 mb-4">
+                        <div className="space-y-2 mb-4" onClick={(e) => e.stopPropagation()}>
                             <h4 className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold flex items-center gap-2">
                                 <FileText className="w-3 h-3" /> Административни Бележки
                             </h4>
@@ -5763,7 +5808,7 @@ const CustomOrdersTab: React.FC = () => {
                             </div>
                         )}
 
-                        <div className="pt-4 border-t border-white/5">
+                        <div className="pt-4 border-t border-white/5" onClick={(e) => e.stopPropagation()}>
                             <button
                                 onClick={() => handlePrintCustom(order)}
                                 className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-white/5 border border-white/10 text-white font-bold text-[10px] uppercase tracking-widest hover:bg-white/10 transition-colors"
