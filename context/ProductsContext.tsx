@@ -57,7 +57,28 @@ export const ProductsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       let allData: any[] = [];
       let rFrom = 0;
       const rSize = 1000;
+      const firstBatchSize = 100; // Small batch for initial fast load
       
+      // 1. Fetch first small batch
+      const { data: firstBatch, error: firstError } = await supabase
+        .from('products')
+        .select("slug,name,name_bg,avatar,cover_image,categories,location,dimensions,size,is_best_seller,is_verified,price,price_eur,wholesale_price,wholesale_price_eur,card_images,is_hidden,posts,highlights")
+        .order('id', { ascending: false })
+        .range(0, firstBatchSize - 1);
+      
+      if (firstError) throw firstError;
+      
+      if (firstBatch) {
+        const mappedFirst = firstBatch.map(mapRow);
+        mappedFirst.sort(naturalSort);
+        setProducts(mappedFirst);
+        // Set loading to false as soon as we have something to show
+        setLoading(false);
+        allData = [...firstBatch];
+      }
+
+      // 2. Fetch the rest in the background
+      rFrom = firstBatchSize;
       while (true) {
         const { data, error } = await supabase
           .from('products')
@@ -66,18 +87,19 @@ export const ProductsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           .range(rFrom, rFrom + rSize - 1);
           
         if (error) throw error;
-        if (data) allData = [...allData, ...data];
+        if (data && data.length > 0) {
+          allData = [...allData, ...data];
+          const mappedAll = allData.map(mapRow);
+          mappedAll.sort(naturalSort);
+          setProducts(mappedAll);
+        }
+        
         if (!data || data.length < rSize) break;
         rFrom += rSize;
       }
 
-      const mapped = allData.map(mapRow);
-      mapped.sort(naturalSort);
-      setProducts(mapped);
-
     } catch (err) {
       console.error('Error in ProductsContext:', err);
-    } finally {
       setLoading(false);
     }
   }, []);
