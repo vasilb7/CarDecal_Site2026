@@ -168,12 +168,14 @@ export const CouponCard: React.FC<CouponCardProps> = ({ coupon, index, bgClass =
           </div>
 
           <div className="flex flex-row items-center justify-between mt-4 md:mt-5">
-             <div className="flex items-center gap-1.5 md:gap-2">
-                <Info className="w-3 h-3 text-gray-400" />
-                <span className="text-[9px] md:text-[10px] text-gray-400 uppercase font-medium">
-                    {coupon.min_order_amount ? `Мин. поръчка: ${Math.round(coupon.min_order_amount * 0.51)}eur/${coupon.min_order_amount}bgn.` : '122 от 130 купона използвани'}
-                </span>
-             </div>
+             {coupon.min_order_amount && (
+               <div className="flex items-center gap-1.5 md:gap-2">
+                  <Info className="w-3 h-3 text-gray-400" />
+                  <span className="text-[9px] md:text-[10px] text-gray-400 uppercase font-medium">
+                      Мин. поръчка: {Math.round(coupon.min_order_amount * 0.51)}eur/{coupon.min_order_amount}bgn.
+                  </span>
+               </div>
+             )}
              <span className="text-[10px] md:text-[11px] text-gray-500 font-bold uppercase">
                  {coupon.valid_until ? `EXP ${new Date(coupon.valid_until).toLocaleDateString('bg-BG', { day: 'numeric', month: 'short', year: 'numeric' })}` : 'Без срок'}
              </span>
