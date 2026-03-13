@@ -53,6 +53,7 @@ const ProductDetailsPage = lazyWithRetry(
   () => import("./pages/ProductDetailsPage"),
 );
 const ContactPage = lazyWithRetry(() => import("./pages/ContactPage"));
+const AboutPage = lazyWithRetry(() => import("./pages/AboutPage"));
 const PricingPage = lazyWithRetry(() => import("./pages/PricingPage"));
 const LoginPage = lazyWithRetry(() => import("./pages/LoginPage"));
 const RegisterPage = lazyWithRetry(() => import("./pages/RegisterPage"));
@@ -71,6 +72,7 @@ const OrderDetailPage = lazyWithRetry(() => import("./pages/OrderDetailPage"));
 const MaintenancePage = lazyWithRetry(() => import("./pages/MaintenancePage"));
 const RestrictedPage = lazyWithRetry(() => import("./pages/RestrictedPage"));
 const StealthAuthPage = lazyWithRetry(() => import("./pages/StealthAuthPage"));
+const PromosPage = lazyWithRetry(() => import("./pages/PromosPage"));
 const ProductQuickViewModal = lazyWithRetry(
   () => import("./components/ProductQuickViewModal"),
 );
@@ -310,10 +312,26 @@ function AppContent() {
                         }
                       />
                       <Route
+                        path="/about"
+                        element={
+                          <PageWrapper>
+                            <AboutPage />
+                          </PageWrapper>
+                        }
+                      />
+                      <Route
                         path="/pricing"
                         element={
                           <PageWrapper>
                             <PricingPage />
+                          </PageWrapper>
+                        }
+                      />
+                      <Route
+                        path="/promos"
+                        element={
+                          <PageWrapper>
+                            <PromosPage />
                           </PageWrapper>
                         }
                       />

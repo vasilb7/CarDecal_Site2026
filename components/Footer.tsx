@@ -7,9 +7,11 @@ interface RollingLinkProps {
   href?: string;
   className?: string;
   children: string;
+  target?: string;
+  rel?: string;
 }
 
-const RollingLink: React.FC<RollingLinkProps> = ({ to, href, className, children }) => {
+const RollingLink: React.FC<RollingLinkProps> = ({ to, href, className, children, target, rel }) => {
   const letters = children.split("");
 
   const content = (
@@ -23,8 +25,8 @@ const RollingLink: React.FC<RollingLinkProps> = ({ to, href, className, children
     </span>
   );
 
-  if (to) return <Link to={to}>{content}</Link>;
-  return <a href={href || "#"}>{content}</a>;
+  if (to) return <Link to={to} target={target} rel={rel}>{content}</Link>;
+  return <a href={href || "#"} target={target} rel={rel}>{content}</a>;
 };
 
 const Footer: React.FC = () => {
@@ -34,11 +36,13 @@ const Footer: React.FC = () => {
 
   // Auto-scanning logic for mobile/touch devices (moves mask horizontally)
   useEffect(() => {
+    // ONLY run the auto-scan animation on touch devices (where hover is not supported)
+    if (!window.matchMedia("(hover: none)").matches) return;
+
     let frameId: number;
     let startTime = Date.now();
     
     const animateMask = () => {
-      // Only animate automatically if not hovered (always true on typical mobile interactions we want to ignore)
       if (!isHovered && containerRef.current) {
         const time = (Date.now() - startTime) / 1000;
         const rect = containerRef.current.getBoundingClientRect();
@@ -73,10 +77,12 @@ const Footer: React.FC = () => {
     topBgClass = "bg-red-600";
   } else if (path.startsWith('/catalog')) {
     topBgClass = "bg-[#0F0F0F]";
-  } else if (path === '/profile' || path === '/cart') {
+  } else if (path === '/profile' || path === '/cart' || path === '/contact' || path === '/privacy' || path === '/terms' || path === '/delivery') {
     topBgClass = "bg-[#0a0a0a]";
   } else if (path === '/custom-orders') {
     topBgClass = "bg-[#080808]";
+  } else if (path === '/promos') {
+    topBgClass = "bg-[#280905]";
   }
 
   return (
@@ -171,6 +177,7 @@ const Footer: React.FC = () => {
               </span>
               <div className="flex flex-col gap-3 sm:gap-[0.7vw] lg:gap-[0.8vw] items-start">
                 <RollingLink to="/catalog"  className="text-[0.95rem] sm:text-[2.8vw] lg:text-[2vw] xl:text-[1.7vw] font-black uppercase text-white leading-none inline-block">КАТАЛОГ</RollingLink>
+                <RollingLink to="/promos"   className="text-[0.95rem] sm:text-[2.8vw] lg:text-[2vw] xl:text-[1.7vw] font-black uppercase text-white leading-none inline-block">ПРОМОЦИИ</RollingLink>
                 <RollingLink to="/about"    className="text-[0.95rem] sm:text-[2.8vw] lg:text-[2vw] xl:text-[1.7vw] font-black uppercase text-white leading-none inline-block">ЗА НАС</RollingLink>
                 <RollingLink to="/custom-orders" className="text-[0.95rem] sm:text-[2.8vw] lg:text-[2vw] xl:text-[1.7vw] font-black uppercase text-white leading-none inline-block">ПОРЪЧКИ</RollingLink>
                 <RollingLink to="/contact"  className="text-[0.95rem] sm:text-[2.8vw] lg:text-[2vw] xl:text-[1.7vw] font-black uppercase text-white leading-none inline-block">КОНТАКТИ</RollingLink>
@@ -186,10 +193,10 @@ const Footer: React.FC = () => {
                 ПОСЛЕДВАЙ НИ
               </span>
               <div className="flex flex-col gap-3 sm:gap-[0.7vw] lg:gap-[0.8vw] items-end">
-                <RollingLink href="https://www.tiktok.com/@cardecal4?_r=1&_t=ZN-94RmUa0RCeE" className="text-[0.95rem] sm:text-[2.8vw] lg:text-[2vw] xl:text-[1.7vw] font-black uppercase text-white leading-none inline-block">TIKTOK</RollingLink>
-                <RollingLink href="https://www.instagram.com/cardecal1?igsh=eWd3b3FpdXN0NXRp" className="text-[0.95rem] sm:text-[2.8vw] lg:text-[2vw] xl:text-[1.7vw] font-black uppercase text-white leading-none inline-block">INSTAGRAM</RollingLink>
-                <RollingLink href="#" className="text-[0.95rem] sm:text-[2.8vw] lg:text-[2vw] xl:text-[1.7vw] font-black uppercase text-white leading-none inline-block">YOUTUBE</RollingLink>
-                <RollingLink href="https://www.facebook.com/share/18yePjATNr/" className="text-[0.95rem] sm:text-[2.8vw] lg:text-[2vw] xl:text-[1.7vw] font-black uppercase text-white leading-none inline-block">FACEBOOK</RollingLink>
+                <RollingLink href="https://www.tiktok.com/@cardecal4?_r=1&_t=ZN-94RmUa0RCeE" target="_blank" rel="noopener noreferrer" className="text-[0.95rem] sm:text-[2.8vw] lg:text-[2vw] xl:text-[1.7vw] font-black uppercase text-white leading-none inline-block">TIKTOK</RollingLink>
+                <RollingLink href="https://www.instagram.com/cardecal1?igsh=eWd3b3FpdXN0NXRp" target="_blank" rel="noopener noreferrer" className="text-[0.95rem] sm:text-[2.8vw] lg:text-[2vw] xl:text-[1.7vw] font-black uppercase text-white leading-none inline-block">INSTAGRAM</RollingLink>
+                <RollingLink href="https://youtube.com/@cardecal?si=NT1sZsww7fp8cKIR" target="_blank" rel="noopener noreferrer" className="text-[0.95rem] sm:text-[2.8vw] lg:text-[2vw] xl:text-[1.7vw] font-black uppercase text-white leading-none inline-block">YOUTUBE</RollingLink>
+                <RollingLink href="https://www.facebook.com/share/18yePjATNr/" target="_blank" rel="noopener noreferrer" className="text-[0.95rem] sm:text-[2.8vw] lg:text-[2vw] xl:text-[1.7vw] font-black uppercase text-white leading-none inline-block">FACEBOOK</RollingLink>
               </div>
             </div>
 

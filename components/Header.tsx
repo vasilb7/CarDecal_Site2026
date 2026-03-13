@@ -230,6 +230,8 @@ const Header: React.FC = () => {
     
     const menuLinks = [
         { path: `/catalog`, label: "КАТАЛОГ" },
+        { path: `/promos`, label: "ПРОМОЦИИ" },
+        { path: `/about`, label: "ЗА НАС" },
         { path: `/contact`, label: "КОНТАКТИ" },
     ];
 
