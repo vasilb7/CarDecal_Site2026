@@ -1,9 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, memo } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { motion, AnimatePresence } from "framer-motion";
 import type { Product } from "../types";
-import { getOptimizedUrl } from "../lib/cloudinary-utils";
 import OptimizedImage from "./ui/OptimizedImage";
 
 interface FeaturedProductCardProps {
@@ -11,7 +9,7 @@ interface FeaturedProductCardProps {
   isPriority?: boolean;
 }
 
-const FeaturedProductCard: React.FC<FeaturedProductCardProps> = ({
+const FeaturedProductCard: React.FC<FeaturedProductCardProps> = memo(({
   product,
   isPriority = false,
 }) => {
@@ -45,22 +43,17 @@ const FeaturedProductCard: React.FC<FeaturedProductCardProps> = ({
   const shortDesc = product.dimensions || product.size || "Premium Sticker";
 
   const CardContent = (
-    <motion.div className="bg-gradient-to-b from-[#141414] to-[#0A0A0A] rounded-[24px] md:rounded-[32px] p-5 md:p-8 flex flex-col h-full justify-between relative shadow-2xl border border-white/5 transition-all duration-500 ease-out overflow-hidden group/card lg:hover:-translate-y-3 lg:hover:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.8),0_0_25px_rgba(212,175,55,0.25)] lg:hover:border-[#D4AF37]/30">
+    <div className="bg-gradient-to-b from-[#141414] to-[#0A0A0A] rounded-[24px] md:rounded-[32px] p-5 md:p-8 flex flex-col h-full justify-between relative shadow-2xl border border-white/5 transition-all duration-500 ease-out overflow-hidden group/card lg:hover:-translate-y-3 lg:hover:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.8),0_0_25px_rgba(212,175,55,0.25)] lg:hover:border-[#D4AF37]/30">
       {/* Product Image Area */}
       <div className="relative w-full aspect-video md:aspect-[4/3] flex-shrink-0 mb-4 min-h-0">
         <div className="absolute inset-0 flex items-center justify-center transition-transform duration-700 ease-out group-hover/card:scale-105">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(212,175,55,0.2)_0%,transparent_60%)] blur-2xl pointer-events-none opacity-0 group-hover/card:opacity-100 transition-opacity duration-500" />
 
-          <AnimatePresence>
-            {!imageLoaded && (
-              <motion.div
-                initial={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="absolute inset-0 m-auto w-10 h-10 border-2 border-white/5 border-t-red-600 rounded-full animate-spin"
-              />
-            )}
-          </AnimatePresence>
+          {!imageLoaded && (
+            <div
+              className="absolute inset-0 m-auto w-10 h-10 border-2 border-white/5 border-t-red-600 rounded-full animate-spin"
+            />
+          )}
 
           {/* Using 90% size instead of 100% so images have breathing room and are never cut off by the border radius */}
           <OptimizedImage
@@ -69,7 +62,7 @@ const FeaturedProductCard: React.FC<FeaturedProductCardProps> = ({
             onLoad={() => setImageLoaded(true)}
             className={`w-[90%] h-[90%] object-contain transition-opacity duration-200 ${imageLoaded ? "opacity-100" : "opacity-0"}`}
             priority={isPriority}
-            widths={[300, 500, 800]}
+            widths={[300, 500]}
             sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
             objectFit="contain"
           />
@@ -93,7 +86,7 @@ const FeaturedProductCard: React.FC<FeaturedProductCardProps> = ({
           </div>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 
   const location = useLocation();
@@ -110,6 +103,8 @@ const FeaturedProductCard: React.FC<FeaturedProductCardProps> = ({
       </Link>
     </div>
   );
-};
+});
+
+FeaturedProductCard.displayName = 'FeaturedProductCard';
 
 export default FeaturedProductCard;

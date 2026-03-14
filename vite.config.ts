@@ -43,6 +43,11 @@ export default defineConfig(({ mode }) => {
               'pdf': ['jspdf', 'jspdf-autotable'],
               // Password strength  
               'zxcvbn': ['zxcvbn'],
+              // ML models (used only in admin/moderation)
+              'tensorflow': ['@tensorflow/tfjs'],
+              'nsfw': ['nsfwjs'],
+              // Image cropper
+              'cropper': ['@origin-space/image-cropper'],
             },
           },
         },

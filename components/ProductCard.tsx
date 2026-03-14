@@ -1,7 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, memo } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { motion, AnimatePresence } from "framer-motion";
 import type { Product } from "../types";
 import { getOptimizedUrl } from "../lib/cloudinary-utils";
 import OptimizedImage from "./ui/OptimizedImage";
@@ -11,7 +10,7 @@ interface ProductCardProps {
   isPriority?: boolean;
 }
 
-const ProductCard: React.FC<ProductCardProps> = ({ product, isPriority = false }) => {
+const ProductCard: React.FC<ProductCardProps> = memo(({ product, isPriority = false }) => {
   const { i18n } = useTranslation();
   const [imageLoaded, setImageLoaded] = useState(false);
 
@@ -46,7 +45,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, isPriority = false }
                     (product.size ? `${product.size} size` : "Premium Sticker");
 
   const CardContent = (
-    <motion.div
+    <div
       className="bg-[#141414] rounded-[28px] md:rounded-[40px] p-4 md:p-8 flex flex-col justify-between relative shadow-2xl border border-white/[0.03] transition-all duration-500 ease-out h-full overflow-hidden lg:hover:-translate-y-3 lg:hover:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5),0_0_20px_rgba(220,38,38,0.2)] lg:hover:border-red-600/20"
     >
       {/* Product Image Area */}
@@ -56,16 +55,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, isPriority = false }
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(220,38,38,0.05)_0%,transparent_70%)] blur-3xl pointer-events-none" />
 
           {/* Skeleton Loader */}
-          <AnimatePresence>
-            {!imageLoaded && (
-              <motion.div
-                initial={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="absolute inset-0 m-auto w-10 h-10 border-2 border-white/5 border-t-red-600 rounded-full animate-spin"
-              />
-            )}
-          </AnimatePresence>
+          {!imageLoaded && (
+            <div
+              className="absolute inset-0 m-auto w-10 h-10 border-2 border-white/5 border-t-red-600 rounded-full animate-spin"
+            />
+          )}
 
           <OptimizedImage
             src={product.avatar}
@@ -73,7 +67,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, isPriority = false }
             onLoad={() => setImageLoaded(true)}
             className={`w-full h-full object-contain transition-opacity duration-200 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
             priority={isPriority}
-            widths={[300, 500, 800]}
+            widths={[300, 500]}
             sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
             objectFit="contain"
           />
@@ -95,7 +89,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, isPriority = false }
           {displayPrice}
         </div>
       </div>
-    </motion.div>
+    </div>
 
   );
 
@@ -128,6 +122,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, isPriority = false }
         </Link>
     </div>
   );
-};
+});
+
+ProductCard.displayName = 'ProductCard';
 
 export default ProductCard;

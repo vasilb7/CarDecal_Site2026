@@ -163,6 +163,7 @@ const HomePage: React.FC = () => {
   });
 
   useEffect(() => {
+    let lastCheckDate = '';
     const calcTimeLeft = () => {
       const now = new Date();
       const tomorrow = new Date(
@@ -178,16 +179,19 @@ const HomePage: React.FC = () => {
 
       setTimeLeft({ hours: h, minutes: m, seconds: s });
 
-      // Instantly check if midnight passed and update products
+      // Check midnight only when date actually changes (not every second)
       const todayStr = now.toDateString();
-      const storedData = localStorage.getItem("carDecalDailyPicks");
-      if (storedData) {
-        try {
-          const parsed = JSON.parse(storedData);
-          if (parsed.date !== todayStr) {
-            updateDailyProducts(); // triggers refresh instantly
-          }
-        } catch (e) {}
+      if (todayStr !== lastCheckDate) {
+        lastCheckDate = todayStr;
+        const storedData = localStorage.getItem("carDecalDailyPicks");
+        if (storedData) {
+          try {
+            const parsed = JSON.parse(storedData);
+            if (parsed.date !== todayStr) {
+              updateDailyProducts();
+            }
+          } catch (e) {}
+        }
       }
     };
 
@@ -481,9 +485,7 @@ const HomePage: React.FC = () => {
                 <p className="text-text-muted text-xs md:text-sm uppercase tracking-widest leading-relaxed max-w-sm md:max-w-none">
                   Специално подбрани стикери за теб днес
                 </p>
-                <div className="relative p-[1.5px] rounded-full overflow-hidden group shadow-[0_0_20px_rgba(220,38,38,0.15)] flex shrink-0 bg-white/5">
-                  {/* Rotating Border Gradient (Beam Effect) */}
-                  <div className="absolute inset-[-1000%] animate-[spin_3s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,transparent_0%,rgba(239,68,68,0.2)_50%,#ef4444_90%,#ffffff_99.5%,transparent_100%)] opacity-100" />
+                  <div className="relative p-[1.5px] rounded-full overflow-hidden group shadow-[0_0_20px_rgba(220,38,38,0.15)] flex shrink-0 bg-gradient-to-r from-red-600/30 via-white/10 to-red-600/30">
 
                   {/* Inner Dark Background */}
                   <div className="relative z-10 flex items-center gap-2 px-4 py-1.5 md:px-6 md:py-2.5 bg-[#050505] rounded-full w-max shadow-[inset_0_4px_10px_rgba(0,0,0,0.5)]">
@@ -530,12 +532,12 @@ const HomePage: React.FC = () => {
                 </div>
               ) : displayProducts.length > 0 ? (
                 displayProducts.map((product, index) => (
-                  <motion.div
+                  <div
                     key={product.slug}
                     className="flex-shrink-0 w-[75%] sm:w-[55%] md:w-auto snap-center lg:hover:-translate-y-2 transition-transform duration-300"
                   >
                     <FeaturedProductCard product={product} isPriority={index < 4} />
-                  </motion.div>
+                  </div>
                 ))
               ) : (
                 <div className="min-w-full md:col-span-full text-center py-20 text-text-muted uppercase tracking-[0.2em] text-sm">

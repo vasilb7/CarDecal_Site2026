@@ -360,11 +360,18 @@ const CatalogPage: React.FC = () => {
 
     // Detect scroll to hide floating filter button near the bottom (pagination/footer)
     useEffect(() => {
+        let ticking = false;
         const handleScroll = () => {
-            const scrollPosition = window.scrollY + window.innerHeight;
-            const bottomPosition = document.documentElement.scrollHeight;
-            // 450px threshold is roughly the space taken by pagination + footer
-            setIsAtBottom(bottomPosition - scrollPosition < 450);
+            if (!ticking) {
+                ticking = true;
+                requestAnimationFrame(() => {
+                    const scrollPosition = window.scrollY + window.innerHeight;
+                    const bottomPosition = document.documentElement.scrollHeight;
+                    // 450px threshold is roughly the space taken by pagination + footer
+                    setIsAtBottom(bottomPosition - scrollPosition < 450);
+                    ticking = false;
+                });
+            }
         };
         handleScroll();
         window.addEventListener('scroll', handleScroll, { passive: true });

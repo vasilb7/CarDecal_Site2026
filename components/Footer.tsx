@@ -49,14 +49,11 @@ const Footer: React.FC = () => {
 
   return (
     <footer className={`${topBgClass} pt-0 pb-0 w-full relative z-10 overflow-hidden -mt-1`}>
-      {/* Royal Background Pattern Overlay - Footer Transition */}
+      {/* Subtle top transition overlay - lightweight CSS gradient instead of repeated image */}
       <div 
-        className="absolute inset-x-0 top-0 h-64 z-0 opacity-[0.05] pointer-events-none mix-blend-overlay"
+        className="absolute inset-x-0 top-0 h-64 z-0 opacity-[0.03] pointer-events-none"
         style={{ 
-          backgroundImage: "url('/royal.png')", 
-          backgroundRepeat: "repeat",
-          backgroundSize: "300px",
-          filter: "brightness(0.5) contrast(1.2)"
+          backgroundImage: "radial-gradient(circle at 50% 0%, rgba(255,255,255,0.1) 0%, transparent 60%)",
         }}
       />
       

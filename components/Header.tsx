@@ -77,10 +77,17 @@ const Header: React.FC = () => {
     const [isScrolled, setIsScrolled] = useState(false);
 
     useEffect(() => {
+        let ticking = false;
         const handleScroll = () => {
-            setIsScrolled(window.scrollY > 20);
+            if (!ticking) {
+                ticking = true;
+                requestAnimationFrame(() => {
+                    setIsScrolled(window.scrollY > 20);
+                    ticking = false;
+                });
+            }
         };
-        window.addEventListener('scroll', handleScroll);
+        window.addEventListener('scroll', handleScroll, { passive: true });
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
@@ -369,7 +376,7 @@ const Header: React.FC = () => {
                 "sticky top-0 z-[100] w-full border-b border-white/5 pt-[env(safe-area-inset-top)] transition-colors duration-500",
                 (location.pathname === '/contact' || location.pathname === '/promos') && !isScrolled
                     ? "bg-transparent" 
-                    : "bg-background/95 backdrop-blur-md"
+                    : "bg-background/[0.97]"
             )}>
                 <div className="container mx-auto px-4 sm:px-6 flex items-center justify-between relative h-20 sm:h-24">
                     <Link 
