@@ -169,9 +169,10 @@ export const CompleteRegistrationModal = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-
-        if (name.trim().length < 2) {
-            showToast(t('toast.register_name_too_short', 'Името трябва да е поне 2 символа!'), "warning");
+        
+        const nameParts = name.trim().split(/\s+/);
+        if (nameParts.length < 2) {
+            showToast('Моля, въведете име и фамилия разделени с интервал.', "warning");
             return;
         }
 
@@ -191,10 +192,14 @@ export const CompleteRegistrationModal = () => {
 
         try {
             const normalizedPhone = phone ? formatToE164(phone) : null;
+            const firstName = nameParts[0];
+            const lastName = nameParts.slice(1).join(' ') || firstName; // Fallback to avoid empty string constraint
 
             // Update profile first to check for uniqueness
             const updateData: any = { 
                 full_name: name.trim(), 
+                first_name: firstName,
+                last_name: lastName,
                 onboarding_completed: true,
                 updated_at: new Date().toISOString()
             };
@@ -205,6 +210,7 @@ export const CompleteRegistrationModal = () => {
 
             if (isCompany) {
                 updateData.is_company = true;
+                updateData.account_type = 'company';
                 updateData.company_name = companyName;
                 updateData.bulstat = bulstat;
                 updateData.company_address = companyAddress;
@@ -213,6 +219,7 @@ export const CompleteRegistrationModal = () => {
                 updateData.vat_number = vatNumber;
             } else {
                 updateData.is_company = false;
+                updateData.account_type = 'personal';
             }
 
             const { error: profileError } = await supabase
@@ -230,7 +237,10 @@ export const CompleteRegistrationModal = () => {
             // Update auth metadata
             const authUpdateData: any = {
                 data: {
-                    full_name: name.trim()
+                    full_name: name.trim(),
+                    first_name: firstName,
+                    last_name: lastName,
+                    onboarding_completed: true
                 }
             };
             

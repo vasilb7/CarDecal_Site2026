@@ -252,20 +252,8 @@ export default function AuthPage() {
         return;
       }
 
-      const { error: checkError } = await supabase.auth.signUp({
-        email: regEmail,
-        password: regPassword,
-        options: {
-          data: { full_name: regName.trim(), phone: normalizedPhone },
-          captchaToken
-        }
-      });
-
-      // This is a bit of a hack to check for existing email/phone before onboarding
-      // But we don't want to actually commit yet if possible. 
-      // Actually, Supabase doesn't have a "check email" API easily without signing up.
-      // So we will just proceed to onboarding and catch errors during the final signUp.
-      
+      // We no longer call signUp here. 
+      // User will be created in onCompleteOnboarding.
       setView('onboarding');
     } catch (err: any) {
       showToast(translateAuthError(err), 'error');
@@ -273,6 +261,7 @@ export default function AuthPage() {
       setLoading(false);
     }
   };
+
 
   const onCompleteOnboarding = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();

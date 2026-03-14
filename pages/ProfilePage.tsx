@@ -351,11 +351,27 @@ const SettingsTab: React.FC<{
         try {
             const oldName = profile?.full_name || '';
             const newName = fullName.trim();
-            
-            await supabase.auth.updateUser({ data: { full_name: newName } });
+            const nameParts = newName.split(/\s+/);
+            const firstName = nameParts[0];
+            const lastName = nameParts.slice(1).join(' ') || firstName; // Fallback to avoid null constraint fail
+
+            await supabase.auth.updateUser({ 
+                data: { 
+                    full_name: newName,
+                    first_name: firstName,
+                    last_name: lastName
+                } 
+            });
+
             const { error } = await supabase
                 .from('profiles')
-                .update({ full_name: newName, updated_at: new Date().toISOString() })
+                .update({ 
+                    full_name: newName, 
+                    first_name: firstName,
+                    last_name: lastName,
+                    onboarding_completed: true,
+                    updated_at: new Date().toISOString() 
+                })
                 .eq('id', user.id);
             if (error) throw error;
 
@@ -374,12 +390,10 @@ const SettingsTab: React.FC<{
         }
     };
 
-
-
     const savePhone = async () => {
         if (!userPhone.trim()) return;
 
-        if (!isValidBulgarianPhone(userPhone)) { // Assuming userPhone is the variable to validate
+        if (!isValidBulgarianPhone(userPhone)) {
             showToast("Невалиден телефон! (8-15 цифри)", "error");
             return;
         }
@@ -750,6 +764,10 @@ const CompanyTab: React.FC<{ profile: any }> = ({ profile }) => {
 
         setLoading(true);
         try {
+            const nameParts = (profile?.full_name || '').trim().split(/\s+/);
+            const firstName = nameParts[0] || '';
+            const lastName = nameParts.slice(1).join(' ') || '';
+
             const { error } = await supabase
                 .from('profiles')
                 .update({
@@ -759,11 +777,31 @@ const CompanyTab: React.FC<{ profile: any }> = ({ profile }) => {
                     vat_number: form.vat_number,
                     company_address: form.company_address,
                     company_person: form.company_person,
+                    is_company: true,
+                    first_name: firstName || undefined,
+                    last_name: lastName || undefined,
+                    onboarding_completed: true,
                     updated_at: new Date().toISOString()
                 })
                 .eq('id', profile.id);
 
             if (error) throw error;
+
+            // Sync with Auth metadata
+            await supabase.auth.updateUser({
+                data: {
+                    is_company: true,
+                    company_name: form.company_name,
+                    bulstat: form.bulstat,
+                    company_address: form.company_address,
+                    company_person: form.company_person,
+                    vat_registered: form.vat_registered,
+                    vat_number: form.vat_number,
+                    first_name: firstName,
+                    last_name: lastName,
+                    onboarding_completed: true
+                }
+            });
 
             await refreshProfile();
             setEditing(false);
@@ -933,11 +971,11 @@ const DashboardGrid: React.FC<{
         { id: 'settings', label: 'Настройки', icon: Settings },
         { id: 'addresses', label: 'Моите адреси', icon: MapPin },
         { id: 'orders', label: 'Моите поръчки', icon: ShoppingBag },
-        { id: 'company', label: 'Данни на фирма', icon: Building2, hidden: !profile?.is_company },
+        { id: 'company', label: 'Данни на фирма', icon: Building2 },
         { id: 'favorites', label: 'Любими продукти', icon: Heart },
         { id: 'wallet', label: 'Портфейл', icon: Wallet },
         { id: 'logout', label: 'Изход', icon: LogOut, action: onSignOut },
-    ].filter(c => !c.hidden);
+    ];
 
 
     const firstName = profile?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'Васил';
