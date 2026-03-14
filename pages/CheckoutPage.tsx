@@ -5,7 +5,7 @@ import {
     ArrowLeft, ShieldCheck, Truck, CreditCard, 
     ChevronRight, MapPin, Phone, User, Mail, 
     CheckCircle2, AlertCircle, Loader2, Package,
-    Edit2, Info, Building2, Check
+    Edit2, Info, Building2, Check, ChevronDown
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -381,28 +381,44 @@ const CheckoutPage: React.FC = () => {
                                     className="space-y-8"
                                 >
                                     {savedAddresses.length > 0 && (
-                                        <div className="bg-[#0a0a0a] border border-red-600/30 rounded-[2rem] p-6 sm:p-8 relative overflow-hidden">
-                                            <div className="absolute top-0 right-0 p-4 opacity-10"><MapPin size={80} className="text-red-500"/></div>
-                                            <h2 className="text-xs font-black uppercase tracking-widest text-red-500 mb-4 relative z-10 flex items-center gap-2">
-                                                <MapPin size={16} /> Вашите запазени адреси
+                                        <div className="bg-[#0a0a0a] border border-white/5 rounded-[2rem] p-5 sm:p-8">
+                                            <h2 className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-4 flex items-center gap-2 ml-1">
+                                                <MapPin size={14} className="text-red-500" /> Вашите запазени адреси
                                             </h2>
-                                            <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar relative z-10">
-                                                {savedAddresses.map(addr => (
-                                                    <button 
-                                                        type="button" 
-                                                        key={addr.id} 
-                                                        onClick={() => handleUseSavedAddress(addr)} 
-                                                        className="shrink-0 text-left bg-[#111] hover:bg-zinc-900 border border-white/10 hover:border-red-500/50 p-4 rounded-xl transition-all min-w-[220px]"
-                                                    >
-                                                        <div className="flex items-center gap-2 mb-2">
-                                                             {addr.delivery_type === 'address' ? <MapPin size={14} className="text-red-500" /> : <Building2 size={14} className="text-white/50" />}
-                                                             <span className="text-xs font-bold text-white capitalize">
-                                                                {addr.delivery_type === 'address' ? 'До адрес' : addr.delivery_type === 'econt' ? 'Еконт' : 'Speedy'}
-                                                             </span>
-                                                        </div>
-                                                        <p className="text-[11px] text-zinc-400 font-medium truncate">{addr.city}, {addr.street_address}</p>
-                                                    </button>
-                                                ))}
+                                            <div className="relative">
+                                                <select 
+                                                    className="w-full bg-[#111] border border-white/10 hover:border-red-500/50 focus:border-red-500 focus:ring-1 focus:ring-red-500 rounded-xl px-5 py-4 text-[13px] sm:text-sm text-white appearance-none transition-all outline-none cursor-pointer"
+                                                    onChange={(e) => {
+                                                        const id = e.target.value;
+                                                        if (!id) return;
+                                                        const addr = savedAddresses.find(a => a.id === id);
+                                                        if (addr) handleUseSavedAddress(addr);
+                                                    }}
+                                                    value={
+                                                        savedAddresses.find(addr => 
+                                                            formData.deliveryType === addr.delivery_type &&
+                                                            formData.city === addr.city &&
+                                                            (addr.delivery_type === 'address' ? formData.streetAddress === addr.street_address :
+                                                             addr.delivery_type === 'econt' ? formData.econtOffice === addr.street_address :
+                                                             formData.speedyOffice === addr.street_address)
+                                                        )?.id || ''
+                                                    }
+                                                >
+                                                    <option value="" disabled className="bg-[#222]">
+                                                        -- Изберете запазен адрес --
+                                                    </option>
+                                                    {savedAddresses.map(addr => {
+                                                        const typeName = addr.delivery_type === 'address' ? 'До Личен Адрес' : addr.delivery_type === 'econt' ? 'Офис на Еконт' : 'Офис на Speedy';
+                                                        return (
+                                                            <option key={addr.id} value={addr.id} className="bg-[#111] text-white">
+                                                                {typeName}: {addr.city}, {addr.street_address} ({addr.full_name})
+                                                            </option>
+                                                        )
+                                                    })}
+                                                </select>
+                                                <div className="absolute inset-y-0 right-0 flex items-center pr-5 pointer-events-none text-zinc-500">
+                                                    <ChevronDown size={18} />
+                                                </div>
                                             </div>
                                         </div>
                                     )}
