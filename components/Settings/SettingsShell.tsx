@@ -72,7 +72,7 @@ const SettingsShell: React.FC<SettingsShellProps> = ({
       </div>
 
       {/* Content */}
-      <div className="flex-grow w-full max-w-[760px] mx-auto px-4 md:px-6 py-6 pb-24 pb-[calc(6rem+env(safe-area-inset-bottom))]">
+      <div className="flex-grow w-full max-w-[760px] mx-auto px-4 md:px-6 py-6 pb-[calc(6rem+env(safe-area-inset-bottom))]">  
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
           {children}
         </motion.div>

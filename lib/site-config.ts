@@ -12,6 +12,6 @@ export const SITE_CONFIG = {
     phone: "+359 8XX XXX XXX",
   },
   socials: {
-    instagram: "https://instagram.com/vbvision",
+    instagram: "https://www.instagram.com/cardecal1?igsh=eWd3b3FpdXN0NXRp",
   },
 };

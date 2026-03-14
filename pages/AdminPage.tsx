@@ -3493,7 +3493,7 @@ const MaintenanceSettingsSection: React.FC = () => {
                 </div>
             `;
             
-            const { error, data } = await supabase.functions.invoke('resend-email', {
+            const { error, data } = await supabase.functions.invoke('broadcast-email', {
                 body: { subject, html }
             });
             

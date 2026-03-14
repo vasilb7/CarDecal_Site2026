@@ -322,6 +322,18 @@ const CheckoutPage: React.FC = () => {
                 }).eq('id', user.id);
             }
 
+            // Send confirmation email in background
+            supabase.functions.invoke('send-order-email', {
+                body: { 
+                    order: data, 
+                    items: activeItems, 
+                    shippingDetails: {
+                        ...formData,
+                        officeName: formData.deliveryType === 'econt' ? formData.econtOffice : formData.deliveryType === 'speedy' ? formData.speedyOffice : formData.streetAddress
+                    }
+                }
+            }).catch(e => console.error('Email failed:', e));
+
             clearCart();
             showToast('Поръчката е успешно приета!', 'success');
             navigate(`/order/success/${data.id}`, { replace: true });

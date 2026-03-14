@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { logSecurityEvent, recordProfileChange } from '../lib/security';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useToast } from '../components/Toast/ToastProvider';
 import SEO from '../components/SEO';
 import { AvatarCropModal } from '../components/AvatarCropModal';
@@ -1045,7 +1045,16 @@ const ProfilePage: React.FC = () => {
     const navigate = useNavigate();
     const { showToast } = useToast();
 
-    const [activeTab, setActiveTab] = useState<ProfileTab>('dashboard');
+    const [searchParams, setSearchParams] = useSearchParams();
+    const activeTab = (searchParams.get('view') as ProfileTab) || 'dashboard';
+
+    const setActiveTab = (tab: ProfileTab) => {
+        if (tab === 'dashboard') {
+            setSearchParams({});
+        } else {
+            setSearchParams({ view: tab });
+        }
+    };
     const [cropModalOpen, setCropModalOpen] = useState(false);
     const [imageToCrop, setImageToCrop] = useState<string | null>(null);
     const [avatarLoading, setAvatarLoading] = useState(false);
