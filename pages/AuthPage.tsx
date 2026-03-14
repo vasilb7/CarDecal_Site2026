@@ -252,9 +252,36 @@ export default function AuthPage() {
         return;
       }
 
-      // We no longer call signUp here. 
-      // User will be created in onCompleteOnboarding.
-      setView('onboarding');
+      const nameParts = regName.trim().split(/\s+/);
+      const firstName = nameParts[0];
+      const lastName = nameParts.slice(1).join(' ') || firstName;
+
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email: regEmail,
+        password: regPassword,
+        options: {
+          data: {
+            full_name: regName.trim(),
+            first_name: firstName,
+            last_name: lastName,
+            phone: normalizedPhone,
+            role: 'user',
+            onboarding_completed: false
+          },
+          captchaToken
+        }
+      });
+
+      if (signUpError) throw signUpError;
+
+      // After successful signUp, we are either logged in or need confirmation
+      // If we have a session/user now, move to onboarding
+      if (data?.user) {
+        setView('onboarding');
+      } else {
+        showToast('Моля, проверете имейла си за потвърждение.', 'success');
+        setView('login');
+      }
     } catch (err: any) {
       showToast(translateAuthError(err), 'error');
     } finally {
@@ -265,11 +292,24 @@ export default function AuthPage() {
 
   const onCompleteOnboarding = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+    if (!user) {
+        showToast('Няма активна сесия. Моля, влезте отново.', 'error');
+        setView('login');
+        return;
+    }
+
     setLoading(true);
     try {
+      const nameParts = (user.user_metadata?.full_name || regName || '').trim().split(/\s+/);
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || firstName;
+
       const onboardingData: any = {
         is_company: !!isCompany,
+        account_type: isCompany ? 'company' : 'personal',
         onboarding_completed: true,
+        first_name: firstName,
+        last_name: lastName,
         updated_at: new Date().toISOString()
       };
 
@@ -281,39 +321,18 @@ export default function AuthPage() {
         onboardingData.vat_registered = isVatRegistered;
         onboardingData.vat_number = vatNumber;
       }
+      // Update both profile table and auth metadata
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update(onboardingData)
+        .eq('id', user.id);
 
-      if (user) {
-        // CASE: Auth user exists (Google Login or session)
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .update(onboardingData)
-          .eq('id', user.id);
+      if (profileError) throw profileError;
 
-        if (profileError) throw profileError;
-
-        const { error: authError } = await supabase.auth.updateUser({
-          data: onboardingData
-        });
-        if (authError) throw authError;
-
-      } else {
-        // CASE: New Email Registration - Create user ONLY NOW
-        const { error: signUpError } = await supabase.auth.signUp({
-          email: regEmail,
-          password: regPassword,
-          options: {
-            data: {
-              full_name: regName.trim(),
-              phone: formatToE164(regPhone),
-              role: 'user',
-              ...onboardingData
-            },
-            captchaToken
-          }
-        });
-
-        if (signUpError) throw signUpError;
-      }
+      const { error: authError } = await supabase.auth.updateUser({
+        data: onboardingData
+      });
+      if (authError) throw authError;
 
       showToast(t('toast.register_success', 'Профилът е готов!'), 'success');
       const from = (location.state as any)?.from || '/';
