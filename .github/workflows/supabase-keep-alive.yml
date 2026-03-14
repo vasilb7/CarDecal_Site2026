@@ -25,6 +25,7 @@ jobs:
       - name: Run Keep-Alive Script
         run: node scripts/supabase-keep-alive.js
         env:
+          FORCE_RUN: "true"
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
