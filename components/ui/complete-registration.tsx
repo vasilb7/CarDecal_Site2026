@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { useTranslation } from 'react-i18next';
-import { Loader2, User, Phone, CheckSquare, Square } from 'lucide-react';
+import { Loader2, User, Phone, CheckSquare, Square, Building2, ChevronRight, ArrowLeft } from 'lucide-react';
 import { useToast } from '../Toast/ToastProvider';
 import { translateAuthError } from '../../lib/passwordUtils';
 import { isValidBulgarianPhone, formatToE164, formatPhoneNumber } from '../../lib/utils';
@@ -90,7 +90,8 @@ export const CompleteRegistrationModal = () => {
 
 
 
-    const [isCompany, setIsCompany] = useState(false);
+    const [step, setStep] = useState(1);
+    const [isCompany, setIsCompany] = useState<boolean | null>(null);
     const [companyName, setCompanyName] = useState("");
     const [bulstat, setBulstat] = useState("");
     const [isVatRegistered, setIsVatRegistered] = useState(false);
@@ -171,21 +172,26 @@ export const CompleteRegistrationModal = () => {
         };
     }, [isOpen]);
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        
+    const nextStep = () => {
         const nameParts = name.trim().split(/\s+/);
         if (nameParts.length < 2) {
             showToast('Моля, въведете име и фамилия разделени с интервал.', "warning");
             return;
         }
-
         if (!isValidBulgarianPhone(phone)) {
             showToast('Невалиден телефон! (8-15 цифри)', 'error');
             return;
         }
+        setStep(2);
+    };
 
-        if (isCompany) {
+    const handleSubmit = async (e?: React.FormEvent, forcePersonal = false) => {
+        if (e) e.preventDefault();
+        
+        const nameParts = name.trim().split(/\s+/);
+        const activeIsCompany = forcePersonal ? false : isCompany;
+
+        if (activeIsCompany) {
             if (!companyName || !bulstat || !companyAddress || !companyPerson) {
                 showToast('Моля, попълнете всички задължителни данни за фирмата.', 'error');
                 return;
@@ -212,7 +218,7 @@ export const CompleteRegistrationModal = () => {
                 updateData.phone = normalizedPhone;
             }
 
-            if (isCompany) {
+            if (activeIsCompany) {
                 updateData.is_company = true;
                 updateData.account_type = 'company';
                 updateData.company_name = companyName;
@@ -252,7 +258,7 @@ export const CompleteRegistrationModal = () => {
                 authUpdateData.data.phone = normalizedPhone;
             }
 
-            if (isCompany) {
+            if (activeIsCompany) {
                 authUpdateData.data.is_company = true;
                 authUpdateData.data.company_name = companyName;
                 authUpdateData.data.bulstat = bulstat;
@@ -318,152 +324,176 @@ export const CompleteRegistrationModal = () => {
                     <div className="absolute bottom-0 left-0 w-64 h-64 bg-red-900/10 rounded-full blur-[80px] pointer-events-none" />
 
                     <div className="relative z-10">
-                        <div className="text-center mb-6 md:mb-10">
-                            <h2 className="text-2xl md:text-3xl font-bold text-white mb-3">
-                                Завършете регистрацията
-                            </h2>
-                            <p className="text-zinc-400 text-sm md:text-base leading-relaxed px-2">
-                                За да продължите, моля, потвърдете Вашите имена и въведете телефонен номер за връзка относно поръчките Ви.
-                            </p>
-                        </div>
+                        {step === 1 ? (
+                            <div className="fade-in">
+                                <div className="text-center mb-6 md:mb-10">
+                                    <h2 className="text-2xl md:text-3xl font-bold text-white mb-3">
+                                        Завършете профила си
+                                    </h2>
+                                    <p className="text-zinc-400 text-sm md:text-base leading-relaxed px-2">
+                                        Потвърдете Вашите имена и въведете телефонен номер за контакт.
+                                    </p>
+                                </div>
 
-                        <form onSubmit={handleSubmit} className="space-y-6">
-                            <FloatingInput 
-                                label="Име и Фамилия"
-                                icon={
-                                    <svg viewBox="0 0 19.05 19.05" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                                        <g transform="matrix(1.2920428,0,0,1.2919512,-1.6693268,-1.8598751)">
-                                            <circle cx="8.6640282" cy="6.1416821" r="3.1941113" stroke="currentColor" strokeWidth="0.4" />
-                                            <path d="M 2.8440923,14.676347 A 5.8645983,5.8645983 0 0 1 8.6640286,9.5341541 5.8645983,5.8645983 0 0 1 14.484013,14.676741" stroke="currentColor" strokeWidth="0.4" />
-                                        </g>
-                                    </svg>
-                                }
-                                value={name}
-                                onChange={(e: any) => setName(e.target.value.replace(/[0-9]/g, ''))}
-                                required
-                            />
+                                <div className="space-y-6">
+                                    <FloatingInput 
+                                        label="Име и Фамилия"
+                                        icon={<User className="w-5 h-5" />}
+                                        value={name}
+                                        onChange={(e: any) => setName(e.target.value.replace(/[0-9]/g, ''))}
+                                        required
+                                    />
 
-                            <FloatingInput 
-                                label="Телефонен номер"
-                                icon={
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                                            <path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z" />
-                                            <path d="M15 7a2 2 0 0 1 2 2" />
-                                            <path d="M15 3a6 6 0 0 1 6 6" />
-                                        </svg>
-                                    }
-                                    type="tel"
-                                    value={phone}
-                                    onChange={(e: any) => setPhone(formatPhoneNumber(e.target.value))}
-                                    required
-                                    onKeyDown={(e: any) => {
-                                        if (e.target.selectionStart <= 5 && (e.key === 'Backspace' || e.key === 'ArrowLeft' || e.key === 'Home')) {
-                                            e.preventDefault();
-                                            return;
-                                        }
-                                    }}
-                                    onFocus={(e: any) => {
-                                        const val = e.target.value;
-                                        setTimeout(() => e.target.setSelectionRange(val.length, val.length), 0);
-                                    }}
-                                    onClick={(e: any) => {
-                                        if (e.target.selectionStart < 5) {
-                                            e.target.setSelectionRange(e.target.value.length, e.target.value.length);
-                                        }
-                                    }}
-                                    onSelect={(e: any) => {
-                                    const start = e.target.selectionStart;
-                                    if (start !== null && start < 5) {
-                                        e.target.setSelectionRange(5, Math.max(5, e.target.selectionEnd || 5));
-                                    }
-                                }}
-                            />
+                                    <FloatingInput 
+                                        label="Телефонен номер"
+                                        icon={<Phone className="w-5 h-5" />}
+                                        type="tel"
+                                        value={phone}
+                                        onChange={(e: any) => setPhone(formatPhoneNumber(e.target.value))}
+                                        required
+                                        onKeyDown={(e: any) => {
+                                            if (e.target.selectionStart <= 5 && (e.key === 'Backspace' || e.key === 'ArrowLeft' || e.key === 'Home')) {
+                                                e.preventDefault();
+                                            }
+                                        }}
+                                        onFocus={(e: any) => {
+                                            const val = e.target.value;
+                                            setTimeout(() => e.target.setSelectionRange(val.length, val.length), 0);
+                                        }}
+                                    />
 
-                            <div className="pt-2">
-                                <label className="flex items-center gap-2 cursor-pointer w-fit" onClick={() => setIsCompany(!isCompany)}>
-                                    <div className={`w-5 h-5 rounded flex items-center justify-center transition-colors ${isCompany ? 'bg-red-600 text-white' : 'bg-white/10 text-transparent border border-white/20'}`}>
-                                        <CheckSquare className="w-4 h-4" />
+                                    <div className="pt-6">
+                                        <motion.button
+                                            whileHover={{ scale: 1.02 }}
+                                            whileTap={{ scale: 0.98 }}
+                                            onClick={nextStep}
+                                            className="w-full relative overflow-hidden bg-gradient-to-r from-red-600 to-red-800 text-white font-bold py-4 rounded-xl text-base flex items-center justify-center gap-2 shadow-lg transition-all border border-red-500/30"
+                                        >
+                                            <span>Продължи</span>
+                                            <ChevronRight className="w-5 h-5" />
+                                        </motion.button>
                                     </div>
-                                    <span className="text-white text-sm">Искате ли да регистрирате фирма?</span>
-                                </label>
+                                </div>
                             </div>
-
-                            <AnimatePresence>
-                                {isCompany && (
-                                    <motion.div 
-                                        initial={{ opacity: 0, height: 0 }}
-                                        animate={{ opacity: 1, height: "auto" }}
-                                        exit={{ opacity: 0, height: 0 }}
-                                        className="space-y-4 overflow-hidden"
-                                    >
-                                        <FloatingInput 
-                                            label="Наименование на фирмата"
-                                            value={companyName}
-                                            onChange={(e: any) => setCompanyName(e.target.value)}
-                                            placeholder="Пример: Декал Дизайн ЕООД"
-                                            required={isCompany}
-                                        />
-                                        <FloatingInput 
-                                            label="ЕИК / Булстат (9 цифри)"
-                                            value={bulstat}
-                                            onChange={(e: any) => setBulstat(e.target.value.replace(/[^0-9]/g, '').slice(0, 9))}
-                                            placeholder="напр. 123456789"
-                                            required={isCompany}
-                                        />
-                                        <div className="pl-1">
-                                            <label className="flex items-center gap-2 cursor-pointer w-fit" onClick={() => setIsVatRegistered(!isVatRegistered)}>
-                                                <div className={`w-5 h-5 rounded flex items-center justify-center transition-colors ${isVatRegistered ? 'bg-red-600 text-white' : 'bg-white/10 text-transparent border border-white/20'}`}>
-                                                    <CheckSquare className="w-4 h-4" />
-                                                </div>
-                                                <span className="text-white text-sm">Регистрирана по ДДС</span>
-                                            </label>
+                        ) : (
+                            <div className="fade-in">
+                                {isCompany === null ? (
+                                    <>
+                                        <div className="text-center mb-8">
+                                            <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">Почти приключихме!</h1>
+                                            <p className="text-zinc-500 text-sm md:text-base leading-relaxed">Искате ли да довършим профила ви с фирмени данни?</p>
                                         </div>
-                                        {isVatRegistered && (
+
+                                        <div className="space-y-6 py-4">
+                                            <h2 className="text-lg font-medium text-white text-center">Искате ли да регистрирате фирма?</h2>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <button
+                                                    onClick={() => setIsCompany(true)}
+                                                    className="flex flex-col items-center justify-center p-6 bg-white/[0.03] border border-white/10 rounded-2xl hover:border-red-600 hover:bg-red-600/5 transition-all group"
+                                                >
+                                                    <Building2 className="mb-3 text-zinc-500 group-hover:text-red-500" size={32} />
+                                                    <span className="text-sm font-medium text-zinc-300">Да, фирма</span>
+                                                </button>
+                                                <button
+                                                    onClick={() => handleSubmit(undefined, true)}
+                                                    className="flex flex-col items-center justify-center p-6 bg-white/[0.03] border border-white/10 rounded-2xl hover:border-red-600 hover:bg-red-600/5 transition-all group"
+                                                >
+                                                    <User className="mb-3 text-zinc-500 group-hover:text-red-500" size={32} />
+                                                    <span className="text-sm font-medium text-zinc-300">Не, по-късно</span>
+                                                </button>
+                                            </div>
+                                            
+                                            <button 
+                                                onClick={() => setStep(1)}
+                                                className="w-full flex items-center justify-center gap-2 text-zinc-500 hover:text-white transition-colors text-sm py-2"
+                                            >
+                                                <ArrowLeft className="w-4 h-4" />
+                                                <span>Назад към лични данни</span>
+                                            </button>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <form onSubmit={handleSubmit} className="space-y-6">
+                                        <div className="flex items-center gap-3 mb-6">
+                                            <button 
+                                                type="button"
+                                                onClick={() => setIsCompany(null)}
+                                                className="p-2 bg-white/5 rounded-full text-zinc-400 hover:text-white transition-colors"
+                                            >
+                                                <ArrowLeft className="w-5 h-5" />
+                                            </button>
+                                            <h2 className="text-xl font-bold text-white">Данни за фирмата</h2>
+                                        </div>
+
+                                        <div className="space-y-4">
                                             <FloatingInput 
-                                                label="ДДС Номер"
-                                                value={vatNumber}
-                                                onChange={(e: any) => setVatNumber(e.target.value.toUpperCase())}
-                                                placeholder="Пример: BG123456789"
+                                                label="Наименование на фирмата"
+                                                value={companyName}
+                                                onChange={(e: any) => setCompanyName(e.target.value)}
+                                                placeholder="Пример: Декал Дизайн ЕООД"
+                                                required
                                             />
-                                        )}
-                                        <FloatingInput 
-                                            label="Адрес на регистрация"
-                                            value={companyAddress}
-                                            onChange={(e: any) => setCompanyAddress(e.target.value)}
-                                            placeholder="Град, п.к., улица и номер"
-                                            required={isCompany}
-                                        />
-                                        <FloatingInput 
-                                            label="МОЛ"
-                                            value={companyPerson}
-                                            onChange={(e: any) => setCompanyPerson(e.target.value)}
-                                            placeholder="Име на управителя"
-                                            required={isCompany}
-                                        />
+                                            <FloatingInput 
+                                                label="ЕИК / Булстат (9 цифри)"
+                                                value={bulstat}
+                                                onChange={(e: any) => setBulstat(e.target.value.replace(/[^0-9]/g, '').slice(0, 9))}
+                                                placeholder="напр. 123456789"
+                                                required
+                                            />
+                                            <div className="pl-1">
+                                                <label className="flex items-center gap-2 cursor-pointer w-fit" onClick={() => setIsVatRegistered(!isVatRegistered)}>
+                                                    <div className={`w-5 h-5 rounded flex items-center justify-center transition-colors ${isVatRegistered ? 'bg-red-600 text-white border-red-600' : 'bg-white/10 text-transparent border border-white/20'}`}>
+                                                        <CheckSquare className="w-4 h-4" />
+                                                    </div>
+                                                    <span className="text-white text-sm">Регистрирана по ДДС</span>
+                                                </label>
+                                            </div>
+                                            {isVatRegistered && (
+                                                <FloatingInput 
+                                                    label="ДДС Номер"
+                                                    value={vatNumber}
+                                                    onChange={(e: any) => setVatNumber(e.target.value.toUpperCase())}
+                                                    placeholder="Пример: BG123456789"
+                                                />
+                                            )}
+                                            <FloatingInput 
+                                                label="Адрес на регистрация"
+                                                value={companyAddress}
+                                                onChange={(e: any) => setCompanyAddress(e.target.value)}
+                                                placeholder="Град, п.к., улица и номер"
+                                                required
+                                            />
+                                            <FloatingInput 
+                                                label="МОЛ"
+                                                value={companyPerson}
+                                                onChange={(e: any) => setCompanyPerson(e.target.value)}
+                                                placeholder="Име на управителя"
+                                                required
+                                            />
+                                        </div>
 
-                                    </motion.div>
+                                        <div className="pt-6">
+                                            <motion.button
+                                                whileHover={{ scale: 1.02 }}
+                                                whileTap={{ scale: 0.98 }}
+                                                type="submit"
+                                                disabled={loading}
+                                                className="w-full relative overflow-hidden bg-gradient-to-r from-red-600 to-red-800 text-white font-bold py-4 rounded-xl text-base flex items-center justify-center gap-2 shadow-lg disabled:opacity-70 transition-all border border-red-500/30"
+                                            >
+                                                {loading ? (
+                                                    <>
+                                                        <Loader2 className="w-5 h-5 animate-spin" />
+                                                        <span>Запазване...</span>
+                                                    </>
+                                                ) : (
+                                                    <span>Завърши</span>
+                                                )}
+                                            </motion.button>
+                                        </div>
+                                    </form>
                                 )}
-                            </AnimatePresence>
-
-                            <div className="pt-6">
-                                <motion.button
-                                    whileHover={{ scale: 1.02 }}
-                                    whileTap={{ scale: 0.98 }}
-                                    type="submit"
-                                    disabled={loading}
-                                    className="w-full relative overflow-hidden bg-gradient-to-r from-red-600 to-red-800 text-white font-bold py-4 rounded-xl text-base flex items-center justify-center gap-2 shadow-lg disabled:opacity-70 transition-all border border-red-500/30"
-                                >
-                                    {loading ? (
-                                        <>
-                                            <Loader2 className="w-5 h-5 animate-spin" />
-                                            <span>Запазване...</span>
-                                        </>
-                                    ) : (
-                                        <span>Завърши</span>
-                                    )}
-                                </motion.button>
                             </div>
-                        </form>
+                        )}
                     </div>
                 </motion.div>
             </motion.div>
