@@ -33,55 +33,63 @@ export const isValidFullName = (name: string): boolean => {
  */
 export const isValidPhone = (phone: string): boolean => {
     if (!phone) return false;
-    const trimmed = phone.trim();
+    const digitsOnly = phone.replace(/\D/g, '');
     
-    // Check basic format: optional '+' then 8-15 digits
-    const phoneRegex = /^\+?[0-9]{8,15}$/;
-    if (!phoneRegex.test(trimmed)) return false;
-
-    // Prevent fake repeating numbers (e.g. 00000000)
-    const digitsOnly = trimmed.replace('+', '');
-    if (/^(\d)\1{7,}$/.test(digitsOnly)) return false;
+    // Standard Bulgarian mobile: 359 + 9 digits = 12 digits
+    if (digitsOnly.length !== 12) return false;
+    
+    // Prevent fake repeating numbers
+    if (/^(\d)\1{11}$/.test(digitsOnly)) return false;
 
     return true;
 };
 
 /**
- * Formats a phone number to E.164 format (+359...)
+ * Strips formatting and returns E164 format (+359...)
  */
 export const formatToE164 = (phone: string): string => {
-    // Премахваме всичко освен цифри и символа '+'
-    let clean = phone.trim().replace(/[^\d+]/g, '');
+    let digits = phone.replace(/\D/g, '');
     
-    // Ако започва с +3590, премахваме нулата -> +359
-    if (clean.startsWith('+3590')) {
-        clean = '+359' + clean.substring(5);
+    if (digits.startsWith('359')) {
+        digits = digits.substring(3);
+    } else if (digits.startsWith('0')) {
+        digits = digits.substring(1);
     }
     
-    // Ако започва с 00, приемаме го за международен префикс (+) 
-    if (clean.startsWith('00')) {
-        clean = '+' + clean.substring(2);
-    } 
-    // Ако е стандартен БГ номер започващ с 0, заменяме 0 с +359
-    else if (clean.startsWith('0')) {
-        clean = '+359' + clean.substring(1);
-    }
-    // Ако започва директно със закъснения префикс 8... (без 0 отпред)
-    else if (clean.startsWith('8') && clean.length === 9) {
-        clean = '+359' + clean;
-    }
+    return '+359' + digits.substring(0, 9);
+};
+
+/**
+ * Formats a raw phone string into: +359 XX XXX XXXX
+ */
+export const formatPhoneNumber = (value: string): string => {
+    // Extract only digits
+    let digits = value.replace(/\D/g, '');
     
-    // Ако все още няма +, добавяме го
-    if (!clean.startsWith('+')) {
-        clean = '+' + clean;
+    // Extract user part: ignore leading 359 or leading 0
+    let userPart = '';
+    if (digits.startsWith('359')) {
+        userPart = digits.substring(3);
+    } else if (digits.startsWith('0')) {
+        userPart = digits.substring(1);
+    } else {
+        userPart = digits;
     }
 
-    // Финална проверка: ако след форматирането е станало +3590... (напр. от 003590...), махаме нулата
-    if (clean.startsWith('+3590')) {
-        clean = '+359' + clean.substring(5);
+    // Limit to 9 digits (Bulgarian mobile)
+    const cleanDigits = userPart.substring(0, 9);
+    
+    // If no digits, return just the prefix with example
+    if (cleanDigits.length === 0) return "+359 ";
+
+    // Simple grouping: +359 XX XXX XXXX
+    let formatted = "+359 ";
+    for (let i = 0; i < cleanDigits.length; i++) {
+        if (i === 2 || i === 5) formatted += " ";
+        formatted += cleanDigits[i];
     }
     
-    return clean;
+    return formatted;
 };
 
 export const isValidBulgarianPhone = isValidPhone;

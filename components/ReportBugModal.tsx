@@ -215,7 +215,6 @@ const ReportBugModal: React.FC = () => {
                                                 <option value="catalog">Разглеждане на продукти</option>
                                                  <option value="checkout">Проблем с завършване на поръчка</option>
                                                 <option value="cart">Количка и поръчка</option>
-                                                <option value="account">Профил / Влизане</option>
                                                 <option value="login">Проблем с Влизане</option>
                                                 <option value="register">Проблем с Регистрация</option>
                                                 <option value="other">Друго</option>

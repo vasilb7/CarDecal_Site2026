@@ -11,7 +11,7 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { useToast } from '../components/Toast/ToastProvider';
-import { isValidPhone as isValidBulgarianPhone, isValidFullName, formatToE164 } from '../lib/utils';
+import { isValidPhone as isValidBulgarianPhone, isValidFullName, formatToE164, formatPhoneNumber } from '../lib/utils';
 import { Ticket, X as XIcon } from 'lucide-react';
 import { logPromoCodeUsage } from '../lib/promo-utils';
 import SEO from '../components/SEO';
@@ -83,7 +83,7 @@ const CheckoutPage: React.FC = () => {
     const [formData, setFormData] = useState({
         fullName: '',
         email: '',
-        phone: '',
+        phone: '+359 ',
         deliveryType: 'econt' as 'econt' | 'speedy',
         city: '',
         econtOffice: '',
@@ -99,7 +99,7 @@ const CheckoutPage: React.FC = () => {
                 ...prev,
                 fullName: prev.fullName || profile?.full_name || (profile as any)?.last_full_name || '',
                 email: user?.email || '',
-                phone: prev.phone || profile?.phone || (profile as any)?.preferred_phone || '',
+                phone: prev.phone && prev.phone !== '+359 ' ? prev.phone : (profile?.phone ? formatPhoneNumber(profile.phone) : (profile as any)?.preferred_phone ? formatPhoneNumber((profile as any).preferred_phone) : '+359 '),
                 city: prev.city || (profile as any)?.preferred_city || '',
                 deliveryType: (prev.deliveryType as any) === 'address' ? 'econt' : (prev.deliveryType || (profile as any)?.preferred_delivery_type || 'econt'),
                 econtOffice: prev.econtOffice || (profile?.preferred_delivery_type === 'econt' ? profile.preferred_office_name : ''),
@@ -112,6 +112,10 @@ const CheckoutPage: React.FC = () => {
         let { name, value } = e.target;
         if (name === 'fullName') {
             value = value.replace(/[0-9]/g, '');
+            e.target.value = value;
+        }
+        if (name === 'phone') {
+            value = formatPhoneNumber(value);
             e.target.value = value;
         }
         setFormData(prev => ({ ...prev, [name]: value }));
@@ -357,7 +361,28 @@ const CheckoutPage: React.FC = () => {
                                                 <div className="relative">
                                                     <input 
                                                         type="tel" name="phone" value={formData.phone} onChange={handleInputChange}
-                                                        className={inputStyle('phone')} placeholder="08XXXXXXXX"
+                                                        className={inputStyle('phone')} placeholder="+359 88 888 8888"
+                                                        onKeyDown={(e: any) => {
+                                                            if (e.target.selectionStart <= 5 && (e.key === 'Backspace' || e.key === 'ArrowLeft' || e.key === 'Home')) {
+                                                                e.preventDefault();
+                                                                return;
+                                                            }
+                                                        }}
+                                                        onFocus={(e: any) => {
+                                                            const val = e.target.value;
+                                                            setTimeout(() => e.target.setSelectionRange(val.length, val.length), 0);
+                                                        }}
+                                                        onClick={(e: any) => {
+                                                            if (e.target.selectionStart < 5) {
+                                                                e.target.setSelectionRange(e.target.value.length, e.target.value.length);
+                                                            }
+                                                        }}
+                                                        onSelect={(e: any) => {
+                                                            const start = e.target.selectionStart;
+                                                            if (start !== null && start < 5) {
+                                                                e.target.setSelectionRange(5, Math.max(5, e.target.selectionEnd || 5));
+                                                            }
+                                                        }}
                                                     />
                                                     <Phone className="absolute right-4 top-1/2 -translate-y-1/2 text-white/10" size={16} />
                                                 </div>

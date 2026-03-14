@@ -3824,6 +3824,7 @@ const DashboardTab: React.FC = () => {
 // ─── Orders Tab ───────────────────────────────────────────────────────────
 interface RegularOrder {
     id: string;
+    order_number: number;
     user_id: string | null;
     items: any[];
     total_amount: number;
@@ -4007,6 +4008,7 @@ const OrdersTab: React.FC = () => {
     const filteredOrders = useMemo(() => {
         return orders.filter(order => {
             const matchesSearch = 
+                order.order_number.toString().includes(searchTerm) ||
                 order.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
                 order.shipping_details.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 order.shipping_details.phone.includes(searchTerm);
@@ -4126,7 +4128,7 @@ const OrdersTab: React.FC = () => {
             <head>
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>Клиентска Разписка #${order.id.slice(0, 8)}</title>
+                <title>Клиентска Разписка #${order.order_number}</title>
                 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
                 <style>
                     :root {
@@ -4515,7 +4517,7 @@ const OrdersTab: React.FC = () => {
                         </div>
                         <div class="header-right">
                             <span class="receipt-badge">КЛИЕНТСКА РАЗПИСКА</span>
-                            <h1 class="order-number">№ ${order.id.slice(0, 10).toUpperCase()}</h1>
+                            <h1 class="order-number">№ ${order.order_number}</h1>
                             <div class="order-date">${dateFormatted} ч.</div>
                             <div class="status-pill">${st.label}</div>
                         </div>
@@ -4685,7 +4687,7 @@ const OrdersTab: React.FC = () => {
         printWindow.document.write(`
             <html>
                 <head>
-                    <title>ПОРЪЧКА ЗА АДМИНИСТРАЦИЯ - #${(order.id || '').slice(0, 8)}</title>
+                    <title>ПОРЪЧКА ЗА АДМИНИСТРАЦИЯ - #${order.order_number}</title>
                     <style>
                         @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&display=swap');
                         body { font-family: 'Roboto', sans-serif; padding: 40px; color: #000; line-height: 1.6; }
@@ -4707,7 +4709,7 @@ const OrdersTab: React.FC = () => {
                     <div class="header">
                         <div class="logo">CARDECAL / <span style="color: #dc2626;">ADMIN COPY</span></div>
                         <div class="order-info">
-                            <div style="font-weight: 900; font-size: 18px;">ПОРЪЧКА #${(order.id || '').slice(0, 8)}</div>
+                            <div style="font-weight: 900; font-size: 18px;">ПОРЪЧКА #${order.order_number}</div>
                             <div style="font-size: 12px; color: #666;">${order.created_at ? new Date(order.created_at).toLocaleString('bg-BG') : '—'}</div>
                         </div>
                     </div>
@@ -4956,7 +4958,7 @@ const OrdersTab: React.FC = () => {
                             <div className="flex-1 space-y-4">
                                 <div className="flex items-center justify-between border-b border-white/5 pb-4">
                                     <div>
-                                        <h3 className="text-sm font-black text-white uppercase tracking-wider">Поръчка #{order.id.slice(0, 8)}</h3>
+                                        <h3 className="text-sm font-black text-white uppercase tracking-wider">Поръчка #{order.order_number}</h3>
                                         <p className="text-[10px] text-zinc-500 uppercase tracking-widest mt-1">
                                             {new Date(order.created_at).toLocaleString('bg-BG')}
                                         </p>
@@ -5130,7 +5132,7 @@ const OrdersTab: React.FC = () => {
                                                 <div key={idx} className="bg-white/3 border border-white/5 rounded-xl p-4">
                                                     <div className="flex flex-col md:flex-row justify-between items-start mb-3 pb-3 border-b border-white/5 gap-2">
                                                         <div>
-                                                            <p className="text-white text-xs font-bold uppercase">Поръчка #{(order.id || '').slice(0, 8)}</p>
+                                                            <p className="text-white text-xs font-bold uppercase">Поръчка #{order.order_number}</p>
                                                             <p className="text-[10px] text-zinc-500 mt-0.5">{order.created_at ? new Date(order.created_at).toLocaleString('bg-BG') : '—'}</p>
                                                             <p className="text-[10px] text-zinc-600 mt-0.5">Клиент: {order.shipping_details?.fullName || entry.user.full_name || '—'}</p>
                                                         </div>
@@ -6211,7 +6213,7 @@ const ArchivedUsersTab: React.FC = () => {
                                         <div key={idx} className="bg-white/3 border border-white/5 p-4 rounded-xl">
                                             <div className="flex justify-between items-start mb-3 pb-2 border-b border-white/5">
                                                 <div>
-                                                    <p className="text-white text-xs font-bold uppercase">Поръчка #{order.order_number || order.id?.slice(0, 8)}</p>
+                                                    <p className="text-white text-xs font-bold uppercase">Поръчка #{order.order_number}</p>
                                                     <p className="text-[10px] text-zinc-500 mt-0.5">{new Date(order.created_at).toLocaleString('bg-BG')}</p>
                                                 </div>
                                                 <div className="text-right">
@@ -6235,7 +6237,7 @@ const ArchivedUsersTab: React.FC = () => {
                                                         const html = `
                                                             <html>
                                                             <head>
-                                                                <title>Архивирана Поръчка #${order.order_number || order.id?.slice(0, 8)}</title>
+                                                                <title>Архивирана Поръчка #${order.order_number}</title>
                                                                 <style>
                                                                     body { font-family: sans-serif; padding: 40px; line-height: 1.5; color: #000; max-width: 800px; margin: 0 auto; }
                                                                     table { width: 100%; border-collapse: collapse; margin-top: 30px; }
@@ -6249,7 +6251,7 @@ const ArchivedUsersTab: React.FC = () => {
                                                             <body onload="setTimeout(() => { window.print(); window.close(); }, 500)">
                                                                 <div class="header">
                                                                     <div class="warn">ВНИМАНИЕ: АРХИВИРАНА ПОРЪЧКА (ИЗТРИТ АКАУНТ)</div>
-                                                                    <h2>Поръчка #${order.order_number || order.id?.slice(0, 8)}</h2>
+                                                                    <h2>Поръчка #${order.order_number}</h2>
                                                                     <p><strong>Дата на създаване:</strong> ${new Date(order.created_at).toLocaleString('bg-BG')}</p>
                                                                     <p><strong>Последен статус:</strong> ${order.status}</p>
                                                                     <p><strong>Име на клиент:</strong> ${order.shipping_details?.fullName || order.shipping_details?.name || '—'}</p>
@@ -6381,7 +6383,7 @@ const ArchivedUsersTab: React.FC = () => {
                                                 <div key={order.id} className="bg-white/3 border border-white/5 p-4 rounded-xl">
                                                     <div className="flex justify-between items-start mb-3 pb-2 border-b border-white/5">
                                                         <div>
-                                                            <p className="text-white text-xs font-bold uppercase">Поръчка #{order.order_number || order.id.slice(0, 8)}</p>
+                                                            <p className="text-white text-xs font-bold uppercase">Поръчка #{order.order_number}</p>
                                                             <p className="text-[10px] text-zinc-500 mt-0.5">{new Date(order.created_at).toLocaleString('bg-BG')}</p>
                                                         </div>
                                                         <div className="text-right">

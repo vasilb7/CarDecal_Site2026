@@ -7,7 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { useToast } from '../components/Toast/ToastProvider';
 import SEO from '../components/SEO';
 import { AvatarCropModal } from '../components/AvatarCropModal';
-import { isValidPhone as isValidBulgarianPhone, isValidFullName, formatToE164 } from '../lib/utils';
+import { isValidPhone as isValidBulgarianPhone, isValidFullName, formatToE164, formatPhoneNumber } from '../lib/utils';
 import DevicesSection from '../components/profile/DevicesSection';
 import {
     User, Camera, LogOut, Settings, ShoppingBag,
@@ -18,11 +18,12 @@ import {
     Tag, ChevronDown, Check, CreditCard, 
     ExternalLink, Trash2, ArrowLeft, Eye, 
     EyeOff, X, AlertTriangle, AlertCircle, KeyRound, 
-    PackageOpen, CheckCircle2, Truck, Megaphone, ClipboardCheck
+    PackageOpen, CheckCircle2, Truck, Megaphone, ClipboardCheck,
+    Library, FileText, Heart, Wallet, BookOpen, Undo2
 } from 'lucide-react';
 
 // ─── Типове ─────────────────────────────────────────────────────────────────
-type ProfileTab = 'orders' | 'settings';
+type ProfileTab = 'dashboard' | 'orders' | 'settings' | 'addresses' | 'favorites' | 'library' | 'cards' | 'wallet' | 'invoices' | 'returns' | 'guarantees' | 'textbooks';
 
 // ─── Custom Confirm Dialog ──────────────────────────────────────────────────
 interface ConfirmDialogProps {
@@ -226,7 +227,7 @@ const OrdersTab: React.FC<{ orders: any[]; loading: boolean; user: any }> = ({ o
                                     <div className="flex items-center gap-2">
                                         <Hash className="w-3 h-3 text-zinc-600" />
                                         <h4 className="text-[10px] text-zinc-400 font-black uppercase tracking-widest">
-                                            {order.id.slice(0, 8).toUpperCase()}
+                                            #{order.order_number}
                                         </h4>
                                     </div>
                                     <div className="flex items-center gap-2">
@@ -307,7 +308,7 @@ const SettingsTab: React.FC<{
     user: any;
     onAvatarClick: () => void;
     onSignOut: () => void;
-    handleDeleteAccount: (password: string) => Promise<void>;
+    handleDeleteAccount: (password?: string) => Promise<void>;
 }> = ({ profile, user, onAvatarClick, onSignOut, handleDeleteAccount }) => {
     const { refreshProfile } = useAuth();
     const { showToast } = useToast();
@@ -316,12 +317,13 @@ const SettingsTab: React.FC<{
     const [saving, setSaving] = useState(false);
     const [nameEditing, setNameEditing] = useState(false);
 
-    const [userPhone, setUserPhone] = useState(profile?.phone || user?.user_metadata?.phone || '');
+    const [userPhone, setUserPhone] = useState(formatPhoneNumber(profile?.phone || user?.user_metadata?.phone || ''));
     const [phoneSaving, setPhoneSaving] = useState(false);
     const [phoneEditing, setPhoneEditing] = useState(false);
 
     const [showDangerZone, setShowDangerZone] = useState(false);
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+    const phoneInputRef = useRef<HTMLInputElement>(null);
 
     const [resetModalOpen, setResetModalOpen] = useState(false);
     const [resettingPassword, setResettingPassword] = useState(false);
@@ -331,7 +333,7 @@ const SettingsTab: React.FC<{
 
     useEffect(() => {
         setFullName(profile?.full_name || '');
-        setUserPhone(profile?.phone || user?.user_metadata?.phone || '');
+        setUserPhone(formatPhoneNumber(profile?.phone || user?.user_metadata?.phone || ''));
     }, [profile, user]);
 
     const saveProfile = async () => {
@@ -529,15 +531,39 @@ const SettingsTab: React.FC<{
                         {phoneEditing ? (
                             <div className="flex gap-2 w-full md:max-w-md ml-auto">
                                 <input
+                                    ref={phoneInputRef}
                                     type="tel"
                                     value={userPhone}
-                                    onChange={e => setUserPhone(e.target.value)}
-                                    className={`${inputCls} flex-1`}
-                                    placeholder="Вашият телефон"
-                                    autoFocus
+                                    onFocus={(e: any) => {
+                                        const val = e.target.value;
+                                        setTimeout(() => e.target.setSelectionRange(val.length, val.length), 0);
+                                    }}
+                                    onSelect={(e: any) => {
+                                        const start = e.target.selectionStart;
+                                        if (start !== null && start < 5) {
+                                            e.target.setSelectionRange(5, Math.max(5, e.target.selectionEnd || 5));
+                                        }
+                                    }}
                                     onKeyDown={e => {
+                                        if (e.target instanceof HTMLInputElement && e.target.selectionStart !== null && e.target.selectionStart <= 5 && (e.key === 'Backspace' || e.key === 'ArrowLeft' || e.key === 'Home')) {
+                                            e.preventDefault();
+                                            return;
+                                        }
                                         if (e.key === 'Enter') savePhone();
-                                        if (e.key === 'Escape') { setPhoneEditing(false); setUserPhone(profile?.phone || user?.user_metadata?.phone || ''); }
+                                        if (e.key === 'Escape') { setPhoneEditing(false); setUserPhone(formatPhoneNumber(profile?.phone || user?.user_metadata?.phone || '')); }
+                                    }}
+                                    onChange={e => {
+                                        const val = e.target.value;
+                                        const formatted = formatPhoneNumber(val);
+                                        setUserPhone(formatted);
+                                    }}
+                                    className={`${inputCls} flex-1`}
+                                    placeholder="+359 88 888 8888"
+                                    autoFocus
+                                    onClick={(e: any) => {
+                                        if (e.target.selectionStart < 5) {
+                                            e.target.setSelectionRange(e.target.value.length, e.target.value.length);
+                                        }
                                     }}
                                 />
                                 <button
@@ -683,7 +709,58 @@ const SettingsTab: React.FC<{
 };
 
 
-// ... inside ProfilePage component ...
+const DashboardGrid: React.FC<{
+    profile: any;
+    user: any;
+    onSelect: (tab: ProfileTab) => void;
+    onSignOut: () => void;
+}> = ({ profile, user, onSelect, onSignOut }) => {
+    const cards = [
+        { id: 'settings', label: 'Настройки', icon: Settings },
+        { id: 'addresses', label: 'Моите адреси', icon: MapPin },
+        { id: 'orders', label: 'Моите поръчки', icon: ShoppingBag },
+        { id: 'favorites', label: 'Любими продукти', icon: Heart },
+        { id: 'library', label: 'Е-библиотека', icon: Library },
+        { id: 'cards', label: 'Моите карти', icon: CreditCard },
+        { id: 'wallet', label: 'Портфейл', icon: Wallet },
+        { id: 'invoices', label: 'Фактури', icon: FileText },
+        { id: 'returns', label: 'Връщане на продукт', icon: Undo2 },
+        { id: 'guarantees', label: 'Моите гаранции', icon: Shield },
+        { id: 'textbooks', label: 'Заявка за учебници', icon: BookOpen },
+        { id: 'logout', label: 'Изход', icon: LogOut, action: onSignOut },
+    ];
+
+    const firstName = profile?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'Васил';
+    const fullName = profile?.full_name || user?.email?.split('@')[0] || 'Васил Бенков';
+
+    return (
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-16">
+            <div className="mb-10 sm:mb-16 flex flex-col items-center sm:items-start text-center sm:text-left">
+                <h1 className="text-3xl sm:text-4xl font-bold text-zinc-900 dark:text-white mb-3">Моят профил</h1>
+                <p className="text-zinc-500 text-base sm:text-lg">Здравей, {fullName} !</p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                {cards.map((card) => (
+                    <button
+                        key={card.id}
+                        onClick={() => card.action ? card.action() : onSelect(card.id as ProfileTab)}
+                        className="flex items-center justify-between p-6 sm:p-8 bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-white/5 rounded-2xl shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07)] hover:shadow-[0_10px_25px_-5px_rgba(0,0,0,0.1)] hover:border-zinc-200 dark:hover:border-white/10 transition-all group text-left h-24 sm:h-32"
+                    >
+                        <div className="flex items-center gap-4 sm:gap-6">
+                            <div className="w-10 h-10 sm:w-14 sm:h-14 flex items-center justify-center text-zinc-800 dark:text-zinc-200 group-hover:text-red-600 transition-colors">
+                                <card.icon className="w-6 h-6 sm:w-8 sm:h-8" strokeWidth={1.2} />
+                            </div>
+                            <span className="text-zinc-900 dark:text-white font-bold text-sm sm:text-lg tracking-tight">{card.label}</span>
+                        </div>
+                        <ChevronRight className="w-5 h-5 text-zinc-300 group-hover:text-zinc-900 dark:group-hover:text-white group-hover:translate-x-1 transition-all" />
+                    </button>
+                ))}
+            </div>
+        </div>
+    );
+};
+
 
 // ─── Главна страница ─────────────────────────────────────────────────────────
 const ProfilePage: React.FC = () => {
@@ -691,7 +768,7 @@ const ProfilePage: React.FC = () => {
     const navigate = useNavigate();
     const { showToast } = useToast();
 
-    const [activeTab, setActiveTab] = useState<ProfileTab>('orders');
+    const [activeTab, setActiveTab] = useState<ProfileTab>('dashboard');
     const [cropModalOpen, setCropModalOpen] = useState(false);
     const [imageToCrop, setImageToCrop] = useState<string | null>(null);
     const [avatarLoading, setAvatarLoading] = useState(false);
@@ -874,126 +951,95 @@ const ProfilePage: React.FC = () => {
     ];
 
     return (
-        <div className="min-h-screen bg-[#0a0a0a] text-white">
-            <SEO title="Профил" />
-            
-            {/* ──── Hero Header ──── */}
-            <div className="relative bg-gradient-to-b from-zinc-950 to-[#0a0a0a] border-b border-white/5 overflow-hidden">
-                {/* Grid bg */}
-                <div
-                    className="absolute inset-0 opacity-[0.03]"
-                    style={{
-                        backgroundImage:
-                            'repeating-linear-gradient(0deg,#fff 0,#fff 1px,transparent 1px,transparent 40px),repeating-linear-gradient(90deg,#fff 0,#fff 1px,transparent 1px,transparent 40px)',
-                    }}
-                />
-                {/* Red glow */}
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-32 bg-red-600/8 blur-3xl pointer-events-none" />
+        <div className="min-h-screen bg-[#0a0a0a]">
+            {/* ──── Header Mobile ──── */}
+            {activeTab !== 'dashboard' && (
+                <div className="bg-white border-b border-zinc-100 flex items-center px-4 h-16 sm:hidden sticky top-0 z-50">
+                    <button 
+                        onClick={() => setActiveTab('dashboard')}
+                        className="p-2 text-zinc-500 hover:text-zinc-900 transition-colors"
+                    >
+                        <ArrowLeft className="w-6 h-6" />
+                    </button>
+                    <h2 className="flex-1 text-center font-bold text-zinc-900 mr-10">
+                        {activeTab === 'orders' ? 'Моите поръчки' : 
+                         activeTab === 'settings' ? 'Настройки' : 'Профил'}
+                    </h2>
+                </div>
+            )}
 
-                <div className="relative max-w-3xl mx-auto px-6 pt-16 pb-12">
-                    <div className="flex flex-col sm:flex-row items-center sm:items-end gap-6">
-                        {/* Avatar */}
-                        <div className="relative group flex-shrink-0">
-                            <div className="w-28 h-28 rounded-full overflow-hidden bg-zinc-900 border-2 border-white/10 shadow-2xl">
-                                {avatarLoading ? (
-                                    <div className="w-full h-full flex items-center justify-center">
-                                        <Loader2 className="w-8 h-8 text-red-600 animate-spin" />
-                                    </div>
-                                ) : (profile?.avatar_url || user?.user_metadata?.avatar_url || user?.user_metadata?.picture) ? (
-                                    <img
-                                        src={profile?.avatar_url || user?.user_metadata?.avatar_url || user?.user_metadata?.picture}
-                                        alt="avatar"
-                                        className="w-full h-full object-cover"
-                                    />
-                                ) : (
-                                    <User className="w-full h-full p-7 text-zinc-700" />
-                                )}
-                            </div>
-                            <button
-                                onClick={() => avatarInputRef.current?.click()}
-                                className="absolute bottom-0 right-0 w-8 h-8 bg-red-600 rounded-full flex items-center justify-center shadow-lg hover:bg-red-500 transition-colors opacity-0 group-hover:opacity-100"
-                                title="Промени снимката"
-                            >
-                                <Camera className="w-3.5 h-3.5 text-white" />
-                            </button>
-                            <input
-                                ref={avatarInputRef}
-                                type="file"
-                                accept="image/*"
-                                className="hidden"
-                                onChange={handleAvatarFile}
-                            />
-                        </div>
-
-                        {/* Info */}
-                        <div className="flex-1 text-center sm:text-left">
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
-                                <h1 className="text-2xl font-black tracking-tight text-white">
-                                    {profile?.full_name || user.email?.split('@')[0] || 'Потребител'}
-                                </h1>
-                                <span
-                                    className={`inline-flex items-center gap-1 text-[10px] uppercase tracking-widest font-bold px-2.5 py-1 border rounded-full w-fit mx-auto sm:mx-0 ${roleColor}`}
-                                >
-                                    <Shield className="w-2.5 h-2.5" />
-                                    {roleLabel}
-                                </span>
-                            </div>
-                            <p className="text-zinc-500 text-sm flex items-center gap-2 justify-center sm:justify-start">
-                                <Mail className="w-3.5 h-3.5 flex-shrink-0" />
-                                <span className="select-none pointer-events-none">{user.email}</span>
-                            </p>
-                            <p className="text-zinc-700 text-xs flex items-center gap-2 mt-1 justify-center sm:justify-start">
-                                <Calendar className="w-3 h-3 flex-shrink-0" />
-                                Член от {memberSince}
-                            </p>
-                        </div>
+            {/* ──── Desktop Header (Compact when NOT in dashboard) ──── */}
+            {activeTab !== 'dashboard' && (
+                <div className="hidden sm:block bg-zinc-950 border-b border-white/5 py-4">
+                    <div className="max-w-6xl mx-auto px-6 flex items-center justify-between">
+                        <button 
+                            onClick={() => setActiveTab('dashboard')}
+                            className="flex items-center gap-2 text-zinc-400 hover:text-white transition-colors text-xs font-bold uppercase tracking-widest"
+                        >
+                            <ArrowLeft size={16} />
+                            Назад
+                        </button>
+                        <h2 className="text-sm font-black uppercase tracking-[0.2em] text-white">
+                             {activeTab === 'orders' ? 'Моите поръчки' : 
+                              activeTab === 'settings' ? 'Настройки' : 'Раздел'}
+                        </h2>
+                        <div className="w-20" /> {/* Spacer */}
                     </div>
                 </div>
-            </div>
+            )}
 
-            {/* ──── Tabs ──── */}
-            <div className="max-w-3xl mx-auto px-6">
-                <div className="flex border-b border-white/5">
-                    {tabs.map(tab => (
-                        <button
-                            key={tab.id}
-                            onClick={() => setActiveTab(tab.id)}
-                            className={`flex items-center gap-2 px-6 py-5 text-[11px] font-bold uppercase tracking-[0.2em] border-b-2 transition-all ${
-                                activeTab === tab.id
-                                    ? 'border-red-600 text-white'
-                                    : 'border-transparent text-zinc-600 hover:text-zinc-400'
-                            }`}
-                        >
-                            <tab.icon className="w-3.5 h-3.5" />
-                            {tab.label}
-                        </button>
-                    ))}
-                </div>
+            {/* ──── Dynamic Content ──── */}
+            <main className={`${activeTab === 'dashboard' ? 'bg-[#fcfcfc] dark:bg-zinc-950 min-h-screen' : 'bg-[#0a0a0a] min-h-screen py-8'}`}>
+                <AnimatePresence mode="wait">
+                    <motion.div
+                        key={activeTab}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ duration: 0.2 }}
+                    >
+                        {activeTab === 'dashboard' && (
+                            <DashboardGrid 
+                                profile={profile} 
+                                user={user} 
+                                onSelect={setActiveTab} 
+                                onSignOut={handleSignOut} 
+                            />
+                        )}
+                        
+                        {(activeTab === 'orders' || activeTab === 'settings') && (
+                            <div className="max-w-4xl mx-auto px-6">
+                                {activeTab === 'orders' && <OrdersTab orders={orders} loading={ordersLoading} user={user} />}
+                                {activeTab === 'settings' && (
+                                    <SettingsTab
+                                        profile={profile}
+                                        user={user}
+                                        onAvatarClick={() => avatarInputRef.current?.click()}
+                                        onSignOut={handleSignOut}
+                                        handleDeleteAccount={handleDeleteAccount}
+                                    />
+                                )}
+                            </div>
+                        )}
 
-                {/* ──── Content ──── */}
-                <div className="py-6 pb-20">
-                    <AnimatePresence mode="wait">
-                        <motion.div
-                            key={activeTab}
-                            initial={{ opacity: 0, y: 8 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -8 }}
-                            transition={{ duration: 0.15 }}
-                        >
-                            {activeTab === 'orders' && <OrdersTab orders={orders} loading={ordersLoading} user={user} />}
-                            {activeTab === 'settings' && (
-                                <SettingsTab
-                                    profile={profile}
-                                    user={user}
-                                    onAvatarClick={() => avatarInputRef.current?.click()}
-                                    onSignOut={handleSignOut}
-                                    handleDeleteAccount={handleDeleteAccount}
-                                />
-                            )}
-                        </motion.div>
-                    </AnimatePresence>
-                </div>
-            </div>
+                        {!['dashboard', 'orders', 'settings'].includes(activeTab) && (
+                            <div className="max-w-4xl mx-auto px-6 py-20 text-center">
+                                <div className="w-24 h-24 bg-zinc-900 border border-white/5 rounded-full flex items-center justify-center mx-auto mb-6 text-zinc-700">
+                                    <Info className="w-12 h-12" />
+                                </div>
+                                <h3 className="text-xl font-bold text-white mb-2 uppercase tracking-widest">Този раздел е в разработка</h3>
+                                <p className="text-zinc-500 max-w-sm mx-auto">Работим по добавянето на тази функционалност. Очаквайте я скоро!</p>
+                                <button 
+                                    onClick={() => setActiveTab('dashboard')}
+                                    className="mt-8 px-6 py-3 bg-white text-black text-xs font-black uppercase tracking-widest hover:bg-zinc-200"
+                                >
+                                    Обратно към профила
+                                </button>
+                            </div>
+                        )}
+                    </motion.div>
+                </AnimatePresence>
+            </main>
 
             {/* Avatar Crop Modal */}
             {cropModalOpen && imageToCrop && (

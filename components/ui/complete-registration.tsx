@@ -5,7 +5,7 @@ import { supabase } from '../../lib/supabase';
 import { useTranslation } from 'react-i18next';
 import { Loader2, User, Phone } from 'lucide-react';
 import { useToast } from '../Toast/ToastProvider';
-import { isValidBulgarianPhone, formatToE164 } from '../../lib/utils';
+import { isValidBulgarianPhone, formatToE164, formatPhoneNumber } from '../../lib/utils';
 
 const FloatingInput = ({ 
     label, 
@@ -40,8 +40,14 @@ const FloatingInput = ({
                     type={type}
                     value={value}
                     onChange={onChange}
-                    onFocus={() => setIsFocused(true)}
-                    onBlur={() => setIsFocused(false)}
+                    onFocus={(e) => {
+                        setIsFocused(true);
+                        if (props.onFocus) props.onFocus(e);
+                    }}
+                    onBlur={(e) => {
+                        setIsFocused(false);
+                        if (props.onBlur) props.onBlur(e);
+                    }}
                     className={`w-full bg-white/[0.03] border ${isFocused ? 'border-red-600 shadow-[0_0_25px_rgba(239,68,68,0.15)]' : 'border-white/10'} rounded-xl px-4 py-4 pl-12 shadow-sm outline-none text-white placeholder-transparent transition-all`}
                     required={required}
                     placeholder=" "
@@ -63,7 +69,7 @@ export const CompleteRegistrationModal = () => {
     
     const [isOpen, setIsOpen] = useState(false);
     const [name, setName] = useState(() => sessionStorage.getItem('registration_draft_name') || '');
-    const [phone, setPhone] = useState(() => sessionStorage.getItem('registration_draft_phone') || '');
+    const [phone, setPhone] = useState(() => formatPhoneNumber(sessionStorage.getItem('registration_draft_phone') || ''));
     const [loading, setLoading] = useState(false);
 
     // Track if we have already pre-filled from Google/Auth
@@ -306,8 +312,29 @@ export const CompleteRegistrationModal = () => {
                                     }
                                     type="tel"
                                     value={phone}
-                                    onChange={(e: any) => setPhone(e.target.value)}
+                                    onChange={(e: any) => setPhone(formatPhoneNumber(e.target.value))}
                                     required
+                                    onKeyDown={(e: any) => {
+                                        if (e.target.selectionStart <= 5 && (e.key === 'Backspace' || e.key === 'ArrowLeft' || e.key === 'Home')) {
+                                            e.preventDefault();
+                                            return;
+                                        }
+                                    }}
+                                    onFocus={(e: any) => {
+                                        const val = e.target.value;
+                                        setTimeout(() => e.target.setSelectionRange(val.length, val.length), 0);
+                                    }}
+                                    onClick={(e: any) => {
+                                        if (e.target.selectionStart < 5) {
+                                            e.target.setSelectionRange(e.target.value.length, e.target.value.length);
+                                        }
+                                    }}
+                                    onSelect={(e: any) => {
+                                        const start = e.target.selectionStart;
+                                        if (start !== null && start < 5) {
+                                            e.target.setSelectionRange(5, Math.max(5, e.target.selectionEnd || 5));
+                                        }
+                                    }}
                                 />
                             )}
 

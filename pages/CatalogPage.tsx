@@ -6,7 +6,7 @@ import { useProducts } from '../hooks/useProducts';
 import ProductCard from '../components/ProductCard';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUI } from '../context/UIContext';
-import { Search, SlidersHorizontal, X, ChevronDown } from 'lucide-react';
+import { Search, SlidersHorizontal, X, ChevronDown, LayoutGrid, List } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import type { Product } from '../types';
 import { getOptimizedUrl } from '../lib/cloudinary-utils';
@@ -34,42 +34,63 @@ const CatalogPage: React.FC = () => {
     
     const [priceRange, setPriceRange] = useState<[number, number]>([0, 100]); 
     const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
+    
+    // Pending states for mobile filters with staging logic
+    const [pendingCategory, setPendingCategory] = useState<string>('All');
+    const [pendingSizes, setPendingSizes] = useState<string[]>([]);
+    
     const [isSortOpen, setIsSortOpen] = useState(false);
     const [isAtBottom, setIsAtBottom] = useState(false);
+    const [isGridView, setIsGridView] = useState(false); // Default to 1 column (false) based on "(defaut)" request
     const itemsPerPage = 18;
 
     // Dynamic Categories, Sizes & Tag counts
     const filterStats = useMemo(() => {
         const catMap: Record<string, number> = {};
         const sizeSet = new Set<string>();
+        const dynamicSizeSet = new Set<string>();
         let maxP = 20;
         
         allProducts.forEach(p => {
+            // Global categories count
             p.categories.forEach(cat => {
                 const isSizeCandidate = cat.toLowerCase().includes('cm') || /^\d+x\d+$/.test(cat.toLowerCase());
-                if (isSizeCandidate) {
-                    sizeSet.add(cat);
-                } else {
+                if (!isSizeCandidate) {
                     catMap[cat] = (catMap[cat] || 0) + 1;
                 }
             });
-            const genericSizes = ['small', 'medium', 'large', 'various', 'xl', 'xxl'];
-            if (p.size && !genericSizes.includes(p.size.toLowerCase())) sizeSet.add(p.size);
+
+            // Global sizes for initial list if needed, but we'll focus on dynamic filtering
+            const productSizes = p.categories.filter(cat => 
+                cat.toLowerCase().includes('cm') || /^\d+x\d+$/.test(cat.toLowerCase())
+            );
+            if (p.size) productSizes.push(p.size);
+            
+            // Check if product belongs to selected category for dynamic sizes
+            const matchesCategory = selectedCategory === 'All' || p.categories.includes(selectedCategory);
+            if (matchesCategory) {
+                productSizes.forEach(s => dynamicSizeSet.add(s));
+            }
 
             const pPrice = p.price_eur || p.wholesalePriceEur || 0;
             if (pPrice > maxP) maxP = Math.ceil(pPrice);
         });
 
-        return { 
-            categories: Object.entries(catMap).map(([name, count]) => ({ name, count })),
-            sizes: Array.from(sizeSet).sort((a, b) => {
+        const genericSizes = ['small', 'medium', 'large', 'various', 'xl', 'xxl'];
+        const finalSizes = Array.from(dynamicSizeSet)
+            .filter(s => !genericSizes.includes(s.toLowerCase()))
+            .sort((a, b) => {
                 const aNum = parseInt(a) || 0;
                 const bNum = parseInt(b) || 0;
                 return aNum - bNum;
-            }),
+            });
+
+        return { 
+            categories: Object.entries(catMap).map(([name, count]) => ({ name, count })),
+            sizes: finalSizes,
             maxPrice: maxP
         };
-    }, [allProducts]);
+    }, [allProducts, selectedCategory]);
 
     // Prices distribution data
     const priceBins = useMemo(() => {
@@ -213,11 +234,16 @@ const CatalogPage: React.FC = () => {
     };
 
     const clearFilters = () => {
-        setSelectedCategory('All');
-        setSelectedSizes([]);
-        setSearchTerm('');
-        setCurrentPage(1);
-        setSearchParams({}, { replace: false });
+        if (isMobileFiltersOpen) {
+            setPendingCategory('All');
+            setPendingSizes([]);
+        } else {
+            setSelectedCategory('All');
+            setSelectedSizes([]);
+            setSearchTerm('');
+            setCurrentPage(1);
+            setSearchParams({}, { replace: false });
+        }
     };
 
 
@@ -280,10 +306,26 @@ const CatalogPage: React.FC = () => {
 
     const handleCloseFilters = () => {
         setIsMobileFiltersOpen(false);
-        // If we still have our custom state in history, go back to remove it
+        // Discard pending changes by not committing them
         if (window.history.state?.modal === 'mobile-filters') {
             window.history.back();
         }
+    };
+
+    const handleApplyFilters = () => {
+        // Commit pending changes to actual state and URL
+        handleSetSelectedCategory(pendingCategory);
+        handleSetSelectedSizes(pendingSizes);
+        setIsMobileFiltersOpen(false);
+        if (window.history.state?.modal === 'mobile-filters') {
+            window.history.back();
+        }
+    };
+
+    const openMobileFilters = () => {
+        setPendingCategory(selectedCategory);
+        setPendingSizes(selectedSizes);
+        setIsMobileFiltersOpen(true);
     };
 
     // Detect mobile keyboard close (e.g. via Android/iOS Back button or done button) and remove focus
@@ -454,74 +496,98 @@ const CatalogPage: React.FC = () => {
         return;
     };
 
-    const renderFilters = () => (
-        <>
-            {/* Search - Hidden on mobile drawer as it's moved to the main header */}
-            <div className="relative mb-10 hidden lg:block">
+    const renderFilters = (isMobile: boolean = false) => {
+        const currentCat = isMobile ? pendingCategory : selectedCategory;
+        const currentSelectedSizes = isMobile ? pendingSizes : selectedSizes;
+        
+        const setCat = (val: string) => {
+            if (isMobile) setPendingCategory(val);
+            else handleSetSelectedCategory(val);
+        };
+
+        const setSizes = (size: string) => {
+            if (isMobile) {
+                setPendingSizes(prev => prev.includes(size) ? prev.filter(s => s !== size) : [...prev, size]);
+            } else {
+                handleSetSelectedSizes(prev => prev.includes(size) ? prev.filter(s => s !== size) : [...prev, size]);
+            }
+        };
+
+        return (
+        <div className="space-y-0">
+            {/* Search - Only for desktop sidebar */}
+            <div className="relative mb-8 hidden lg:block">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#525252]" size={18} />
                 <input 
                     type="text"
                     placeholder="Search..."
                     value={localSearchValue}
                     onChange={(e) => handleSetSearchTerm(e.target.value)}
-                    onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                            e.currentTarget.blur();
-                        }
-                    }}
-                    autoComplete="off"
-                    autoCorrect="off"
-                    autoCapitalize="off"
-                    className="w-full bg-[#1A1A1A] border border-transparent focus:border-[#404040] rounded-xl py-3.5 pl-12 pr-4 text-sm text-white placeholder:text-[#525252] outline-none transition-all"
+                    className="w-full bg-[#161616] border border-[#262626] focus:border-[#404040] rounded-xl py-4 pl-12 pr-4 text-[13px] text-white placeholder:text-[#525252] outline-none transition-all"
                 />
             </div>
 
-            {/* Categories */}
-            <div className="mb-10">
-                <h3 className="text-[11px] font-bold text-[#525252] uppercase tracking-[0.2em] mb-6">{t('catalog.all_categories')}</h3>
+            {/* Categories Section */}
+            <div className="py-5">
+                <div className="flex items-center justify-between text-white mb-6">
+                    <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-[#525252]">{t('catalog.all_categories')}</span>
+                </div>
                 <ul className="space-y-4">
                     <li 
-                        onClick={() => handleSetSelectedCategory('All')}
-                        className="group cursor-pointer flex items-center justify-between transition-colors"
+                        onClick={() => setCat('All')}
+                        className={`flex items-center justify-between cursor-pointer transition-colors group ${currentCat === 'All' ? 'text-white font-medium' : 'text-[#A3A3A3] hover:text-white'}`}
                     >
                         <div className="flex items-center gap-3">
-                            <div className={`w-1.5 h-1.5 rounded-full ${selectedCategory === 'All' ? 'bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]' : 'bg-transparent group-hover:bg-[#404040]'}`} />
-                            <span className={`text-[15px] ${selectedCategory === 'All' ? 'text-white font-medium' : 'text-[#A3A3A3] group-hover:text-white'}`}>
-                                {t('catalog.all')}
-                            </span>
+                            {currentCat === 'All' ? (
+                                <div className="w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]" />
+                            ) : (
+                                <div className="w-1.5 h-1.5 rounded-full bg-transparent group-hover:bg-[#A3A3A3] transition-colors" />
+                            )}
+                            <span className="text-[14px]">{t('catalog.all')}</span>
                         </div>
                         <span className="text-xs text-[#525252]">{allProducts.length}</span>
                     </li>
                     {filterStats.categories.map((cat) => (
                         <li 
                             key={cat.name} 
-                            onClick={() => handleSetSelectedCategory(cat.name)}
-                            className="group cursor-pointer flex items-center justify-between transition-colors"
+                            onClick={() => setCat(cat.name)}
+                            className={`flex items-center justify-between cursor-pointer transition-colors group ${currentCat === cat.name ? 'text-white font-medium' : 'text-[#A3A3A3] hover:text-white'}`}
                         >
                             <div className="flex items-center gap-3">
-                                <div className={`w-1.5 h-1.5 rounded-full ${selectedCategory === cat.name ? 'bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]' : 'bg-transparent group-hover:bg-[#404040]'}`} />
-                                <span className={`text-[15px] ${selectedCategory === cat.name ? 'text-white font-medium' : 'text-[#A3A3A3] group-hover:text-white'}`}>
-                                    {cat.name}
-                                </span>
+                                {currentCat === cat.name ? (
+                                    <div className="w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]" />
+                                ) : (
+                                    <div className="w-1.5 h-1.5 rounded-full bg-transparent group-hover:bg-[#A3A3A3] transition-colors" />
+                                )}
+                                <span className="text-[14px]">{cat.name}</span>
                             </div>
-                            <span className="text-xs text-[#525252] group-hover:text-white transition-colors">{cat.count}</span>
+                            <span className="text-xs text-[#525252]">{cat.count}</span>
                         </li>
                     ))}
                 </ul>
             </div>
 
-            {/* Size */}
-            <div className="mb-10">
-                <h3 className="text-[11px] font-bold text-[#525252] uppercase tracking-[0.2em] mb-6">{t('profile.height')}</h3>
+            {/* Size Section */}
+            <div className="py-5">
+                <div className="flex items-center justify-between text-white mb-6">
+                    <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#525252]">{t('profile.height')}</span>
+                        {currentSelectedSizes.length > 0 && (
+                            <div className="flex items-center justify-center bg-white text-black text-[10px] font-black w-5 h-5 rounded-full shadow-[0_4px_10px_rgba(255,255,255,0.3)]">
+                                {currentSelectedSizes.length}
+                            </div>
+                        )}
+                    </div>
+                </div>
                 <div className="grid grid-cols-2 gap-2">
                     {filterStats.sizes.map(size => (
                         <button
                             key={size}
-                            onClick={() => handleSetSelectedSizes(prev => prev.includes(size) ? prev.filter(s => s !== size) : [...prev, size])}
-                            className={`h-11 md:h-10 px-3 rounded-xl flex items-center justify-center text-xs md:text-[10px] font-bold transition-all border ${
-                                selectedSizes.includes(size) 
-                                ? 'bg-white text-black border-white shadow-[0_4px_12px_rgba(255,255,255,0.2)]' 
-                                : 'bg-[#1A1A1A] text-[#525252] border-transparent hover:border-[#404040] hover:text-[#A3A3A3]'
+                            onClick={() => setSizes(size)}
+                            className={`h-11 rounded-xl flex items-center justify-center text-xs font-bold transition-all border ${
+                                currentSelectedSizes.includes(size) 
+                                ? 'bg-white text-black border-white' 
+                                : 'bg-[#1A1A1A] text-[#525252] border-transparent hover:border-[#404040]'
                             }`}
                         >
                             {size}
@@ -529,18 +595,9 @@ const CatalogPage: React.FC = () => {
                     ))}
                 </div>
             </div>
-
-            { (selectedCategory !== 'All' || selectedSizes.length > 0 || searchTerm) && (
-                <button
-                    onClick={clearFilters}
-                    className="w-full py-4 rounded-xl border border-[#262626] text-[#A3A3A3] text-xs font-bold uppercase tracking-wider hover:bg-white hover:text-black transition-all mb-10"
-                >
-                    Изчисти филтрите
-                </button>
-            )}
-
-        </>
+        </div>
     );
+    };
 
     if (loading) {
         return (
@@ -573,7 +630,7 @@ const CatalogPage: React.FC = () => {
                         className="lg:hidden fixed bottom-10 left-1/2 z-[100]"
                     >
                         <button 
-                            onClick={() => setIsMobileFiltersOpen(true)}
+                            onClick={openMobileFilters}
                             className="bg-white text-black px-6 py-3.5 rounded-full flex items-center gap-2 font-bold shadow-[0_10px_30px_rgba(255,255,255,0.2)] active:scale-95 transition-all text-sm uppercase tracking-wider"
                         >
                             <SlidersHorizontal size={18} />
@@ -602,15 +659,49 @@ const CatalogPage: React.FC = () => {
                             animate={{ y: 0 }}
                             exit={{ y: "100%" }}
                             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                            className="fixed inset-x-0 bottom-0 max-h-[90vh] bg-[#0F0F0F] border-t border-[#262626] rounded-t-[40px] p-8 overflow-y-auto no-scrollbar z-[120] lg:hidden shadow-2xl"
+                            className="fixed inset-0 bg-[#0F0F0F] z-[120] lg:hidden flex flex-col overflow-hidden"
                         >
-                            <div className="flex items-center justify-between mb-8">
-                                <h2 className="text-xl font-semibold text-white">{t('catalog.filters')}</h2>
-                                <button onClick={handleCloseFilters} className="w-10 h-10 rounded-full bg-[#1A1A1A] flex items-center justify-center text-white">
-                                    <X size={20} />
+                            <div className="flex items-center justify-between p-8 pb-4 shrink-0">
+                                <h2 className="text-2xl font-black text-white uppercase tracking-tight">Филтри</h2>
+                                <button 
+                                    onClick={clearFilters}
+                                    className="text-[13px] font-medium text-[#525252] hover:text-white transition-colors"
+                                >
+                                    Изчисти всичко
                                 </button>
                             </div>
-                            {renderFilters()}
+
+                            <div className="flex-1 overflow-y-auto no-scrollbar p-8 pt-0 pb-32">
+                                {renderFilters(true)}
+                            </div>
+                            
+                            <div className="absolute bottom-0 left-0 right-0 p-8 pt-12 bg-gradient-to-t from-[#0F0F0F] via-[#0F0F0F] to-transparent pointer-events-none">
+                                <div className="flex gap-4 pointer-events-auto">
+                                    {(pendingCategory !== selectedCategory || pendingSizes.length !== selectedSizes.length || !pendingSizes.every(s => selectedSizes.includes(s))) ? (
+                                        <>
+                                            <button
+                                                onClick={handleCloseFilters}
+                                                className="flex-1 py-4 rounded-xl border border-[#262626] bg-[#0F0F0F] text-white text-sm font-black uppercase tracking-widest active:scale-95 transition-all"
+                                            >
+                                                Затвори
+                                            </button>
+                                            <button
+                                                onClick={handleApplyFilters}
+                                                className="flex-1 py-4 rounded-xl bg-white text-black text-sm font-black uppercase tracking-widest active:scale-95 transition-all shadow-[0_10px_40px_rgba(255,255,255,0.15)]"
+                                            >
+                                                Приложи
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <button
+                                            onClick={handleCloseFilters}
+                                            className="w-full py-4 rounded-xl border border-[#262626] bg-[#0F0F0F] text-white text-sm font-black uppercase tracking-widest active:scale-95 transition-all"
+                                        >
+                                            Затвори
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
                         </motion.aside>
                     </>
                 )}
@@ -618,26 +709,28 @@ const CatalogPage: React.FC = () => {
 
             <div className="flex">
                 {/* --- Sidebar (Desktop) --- */}
-                <aside className="w-80 h-screen sticky top-0 bg-[#0F0F0F] border-r border-[#262626] p-8 overflow-y-auto no-scrollbar hidden lg:block">
-                    <div className="flex items-center gap-3 mb-10 text-white">
-                        <SlidersHorizontal size={20} />
-                        <h2 className="text-xl font-semibold tracking-tight">{t('catalog.filters')}</h2>
+                <aside className="w-[300px] xl:w-[340px] h-screen sticky top-0 bg-[#0F0F0F] border-r border-[#262626] p-8 pb-32 overflow-y-auto no-scrollbar hidden lg:flex flex-col">
+                    <div className="flex items-center gap-4 mb-10 text-white">
+                        <SlidersHorizontal size={22} className="text-[#A3A3A3]" />
+                        <h2 className="text-[18px] font-bold tracking-tight">{t('catalog.filters')}</h2>
                     </div>
-                    {renderFilters()}
+                    <div className="flex-1">
+                        {renderFilters()}
+                    </div>
                 </aside>
 
                 <main className="flex-1 p-4 md:p-8 lg:p-12">
                     <div className="max-w-[1600px] 2xl:max-w-[1800px] mx-auto">
                         {/* Header Section */}
-                        <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-6">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-6">
                             <div className="w-full md:w-auto">
-                                <h1 className="text-[28px] md:text-[40px] font-bold text-white mb-4 md:mb-6">
+                                <h1 className="text-[28px] md:text-[36px] xl:text-[42px] font-black text-white mb-2 md:mb-4">
                                     {selectedCategory === 'All' ? t('catalog.welcome_modules.all') : selectedCategory}
                                 </h1>
                                 {/* Filter Chips */}
                                 <div className="flex flex-wrap gap-2 items-center">
                                     {selectedCategory !== 'All' && (
-                                        <div className="bg-[#1A1A1A] border border-[#262626] rounded-full px-3 py-1.5 md:px-4 md:py-2.5 flex items-center gap-2 text-[12px] md:text-sm text-[#A3A3A3]">
+                                        <div className="bg-[#1A1A1A] border border-[#262626] rounded-full px-3 py-1.5 md:px-4 md:py-2 flex items-center gap-2 text-[12px] md:text-sm text-[#A3A3A3]">
                                             <span>{selectedCategory}</span>
                                             <button onClick={() => handleSetSelectedCategory('All')} className="hover:text-white transition-colors">
                                                 <X size={14} />
@@ -645,7 +738,7 @@ const CatalogPage: React.FC = () => {
                                         </div>
                                     )}
                                     { (priceRange[0] > 0 || priceRange[1] < filterStats.maxPrice) && (
-                                        <div className="bg-[#1A1A1A] border border-[#262626] rounded-full px-3 py-1.5 md:px-4 md:py-2.5 flex items-center gap-2 text-[12px] md:text-sm text-[#A3A3A3]">
+                                        <div className="bg-[#1A1A1A] border border-[#262626] rounded-full px-3 py-1.5 md:px-4 md:py-2 flex items-center gap-2 text-[12px] md:text-sm text-[#A3A3A3]">
                                             <span>€{priceRange[0].toFixed(0)}-{priceRange[1].toFixed(0)}</span>
                                             <button onClick={() => { setPriceRange([0, filterStats.maxPrice]); handleSetCurrentPage(1); }} className="hover:text-white transition-colors">
                                                 <X size={14} />
@@ -653,7 +746,7 @@ const CatalogPage: React.FC = () => {
                                         </div>
                                     )}
                                     {selectedSizes.map((size) => (
-                                        <div key={size} className="bg-[#1A1A1A] border border-[#262626] rounded-full px-3 py-1.5 md:px-4 md:py-2.5 flex items-center gap-2 text-[12px] md:text-sm text-[#A3A3A3]">
+                                        <div key={size} className="bg-[#1A1A1A] border border-[#262626] rounded-full px-3 py-1.5 md:px-4 md:py-2 flex items-center gap-2 text-[12px] md:text-sm text-[#A3A3A3]">
                                             <span>{size}</span>
                                             <button onClick={() => handleSetSelectedSizes(prev => prev.filter(s => s !== size))} className="hover:text-white transition-colors">
                                                 <X size={14} />
@@ -663,14 +756,15 @@ const CatalogPage: React.FC = () => {
                                 </div>
                             </div>
 
-                            <div className="flex items-center justify-between md:justify-end gap-3 md:gap-6 text-xs md:text-sm text-[#737373] w-full md:w-auto">
-                                <div className="relative shrink-0">
+                            {/* Catalog Actions Row (Sort, Search, Count, View) */}
+                            <div className="flex flex-wrap items-center gap-3 md:gap-4 w-full md:w-auto ml-auto">
+                                <div className="relative shrink-0 hidden md:block">
                                     <button 
                                         onClick={() => setIsSortOpen(!isSortOpen)}
-                                        className="flex items-center gap-2 hover:text-white transition-colors py-2"
+                                        className="flex items-center gap-2 hover:text-white transition-colors py-2 text-xs md:text-[13px] text-[#A3A3A3]"
                                     >
                                         <span className="font-medium whitespace-nowrap">
-                                            {sortBy === 'default' ? t('catalog.sort.label') : t(`catalog.sort.${sortBy}`)}
+                                            Сортиране
                                         </span>
                                         <ChevronDown size={14} className={`transition-transform duration-300 ${isSortOpen ? 'rotate-180' : ''}`} />
                                     </button>
@@ -689,7 +783,7 @@ const CatalogPage: React.FC = () => {
                                                     initial={{ opacity: 0, y: 10, scale: 0.95 }}
                                                     animate={{ opacity: 1, y: 0, scale: 1 }}
                                                     exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                                    className="absolute top-full left-0 md:left-auto md:right-0 mt-2 w-56 bg-[#1A1A1A] border border-[#262626] rounded-2xl py-2 z-50 shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden"
+                                                    className="absolute top-full right-0 mt-2 w-56 bg-[#1A1A1A] border border-[#262626] rounded-2xl py-2 z-50 shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden"
                                                 >
                                                     {[
                                                         { id: 'default',   label: t('catalog.sort.default') },
@@ -711,21 +805,53 @@ const CatalogPage: React.FC = () => {
                                         )}
                                     </AnimatePresence>
                                 </div>
-
-                                {/* Mobile Always-Visible Search Bar with Debounce */}
-                                <div className="flex-1 lg:hidden relative">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={14} />
-                                    <input 
-                                        type="text"
-                                        placeholder="Търсене..."
-                                        value={localSearchValue}
-                                        onChange={(e) => handleSetSearchTerm(e.target.value)}
-                                        className="w-full bg-white/5 border border-white/5 focus:border-white/20 focus:bg-white/10 rounded-full py-2 pl-9 pr-3 text-[13px] text-white outline-none transition-all"
-                                    />
+                                
+                                <div className="hidden md:flex items-center justify-center bg-[#1A1A1A] rounded-full px-4 py-2 text-[10px] font-bold text-white uppercase tracking-[0.2em] shrink-0 border border-[#262626]">
+                                    {filteredProducts.length} РЕЗУЛТАТА
                                 </div>
 
-                                <div className="font-mono text-[10px] md:text-[11px] uppercase tracking-widest bg-[#1A1A1A] px-3 py-1.5 rounded-full border border-[#262626] text-white shrink-0">
-                                    {filteredProducts.length} {t('catalog.results')}
+                                {/* Mobile Action Row (Sort, Search, View) */}
+                                <div className="flex w-full items-center justify-between gap-3 lg:hidden">
+                                    <div className="relative flex items-center shrink-0">
+                                        <select 
+                                            value={sortBy}
+                                            onChange={(e) => handleSetSortBy(e.target.value)}
+                                            className="appearance-none bg-transparent text-[#737373] hover:text-white transition-colors text-xs font-medium focus:outline-none cursor-pointer pr-4 z-10"
+                                        >
+                                            <option value="default" className="text-black bg-white">{t('catalog.sort.default')}</option>
+                                            <option value="price_asc" className="text-black bg-white">{t('catalog.sort.price_asc')}</option>
+                                            <option value="price_desc" className="text-black bg-white">{t('catalog.sort.price_desc')}</option>
+                                            <option value="name_asc" className="text-black bg-white">{t('catalog.sort.name_asc')}</option>
+                                        </select>
+                                        <ChevronDown size={14} className="text-[#737373] absolute right-0 pointer-events-none" />
+                                    </div>
+                                    
+                                    <div className="flex-1 relative">
+                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#525252]" size={14} />
+                                        <input 
+                                            type="text"
+                                            placeholder="Търсене..."
+                                            value={localSearchValue}
+                                            onChange={(e) => handleSetSearchTerm(e.target.value)}
+                                            className="w-full bg-[#1A1A1A] border border-[#262626] focus:border-[#404040] rounded-full py-2.5 pl-9 pr-3 text-[13px] text-white outline-none transition-all"
+                                        />
+                                    </div>
+
+                                    {/* View Switcher */}
+                                    <div className="flex items-center bg-[#1A1A1A] border border-[#262626] rounded-full p-1 shrink-0">
+                                        <button 
+                                            onClick={() => setIsGridView(false)}
+                                            className={`p-1.5 rounded-full transition-all ${!isGridView ? 'bg-white text-black shadow-[0_0_10px_rgba(255,255,255,0.2)]' : 'text-[#737373] hover:text-white'}`}
+                                        >
+                                            <List size={14} />
+                                        </button>
+                                        <button 
+                                            onClick={() => setIsGridView(true)}
+                                            className={`p-1.5 rounded-full transition-all ${isGridView ? 'bg-white text-black shadow-[0_0_10px_rgba(255,255,255,0.2)]' : 'text-[#737373] hover:text-white'}`}
+                                        >
+                                            <LayoutGrid size={14} />
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -796,7 +922,7 @@ const CatalogPage: React.FC = () => {
                                 )}
                             </div>
                         ) : (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3 gap-6 md:gap-8 lg:gap-10 min-h-[500px]">
+                            <div className={`grid ${isGridView ? 'grid-cols-2' : 'grid-cols-1'} md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3 gap-3 md:gap-8 lg:gap-10 min-h-[500px]`}>
                                 {paginatedProducts.map((product, index) => (
                                     <motion.div
                                         key={product.slug}
@@ -810,56 +936,54 @@ const CatalogPage: React.FC = () => {
                             </div>
                         )}
 
-                        {/* Pagination - Add flex-wrap and slightly smaller mobile buttons to prevent horizontal overflow on middle pages */}
+                        {/* Pagination - Mobile First Minimalist Style */}
                         {totalPages > 1 && (
-                            <div className="mt-16 md:mt-24 flex flex-wrap items-center justify-center gap-2 px-2">
+                            <div className="mt-12 md:mt-20 flex items-center gap-2 md:gap-6 overflow-x-auto no-scrollbar py-4 px-2 lg:justify-center w-full max-w-full">
                                 <button 
                                     onClick={() => handleSetCurrentPage(prev => Math.max(1, prev - 1))}
                                     disabled={currentPage === 1}
-                                    className="w-12 h-12 rounded-xl md:rounded-2xl bg-[#1A1A1A] border border-[#262626] flex items-center justify-center text-[#A3A3A3] hover:text-white hover:border-[#404040] disabled:opacity-20 disabled:cursor-not-allowed transition-all active:scale-90 shrink-0"
+                                    className="p-2 text-[#525252] hover:text-white disabled:opacity-10 transition-all active:scale-90 shrink-0"
                                 >
-                                    <ChevronDown size={20} className="rotate-90" />
+                                    <ChevronDown size={22} className="rotate-90" />
                                 </button>
                                 
-                                <div className="flex items-center justify-center gap-2 overflow-x-auto no-scrollbar max-w-[calc(100vw-130px)] sm:max-w-none px-2 py-2">
-                                    {[...Array(totalPages)].map((_, i) => {
-                                        const page = i + 1;
-                                        // Mobile Window Logic: First, Last, Current, and neighbors
-                                        const isPageVisible = 
-                                            page === 1 || 
-                                            page === totalPages || 
-                                            (page >= currentPage - 1 && page <= currentPage + 1);
-                                        
-                                        if (isPageVisible) {
-                                            return (
+                                <div className="flex items-center gap-1 md:gap-4">
+                                        {[...Array(totalPages)].map((_, i) => {
+                                            const page = i + 1;
+                                            const isPageVisible = 
+                                                page === 1 || 
+                                                page === totalPages || 
+                                                (page >= currentPage - 1 && page <= currentPage + 1);
+                                            
+                                            if (isPageVisible) {
+                                                return (
                                                 <button
                                                     key={page}
                                                     onClick={() => handleSetCurrentPage(page)}
-                                                    className={`w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-xl md:rounded-2xl text-[15px] font-black transition-all border ${
+                                                    className={`w-9 h-9 md:w-10 md:h-10 flex items-center justify-center rounded-xl text-[14px] md:text-[16px] font-black transition-all shrink-0 ${
                                                         currentPage === page 
-                                                        ? 'bg-white text-black border-white shadow-[0_4px_15px_rgba(255,255,255,0.3)] scale-110 z-10' 
-                                                        : 'bg-[#1A1A1A] text-[#525252] border-transparent hover:border-[#404040] hover:text-[#A3A3A3]'
+                                                        ? 'bg-[#1A1A1A] text-white border border-white/5 shadow-xl' 
+                                                        : 'bg-transparent text-[#525252] hover:text-white'
                                                     }`}
                                                 >
                                                     {page}
                                                 </button>
-                                            );
-                                        }
-                                        
-                                        // Show Dots if gap exists
-                                        if (page === currentPage - 2 || page === currentPage + 2) {
-                                            return <span key={page} className="text-[#333] px-1 text-[10px] font-bold shrink-0 self-center">...</span>;
-                                        }
-                                        return null;
-                                    })}
+                                                );
+                                            }
+                                            
+                                            if (page === currentPage - 2 || page === currentPage + 2) {
+                                                return <span key={page} className="text-[#333] text-sm font-black shrink-0">...</span>;
+                                            }
+                                            return null;
+                                        })}
                                 </div>
 
                                 <button 
                                     onClick={() => handleSetCurrentPage(prev => Math.min(totalPages, prev + 1))}
                                     disabled={currentPage === totalPages}
-                                    className="w-12 h-12 rounded-xl md:rounded-2xl bg-[#1A1A1A] border border-[#262626] flex items-center justify-center text-[#A3A3A3] hover:text-white hover:border-[#404040] disabled:opacity-20 disabled:cursor-not-allowed transition-all active:scale-90 shrink-0"
+                                    className="p-2 text-[#525252] hover:text-white disabled:opacity-10 transition-all active:scale-90 shrink-0"
                                 >
-                                    <ChevronDown size={20} className="-rotate-90" />
+                                    <ChevronDown size={22} className="-rotate-90" />
                                 </button>
                             </div>
                         )}

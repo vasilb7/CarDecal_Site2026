@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { AlertCircle, Plus, X, Mail, Phone, User as UserIcon, Lock, Loader2 } from 'lucide-react';
 import { uploadToCloudinary } from '../lib/cloudinary-utils';
-import { isValidPhone as isValidBulgarianPhone, isValidFullName, formatToE164 } from '../lib/utils';
+import { isValidPhone as isValidBulgarianPhone, isValidFullName, formatToE164, formatPhoneNumber } from '../lib/utils';
 import SEO from '../components/SEO';
 
 const DB_NAME = 'CarDecalBookingDB';
@@ -91,7 +91,7 @@ const BookingPage: React.FC = () => {
         const saved = localStorage.getItem('custom_order_form_new');
         return saved ? JSON.parse(saved) : {
             fullName: '',
-            phone: '',
+            phone: '+359 ',
             email: '',
             width: '',
             height: '',
@@ -137,7 +137,10 @@ const BookingPage: React.FC = () => {
                 
                 const updates: any = {};
                 if (!prev.fullName && finalFullName) updates.fullName = finalFullName;
-                if (!prev.phone && (profile.phone || user.user_metadata?.phone)) updates.phone = profile.phone || user.user_metadata?.phone;
+                if (!prev.phone && (profile.phone || user.user_metadata?.phone)) {
+                    const rawPhone = profile.phone || user.user_metadata?.phone;
+                    updates.phone = formatPhoneNumber(rawPhone);
+                }
                 if (!prev.email && (user.email || profile.email)) updates.email = user.email || profile.email;
                 
                 if (Object.keys(updates).length > 0) {
@@ -151,7 +154,7 @@ const BookingPage: React.FC = () => {
     const handleClearForm = async () => {
         setFormData({
             fullName: '',
-            phone: '',
+            phone: '+359 ',
             email: '',
             width: '',
             height: '',
@@ -203,6 +206,10 @@ const BookingPage: React.FC = () => {
         let { name, value } = e.target;
         if (name === 'fullName') {
             value = value.replace(/[0-9]/g, '');
+            e.target.value = value;
+        }
+        if (name === 'phone') {
+            value = formatPhoneNumber(value);
             e.target.value = value;
         }
         if (name === 'description' && value.length > 500) {
@@ -308,7 +315,7 @@ const BookingPage: React.FC = () => {
             
             setFormData({
                 fullName: '',
-                phone: '',
+                phone: '+359 ',
                 email: '',
                 width: '',
                 height: '',
@@ -406,11 +413,32 @@ const BookingPage: React.FC = () => {
                                             label="ТЕЛЕФОН"
                                             name="phone"
                                             type="tel"
-                                            placeholder="08X XXX XXXX"
+                                            placeholder="+359 88 888 8888"
                                             icon={<Phone size={18} className="text-[#cebc89]" />}
                                             value={formData.phone}
                                             onChange={handleInputChange}
-                                            onKeyDown={handleKeyDown}
+                                            onKeyDown={(e: any) => {
+                                                if (e.target.selectionStart <= 5 && (e.key === 'Backspace' || e.key === 'ArrowLeft' || e.key === 'Home')) {
+                                                    e.preventDefault();
+                                                    return;
+                                                }
+                                                if (e.key === 'Enter') e.currentTarget.blur();
+                                            }}
+                                            onFocus={(e: any) => {
+                                                const val = e.target.value;
+                                                setTimeout(() => e.target.setSelectionRange(val.length, val.length), 0);
+                                            }}
+                                            onClick={(e: any) => {
+                                                if (e.target.selectionStart < 5) {
+                                                    e.target.setSelectionRange(e.target.value.length, e.target.value.length);
+                                                }
+                                            }}
+                                            onSelect={(e: any) => {
+                                                const start = e.target.selectionStart;
+                                                if (start !== null && start < 5) {
+                                                    e.target.setSelectionRange(5, Math.max(5, e.target.selectionEnd || 5));
+                                                }
+                                            }}
                                         />
                                         <GlossyInput
                                             label="Имейл"
@@ -651,7 +679,7 @@ const BookingPage: React.FC = () => {
     );
 };
 
-const GlossyInput = ({ name, label, placeholder, type = "text", value, onChange, onKeyDown }: any) => (
+const GlossyInput = ({ name, label, placeholder, type = "text", value, onChange, onKeyDown, ...props }: any) => (
     <div className="space-y-1.5 flex flex-col">
         <label className="text-[#a09060] text-[9px] md:text-[10px] font-bold tracking-[0.15em] uppercase px-1">
             {label}
@@ -663,6 +691,7 @@ const GlossyInput = ({ name, label, placeholder, type = "text", value, onChange,
                 onKeyDown={onKeyDown}
                 autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck="false"
                 className="w-full bg-[#181818] text-gray-200 placeholder-[#444] text-[13px] md:text-sm px-4 py-3 min-h-[44px] rounded-md border-none focus:ring-1 focus:ring-[#555] shadow-[inset_0_3px_10px_rgba(0,0,0,0.9)] relative z-20 font-medium"
+                {...props}
             />
             <div className="absolute top-[1px] left-[1px] right-[1px] h-[40%] bg-gradient-to-b from-white/5 to-transparent rounded-t-md pointer-events-none z-30"></div>
         </div>

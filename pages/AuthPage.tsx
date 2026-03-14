@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../lib/supabase';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useToast } from '../hooks/useToast';
 import { recordFailedLogin, recordSuccessfulLogin, logSecurityEvent } from '../lib/security';
 import { validatePassword, translateAuthError } from '../lib/passwordUtils';
-import { isValidPhone as isValidBulgarianPhone, isValidFullName, formatToE164 } from '../lib/utils';
+import { isValidPhone as isValidBulgarianPhone, isValidFullName, formatToE164, formatPhoneNumber } from '../lib/utils';
+import ReportBugModal from '../components/ReportBugModal';
 import { hasProfanity } from '../lib/profanity';
 import { Turnstile } from '@marsidev/react-turnstile';
 import { Eye, EyeOff, Loader2, CheckCircle2 } from 'lucide-react';
@@ -26,7 +27,7 @@ const SupabaseLogo = () => (
   </svg>
 );
 
-const SupabaseInput = ({ label, type = "text", name, required, value, onChange, icon: Icon, onToggleIcon }: any) => {
+const SupabaseInput = React.forwardRef(({ label, type = "text", name, required, value, onChange, onClick, icon: Icon, onToggleIcon, ...props }: any, ref: any) => {
   return (
     <div className="flex flex-col space-y-2 w-full group">
       <label htmlFor={name} className="text-[13px] font-medium text-zinc-400 group-focus-within:text-red-500 transition-colors">
@@ -34,13 +35,16 @@ const SupabaseInput = ({ label, type = "text", name, required, value, onChange, 
       </label>
       <div className="relative flex items-center h-[56px]">
         <input
+          ref={ref}
           type={type}
           id={name}
           name={name}
           required={required}
           value={value}
           onChange={onChange}
+          onClick={onClick}
           className={`w-full h-full px-5 bg-neutral-800 rounded-xl text-sm outline-none shadow-inner border border-neutral-700/50 focus:border-red-600 transition-all text-white placeholder-neutral-500 ${Icon ? 'pr-14' : ''}`}
+          {...props}
         />
         {Icon && (
           <div className="absolute right-2 inset-y-0 flex items-center">
@@ -58,7 +62,7 @@ const SupabaseInput = ({ label, type = "text", name, required, value, onChange, 
       </div>
     </div>
   );
-};
+});
 
 // Password Rules specific to match exactly the layout
 const PasswordRules = ({ password }: { password: string }) => {
@@ -110,7 +114,8 @@ export default function AuthPage() {
 
   // Register Fields
   const [regName, setRegName] = useState("");
-  const [regPhone, setRegPhone] = useState("");
+  const [regPhone, setRegPhone] = useState("+359 ");
+  const phoneInputRef = useRef<HTMLInputElement>(null);
   const [regEmail, setRegEmail] = useState("");
   const [regPassword, setRegPassword] = useState("");
 
@@ -375,11 +380,17 @@ export default function AuthPage() {
               </button>
             </form>
 
-            <div className="mt-6 text-center text-[14px] text-zinc-500">
+            <div className="mt-8 text-center text-[14px] text-zinc-500">
               Нямате профил?{' '}
               <button onClick={() => { setView('register'); window.history.pushState({}, '', '/register'); }} className="text-white hover:underline">
                 Регистрация
               </button>
+              <div className="mt-6 pt-6 border-t border-zinc-900/50">
+                <button onClick={() => window.dispatchEvent(new CustomEvent('open-bug-report'))} className="text-[12px] text-zinc-600 hover:text-zinc-400 transition-colors flex items-center justify-center gap-1.5 mx-auto">
+                    <span className="w-1 h-1 rounded-full bg-zinc-800"></span>
+                    Докладване на проблем
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -406,7 +417,40 @@ export default function AuthPage() {
 
             <form onSubmit={onSignUp} className="space-y-4">
               <SupabaseInput label="Име и Фамилия" name="name" value={regName} onChange={(e: any) => setRegName(e.target.value)} required />
-              <SupabaseInput label="Телефон" name="phone" type="tel" value={regPhone} onChange={(e: any) => setRegPhone(e.target.value)} required />
+              <SupabaseInput 
+                ref={phoneInputRef}
+                label="Телефон" 
+                name="phone" 
+                type="tel" 
+                value={regPhone} 
+                onFocus={(e: any) => {
+                  const val = e.target.value;
+                  setTimeout(() => e.target.setSelectionRange(val.length, val.length), 0);
+                }}
+                onKeyDown={(e: any) => {
+                  if (e.target.selectionStart <= 5 && (e.key === 'Backspace' || e.key === 'ArrowLeft' || e.key === 'Home')) {
+                    e.preventDefault();
+                  }
+                }}
+                onSelect={(e: any) => {
+                  const start = e.target.selectionStart;
+                  if (start !== null && start < 5) {
+                    e.target.setSelectionRange(5, Math.max(5, e.target.selectionEnd || 5));
+                  }
+                }}
+                onChange={(e: any) => {
+                  const val = e.target.value;
+                  const formatted = formatPhoneNumber(val);
+                  setRegPhone(formatted);
+                }} 
+                onClick={(e: any) => {
+                  if (e.target.selectionStart < 5) {
+                    e.target.setSelectionRange(e.target.value.length, e.target.value.length);
+                  }
+                }}
+                placeholder="+359 88 888 8888" 
+                required 
+              />
               <SupabaseInput label="Имейл" name="email" type="email" value={regEmail} onChange={(e: any) => setRegEmail(e.target.value)} required />
               
               <SupabaseInput 
@@ -435,11 +479,17 @@ export default function AuthPage() {
               </button>
             </form>
 
-            <div className="mt-6 text-center text-[14px] text-zinc-500">
+            <div className="mt-8 text-center text-[14px] text-zinc-500">
               Вече имате профил?{' '}
               <button onClick={() => { setView('login'); window.history.pushState({}, '', '/login'); }} className="text-white hover:underline">
                 Вход
               </button>
+              <div className="mt-6 pt-6 border-t border-zinc-900/50">
+                <button onClick={() => window.dispatchEvent(new CustomEvent('open-bug-report'))} className="text-[12px] text-zinc-600 hover:text-zinc-400 transition-colors flex items-center justify-center gap-1.5 mx-auto">
+                    <span className="w-1 h-1 rounded-full bg-zinc-800"></span>
+                    Докладване на проблем
+                </button>
+              </div>
             </div>
             
           </div>
@@ -475,10 +525,16 @@ export default function AuthPage() {
                   </button>
                 </form>
 
-                <div className="mt-6 text-center text-[14px] text-zinc-500">
+                <div className="mt-8 text-center text-[14px] text-zinc-500">
                    <button onClick={() => { setView('login'); window.history.pushState({}, '', '/login'); }} className="text-white hover:underline">
                      Назад към Вход
                    </button>
+                   <div className="mt-6 pt-6 border-t border-zinc-900/50">
+                    <button onClick={() => window.dispatchEvent(new CustomEvent('open-bug-report'))} className="text-[12px] text-zinc-600 hover:text-zinc-400 transition-colors flex items-center justify-center gap-1.5 mx-auto">
+                        <span className="w-1 h-1 rounded-full bg-zinc-800"></span>
+                        Докладване на проблем
+                    </button>
+                  </div>
                 </div>
               </>
             ) : (
@@ -556,6 +612,7 @@ export default function AuthPage() {
         </div>
       </div>
 
+      <ReportBugModal />
       <style>{`
         .fade-in {
           animation: fadeIn 0.3s ease-in-out;
