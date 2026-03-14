@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { 
@@ -74,6 +74,20 @@ const CheckoutPage: React.FC = () => {
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
+    
+    // Address Dropdown State
+    const [isAddressDropdownOpen, setIsAddressDropdownOpen] = useState(false);
+    const addressDropdownRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (addressDropdownRef.current && !addressDropdownRef.current.contains(event.target as Node)) {
+                setIsAddressDropdownOpen(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
     
     // Promo Code State
     const [promoInput, setPromoInput] = useState('');
@@ -385,40 +399,79 @@ const CheckoutPage: React.FC = () => {
                                             <h2 className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-4 flex items-center gap-2 ml-1">
                                                 <MapPin size={14} className="text-red-500" /> Вашите запазени адреси
                                             </h2>
-                                            <div className="relative">
-                                                <select 
-                                                    className="w-full bg-[#111] border border-white/10 hover:border-red-500/50 focus:border-red-500 focus:ring-1 focus:ring-red-500 rounded-xl px-5 py-4 text-[13px] sm:text-sm text-white appearance-none transition-all outline-none cursor-pointer"
-                                                    onChange={(e) => {
-                                                        const id = e.target.value;
-                                                        if (!id) return;
-                                                        const addr = savedAddresses.find(a => a.id === id);
-                                                        if (addr) handleUseSavedAddress(addr);
-                                                    }}
-                                                    value={
-                                                        savedAddresses.find(addr => 
-                                                            formData.deliveryType === addr.delivery_type &&
-                                                            formData.city === addr.city &&
-                                                            (addr.delivery_type === 'address' ? formData.streetAddress === addr.street_address :
-                                                             addr.delivery_type === 'econt' ? formData.econtOffice === addr.street_address :
-                                                             formData.speedyOffice === addr.street_address)
-                                                        )?.id || ''
-                                                    }
+                                            <div className="relative" ref={addressDropdownRef}>
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => setIsAddressDropdownOpen(!isAddressDropdownOpen)}
+                                                    className="w-full bg-[#111] border border-white/10 hover:border-red-500/50 focus:border-red-500 focus:ring-1 focus:ring-red-500 rounded-xl px-5 py-4 text-[13px] sm:text-sm text-white transition-all outline-none cursor-pointer flex items-center justify-between text-left"
                                                 >
-                                                    <option value="" disabled className="bg-[#222]">
-                                                        -- Изберете запазен адрес --
-                                                    </option>
-                                                    {savedAddresses.map(addr => {
-                                                        const typeName = addr.delivery_type === 'address' ? 'До Личен Адрес' : addr.delivery_type === 'econt' ? 'Офис на Еконт' : 'Офис на Speedy';
-                                                        return (
-                                                            <option key={addr.id} value={addr.id} className="bg-[#111] text-white">
-                                                                {typeName}: {addr.city}, {addr.street_address} ({addr.full_name})
-                                                            </option>
-                                                        )
-                                                    })}
-                                                </select>
-                                                <div className="absolute inset-y-0 right-0 flex items-center pr-5 pointer-events-none text-zinc-500">
-                                                    <ChevronDown size={18} />
-                                                </div>
+                                                    <span className="truncate pr-4">
+                                                        {(() => {
+                                                            const selected = savedAddresses.find(addr => 
+                                                                formData.deliveryType === addr.delivery_type &&
+                                                                formData.city === addr.city &&
+                                                                (addr.delivery_type === 'address' ? formData.streetAddress === addr.street_address :
+                                                                 addr.delivery_type === 'econt' ? formData.econtOffice === addr.street_address :
+                                                                 formData.speedyOffice === addr.street_address)
+                                                            );
+                                                            if (!selected) return <span className="text-zinc-500">-- Изберете запазен адрес --</span>;
+                                                            const typeName = selected.delivery_type === 'address' ? 'До Личен Адрес' : selected.delivery_type === 'econt' ? 'Офис на Еконт' : 'Офис на Speedy';
+                                                            return (
+                                                                <span>
+                                                                    <span className="font-bold text-red-500 mr-2">{typeName}:</span>
+                                                                    {selected.city}, {selected.street_address} ({selected.full_name})
+                                                                </span>
+                                                            );
+                                                        })()}
+                                                    </span>
+                                                    <ChevronDown size={18} className={`text-zinc-500 transition-transform ${isAddressDropdownOpen ? 'rotate-180' : ''}`} />
+                                                </button>
+
+                                                <AnimatePresence>
+                                                    {isAddressDropdownOpen && (
+                                                        <motion.div 
+                                                            initial={{ opacity: 0, y: -10 }}
+                                                            animate={{ opacity: 1, y: 0 }}
+                                                            exit={{ opacity: 0, y: -10 }}
+                                                            transition={{ duration: 0.2 }}
+                                                            className="absolute z-50 w-full mt-2 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl overflow-hidden"
+                                                        >
+                                                            <div className="max-h-[240px] overflow-y-auto custom-scrollbar">
+                                                                {savedAddresses.map(addr => {
+                                                                    const typeName = addr.delivery_type === 'address' ? 'До Личен Адрес' : addr.delivery_type === 'econt' ? 'Еконт' : 'Speedy';
+                                                                    const isSelected = 
+                                                                        formData.deliveryType === addr.delivery_type &&
+                                                                        formData.city === addr.city &&
+                                                                        (addr.delivery_type === 'address' ? formData.streetAddress === addr.street_address :
+                                                                         addr.delivery_type === 'econt' ? formData.econtOffice === addr.street_address :
+                                                                         formData.speedyOffice === addr.street_address);
+                                                                    
+                                                                    return (
+                                                                        <button
+                                                                            key={addr.id}
+                                                                            type="button"
+                                                                            onClick={() => {
+                                                                                handleUseSavedAddress(addr);
+                                                                                setIsAddressDropdownOpen(false);
+                                                                            }}
+                                                                            className={`w-full text-left px-5 py-4 text-[13px] sm:text-sm border-b border-white/5 last:border-0 hover:bg-zinc-800 transition-colors flex items-center justify-between gap-4 ${isSelected ? 'bg-red-600/10' : ''}`}
+                                                                        >
+                                                                            <div className="flex-1 truncate">
+                                                                                <span className={`font-bold mr-2 ${isSelected ? 'text-red-500' : 'text-zinc-400'}`}>
+                                                                                    {typeName}:
+                                                                                </span>
+                                                                                <span className={isSelected ? 'text-white' : 'text-zinc-300'}>
+                                                                                    {addr.city}, {addr.street_address} ({addr.full_name})
+                                                                                </span>
+                                                                            </div>
+                                                                            {isSelected && <CheckCircle2 size={16} className="text-red-500 shrink-0" />}
+                                                                        </button>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        </motion.div>
+                                                    )}
+                                                </AnimatePresence>
                                             </div>
                                         </div>
                                     )}
