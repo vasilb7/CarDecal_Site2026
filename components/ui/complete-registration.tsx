@@ -289,14 +289,8 @@ export const CompleteRegistrationModal = () => {
         }
     };
 
-    // Immediate solid covering if we know we need completion
-    const userName = user?.user_metadata?.full_name || profile?.full_name;
-    const userPhone = user?.user_metadata?.phone || profile?.phone;
-    
-    let isBlocking = false;
-    if (user && !authLoading) {
-        isBlocking = !userName || !userPhone;
-    }
+    // Use the same blocking logic as App.tsx
+    const isBlocking = !!user && profile?.onboarding_completed === false;
 
     if (!isBlocking && !isOpen) return null;
 

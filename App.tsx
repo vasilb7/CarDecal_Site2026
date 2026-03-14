@@ -186,6 +186,19 @@ function AppContent() {
     );
   }
 
+  // Onboarding block - strictly force completion before using the site
+  const isOnboardingRequired = isAuthenticated && profile?.onboarding_completed === false;
+
+  if (isOnboardingRequired) {
+    return (
+      <Suspense fallback={<div className="min-h-screen bg-black" />}>
+        <div className="min-h-screen bg-zinc-950">
+           <CompleteRegistrationModal />
+        </div>
+      </Suspense>
+    );
+  }
+
   const LazyFallback = (
     <div className="flex items-center justify-center min-h-[50vh]">
       <Loader2 className="w-8 h-8 animate-spin text-red-600" />
@@ -418,7 +431,6 @@ function AppContent() {
                     </Routes>
                   </motion.div>
                 </AnimatePresence>
-                <CompleteRegistrationModal />
               </Layout>
             }
           />
