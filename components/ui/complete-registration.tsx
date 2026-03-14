@@ -1,71 +1,50 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { useTranslation } from 'react-i18next';
-import { Loader2, User, Phone, CheckSquare, Square, Building2, ChevronRight, ArrowLeft } from 'lucide-react';
+import { Loader2, User, Phone, CheckSquare, Building2, ChevronRight, ArrowLeft, Check } from 'lucide-react';
 import { useToast } from '../Toast/ToastProvider';
 import { translateAuthError } from '../../lib/passwordUtils';
-import { isValidBulgarianPhone, formatToE164, formatPhoneNumber } from '../../lib/utils';
+import { isValidPhone as isValidBulgarianPhone, formatToE164, formatPhoneNumber, isValidFullName } from '../../lib/utils';
+import { useNavigate } from 'react-router-dom';
 
-const FloatingInput = ({ 
-    label, 
-    icon,
-    type = "text", 
-    required = false, 
-    value,
-    onChange,
-    className = "",
-    ...props 
-
-}: any) => {
-    const [isFocused, setIsFocused] = useState(false);
-
-    return (
-        <div className="relative group w-full">
-            <motion.label
-                initial={false}
-                animate={{
-                    y: (isFocused || value) ? -42 : 0,
-                    x: (isFocused || value) ? -44 : 0,
-                    scale: (isFocused || value) ? 0.8 : 1,
-                    color: isFocused ? "#ef4444" : (value ? "rgba(255,255,255,0.6)" : "rgba(255,255,255,0.4)")
-                }}
-                transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                className="absolute left-12 top-4 pointer-events-none transition-all z-10 px-1 select-none text-sm md:text-base font-medium"
+const SupabaseInput = React.forwardRef(({ label, type = "text", name, required, value, onChange, onClick, icon: Icon, onToggleIcon, ...props }: any, ref: any) => {
+  return (
+    <div className="flex flex-col space-y-2 w-full group">
+      <label htmlFor={name} className="text-[13px] font-medium text-zinc-400 group-focus-within:text-red-500 transition-colors">
+        {label}
+      </label>
+      <div className="relative flex items-center h-[56px]">
+        <input
+          ref={ref}
+          type={type}
+          id={name}
+          name={name}
+          required={required}
+          value={value}
+          onChange={onChange}
+          onClick={onClick}
+          className={`w-full h-full px-5 bg-neutral-800 rounded-xl text-sm outline-none shadow-inner border border-neutral-700/50 focus:border-red-600 transition-all text-white placeholder-neutral-500 ${Icon ? 'pr-14' : ''}`}
+          {...props}
+        />
+        {Icon && (
+          <div className="absolute right-2 inset-y-0 flex items-center">
+            <button
+              type="button"
+              onClick={onToggleIcon}
+              className="w-10 h-10 flex items-center justify-center rounded-full text-neutral-400 hover:text-white hover:bg-white/5 transition-all outline-none"
             >
-                {label}
-            </motion.label>
-            
-            <div className="relative flex items-center">
-                <input 
-                    {...props}
-                    type={type}
-                    value={value}
-                    onChange={onChange}
-                    onFocus={(e) => {
-                        setIsFocused(true);
-                        if (props.onFocus) props.onFocus(e);
-                    }}
-                    onBlur={(e) => {
-                        setIsFocused(false);
-                        if (props.onBlur) props.onBlur(e);
-                    }}
-                    className={`w-full bg-white/[0.03] border ${isFocused ? 'border-red-600 shadow-[0_0_25px_rgba(239,68,68,0.15)]' : 'border-white/10'} rounded-xl px-4 py-4 ${icon ? 'pl-12' : ''} shadow-sm outline-none text-white placeholder-transparent transition-all ${className}`}
-                    required={required}
-                    placeholder=" "
-                />
-                {icon && (
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-20">
-                        {React.cloneElement(icon as React.ReactElement, {
-                            className: `w-5 h-5 transition-all duration-300 ${isFocused ? 'text-red-500 scale-110' : (value ? 'text-white/80' : 'text-white/30')}`
-                        })}
-                    </div>
-                )}
-            </div>
-        </div>
-    );
-};
+              <div key={type} className="animate-eye flex items-center justify-center">
+                <Icon size={20} />
+              </div>
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+});
 
 export const CompleteRegistrationModal = () => {
     const { user, profile, refreshProfile, loading: authLoading } = useAuth();
@@ -98,6 +77,24 @@ export const CompleteRegistrationModal = () => {
     const [vatNumber, setVatNumber] = useState("");
     const [companyAddress, setCompanyAddress] = useState("");
     const [companyPerson, setCompanyPerson] = useState("");
+    const [quoteIndex, setQuoteIndex] = useState(0);
+    const phoneInputRef = useRef<HTMLInputElement>(null);
+    const navigate = useNavigate();
+
+    const registerBenefits = [
+        "Направи първата крачка към своята нова цел.",
+        "Открий възможностите, които те очакват тук.",
+        "Присъедини се към общност, стремяща се към успех.",
+        "Твоят напредък е наш основен приоритет.",
+        "Започни своето пътешествие към промяната сега.",
+    ];
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setQuoteIndex((prev) => (prev + 1) % registerBenefits.length);
+        }, 8000);
+        return () => clearInterval(timer);
+    }, []);
 
 
 
@@ -173,9 +170,8 @@ export const CompleteRegistrationModal = () => {
     }, [isOpen]);
 
     const nextStep = () => {
-        const nameParts = name.trim().split(/\s+/);
-        if (nameParts.length < 2) {
-            showToast('Моля, въведете име и фамилия разделени с интервал.', "warning");
+        if (!isValidFullName(name)) {
+            showToast('Въведете име и фамилия (3-100 символа).', "warning");
             return;
         }
         if (!isValidBulgarianPhone(phone)) {
@@ -308,196 +304,249 @@ export const CompleteRegistrationModal = () => {
         <AnimatePresence>
             {(isBlocking || isOpen) && (
                 <motion.div 
-                    initial={{ opacity: 1 }} // Start solid if blocking
+                    initial={{ opacity: 0 }} 
                     animate={{ opacity: 1 }} 
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[9999] flex items-center justify-center bg-black p-4 overflow-y-auto"
+                    className="fixed inset-0 z-[9999] bg-zinc-950 flex font-sans antialiased overflow-hidden"
                 >
-                    <motion.div 
-                        initial={isOpen ? { scale: 1, y: 0 } : { scale: 0.95, y: 20 }}
-                        animate={{ scale: 1, y: 0 }}
-                        transition={{ type: "spring", bounce: 0.4 }}
-                        className="w-full max-w-md bg-[#0a0a0a] border border-white/10 rounded-2xl md:rounded-[32px] p-6 md:p-10 shadow-2xl relative overflow-hidden"
-                    >
-                    {/* Background glows */}
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-red-600/10 rounded-full blur-[80px] pointer-events-none" />
-                    <div className="absolute bottom-0 left-0 w-64 h-64 bg-red-900/10 rounded-full blur-[80px] pointer-events-none" />
-
-                    <div className="relative z-10">
-                        {step === 1 ? (
-                            <div className="fade-in">
-                                <div className="text-center mb-6 md:mb-10">
-                                    <h2 className="text-2xl md:text-3xl font-bold text-white mb-3">
-                                        Завършете профила си
-                                    </h2>
-                                    <p className="text-zinc-400 text-sm md:text-base leading-relaxed px-2">
-                                        Потвърдете Вашите имена и въведете телефонен номер за контакт.
-                                    </p>
-                                </div>
-
-                                <div className="space-y-6">
-                                    <FloatingInput 
-                                        label="Име и Фамилия"
-                                        icon={<User className="w-5 h-5" />}
-                                        value={name}
-                                        onChange={(e: any) => setName(e.target.value.replace(/[0-9]/g, ''))}
-                                        required
-                                    />
-
-                                    <FloatingInput 
-                                        label="Телефонен номер"
-                                        icon={<Phone className="w-5 h-5" />}
-                                        type="tel"
-                                        value={phone}
-                                        onChange={(e: any) => setPhone(formatPhoneNumber(e.target.value))}
-                                        required
-                                        onKeyDown={(e: any) => {
-                                            if (e.target.selectionStart <= 5 && (e.key === 'Backspace' || e.key === 'ArrowLeft' || e.key === 'Home')) {
-                                                e.preventDefault();
-                                            }
-                                        }}
-                                        onFocus={(e: any) => {
-                                            const val = e.target.value;
-                                            setTimeout(() => e.target.setSelectionRange(val.length, val.length), 0);
-                                        }}
-                                    />
-
-                                    <div className="pt-6">
-                                        <motion.button
-                                            whileHover={{ scale: 1.02 }}
-                                            whileTap={{ scale: 0.98 }}
-                                            onClick={nextStep}
-                                            className="w-full relative overflow-hidden bg-gradient-to-r from-red-600 to-red-800 text-white font-bold py-4 rounded-xl text-base flex items-center justify-center gap-2 shadow-lg transition-all border border-red-500/30"
-                                        >
-                                            <span>Продължи</span>
-                                            <ChevronRight className="w-5 h-5" />
-                                        </motion.button>
-                                    </div>
-                                </div>
+                    {/* Left Column (Forms) */}
+                    <div className="w-full lg:w-[560px] xl:w-[600px] flex flex-col pt-8 sm:pt-12 pb-12 px-6 sm:px-12 xl:px-16 overflow-y-auto relative z-10 mx-auto lg:mx-0 shadow-2xl bg-zinc-950 border-r border-zinc-900">
+                        
+                        {/* CD CARDECAL Gradient Logo */}
+                        <div className="flex items-center gap-3 mb-12 cursor-pointer transition-opacity hover:opacity-80" onClick={() => navigate('/')}>
+                            <div className="w-8 h-8 rounded bg-gradient-to-br from-red-600 to-red-900 flex items-center justify-center shadow-lg shadow-red-600/20">
+                                <span className="text-white font-bold text-sm tracking-widest pl-[1px]">CD</span>
                             </div>
-                        ) : (
-                            <div className="fade-in">
-                                {isCompany === null ? (
-                                    <>
-                                        <div className="text-center mb-8">
-                                            <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">Почти приключихме!</h1>
-                                            <p className="text-zinc-500 text-sm md:text-base leading-relaxed">Искате ли да довършим профила ви с фирмени данни?</p>
-                                        </div>
+                            <span className="font-semibold text-[20px] text-white uppercase tracking-[0.05em]">CARDECAL</span>
+                        </div>
 
-                                        <div className="space-y-6 py-4">
-                                            <h2 className="text-lg font-medium text-white text-center">Искате ли да регистрирате фирма?</h2>
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <button
-                                                    onClick={() => setIsCompany(true)}
-                                                    className="flex flex-col items-center justify-center p-6 bg-white/[0.03] border border-white/10 rounded-2xl hover:border-red-600 hover:bg-red-600/5 transition-all group"
-                                                >
-                                                    <Building2 className="mb-3 text-zinc-500 group-hover:text-red-500" size={32} />
-                                                    <span className="text-sm font-medium text-zinc-300">Да, фирма</span>
-                                                </button>
-                                                <button
-                                                    onClick={() => handleSubmit(undefined, true)}
-                                                    className="flex flex-col items-center justify-center p-6 bg-white/[0.03] border border-white/10 rounded-2xl hover:border-red-600 hover:bg-red-600/5 transition-all group"
-                                                >
-                                                    <User className="mb-3 text-zinc-500 group-hover:text-red-500" size={32} />
-                                                    <span className="text-sm font-medium text-zinc-300">Не, по-късно</span>
-                                                </button>
-                                            </div>
-                                            
-                                            <button 
-                                                onClick={() => setStep(1)}
-                                                className="w-full flex items-center justify-center gap-2 text-zinc-500 hover:text-white transition-colors text-sm py-2"
-                                            >
-                                                <ArrowLeft className="w-4 h-4" />
-                                                <span>Назад към лични данни</span>
-                                            </button>
-                                        </div>
-                                    </>
-                                ) : (
-                                    <form onSubmit={handleSubmit} className="space-y-6">
-                                        <div className="flex items-center gap-3 mb-6">
-                                            <button 
-                                                type="button"
-                                                onClick={() => setIsCompany(null)}
-                                                className="p-2 bg-white/5 rounded-full text-zinc-400 hover:text-white transition-colors"
-                                            >
-                                                <ArrowLeft className="w-5 h-5" />
-                                            </button>
-                                            <h2 className="text-xl font-bold text-white">Данни за фирмата</h2>
-                                        </div>
+                        <div className="flex-1 w-full max-w-[420px] mx-auto flex flex-col justify-center">
+                            {step === 1 ? (
+                                <div className="fade-in">
+                                    <h1 className="text-[24px] font-semibold text-white mb-1 tracking-tight">Завършете профила си</h1>
+                                    <p className="text-[14px] text-zinc-500 mb-8">Потвърдете Вашите имена и въведете телефонен номер за контакт.</p>
 
-                                        <div className="space-y-4">
-                                            <FloatingInput 
-                                                label="Наименование на фирмата"
-                                                value={companyName}
-                                                onChange={(e: any) => setCompanyName(e.target.value)}
-                                                placeholder="Пример: Декал Дизайн ЕООД"
-                                                required
-                                            />
-                                            <FloatingInput 
-                                                label="ЕИК / Булстат (9-13 цифри)"
-                                                value={bulstat}
-                                                onChange={(e: any) => setBulstat(e.target.value.replace(/[^0-9]/g, '').slice(0, 13))}
-                                                placeholder="напр. 123456789"
-                                                required
-                                            />
-                                            <div className="pl-1">
-                                                <label className="flex items-center gap-2 cursor-pointer w-fit" onClick={() => setIsVatRegistered(!isVatRegistered)}>
-                                                    <div className={`w-5 h-5 rounded flex items-center justify-center transition-colors ${isVatRegistered ? 'bg-red-600 text-white border-red-600' : 'bg-white/10 text-transparent border border-white/20'}`}>
-                                                        <CheckSquare className="w-4 h-4" />
-                                                    </div>
-                                                    <span className="text-white text-sm">Регистрирана по ДДС</span>
-                                                </label>
-                                            </div>
-                                            {isVatRegistered && (
-                                                <FloatingInput 
-                                                    label="ДДС Номер"
-                                                    value={vatNumber}
-                                                    onChange={(e: any) => setVatNumber(e.target.value.toUpperCase())}
-                                                    placeholder="Пример: BG123456789"
-                                                />
-                                            )}
-                                            <FloatingInput 
-                                                label="Адрес на регистрация"
-                                                value={companyAddress}
-                                                onChange={(e: any) => setCompanyAddress(e.target.value)}
-                                                placeholder="Град, п.к., улица и номер"
-                                                required
-                                            />
-                                            <FloatingInput 
-                                                label="МОЛ"
-                                                value={companyPerson}
-                                                onChange={(e: any) => setCompanyPerson(e.target.value)}
-                                                placeholder="Име на управителя"
-                                                required
-                                            />
-                                        </div>
+                                    <div className="space-y-4">
+                                        <SupabaseInput 
+                                            label="Име и Фамилия"
+                                            name="name"
+                                            value={name}
+                                            onChange={(e: any) => setName(e.target.value.replace(/[0-9]/g, ''))}
+                                            required
+                                        />
+
+                                        <SupabaseInput 
+                                            ref={phoneInputRef}
+                                            label="Телефонен номер"
+                                            name="phone"
+                                            type="tel"
+                                            value={phone}
+                                            onChange={(e: any) => setPhone(formatPhoneNumber(e.target.value))}
+                                            onFocus={(e: any) => {
+                                                const val = e.target.value;
+                                                setTimeout(() => e.target.setSelectionRange(val.length, val.length), 0);
+                                            }}
+                                            onKeyDown={(e: any) => {
+                                                if (e.target.selectionStart <= 5 && (e.key === 'Backspace' || e.key === 'ArrowLeft' || e.key === 'Home')) {
+                                                    e.preventDefault();
+                                                }
+                                            }}
+                                            required
+                                        />
 
                                         <div className="pt-6">
-                                            <motion.button
-                                                whileHover={{ scale: 1.02 }}
-                                                whileTap={{ scale: 0.98 }}
-                                                type="submit"
-                                                disabled={loading}
-                                                className="w-full relative overflow-hidden bg-gradient-to-r from-red-600 to-red-800 text-white font-bold py-4 rounded-xl text-base flex items-center justify-center gap-2 shadow-lg disabled:opacity-70 transition-all border border-red-500/30"
+                                            <button
+                                                onClick={nextStep}
+                                                className="w-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center py-3 rounded-md transition-colors text-[14px] font-medium"
                                             >
-                                                {loading ? (
-                                                    <>
-                                                        <Loader2 className="w-5 h-5 animate-spin" />
-                                                        <span>Запазване...</span>
-                                                    </>
-                                                ) : (
-                                                    <span>Завърши</span>
-                                                )}
-                                            </motion.button>
+                                                <span>Продължи</span>
+                                                <ChevronRight className="w-4 h-4 ml-2" />
+                                            </button>
                                         </div>
-                                    </form>
-                                )}
-                            </div>
-                        )}
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="fade-in">
+                                    {isCompany === null ? (
+                                        <div className="space-y-6">
+                                            <div>
+                                                <h1 className="text-[24px] font-semibold text-white mb-1 tracking-tight">Почти приключихме!</h1>
+                                                <p className="text-[14px] text-zinc-500">Искате ли да довършим профила ви с фирмени данни?</p>
+                                            </div>
+
+                                            <div className="space-y-6 pt-4">
+                                                <h2 className="text-[16px] font-medium text-white text-center">Искате ли да регистрирате фирма?</h2>
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <button
+                                                        onClick={() => setIsCompany(true)}
+                                                        className="flex flex-col items-center justify-center p-6 bg-zinc-900 border border-zinc-800 rounded-2xl hover:border-red-600 hover:bg-red-600/5 transition-all group"
+                                                    >
+                                                        <Building2 className="mb-3 text-zinc-500 group-hover:text-red-500" size={32} />
+                                                        <span className="text-[14px] font-medium text-zinc-300">Да, фирма</span>
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleSubmit(undefined, true)}
+                                                        className="flex flex-col items-center justify-center p-6 bg-zinc-900 border border-zinc-800 rounded-2xl hover:border-red-600 hover:bg-red-600/5 transition-all group"
+                                                    >
+                                                        <User className="mb-3 text-zinc-500 group-hover:text-red-500" size={32} />
+                                                        <span className="text-[14px] font-medium text-zinc-300">Не, по-късно</span>
+                                                    </button>
+                                                </div>
+                                                
+                                                <button 
+                                                    onClick={() => setStep(1)}
+                                                    className="w-full flex items-center justify-center gap-2 text-zinc-500 hover:text-white transition-colors text-xs py-2"
+                                                >
+                                                    <ArrowLeft className="w-3 h-3" />
+                                                    <span>Назад към лични данни</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <form onSubmit={handleSubmit} className="space-y-4">
+                                            <div className="flex items-center gap-3 mb-6">
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => setIsCompany(null)}
+                                                    className="p-1.5 bg-zinc-900 border border-zinc-800 rounded-full text-zinc-400 hover:text-white transition-colors"
+                                                >
+                                                    <ArrowLeft className="w-4 h-4" />
+                                                </button>
+                                                <h2 className="text-[20px] font-semibold text-white tracking-tight">Данни за фирмата</h2>
+                                            </div>
+
+                                            <div className="space-y-4">
+                                                <SupabaseInput 
+                                                    label="Наименование на фирмата"
+                                                    name="companyName"
+                                                    value={companyName}
+                                                    onChange={(e: any) => setCompanyName(e.target.value)}
+                                                    placeholder="Пример: Декал Дизайн ЕООД"
+                                                    required
+                                                />
+                                                <SupabaseInput 
+                                                    label="ЕИК / Булстат (9-13 цифри)"
+                                                    name="bulstat"
+                                                    value={bulstat}
+                                                    onChange={(e: any) => setBulstat(e.target.value.replace(/[^0-9]/g, '').slice(0, 13))}
+                                                    placeholder="напр. 123456789"
+                                                    required
+                                                />
+                                                <div className="flex items-center gap-2 px-1 cursor-pointer w-fit" onClick={() => setIsVatRegistered(!isVatRegistered)}>
+                                                    <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${isVatRegistered ? 'bg-red-600 border-red-600' : 'border-zinc-700 bg-zinc-900'}`}>
+                                                        {isVatRegistered && <Check size={12} className="text-white" />}
+                                                    </div>
+                                                    <span className="text-[13px] text-zinc-400">Регистрирана по ДДС</span>
+                                                </div>
+
+                                                {isVatRegistered && (
+                                                    <SupabaseInput 
+                                                        label="ДДС Номер"
+                                                        name="vatNumber"
+                                                        value={vatNumber}
+                                                        onChange={(e: any) => setVatNumber(e.target.value.toUpperCase())}
+                                                        placeholder="Пример: BG123456789"
+                                                    />
+                                                )}
+                                                <SupabaseInput 
+                                                    label="Адрес на регистрация"
+                                                    name="companyAddress"
+                                                    value={companyAddress}
+                                                    onChange={(e: any) => setCompanyAddress(e.target.value)}
+                                                    placeholder="Град, п.к., улица и номер"
+                                                    required
+                                                />
+                                                <SupabaseInput 
+                                                    label="МОЛ"
+                                                    name="companyPerson"
+                                                    value={companyPerson}
+                                                    onChange={(e: any) => setCompanyPerson(e.target.value)}
+                                                    placeholder="Име на управителя"
+                                                    required
+                                                />
+
+                                                <button
+                                                    type="submit"
+                                                    disabled={loading}
+                                                    className="w-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center py-3 rounded-md transition-colors text-[14px] font-medium disabled:opacity-50 mt-4"
+                                                >
+                                                    {loading ? (
+                                                        <>
+                                                            <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                                                            <span>Запазване...</span>
+                                                        </>
+                                                    ) : (
+                                                        <span>Завърши</span>
+                                                    )}
+                                                </button>
+                                            </div>
+                                        </form>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="mt-12 w-full max-w-[420px] mx-auto text-left text-[11px] text-zinc-500 leading-relaxed">
+                            Продължавайки се съгласявате с <a href="/terms" target="_blank" className="hover:text-white underline transition-colors">Общите условия</a> и{' '}
+                            <a href="/privacy" target="_blank" className="hover:text-white underline transition-colors">Политиката за поверителност</a> на CarDecal.
+                        </div>
                     </div>
+
+                    {/* Right Column (Branding) */}
+                    <div className="hidden lg:flex lg:flex-1 relative overflow-hidden bg-[#280905]">
+                        <div 
+                            className="absolute inset-0 z-0 opacity-[0.12] pointer-events-none"
+                            style={{ 
+                                backgroundImage: "url('/royal.png')", 
+                                backgroundRepeat: "repeat",
+                                backgroundSize: "300px",
+                            }}
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/20" />
+                        <div className="absolute inset-0 bg-gradient-to-r from-[#280905] via-transparent to-transparent z-10" />
+
+                        <div className="absolute inset-0 flex flex-col items-center justify-center p-12 text-center z-20">
+                            <div className="mb-8 p-6 rounded-full bg-black/30 backdrop-blur-md border border-white/5 shadow-2xl animate-float">
+                                <img src="/crown.png" alt="Crown" className="w-[100px] h-auto object-contain filter drop-shadow-[0_0_15px_rgba(255,0,0,0.5)]" />
+                            </div>
+                            
+                            <div className="max-w-md space-y-6">
+                                <div className="h-[100px] flex items-center justify-center">
+                                    <h2 key={quoteIndex} className="text-2xl font-medium text-white tracking-tight leading-relaxed slide-up-fade italic font-serif">
+                                        "{registerBenefits[quoteIndex]}"
+                                    </h2>
+                                </div>
+                                <div className="flex gap-2 justify-center">
+                                    {registerBenefits.map((_, i) => (
+                                        <div 
+                                            key={i} 
+                                            className={`h-1 rounded-full transition-all duration-700 ease-in-out ${i === quoteIndex ? 'w-8 bg-red-600 shadow-[0_0_8px_rgba(220,38,38,0.8)]' : 'w-2 bg-white/10'}`}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <style>{`
+                        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+                        @keyframes fadeIn {
+                            from { opacity: 0; transform: translateY(5px); }
+                            to { opacity: 1; transform: translateY(0); }
+                        }
+                        .animate-float { animation: float 6s ease-in-out infinite; }
+                        @keyframes float {
+                            0%, 100% { transform: translateY(0px); }
+                            50% { transform: translateY(-20px); }
+                        }
+                        .slide-up-fade { animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
+                        @keyframes slideUpFade {
+                            from { opacity: 0; transform: translateY(10px); filter: blur(4px); }
+                            to { opacity: 1; transform: translateY(0); filter: blur(0); }
+                        }
+                    `}</style>
                 </motion.div>
-            </motion.div>
-        )}
+            )}
         </AnimatePresence>
     );
 };
