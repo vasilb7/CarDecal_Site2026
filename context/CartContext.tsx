@@ -50,7 +50,7 @@ interface CartContextType {
   promoError: string | null;
   promoDiscountAmount: number;
   applyPromo: (promo: PromoCode) => void;
-  removePromo: () => void;
+  removePromo: (silent?: boolean) => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -86,6 +86,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
 
   const removeTimeouts = useRef<Record<string, NodeJS.Timeout>>({});
+  const isClearingRef = useRef(false);
 
   useEffect(() => {
     try {
@@ -234,11 +235,17 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const clearCart = () => {
+    isClearingRef.current = true;
     Object.values(removeTimeouts.current).forEach(clearTimeout);
     removeTimeouts.current = {};
     setItems([]);
     setAppliedPromo(null);
     localStorage.removeItem('cardecal_promo');
+    
+    // Reset the flag after a short delay to allow background updates to finish
+    setTimeout(() => {
+      isClearingRef.current = false;
+    }, 2000);
   };
 
   const applyPromo = React.useCallback((promo: PromoCode) => {
@@ -246,10 +253,18 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem('cardecal_promo', JSON.stringify(promo));
   }, []);
 
-  const removePromo = React.useCallback(() => {
+  const removePromo = React.useCallback((silent: boolean = false) => {
+    const code = appliedPromo?.code;
     setAppliedPromo(null);
     localStorage.removeItem('cardecal_promo');
-  }, []);
+    
+    if (!silent && code) {
+      // Small delay to prevent issues with state updates
+      setTimeout(() => {
+        showToast(`купон : ${code} изтече`, 'error');
+      }, 100);
+    }
+  }, [appliedPromo, showToast]);
 
   // Cleanup timeouts on unmount and listen for global clear cart event
   useEffect(() => {
@@ -279,8 +294,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .single();
 
         if (error || !data) {
-          removePromo();
-          showToast(`купон : ${appliedPromo.code} изтече`, 'error');
+          removePromo(true); // Silent removal if it doesn't exist anymore
           return;
         }
 
@@ -289,8 +303,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const isLimitReached = data.max_uses && data.current_uses >= data.max_uses;
 
         if (!data.is_active || isExpired || isLimitReached) {
-          removePromo();
-          showToast(`купон : ${appliedPromo.code} изтече`, 'error');
+          removePromo(false); // Show toast if it's an initial check failure
         }
       } catch (err) {
         console.error('Promo verification failed:', err);
@@ -311,6 +324,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
           filter: `id=eq.${appliedPromo.id}` 
         },
         (payload) => {
+          if (isClearingRef.current) return;
           console.log('Promo real-time update:', payload);
           if (payload.eventType === 'DELETE') {
             removePromo();
@@ -322,8 +336,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const isLimitReached = up.max_uses && up.current_uses >= up.max_uses;
             
             if (up.is_active === false || isExpired || isLimitReached) {
-              removePromo();
-              showToast(`купон : ${appliedPromo.code} изтече`, 'error');
+              removePromo(false); // Show toast for real-time deactivation
             }
           }
         }
