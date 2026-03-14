@@ -105,14 +105,7 @@ export default function AuthPage() {
   const [recoveryEmail, setRecoveryEmail] = useState("");
   const [recoverySent, setRecoverySent] = useState(false);
 
-  // Effect to auto-fill VAT number if checkbox is checked
-  useEffect(() => {
-    if (isVatRegistered && bulstat && (!vatNumber || vatNumber === 'BG')) {
-      setVatNumber(`BG${bulstat}`);
-    } else if (!isVatRegistered && vatNumber === `BG${bulstat}`) {
-      setVatNumber('');
-    }
-  }, [isVatRegistered, bulstat]);
+
 
 
   useEffect(() => {
@@ -259,79 +252,90 @@ export default function AuthPage() {
         return;
       }
 
-      const { error } = await supabase.auth.signUp({
-        email: regEmail, password: regPassword,
+      const { error: checkError } = await supabase.auth.signUp({
+        email: regEmail,
+        password: regPassword,
         options: {
-          data: { 
-            full_name: regName.trim(), 
-            phone: normalizedPhone, 
-            role: 'user'
-          },
+          data: { full_name: regName.trim(), phone: normalizedPhone },
           captchaToken
-        },
+        }
       });
 
-      if (error) {
-        showToast(translateAuthError(error), 'error');
-      } else {
-        // Instead of immediate redirect, show onboarding questions
-        setView('onboarding');
-      }
+      // This is a bit of a hack to check for existing email/phone before onboarding
+      // But we don't want to actually commit yet if possible. 
+      // Actually, Supabase doesn't have a "check email" API easily without signing up.
+      // So we will just proceed to onboarding and catch errors during the final signUp.
+      
+      setView('onboarding');
     } catch (err: any) {
       showToast(translateAuthError(err), 'error');
     } finally {
       setLoading(false);
     }
   };
+
   const onCompleteOnboarding = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setLoading(true);
     try {
-      const updateData: any = {
+      const onboardingData: any = {
         is_company: !!isCompany,
         onboarding_completed: true,
         updated_at: new Date().toISOString()
       };
 
-
       if (isCompany) {
-        updateData.company_name = companyName;
-        updateData.bulstat = bulstat;
-        updateData.company_address = companyAddress;
-        updateData.company_person = companyPerson;
-        updateData.vat_registered = isVatRegistered;
-        updateData.vat_number = vatNumber;
+        onboardingData.company_name = companyName;
+        onboardingData.bulstat = bulstat;
+        onboardingData.company_address = companyAddress;
+        onboardingData.company_person = companyPerson;
+        onboardingData.vat_registered = isVatRegistered;
+        onboardingData.vat_number = vatNumber;
       }
 
-      // 1. Update public profile
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update(updateData)
-        .eq('id', user?.id);
+      if (user) {
+        // CASE: Auth user exists (Google Login or session)
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update(onboardingData)
+          .eq('id', user.id);
 
-      if (profileError) throw profileError;
+        if (profileError) throw profileError;
 
-      // 2. Update auth metadata
-      const { error: authError } = await supabase.auth.updateUser({
-        data: {
-          ...updateData
-        }
-      });
-      if (authError) throw authError;
+        const { error: authError } = await supabase.auth.updateUser({
+          data: onboardingData
+        });
+        if (authError) throw authError;
+
+      } else {
+        // CASE: New Email Registration - Create user ONLY NOW
+        const { error: signUpError } = await supabase.auth.signUp({
+          email: regEmail,
+          password: regPassword,
+          options: {
+            data: {
+              full_name: regName.trim(),
+              phone: formatToE164(regPhone),
+              role: 'user',
+              ...onboardingData
+            },
+            captchaToken
+          }
+        });
+
+        if (signUpError) throw signUpError;
+      }
 
       showToast(t('toast.register_success', 'Профилът е готов!'), 'success');
       const from = (location.state as any)?.from || '/';
       navigate(from, { replace: true });
     } catch (err: any) {
-
       showToast(err.message || 'Грешка при запис на данните', 'error');
-      // Still navigate if it's just a supplemental data error
-      const from = (location.state as any)?.from || '/';
-      navigate(from, { replace: true });
     } finally {
       setLoading(false);
     }
   };
+
   const onRecover = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
@@ -570,8 +574,8 @@ export default function AuthPage() {
             ) : (
               <form onSubmit={onCompleteOnboarding} className="space-y-4 fade-in">
                 <div className="space-y-4 pt-2">
-                  <SupabaseInput label="Име на фирмата" name="companyName" value={companyName} onChange={(e: any) => setCompanyName(e.target.value)} required />
-                  <SupabaseInput label="ЕИК / Булстат" name="bulstat" value={bulstat} onChange={(e: any) => setBulstat(e.target.value.replace(/[^0-9]/g, '').slice(0, 9))} required />
+                  <SupabaseInput label="Име на фирмата" name="companyName" value={companyName} onChange={(e: any) => setCompanyName(e.target.value)} placeholder="Пример: Декал Дизайн ЕООД" required />
+                  <SupabaseInput label="ЕИК / Булстат" name="bulstat" value={bulstat} onChange={(e: any) => setBulstat(e.target.value.replace(/[^0-9]/g, '').slice(0, 9))} placeholder="9 цифри (напр. 123456789)" required />
                   
                   <div className="flex items-center gap-2 px-1 cursor-pointer w-fit" onClick={() => setIsVatRegistered(!isVatRegistered)}>
                     <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${isVatRegistered ? 'bg-red-600 border-red-600' : 'border-zinc-700 bg-zinc-900'}`}>
@@ -586,11 +590,13 @@ export default function AuthPage() {
                        name="vatNumber" 
                        value={vatNumber} 
                        onChange={(e: any) => setVatNumber(e.target.value.toUpperCase())} 
+                       placeholder="Пример: BG123456789"
                      />
                   )}
 
-                  <SupabaseInput label="Адрес на регистрация" name="companyAddress" value={companyAddress} onChange={(e: any) => setCompanyAddress(e.target.value)} required />
-                  <SupabaseInput label="МОЛ" name="companyPerson" value={companyPerson} onChange={(e: any) => setCompanyPerson(e.target.value)} required />
+                  <SupabaseInput label="Адрес на регистрация" name="companyAddress" value={companyAddress} onChange={(e: any) => setCompanyAddress(e.target.value)} placeholder="Град, пощенски код, улица..." required />
+                  <SupabaseInput label="МОЛ" name="companyPerson" value={companyPerson} onChange={(e: any) => setCompanyPerson(e.target.value)} placeholder="Име на управителя" required />
+
                 </div>
 
 

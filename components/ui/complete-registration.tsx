@@ -97,14 +97,7 @@ export const CompleteRegistrationModal = () => {
     const [companyAddress, setCompanyAddress] = useState("");
     const [companyPerson, setCompanyPerson] = useState("");
 
-    // Effect to auto-fill VAT number if checkbox is checked
-    useEffect(() => {
-        if (isVatRegistered && bulstat && (!vatNumber || vatNumber === 'BG')) {
-            setVatNumber(`BG${bulstat}`);
-        } else if (!isVatRegistered && vatNumber === `BG${bulstat}`) {
-            setVatNumber('');
-        }
-    }, [isVatRegistered, bulstat]);
+
 
     useEffect(() => {
         // Correctly detect if registration is incomplete
@@ -390,15 +383,17 @@ export const CompleteRegistrationModal = () => {
                                         className="space-y-4 overflow-hidden"
                                     >
                                         <FloatingInput 
-                                            label="Наименование на фирмата (напр. 'Пример ЕООД')"
+                                            label="Наименование на фирмата"
                                             value={companyName}
                                             onChange={(e: any) => setCompanyName(e.target.value)}
+                                            placeholder="Пример: Декал Дизайн ЕООД"
                                             required={isCompany}
                                         />
                                         <FloatingInput 
                                             label="ЕИК / Булстат (9 цифри)"
                                             value={bulstat}
                                             onChange={(e: any) => setBulstat(e.target.value.replace(/[^0-9]/g, '').slice(0, 9))}
+                                            placeholder="напр. 123456789"
                                             required={isCompany}
                                         />
                                         <div className="pl-1">
@@ -411,23 +406,27 @@ export const CompleteRegistrationModal = () => {
                                         </div>
                                         {isVatRegistered && (
                                             <FloatingInput 
-                                                label="ДДС Номер (напр. BG123456789)"
+                                                label="ДДС Номер"
                                                 value={vatNumber}
                                                 onChange={(e: any) => setVatNumber(e.target.value.toUpperCase())}
+                                                placeholder="Пример: BG123456789"
                                             />
                                         )}
                                         <FloatingInput 
-                                            label="Адрес на регистрация (Град, п.к., улица и номер)"
+                                            label="Адрес на регистрация"
                                             value={companyAddress}
                                             onChange={(e: any) => setCompanyAddress(e.target.value)}
+                                            placeholder="Град, п.к., улица и номер"
                                             required={isCompany}
                                         />
                                         <FloatingInput 
-                                            label="МОЛ (Материално отговорно лице)"
+                                            label="МОЛ"
                                             value={companyPerson}
                                             onChange={(e: any) => setCompanyPerson(e.target.value)}
+                                            placeholder="Име на управителя"
                                             required={isCompany}
                                         />
+
                                     </motion.div>
                                 )}
                             </AnimatePresence>
