@@ -72,7 +72,7 @@ export default function AuthPage() {
   const { t } = useTranslation();
   const { showToast } = useToast();
 
-  const [view, setView] = useState<'login' | 'register' | 'recovery'>('login');
+  const [view, setView] = useState<'login' | 'register' | 'recovery' | 'onboarding'>('login');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string>();
@@ -257,9 +257,8 @@ export default function AuthPage() {
       if (error) {
         showToast(translateAuthError(error), 'error');
       } else {
-        showToast(t('toast.register_success', 'Регистрацията е успешна! Моля, потвърдете имейла си.'), 'success');
-        const from = (location.state as any)?.from || '/';
-        navigate(from, { replace: true });
+        // Instead of immediate redirect, show onboarding questions
+        setView('onboarding');
       }
     } catch (err: any) {
       showToast(translateAuthError(err), 'error');
@@ -267,7 +266,40 @@ export default function AuthPage() {
       setLoading(false);
     }
   };
+  const onCompleteOnboarding = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setLoading(true);
+    try {
+      if (isCompany) {
+        // Update user metadata with company info
+        const { error } = await supabase.auth.updateUser({
+          data: {
+            is_company: true,
+            company_name: companyName,
+            bulstat: bulstat,
+            company_address: companyAddress,
+            company_person: companyPerson
+          }
+        });
+        if (error) throw error;
+      } else {
+        await supabase.auth.updateUser({
+          data: { is_company: false }
+        });
+      }
 
+      showToast(t('toast.register_success', 'Профилът е готов!'), 'success');
+      const from = (location.state as any)?.from || '/';
+      navigate(from, { replace: true });
+    } catch (err: any) {
+      showToast(err.message || 'Грешка при запис на данните', 'error');
+      // Still navigate if it's just a supplemental data error
+      const from = (location.state as any)?.from || '/';
+      navigate(from, { replace: true });
+    } finally {
+      setLoading(false);
+    }
+  };
   const onRecover = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
@@ -400,112 +432,68 @@ export default function AuthPage() {
               <div className="flex-1 h-[1px] bg-zinc-800"></div>
             </div>
 
-            {isCompany === null ? (
-              <div className="space-y-6 py-4 fade-in">
-                <h2 className="text-[18px] font-medium text-white text-center">Искате ли да регистрирате фирма?</h2>
-                <div className="grid grid-cols-2 gap-4">
-                  <button
-                    onClick={() => setIsCompany(true)}
-                    className="flex flex-col items-center justify-center p-6 bg-zinc-900 border border-zinc-800 rounded-2xl hover:border-red-600 hover:bg-red-600/5 transition-all group"
-                  >
-                    <Building2 className="mb-3 text-zinc-500 group-hover:text-red-500" size={32} />
-                    <span className="text-[14px] font-medium text-zinc-300">Да, фирма</span>
-                  </button>
-                  <button
-                    onClick={() => setIsCompany(false)}
-                    className="flex flex-col items-center justify-center p-6 bg-zinc-900 border border-zinc-800 rounded-2xl hover:border-red-600 hover:bg-red-600/5 transition-all group"
-                  >
-                    <User className="mb-3 text-zinc-500 group-hover:text-red-500" size={32} />
-                    <span className="text-[14px] font-medium text-zinc-300">Не, частно лице</span>
-                  </button>
-                </div>
+            <form onSubmit={onSignUp} className="space-y-4 fade-in">
+              <SupabaseInput label="Име и Фамилия" name="name" value={regName} onChange={(e: any) => setRegName(e.target.value)} required />
+              
+              <SupabaseInput 
+                ref={phoneInputRef}
+                label="Телефон" 
+                name="phone" 
+                type="tel" 
+                value={regPhone} 
+                onFocus={(e: any) => {
+                  const val = e.target.value;
+                  setTimeout(() => e.target.setSelectionRange(val.length, val.length), 0);
+                }}
+                onKeyDown={(e: any) => {
+                  if (e.target.selectionStart <= 5 && (e.key === 'Backspace' || e.key === 'ArrowLeft' || e.key === 'Home')) {
+                    e.preventDefault();
+                  }
+                }}
+                onSelect={(e: any) => {
+                  const start = e.target.selectionStart;
+                  if (start !== null && start < 5) {
+                    e.target.setSelectionRange(5, Math.max(5, e.target.selectionEnd || 5));
+                  }
+                }}
+                onChange={(e: any) => {
+                  const val = e.target.value;
+                  const formatted = formatPhoneNumber(val);
+                  setRegPhone(formatted);
+                }} 
+                onClick={(e: any) => {
+                  if (e.target.selectionStart < 5) {
+                    e.target.setSelectionRange(e.target.value.length, e.target.value.length);
+                  }
+                }}
+                placeholder="+359 88 888 8888" 
+                required 
+              />
+              <SupabaseInput label="Имейл" name="email" type="email" value={regEmail} onChange={(e: any) => setRegEmail(e.target.value)} required />
+              
+              <SupabaseInput 
+                label="Парола"
+                name="password"
+                type={showPassword ? "text" : "password"}
+                icon={showPassword ? EyeOff : Eye}
+                onToggleIcon={() => setShowPassword(!showPassword)}
+                onChange={(e: any) => handlePasswordChange(e, setRegPassword)}
+                value={regPassword}
+                required
+              />
+
+              <div className="flex justify-center mt-2 min-h-[65px] w-full overflow-hidden">
+                <Turnstile siteKey="0x4AAAAAACn8KBpSOynPkBCf" onSuccess={(token) => setCaptchaToken(token)} options={{ theme: 'dark', size: 'flexible' }} />
               </div>
-            ) : (
-              <form onSubmit={onSignUp} className="space-y-4 fade-in">
-                <div className="flex items-center justify-between mb-4">
-                  <button 
-                    type="button" 
-                    onClick={() => setIsCompany(null)}
-                    className="text-[12px] text-zinc-500 hover:text-white flex items-center gap-1 transition-colors"
-                  >
-                    <ArrowLeft size={14} /> Назад
-                  </button>
-                  <span className="text-[12px] text-red-500 font-bold uppercase tracking-widest">
-                    {isCompany ? 'Фирмена регистрация' : 'Лична регистрация'}
-                  </span>
-                </div>
 
-                <SupabaseInput label="Име и Фамилия" name="name" value={regName} onChange={(e: any) => setRegName(e.target.value)} required />
-                
-                {isCompany && (
-                  <div className="space-y-4 pt-2 border-t border-zinc-900 mt-4">
-                    <SupabaseInput label="Име на фирмата" name="companyName" value={companyName} onChange={(e: any) => setCompanyName(e.target.value)} required />
-                    <SupabaseInput label="ЕИК / Булстат" name="bulstat" value={bulstat} onChange={(e: any) => setBulstat(e.target.value)} required />
-                    <SupabaseInput label="Адрес на регистрация" name="companyAddress" value={companyAddress} onChange={(e: any) => setCompanyAddress(e.target.value)} required />
-                    <SupabaseInput label="МОЛ" name="companyPerson" value={companyPerson} onChange={(e: any) => setCompanyPerson(e.target.value)} required />
-                  </div>
-                )}
-
-                <SupabaseInput 
-                  ref={phoneInputRef}
-                  label="Телефон" 
-                  name="phone" 
-                  type="tel" 
-                  value={regPhone} 
-                  onFocus={(e: any) => {
-                    const val = e.target.value;
-                    setTimeout(() => e.target.setSelectionRange(val.length, val.length), 0);
-                  }}
-                  onKeyDown={(e: any) => {
-                    if (e.target.selectionStart <= 5 && (e.key === 'Backspace' || e.key === 'ArrowLeft' || e.key === 'Home')) {
-                      e.preventDefault();
-                    }
-                  }}
-                  onSelect={(e: any) => {
-                    const start = e.target.selectionStart;
-                    if (start !== null && start < 5) {
-                      e.target.setSelectionRange(5, Math.max(5, e.target.selectionEnd || 5));
-                    }
-                  }}
-                  onChange={(e: any) => {
-                    const val = e.target.value;
-                    const formatted = formatPhoneNumber(val);
-                    setRegPhone(formatted);
-                  }} 
-                  onClick={(e: any) => {
-                    if (e.target.selectionStart < 5) {
-                      e.target.setSelectionRange(e.target.value.length, e.target.value.length);
-                    }
-                  }}
-                  placeholder="+359 88 888 8888" 
-                  required 
-                />
-                <SupabaseInput label="Имейл" name="email" type="email" value={regEmail} onChange={(e: any) => setRegEmail(e.target.value)} required />
-                
-                <SupabaseInput 
-                  label="Парола"
-                  name="password"
-                  type={showPassword ? "text" : "password"}
-                  icon={showPassword ? EyeOff : Eye}
-                  onToggleIcon={() => setShowPassword(!showPassword)}
-                  onChange={(e: any) => handlePasswordChange(e, setRegPassword)}
-                  value={regPassword}
-                  required
-                />
-
-                <div className="flex justify-center mt-2 min-h-[65px] w-full overflow-hidden">
-                  <Turnstile siteKey="0x4AAAAAACn8KBpSOynPkBCf" onSuccess={(token) => setCaptchaToken(token)} options={{ theme: 'dark', size: 'flexible' }} />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center py-2 rounded-md transition-colors text-[14px] font-medium disabled:opacity-50"
-                >
-                  {loading ? <Loader2 size={18} className="animate-spin" /> : "Регистрация"}
-                </button>
-              </form>
-            )}
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center py-2 rounded-md transition-colors text-[14px] font-medium disabled:opacity-50"
+              >
+                {loading ? <Loader2 size={18} className="animate-spin" /> : "Регистрация"}
+              </button>
+            </form>
 
             <div className="mt-8 text-center text-[14px] text-zinc-500">
               Вече имате профил?{' '}
@@ -519,7 +507,61 @@ export default function AuthPage() {
                 </button>
               </div>
             </div>
-            
+          </div>
+        )}
+
+        {view === 'onboarding' && (
+          <div className="w-full fade-in">
+            <h1 className="text-[24px] font-semibold text-white mb-1 tracking-tight">Почти приключихме!</h1>
+            <p className="text-[14px] text-zinc-500 mb-8">Искате ли да довършим профила ви с фирмени данни?</p>
+
+            {isCompany === null ? (
+              <div className="space-y-6 py-4">
+                <h2 className="text-[18px] font-medium text-white text-center">Искате ли да регистрирате фирма?</h2>
+                <div className="grid grid-cols-2 gap-4">
+                  <button
+                    onClick={() => setIsCompany(true)}
+                    className="flex flex-col items-center justify-center p-6 bg-zinc-900 border border-zinc-800 rounded-2xl hover:border-red-600 hover:bg-red-600/5 transition-all group"
+                  >
+                    <Building2 className="mb-3 text-zinc-500 group-hover:text-red-500" size={32} />
+                    <span className="text-[14px] font-medium text-zinc-300">Да, фирма</span>
+                  </button>
+                  <button
+                    onClick={() => onCompleteOnboarding()}
+                    className="flex flex-col items-center justify-center p-6 bg-zinc-900 border border-zinc-800 rounded-2xl hover:border-red-600 hover:bg-red-600/5 transition-all group"
+                  >
+                    <User className="mb-3 text-zinc-500 group-hover:text-red-500" size={32} />
+                    <span className="text-[14px] font-medium text-zinc-300">Не, по-късно</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={onCompleteOnboarding} className="space-y-4 fade-in">
+                <div className="space-y-4 pt-2">
+                  <SupabaseInput label="Име на фирмата" name="companyName" value={companyName} onChange={(e: any) => setCompanyName(e.target.value)} required />
+                  <SupabaseInput label="ЕИК / Булстат" name="bulstat" value={bulstat} onChange={(e: any) => setBulstat(e.target.value)} required />
+                  <SupabaseInput label="Адрес на регистрация" name="companyAddress" value={companyAddress} onChange={(e: any) => setCompanyAddress(e.target.value)} required />
+                  <SupabaseInput label="МОЛ" name="companyPerson" value={companyPerson} onChange={(e: any) => setCompanyPerson(e.target.value)} required />
+                </div>
+
+                <div className="flex gap-4 mt-6">
+                  <button
+                    type="button"
+                    onClick={() => setIsCompany(null)}
+                    className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white py-2 rounded-md transition-colors text-[14px] font-medium"
+                  >
+                    Назад
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="flex-[2] bg-red-600 hover:bg-red-700 text-white flex items-center justify-center py-2 rounded-md transition-colors text-[14px] font-medium disabled:opacity-50"
+                  >
+                    {loading ? <Loader2 size={18} className="animate-spin" /> : "Запази фирмени данни"}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         )}
 
