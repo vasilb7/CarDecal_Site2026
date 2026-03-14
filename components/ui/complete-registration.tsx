@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { useTranslation } from 'react-i18next';
-import { Loader2, User, Phone } from 'lucide-react';
+import { Loader2, User, Phone, CheckSquare, Square } from 'lucide-react';
 import { useToast } from '../Toast/ToastProvider';
 import { isValidBulgarianPhone, formatToE164, formatPhoneNumber } from '../../lib/utils';
 
@@ -14,7 +14,9 @@ const FloatingInput = ({
     required = false, 
     value,
     onChange,
+    className = "",
     ...props 
+
 }: any) => {
     const [isFocused, setIsFocused] = useState(false);
 
@@ -48,15 +50,17 @@ const FloatingInput = ({
                         setIsFocused(false);
                         if (props.onBlur) props.onBlur(e);
                     }}
-                    className={`w-full bg-white/[0.03] border ${isFocused ? 'border-red-600 shadow-[0_0_25px_rgba(239,68,68,0.15)]' : 'border-white/10'} rounded-xl px-4 py-4 pl-12 shadow-sm outline-none text-white placeholder-transparent transition-all`}
+                    className={`w-full bg-white/[0.03] border ${isFocused ? 'border-red-600 shadow-[0_0_25px_rgba(239,68,68,0.15)]' : 'border-white/10'} rounded-xl px-4 py-4 ${icon ? 'pl-12' : ''} shadow-sm outline-none text-white placeholder-transparent transition-all ${className}`}
                     required={required}
                     placeholder=" "
                 />
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-20">
-                    {React.cloneElement(icon as React.ReactElement, {
-                        className: `w-5 h-5 transition-all duration-300 ${isFocused ? 'text-red-500 scale-110' : (value ? 'text-white/80' : 'text-white/30')}`
-                    })}
-                </div>
+                {icon && (
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-20">
+                        {React.cloneElement(icon as React.ReactElement, {
+                            className: `w-5 h-5 transition-all duration-300 ${isFocused ? 'text-red-500 scale-110' : (value ? 'text-white/80' : 'text-white/30')}`
+                        })}
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -85,28 +89,32 @@ export const CompleteRegistrationModal = () => {
 
 
 
-    const isPasswordUser = 
-        user?.app_metadata?.provider === 'email' || 
-        user?.identities?.some((id: any) => id.provider === 'email') || 
-        user?.user_metadata?.has_password === true;
+    const [isCompany, setIsCompany] = useState(false);
+    const [companyName, setCompanyName] = useState("");
+    const [bulstat, setBulstat] = useState("");
+    const [isVatRegistered, setIsVatRegistered] = useState(false);
+    const [vatNumber, setVatNumber] = useState("");
+    const [companyAddress, setCompanyAddress] = useState("");
+    const [companyPerson, setCompanyPerson] = useState("");
+
+    // Effect to auto-fill VAT number if checkbox is checked
+    useEffect(() => {
+        if (isVatRegistered && bulstat && (!vatNumber || vatNumber === 'BG')) {
+            setVatNumber(`BG${bulstat}`);
+        } else if (!isVatRegistered && vatNumber === `BG${bulstat}`) {
+            setVatNumber('');
+        }
+    }, [isVatRegistered, bulstat]);
 
     useEffect(() => {
         // Correctly detect if registration is incomplete
         const userPhone = user?.user_metadata?.phone || profile?.phone;
         const userName = user?.user_metadata?.full_name || profile?.full_name;
         
-        // For Google/Social users without password, we only strictly need a nickname/name
-        // For standard users, we might still want phone for delivery
-        // The user specifically asked: "if they don't have password, only ask for nickname"
-        
         let needsCompletion = false;
         if (!user || authLoading) {
             needsCompletion = false;
-        } else if (!isPasswordUser) {
-            // Social login - only strictly need a nickname if not present
-            needsCompletion = !userName;
         } else {
-            // Email login - standard flow (needs name and phone for delivery)
             needsCompletion = !userName || !userPhone;
         }
 
@@ -128,7 +136,7 @@ export const CompleteRegistrationModal = () => {
         } else {
             setIsOpen(false);
         }
-    }, [user, profile, authLoading, isInitialized, isPasswordUser]);
+    }, [user, profile, authLoading, isInitialized]);
     
     // Detect mobile keyboard close effect properly
     useEffect(() => {
@@ -172,9 +180,16 @@ export const CompleteRegistrationModal = () => {
             return;
         }
 
-        if (isPasswordUser && !isValidBulgarianPhone(phone)) {
+        if (!isValidBulgarianPhone(phone)) {
             showToast('Невалиден телефон! (8-15 цифри)', 'error');
             return;
+        }
+
+        if (isCompany) {
+            if (!companyName || !bulstat || !companyAddress || !companyPerson) {
+                showToast('Моля, попълнете всички задължителни данни за фирмата.', 'error');
+                return;
+            }
         }
 
         setLoading(true);
@@ -190,6 +205,18 @@ export const CompleteRegistrationModal = () => {
             
             if (normalizedPhone) {
                 updateData.phone = normalizedPhone;
+            }
+
+            if (isCompany) {
+                updateData.is_company = true;
+                updateData.company_name = companyName;
+                updateData.bulstat = bulstat;
+                updateData.company_address = companyAddress;
+                updateData.company_person = companyPerson;
+                updateData.vat_registered = isVatRegistered;
+                updateData.vat_number = vatNumber;
+            } else {
+                updateData.is_company = false;
             }
 
             const { error: profileError } = await supabase
@@ -213,6 +240,18 @@ export const CompleteRegistrationModal = () => {
             
             if (normalizedPhone) {
                 authUpdateData.data.phone = normalizedPhone;
+            }
+
+            if (isCompany) {
+                authUpdateData.data.is_company = true;
+                authUpdateData.data.company_name = companyName;
+                authUpdateData.data.bulstat = bulstat;
+                authUpdateData.data.company_address = companyAddress;
+                authUpdateData.data.company_person = companyPerson;
+                authUpdateData.data.vat_registered = isVatRegistered;
+                authUpdateData.data.vat_number = vatNumber;
+            } else {
+                authUpdateData.data.is_company = false;
             }
 
             const { error: authError } = await supabase.auth.updateUser(authUpdateData);
@@ -244,11 +283,7 @@ export const CompleteRegistrationModal = () => {
     
     let isBlocking = false;
     if (user && !authLoading) {
-        if (!isPasswordUser) {
-            isBlocking = !userName;
-        } else {
-            isBlocking = !userName || !userPhone;
-        }
+        isBlocking = !userName || !userPhone;
     }
 
     if (!isBlocking && !isOpen) return null;
@@ -278,13 +313,11 @@ export const CompleteRegistrationModal = () => {
                                 Завършете регистрацията
                             </h2>
                             <p className="text-zinc-400 text-sm md:text-base leading-relaxed px-2">
-                                {isPasswordUser 
-                                    ? 'За да продължите, моля, потвърдете Вашите имена и въведете телефонен номер за връзка относно поръчките Ви.'
-                                    : 'За Вашата сигурност и по-добра идентификация, моля, въведете Вашето име или псевдоним.'}
+                                За да продължите, моля, потвърдете Вашите имена и въведете телефонен номер за връзка относно поръчките Ви.
                             </p>
                         </div>
 
-                        <form onSubmit={handleSubmit} className="space-y-10">
+                        <form onSubmit={handleSubmit} className="space-y-6">
                             <FloatingInput 
                                 label="Име и Фамилия"
                                 icon={
@@ -300,10 +333,9 @@ export const CompleteRegistrationModal = () => {
                                 required
                             />
 
-                            {isPasswordUser && (
-                                <FloatingInput 
-                                    label="Телефонен номер"
-                                    icon={
+                            <FloatingInput 
+                                label="Телефонен номер"
+                                icon={
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                                             <path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z" />
                                             <path d="M15 7a2 2 0 0 1 2 2" />
@@ -330,15 +362,74 @@ export const CompleteRegistrationModal = () => {
                                         }
                                     }}
                                     onSelect={(e: any) => {
-                                        const start = e.target.selectionStart;
-                                        if (start !== null && start < 5) {
-                                            e.target.setSelectionRange(5, Math.max(5, e.target.selectionEnd || 5));
-                                        }
-                                    }}
-                                />
-                            )}
+                                    const start = e.target.selectionStart;
+                                    if (start !== null && start < 5) {
+                                        e.target.setSelectionRange(5, Math.max(5, e.target.selectionEnd || 5));
+                                    }
+                                }}
+                            />
 
-                            <div className="pt-4">
+                            <div className="pt-2">
+                                <label className="flex items-center gap-2 cursor-pointer w-fit" onClick={() => setIsCompany(!isCompany)}>
+                                    <div className={`w-5 h-5 rounded flex items-center justify-center transition-colors ${isCompany ? 'bg-red-600 text-white' : 'bg-white/10 text-transparent border border-white/20'}`}>
+                                        <CheckSquare className="w-4 h-4" />
+                                    </div>
+                                    <span className="text-white text-sm">Искате ли да регистрирате фирма?</span>
+                                </label>
+                            </div>
+
+                            <AnimatePresence>
+                                {isCompany && (
+                                    <motion.div 
+                                        initial={{ opacity: 0, height: 0 }}
+                                        animate={{ opacity: 1, height: "auto" }}
+                                        exit={{ opacity: 0, height: 0 }}
+                                        className="space-y-4 overflow-hidden"
+                                    >
+                                        <FloatingInput 
+                                            label="Наименование на фирмата (напр. 'Пример ЕООД')"
+                                            value={companyName}
+                                            onChange={(e: any) => setCompanyName(e.target.value)}
+                                            required={isCompany}
+                                        />
+                                        <FloatingInput 
+                                            label="ЕИК / Булстат (9 цифри)"
+                                            value={bulstat}
+                                            onChange={(e: any) => setBulstat(e.target.value.replace(/[^0-9]/g, '').slice(0, 9))}
+                                            required={isCompany}
+                                        />
+                                        <div className="pl-1">
+                                            <label className="flex items-center gap-2 cursor-pointer w-fit" onClick={() => setIsVatRegistered(!isVatRegistered)}>
+                                                <div className={`w-5 h-5 rounded flex items-center justify-center transition-colors ${isVatRegistered ? 'bg-red-600 text-white' : 'bg-white/10 text-transparent border border-white/20'}`}>
+                                                    <CheckSquare className="w-4 h-4" />
+                                                </div>
+                                                <span className="text-white text-sm">Регистрирана по ДДС</span>
+                                            </label>
+                                        </div>
+                                        {isVatRegistered && (
+                                            <FloatingInput 
+                                                label="ДДС Номер (напр. BG123456789)"
+                                                value={vatNumber}
+                                                onChange={(e: any) => setVatNumber(e.target.value.toUpperCase())}
+                                            />
+                                        )}
+                                        <FloatingInput 
+                                            label="Адрес на регистрация (Град, п.к., улица и номер)"
+                                            value={companyAddress}
+                                            onChange={(e: any) => setCompanyAddress(e.target.value)}
+                                            required={isCompany}
+                                        />
+                                        <FloatingInput 
+                                            label="МОЛ (Материално отговорно лице)"
+                                            value={companyPerson}
+                                            onChange={(e: any) => setCompanyPerson(e.target.value)}
+                                            required={isCompany}
+                                        />
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+
+                            <div className="pt-6">
                                 <motion.button
                                     whileHover={{ scale: 1.02 }}
                                     whileTap={{ scale: 0.98 }}

@@ -4,12 +4,13 @@ import { supabase } from '../lib/supabase';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useToast } from '../hooks/useToast';
 import { recordFailedLogin, recordSuccessfulLogin, logSecurityEvent } from '../lib/security';
+import { useAuth } from '../context/AuthContext';
 import { validatePassword, translateAuthError } from '../lib/passwordUtils';
 import { isValidPhone as isValidBulgarianPhone, isValidFullName, formatToE164, formatPhoneNumber } from '../lib/utils';
 import ReportBugModal from '../components/ReportBugModal';
 import { hasProfanity } from '../lib/profanity';
 import { Turnstile } from '@marsidev/react-turnstile';
-import { Eye, EyeOff, Loader2, CheckCircle2, ArrowLeft, Building2, User } from 'lucide-react';
+import { Eye, EyeOff, Loader2, CheckCircle2, ArrowLeft, Building2, User, Check } from 'lucide-react';
 
 const GoogleIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -71,6 +72,8 @@ export default function AuthPage() {
   const location = useLocation();
   const { t } = useTranslation();
   const { showToast } = useToast();
+  const { user } = useAuth();
+
 
   const [view, setView] = useState<'login' | 'register' | 'recovery' | 'onboarding'>('login');
   const [loading, setLoading] = useState(false);
@@ -94,10 +97,23 @@ export default function AuthPage() {
   const [bulstat, setBulstat] = useState("");
   const [companyAddress, setCompanyAddress] = useState("");
   const [companyPerson, setCompanyPerson] = useState("");
+  const [isVatRegistered, setIsVatRegistered] = useState(false);
+  const [vatNumber, setVatNumber] = useState("");
+
 
   // Recovery Fields
   const [recoveryEmail, setRecoveryEmail] = useState("");
   const [recoverySent, setRecoverySent] = useState(false);
+
+  // Effect to auto-fill VAT number if checkbox is checked
+  useEffect(() => {
+    if (isVatRegistered && bulstat && (!vatNumber || vatNumber === 'BG')) {
+      setVatNumber(`BG${bulstat}`);
+    } else if (!isVatRegistered && vatNumber === `BG${bulstat}`) {
+      setVatNumber('');
+    }
+  }, [isVatRegistered, bulstat]);
+
 
   useEffect(() => {
     if (location.pathname === '/register') setView('register');
@@ -270,28 +286,41 @@ export default function AuthPage() {
     if (e) e.preventDefault();
     setLoading(true);
     try {
+      const updateData: any = {
+        is_company: !!isCompany,
+        updated_at: new Date().toISOString()
+      };
+
       if (isCompany) {
-        // Update user metadata with company info
-        const { error } = await supabase.auth.updateUser({
-          data: {
-            is_company: true,
-            company_name: companyName,
-            bulstat: bulstat,
-            company_address: companyAddress,
-            company_person: companyPerson
-          }
-        });
-        if (error) throw error;
-      } else {
-        await supabase.auth.updateUser({
-          data: { is_company: false }
-        });
+        updateData.company_name = companyName;
+        updateData.bulstat = bulstat;
+        updateData.company_address = companyAddress;
+        updateData.company_person = companyPerson;
+        updateData.vat_registered = isVatRegistered;
+        updateData.vat_number = vatNumber;
       }
+
+      // 1. Update public profile
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update(updateData)
+        .eq('id', user?.id);
+
+      if (profileError) throw profileError;
+
+      // 2. Update auth metadata
+      const { error: authError } = await supabase.auth.updateUser({
+        data: {
+          ...updateData
+        }
+      });
+      if (authError) throw authError;
 
       showToast(t('toast.register_success', 'Профилът е готов!'), 'success');
       const from = (location.state as any)?.from || '/';
       navigate(from, { replace: true });
     } catch (err: any) {
+
       showToast(err.message || 'Грешка при запис на данните', 'error');
       // Still navigate if it's just a supplemental data error
       const from = (location.state as any)?.from || '/';
@@ -539,10 +568,28 @@ export default function AuthPage() {
               <form onSubmit={onCompleteOnboarding} className="space-y-4 fade-in">
                 <div className="space-y-4 pt-2">
                   <SupabaseInput label="Име на фирмата" name="companyName" value={companyName} onChange={(e: any) => setCompanyName(e.target.value)} required />
-                  <SupabaseInput label="ЕИК / Булстат" name="bulstat" value={bulstat} onChange={(e: any) => setBulstat(e.target.value)} required />
+                  <SupabaseInput label="ЕИК / Булстат" name="bulstat" value={bulstat} onChange={(e: any) => setBulstat(e.target.value.replace(/[^0-9]/g, '').slice(0, 9))} required />
+                  
+                  <div className="flex items-center gap-2 px-1 cursor-pointer w-fit" onClick={() => setIsVatRegistered(!isVatRegistered)}>
+                    <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${isVatRegistered ? 'bg-red-600 border-red-600' : 'border-zinc-700 bg-zinc-900'}`}>
+                      {isVatRegistered && <Check size={12} className="text-white" />}
+                    </div>
+                    <span className="text-[13px] text-zinc-400">Регистрирана по ДДС</span>
+                  </div>
+
+                  {isVatRegistered && (
+                    <SupabaseInput 
+                       label="ДДС Номер" 
+                       name="vatNumber" 
+                       value={vatNumber} 
+                       onChange={(e: any) => setVatNumber(e.target.value.toUpperCase())} 
+                     />
+                  )}
+
                   <SupabaseInput label="Адрес на регистрация" name="companyAddress" value={companyAddress} onChange={(e: any) => setCompanyAddress(e.target.value)} required />
                   <SupabaseInput label="МОЛ" name="companyPerson" value={companyPerson} onChange={(e: any) => setCompanyPerson(e.target.value)} required />
                 </div>
+
 
                 <div className="flex gap-4 mt-6">
                   <button
