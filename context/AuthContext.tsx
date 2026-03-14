@@ -233,6 +233,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         .single();
 
       if (!error && data) {
+        // Sync with Google metadata if missing or changed
+        const meta = session?.user?.user_metadata;
+        if (meta) {
+          const updates: any = {};
+          if (!data.full_name && (meta.full_name || meta.name)) updates.full_name = meta.full_name || meta.name;
+          if (!data.avatar_url && (meta.avatar_url || meta.picture)) updates.avatar_url = meta.avatar_url || meta.picture;
+          if (!data.email && session.user.email) updates.email = session.user.email;
+
+          if (Object.keys(updates).length > 0) {
+            await supabase.from('profiles').update(updates).eq('id', userId);
+            // Update local data object for the current state update
+            Object.assign(data, updates);
+          }
+        }
+
         // If account was scheduled for deletion, cancel it upon login/fetch
         if (data.deletion_scheduled_at) {
           const { error: restoreError } = await supabase

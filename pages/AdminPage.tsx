@@ -14,7 +14,7 @@ import {
     UserCheck, UserX, Crown, Upload, Video, Film, AlertCircle, Mail,
     Megaphone, Palette, Type, ShoppingBag, Receipt, Printer, Download,
     FileText, BoxSelect, LayoutGrid, ClipboardCheck, Boxes, FileJson, Clock, Bug,
-    Banknote, TrendingUp, Key, ChevronRight, History, Ticket, Building2
+    Banknote, TrendingUp, Key, ChevronRight, History, Ticket, Building2, Phone, Calendar
 } from 'lucide-react';
 import { revokeAllUserDevices } from '../lib/device-service';
 import { useToast } from '../components/Toast/ToastProvider';
@@ -942,7 +942,7 @@ const UsersTab: React.FC = () => {
     const [modHistory, setModHistory] = useState<any[]>([]);
     const [modHistoryLoading, setModHistoryLoading] = useState(false);
     const [modStatusFilter, setModStatusFilter] = useState<'all' | 'active' | 'temporarily_suspended' | 'permanently_banned'>('all');
-    const [onboardingFilter, setOnboardingFilter] = useState<'all' | 'completed' | 'pending'>('completed'); // Default to showing only completed
+    const [onboardingFilter, setOnboardingFilter] = useState<'all' | 'completed' | 'pending'>('all'); // Default to showing all users to prevent confusion
 
     
     // Auto-refresh timer to re-evaluate effective statuses
@@ -1374,43 +1374,42 @@ const UsersTab: React.FC = () => {
                     </button>
                 </div>
 
-                {/* Onboarding Filter Pills */}
-                <div className="flex items-center gap-2 flex-wrap mb-1">
-                    {[
-                        { key: 'all', label: 'Всички Профили', count: users.length },
-                        { key: 'completed', label: 'Завършени', count: users.filter(u => u.onboarding_completed).length },
-                        { key: 'pending', label: 'Непълни (Onboarding)', count: users.filter(u => !u.onboarding_completed).length },
-                    ].map(f => (
-                        <button
-                            key={f.key}
-                            onClick={() => setOnboardingFilter(f.key as any)}
-                            className={`px-3 py-2 text-[10px] uppercase tracking-widest border transition-all flex items-center gap-1.5 ${onboardingFilter === f.key ? 'border-red-600/60 bg-red-600/20 text-white' : 'border-white/5 text-zinc-500 hover:text-zinc-400'}`}
-                        >
-                            {f.key === 'pending' && <Clock className="w-3 h-3 text-red-500" />}
-                            {f.label}
-                            {f.count > 0 && <span className="text-[9px] opacity-60">({f.count})</span>}
-                        </button>
-                    ))}
-                </div>
+                {/* Filter Pills */}
+                <div className="flex flex-wrap items-center gap-4">
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[10px] text-zinc-600 uppercase font-bold mr-1">Onboarding:</span>
+                        {[
+                            { key: 'all', label: 'Всички', count: users.length },
+                            { key: 'completed', label: 'Завършени', count: users.filter(u => u.onboarding_completed).length },
+                            { key: 'pending', label: 'Непълни', count: users.filter(u => !u.onboarding_completed).length },
+                        ].map(f => (
+                            <button
+                                key={f.key}
+                                onClick={() => setOnboardingFilter(f.key as any)}
+                                className={`px-3 py-1.5 text-[10px] uppercase tracking-widest border transition-all ${onboardingFilter === f.key ? 'border-red-600/40 bg-red-600/10 text-white' : 'border-white/5 text-zinc-500 hover:text-white'}`}
+                            >
+                                {f.label} ({f.count})
+                            </button>
+                        ))}
+                    </div>
 
-                {/* Status Filter Pills */}
-                <div className="flex items-center gap-2 flex-wrap">
-
-                    {[
-                        { key: 'all', label: 'Всички', count: users.length },
-                        { key: 'active', label: 'Активни', count: users.filter(u => getEffectiveStatus(u) === 'active').length },
-                        { key: 'temporarily_suspended', label: 'Временно Огр.', count: users.filter(u => getEffectiveStatus(u) === 'temporarily_suspended').length },
-                        { key: 'permanently_banned', label: 'Перманентно Огр.', count: users.filter(u => getEffectiveStatus(u) === 'permanently_banned').length },
-                    ].map(f => (
-                        <button
-                            key={f.key}
-                            onClick={() => setModStatusFilter(f.key as any)}
-                            className={`px-3 py-1.5 text-[10px] uppercase tracking-widest border transition-all flex items-center gap-1.5 ${modStatusFilter === f.key ? 'border-red-600/40 bg-red-600/10 text-white' : 'border-white/5 text-zinc-500 hover:text-white hover:border-white/10'}`}
-                        >
-                            {f.label}
-                            {f.count > 0 && <span className="text-[9px] opacity-60">({f.count})</span>}
-                        </button>
-                    ))}
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[10px] text-zinc-600 uppercase font-bold mr-1">Статус:</span>
+                        {[
+                            { key: 'all', label: 'Всички', count: users.length },
+                            { key: 'active', label: 'Активни', count: users.filter(u => getEffectiveStatus(u) === 'active').length },
+                            { key: 'temporarily_suspended', label: 'Временно', count: users.filter(u => getEffectiveStatus(u) === 'temporarily_suspended').length },
+                            { key: 'permanently_banned', label: 'Перманентно', count: users.filter(u => getEffectiveStatus(u) === 'permanently_banned').length },
+                        ].map(f => (
+                            <button
+                                key={f.key}
+                                onClick={() => setModStatusFilter(f.key as any)}
+                                className={`px-3 py-1.5 text-[10px] uppercase tracking-widest border transition-all ${modStatusFilter === f.key ? 'border-red-600/40 bg-red-600/10 text-white' : 'border-white/5 text-zinc-500 hover:text-white'}`}
+                            >
+                                {f.label} ({f.count})
+                            </button>
+                        ))}
+                    </div>
                 </div>
             </div>
 
@@ -1419,7 +1418,7 @@ const UsersTab: React.FC = () => {
                     <Loader2 className="w-8 h-8 text-red-600 animate-spin" />
                 </div>
             ) : (
-                <div className="space-y-2">
+                <div className="space-y-3">
                     {filtered.map(u => {
                         const effectiveStatus = getEffectiveStatus(u);
                         const badge = modStatusBadge(u);
@@ -1429,208 +1428,121 @@ const UsersTab: React.FC = () => {
                         const hasDeletionRequest = !!u.deletion_requested_at;
 
                         return (
-                        <div key={u.id} className={`flex flex-col md:flex-row md:items-center justify-between gap-3 p-4 border ${!isActive ? 'border-red-900/40 bg-red-950/10' : 'border-white/5 bg-white/2'} hover:border-white/10 transition-colors cursor-pointer group/row`} onClick={() => setUserProfileModal(u)}>
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-full overflow-hidden bg-zinc-900 flex-shrink-0">
-                                    {u.avatar_url ? (
-                                        <img src={u.avatar_url} alt={u.full_name || ''} className="w-full h-full object-cover" />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-zinc-600 text-lg font-bold">
-                                            {(u.full_name || u.email || '?')[0].toUpperCase()}
+                            <div key={u.id} className={`flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 md:p-5 border ${!isActive ? 'border-red-900/40 bg-red-950/10' : 'border-white/5 bg-white/[0.02]'} hover:border-white/10 transition-all cursor-pointer group/row relative overflow-hidden`} onClick={() => setUserProfileModal(u)}>
+                                {/* Status Accent */}
+                                <div className={`absolute left-0 top-0 bottom-0 w-1 ${badge.cls.includes('emerald') ? 'bg-emerald-600' : badge.cls.includes('amber') ? 'bg-amber-600' : 'bg-red-600'}`} />
+                                
+                                <div className="flex items-center gap-4 relative z-10">
+                                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-full overflow-hidden bg-zinc-900 border border-white/10 flex-shrink-0 shadow-lg">
+                                        {u.avatar_url ? (
+                                            <img src={u.avatar_url} alt={u.full_name || ''} className="w-full h-full object-cover" />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center text-zinc-600 text-lg md:text-xl font-black bg-gradient-to-br from-zinc-800 to-zinc-900">
+                                                {(u.full_name || u.email || '?')[0].toUpperCase()}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div>
+                                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                                            <p className="text-white font-black text-sm md:text-base group-hover/row:text-red-500 transition-colors uppercase tracking-widest leading-none">
+                                                {u.full_name || u.email?.split('@')[0] || 'Unknown'}
+                                            </p>
+                                            <span className={`text-[9px] px-2 py-0.5 rounded font-black uppercase tracking-widest border ${badge.cls}`}>{badge.label}</span>
+                                            {u.is_company && u.company_name && (
+                                                <span className="text-[9px] bg-blue-900/40 text-blue-400 px-2 py-0.5 rounded font-black uppercase tracking-widest border border-blue-800/20 flex items-center gap-1">
+                                                    <Building2 size={10} /> {u.company_name}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-zinc-500 text-[10px] md:text-[11px] font-medium">
+                                            <span className="flex items-center gap-1.5 transition-colors group-hover/row:text-zinc-300 whitespace-nowrap">
+                                                <Mail size={12} className="text-red-600" />
+                                                {u.email}
+                                            </span>
+                                            {u.phone && (
+                                                <span className="flex items-center gap-1.5 transition-colors group-hover/row:text-zinc-300 whitespace-nowrap">
+                                                    <Phone size={12} className="text-emerald-600" />
+                                                    {u.phone}
+                                                </span>
+                                            )}
+                                            <span className="flex items-center gap-1.5 text-zinc-600 whitespace-nowrap">
+                                                <Calendar size={12} />
+                                                Joined {new Date(u.created_at).toLocaleDateString('bg-BG')}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Quick Admin Notes */}
+                                <div className="flex-1 max-w-full md:max-w-xs md:mx-4" onClick={e => e.stopPropagation()}>
+                                    <div className="relative group/note">
+                                        <textarea
+                                            defaultValue={u.admin_notes || ''}
+                                            onBlur={e => updateAdminNotes(u.id, e.target.value)}
+                                            placeholder="Internal notes..."
+                                            className="w-full bg-black/60 border border-white/5 focus:border-red-600/40 rounded p-2 text-[11px] text-zinc-400 focus:text-white placeholder-zinc-800 focus:outline-none transition-all resize-none h-14 md:h-16 leading-tight font-medium"
+                                        />
+                                        <div className="absolute top-1 right-2 opacity-30">
+                                            <FileText size={10} />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Actions */}
+                                <div className="flex items-center gap-2 flex-wrap" onClick={e => e.stopPropagation()}>
+                                    <button onClick={() => setUserProfileModal(u)} className="p-2.5 text-zinc-400 hover:text-white hover:bg-white/5 border border-white/5 transition-all" title="View Profile">
+                                        <Eye size={16} />
+                                    </button>
+
+                                    {/* Role Select */}
+                                    <div className="flex items-center gap-0.5 bg-black/40 border border-white/5 p-0.5 rounded">
+                                        {(['user', 'editor', 'admin'] as const).map(role => (
+                                            <button
+                                                key={role}
+                                                disabled={updatingId === u.id || u.id === currentUser?.id}
+                                                onClick={() => handleRoleUpdate(u, role)}
+                                                className={`px-2 py-1.5 text-[9px] uppercase font-black tracking-widest transition-all rounded ${u.role === role ? (role === 'admin' ? 'bg-red-600 text-white shadow-lg shadow-red-600/20' : role === 'editor' ? 'bg-amber-600 text-black' : 'bg-zinc-700 text-white') : 'text-zinc-600 hover:text-zinc-400'}`}
+                                            >
+                                                {role === 'admin' ? 'Adm' : role === 'editor' ? 'Edit' : 'User'}
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    {/* Bans */}
+                                    {u.id !== currentUser?.id && (
+                                        <div className="flex items-center gap-2 border-l border-white/5 pl-2 ml-1">
+                                            {isActive ? (
+                                                <>
+                                                    <button onClick={() => openModModal(u, 'temp_ban')} className="p-2.5 text-amber-500/60 hover:text-amber-500 hover:bg-amber-500/10 transition-all" title="Temp Ban">
+                                                        <Clock size={16} />
+                                                    </button>
+                                                    <button onClick={() => openModModal(u, 'perm_ban')} className="p-2.5 text-red-500/60 hover:text-red-500 hover:bg-red-500/10 transition-all" title="Perm Ban">
+                                                        <ShieldBan size={16} />
+                                                    </button>
+                                                </>
+                                            ) : (
+                                                <button onClick={() => openModModal(u, 'unban')} className="p-2.5 text-emerald-500/60 hover:text-emerald-500 hover:bg-emerald-500/10 transition-all" title="Restore User">
+                                                    <UserCheck size={16} />
+                                                </button>
+                                            )}
                                         </div>
                                     )}
-                                </div>
-                                <div>
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                        <p className="text-white font-medium text-sm group-hover/row:text-red-500 transition-colors uppercase tracking-tight">{u.full_name || 'Без Име'}</p>
-                                        <span className={`text-[10px] px-2 py-0.5 uppercase tracking-widest border ${badge.cls}`}>{badge.label}</span>
-                                        {u.is_company && <span className="text-[10px] bg-blue-900/30 text-blue-400 px-2 py-0.5 uppercase tracking-widest border border-blue-900/20 flex items-center gap-1"><Building2 size={10} /> Фирма</span>}
-                                        {!u.onboarding_completed && <span className="text-[10px] bg-red-900/30 text-red-400 px-2 py-0.5 uppercase tracking-widest border border-red-900/20">Непълна регистрация</span>}
-                                        {u.deletion_scheduled_at && (() => {
 
-                                            const daysLeft = Math.ceil((new Date(u.deletion_scheduled_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-                                            return <span className="text-[10px] bg-red-900/30 text-red-500 px-2 py-0.5 uppercase tracking-widest border border-red-900/40">Изтриване след {Math.max(0, daysLeft)} дни</span>;
-                                        })()}
-                                        {hasDeletionRequest && !u.deletion_scheduled_at && <span className="text-[10px] bg-purple-900/30 text-purple-400 px-2 py-0.5 uppercase tracking-widest border border-purple-900/20">Заявка изтриване</span>}
-                                        {u.id === currentUser?.id && <span className="text-[10px] bg-zinc-800 text-zinc-400 px-2 py-0.5 uppercase tracking-widest">Аз</span>}
-                                    </div>
-                                    <p className="text-zinc-500 text-xs flex items-center gap-2">
-                                        {u.email}
-                                        {u.is_company && u.company_name && <span className="text-blue-400/80">• {u.company_name}</span>}
-                                        {u.phone && <span className="text-zinc-400 tracking-wider">• {u.phone}</span>}
-                                    </p>
-
-                                    {!isActive && u.public_reason && (
-                                        <p className="text-red-400/60 text-xs mt-0.5">Причина: {u.public_reason}</p>
-                                    )}
-                                    {isTemp && u.banned_until && (
-                                        <p className="text-amber-500/60 text-[10px] mt-0.5">
-                                            До: {new Date(u.banned_until).toLocaleString('bg-BG', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                                        </p>
-                                    )}
-                                    <div className="flex flex-wrap items-center gap-2 mt-1.5 pt-1.5 border-t border-white/5">
-                                        {u.last_login_at && (
-                                            <p className="text-[10px] text-zinc-500 uppercase tracking-widest">
-                                                Последно: {new Date(u.last_login_at).toLocaleString('bg-BG', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
-                                            </p>
-                                        )}
-                                        {u.last_device_info && (
-                                            <p className="text-[10px] text-zinc-400 bg-white/5 px-2 py-0.5 rounded flex items-center gap-1">
-                                                {u.last_device_info}
-                                            </p>
-                                        )}
-                                        {u.last_ip_address && (
-                                            <p className="text-[10px] text-red-400/80 bg-red-950/20 px-2 py-0.5 rounded flex items-center gap-1 font-mono border border-red-900/10">
-                                                {u.last_ip_address}
-                                            </p>
-                                        )}
-                                        {u.ip_history && u.ip_history.length > 1 && (
-                                            <p className="text-[9px] text-zinc-500 bg-zinc-900/50 px-2 py-0.5 rounded border border-white/5 hover:border-white/10 transition-colors" title={u.ip_history.join(', ')}>
-                                                {u.ip_history.length} уникални IP-та
-                                            </p>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Center Column: Admin Notes */}
-                            <div className="flex-1 max-w-sm mt-3 md:mt-0" onClick={(e) => e.stopPropagation()}>
-                                <div className="space-y-1 group/note relative">
-                                    <div className="flex items-center gap-2 mb-1 px-1">
-                                        <FileText className="w-2.5 h-2.5 text-zinc-500" />
-                                        <span className="text-[9px] text-zinc-500 uppercase font-black tracking-widest">Бележки за клиента</span>
-                                    </div>
-                                    <textarea
-                                        defaultValue={u.admin_notes || ''}
-                                        onBlur={(e) => updateAdminNotes(u.id, e.target.value)}
-                                        placeholder="Добави вътрешна бележка..."
-                                        className="w-full bg-black/40 border border-white/5 focus:border-red-600/40 rounded-lg p-3 text-[11px] text-white placeholder-zinc-800 focus:outline-none transition-all resize-none h-[70px] leading-tight"
-                                    />
-                                    <div className="absolute right-2 bottom-2 opacity-0 group-focus-within/note:opacity-100 transition-opacity pointer-events-none">
-                                        <span className="text-[8px] text-zinc-600 uppercase font-bold tracking-tighter">Auto-saves on blur</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="flex items-center gap-2 flex-wrap" onClick={(e) => e.stopPropagation()}>
-                                {/* View Profile Button */}
-                                <button
-                                    onClick={() => setUserProfileModal(u)}
-                                    className="p-2.5 text-xs uppercase tracking-widest border border-white/10 text-white hover:bg-white/5 transition-all flex items-center gap-2"
-                                    title="Виж Профил"
-                                >
-                                    <Eye className="w-3.5 h-3.5" />
-                                </button>
-
-                                {/* Role Selector */}
-                                <div className="flex items-center gap-1 bg-black/40 border border-white/10 p-1">
-                                    {(['user', 'editor', 'admin'] as const).map(role => (
-                                        <button
-                                            key={role}
-                                            disabled={updatingId === u.id || u.id === currentUser?.id}
-                                            onClick={() => handleRoleUpdate(u, role)}
-                                            className={`px-3 py-1.5 text-[10px] uppercase tracking-widest transition-all disabled:opacity-30 ${u.role === role ? (role === 'admin' ? 'bg-red-600 text-white' : role === 'editor' ? 'bg-yellow-600 text-black' : 'bg-zinc-700 text-white') : 'text-zinc-500 hover:text-white'}`}
-                                        >
-                                            {role === 'admin' ? 'Админ' : role === 'editor' ? 'Редактор' : 'Потребител'}
-                                        </button>
-                                    ))}
-                                </div>
-
-                                {/* Moderation Buttons */}
-                                {u.id !== currentUser?.id && (
-                                    <button
-                                        onClick={() => setDeleteModal(u)}
-                                        className="p-2.5 text-xs text-red-500 hover:text-white uppercase tracking-widest border border-red-500/20 bg-red-950/20 hover:bg-red-600 transition-all flex items-center gap-2 font-bold"
-                                        title="Незабавно ИЗТРИВАНЕ на акаунта (всички данни)"
-                                    >
-                                        <Trash2 className="w-3.5 h-3.5" />
-                                        {u.deletion_scheduled_at && <span>Ускори </span>}
+                                    {/* History */}
+                                    <button onClick={() => openModModal(u, 'view_history')} className="p-2.5 text-zinc-400 hover:text-white hover:bg-white/5 border border-white/5 transition-all" title="History">
+                                        <History size={16} />
                                     </button>
-                                )}
-                                {isActive && u.id !== currentUser?.id && !u.deletion_scheduled_at && (
-                                    <>
-                                        <button
-                                            disabled={updatingId === u.id}
-                                            onClick={() => openModModal(u, 'temp_ban')}
-                                            className="p-2.5 text-xs border border-amber-600/30 text-amber-400 hover:bg-amber-900/20 transition-all disabled:opacity-30 flex items-center gap-1.5"
-                                            title="Временно ограничение"
-                                        >
-                                            <Clock className="w-3.5 h-3.5" />
-                                        </button>
-                                        <button
-                                            disabled={updatingId === u.id}
-                                            onClick={() => openModModal(u, 'perm_ban')}
-                                            className="p-2.5 text-xs border border-red-600/30 text-red-400 hover:bg-red-900/20 transition-all disabled:opacity-30 flex items-center gap-1.5"
-                                            title="Перманентно ограничение"
-                                        >
-                                            <ShieldBan className="w-3.5 h-3.5" />
-                                        </button>
-                                    </>
-                                )}
 
-                                {isTemp && u.id !== currentUser?.id && (
-                                    <>
-                                        <button
-                                            disabled={updatingId === u.id}
-                                            onClick={() => openModModal(u, 'unban')}
-                                            className="p-2.5 text-xs border border-green-600/30 text-green-400 hover:bg-green-900/20 transition-all disabled:opacity-30 flex items-center gap-1.5"
-                                            title="Възстанови"
-                                        >
-                                            <UserCheck className="w-3.5 h-3.5" />
-                                        </button>
-                                        <button
-                                            disabled={updatingId === u.id}
-                                            onClick={() => openModModal(u, 'extend')}
-                                            className="p-2.5 text-xs border border-amber-600/30 text-amber-400 hover:bg-amber-900/20 transition-all disabled:opacity-30 flex items-center gap-1.5"
-                                            title="Удължи"
-                                        >
-                                            <Clock className="w-3.5 h-3.5" />
-                                        </button>
-                                        <button
-                                            disabled={updatingId === u.id}
-                                            onClick={() => openModModal(u, 'convert_to_perm')}
-                                            className="p-2.5 text-xs border border-red-600/30 text-red-400 hover:bg-red-900/20 transition-all disabled:opacity-30 flex items-center gap-1.5"
-                                            title="Конвертирай в перманентно"
-                                        >
-                                            <ShieldBan className="w-3.5 h-3.5" />
-                                        </button>
-                                    </>
-                                )}
-
-                                {isPerm && u.id !== currentUser?.id && (
-                                    <button
-                                        disabled={updatingId === u.id}
-                                        onClick={() => openModModal(u, 'unban')}
-                                        className="p-2.5 text-xs border border-green-600/30 text-green-400 hover:bg-green-900/20 transition-all disabled:opacity-30 flex items-center gap-1.5"
-                                        title="Възстанови"
-                                    >
-                                        <UserCheck className="w-3.5 h-3.5" />
+                                    <button onClick={() => setDeleteModal(u)} disabled={updatingId === u.id || u.id === currentUser?.id} className="p-2.5 text-zinc-800 hover:text-red-600 transition-colors" title="Delete Account">
+                                        <Trash2 size={16} />
                                     </button>
-                                )}
-
-                                {/* History */}
-                                <button
-                                    onClick={() => openModModal(u, 'view_history')}
-                                    className="p-2.5 text-xs border border-white/10 text-zinc-400 hover:text-white hover:bg-white/5 transition-all flex items-center gap-1.5"
-                                    title="История на модерация"
-                                >
-                                    <Clock className="w-3.5 h-3.5" />
-                                </button>
-                                
-                                {/* Delete Entirely button */}
-                                <button
-                                    disabled={updatingId === u.id || u.id === currentUser?.id}
-                                    onClick={() => setDeleteModal(u)}
-                                    className="p-2.5 text-xs uppercase tracking-widest border transition-all disabled:opacity-30 flex items-center bg-transparent border-red-900/40 text-[#ff4444] hover:bg-red-950/60 hover:text-white hover:border-red-600/80"
-                                    title="ИЗТРИЙ НАПЪЛНО И БЕЗВЪЗВРАТНО"
-                                >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                </button>
+                                </div>
                             </div>
-                        </div>
-                    );
+                        );
                     })}
-                    <p className="text-zinc-600 text-xs mt-4">{filtered.length} от {users.length} потребители</p>
+                    <p className="text-zinc-600 text-[10px] uppercase font-bold tracking-widest mt-6 bg-white/[0.02] inline-block px-3 py-1 rounded-full border border-white/5">
+                        Showing {filtered.length} of {users.length} total members
+                    </p>
                 </div>
             )}
 
@@ -2232,39 +2144,93 @@ const UserProfileModal: React.FC<{
                 className="bg-[#0a0a0a] border border-white/10 w-full max-w-5xl h-[90vh] flex flex-col shadow-3xl overflow-hidden"
             >
                 {/* Header */}
-                <div className="p-8 border-b border-white/5 flex items-center justify-between bg-gradient-to-r from-red-600/5 to-transparent">
-                    <div className="flex items-center gap-6">
-                        <div className="w-20 h-20 rounded-2xl overflow-hidden border border-white/10 shadow-xl bg-zinc-900 flex-shrink-0">
-                            {user.avatar_url ? (
-                                <img src={user.avatar_url} alt={user.full_name || ''} className="w-full h-full object-cover" />
-                            ) : (
-                                <div className="w-full h-full flex items-center justify-center text-zinc-700 text-3xl font-black">
-                                    {user.email?.[0].toUpperCase()}
+                <div className="p-8 border-b border-white/5 flex items-center justify-between bg-gradient-to-r from-red-600/10 via-red-950/5 to-transparent relative overflow-hidden group">
+                    {/* Decorative element */}
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-red-600/5 blur-[100px] -mr-32 -mt-32 rounded-full group-hover:bg-red-600/10 transition-colors duration-700" />
+                    
+                    <div className="flex items-center gap-8 relative z-10">
+                        {/* Avatar Container */}
+                        <div className="relative">
+                            <div className="w-24 h-24 rounded-3xl overflow-hidden border-2 border-white/10 shadow-2xl bg-zinc-900 flex-shrink-0 group/avatar">
+                                {user.avatar_url ? (
+                                    <img src={user.avatar_url} alt={user.full_name || ''} className="w-full h-full object-cover transition-transform duration-500 group-hover/avatar:scale-110" />
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-zinc-800 to-zinc-950 text-zinc-500 text-3xl font-black italic">
+                                        {user.email?.[0].toUpperCase() || '?'}
+                                    </div>
+                                )}
+                            </div>
+                            {user.is_company && (
+                                <div className="absolute -bottom-2 -right-2 bg-blue-600 text-white p-1.5 rounded-xl shadow-lg border-2 border-[#0a0a0a]">
+                                    <Building2 size={14} />
                                 </div>
                             )}
                         </div>
-                        <div>
-                            <div className="flex items-center gap-3 mb-1">
-                                <h2 className="text-2xl font-black text-white uppercase tracking-tighter">{user.full_name || 'Без име'}</h2>
-                                <span className={`text-[10px] px-3 py-1 rounded font-black uppercase tracking-widest ${user.role === 'admin' ? 'bg-red-600 text-white' : user.role === 'editor' ? 'bg-yellow-600 text-black' : 'bg-zinc-800 text-zinc-400'}`}>
-                                    {user.role}
-                                </span>
+
+                        <div className="space-y-3">
+                            <div className="flex items-center gap-4 flex-wrap">
+                                <h2 className="text-3xl font-black text-white uppercase tracking-tighter leading-none">
+                                    {user.full_name || 'Анонимен Потребител'}
+                                </h2>
+                                <div className="flex gap-2">
+                                    <span className={`text-[10px] px-3 py-1.5 rounded-lg font-black uppercase tracking-widest flex items-center gap-1.5 shadow-lg ${
+                                        user.role === 'admin' ? 'bg-red-600 text-white' : 
+                                        user.role === 'editor' ? 'bg-amber-500 text-black' : 
+                                        'bg-zinc-800 text-zinc-400'
+                                    }`}>
+                                        <Shield size={10} />
+                                        {user.role === 'admin' ? 'Администратор' : user.role === 'editor' ? 'Редактор' : 'Потребител'}
+                                    </span>
+                                    {user.is_banned && (
+                                        <span className="text-[10px] px-3 py-1.5 rounded-lg font-black uppercase tracking-widest bg-red-950/50 text-red-500 border border-red-500/20 flex items-center gap-1.5">
+                                            <ShieldBan size={10} />
+                                            BANNED
+                                        </span>
+                                    )}
+                                </div>
                             </div>
-                            <p className="text-zinc-500 font-mono text-xs">{user.email}</p>
-                            <div className="flex items-center gap-4 mt-2">
-                                <p className="text-[10px] text-zinc-600 uppercase tracking-widest flex items-center gap-2">
-                                    <UserCheck className="w-3 h-3" /> Регистриран: {new Date(user.created_at).toLocaleDateString('bg-BG')}
-                                </p>
+                            
+                            <div className="flex flex-wrap gap-6 items-center">
+                                <div className="flex items-center gap-2 group/info">
+                                    <div className="w-8 h-8 rounded-lg bg-zinc-900/50 flex items-center justify-center border border-white/5 text-zinc-500 group-hover/info:text-red-500 transition-colors">
+                                        <Mail size={14} />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-[9px] text-zinc-600 font-black uppercase tracking-[0.2em] leading-none mb-1">Имейл Адрес</span>
+                                        <span className="text-sm font-medium text-zinc-300 tracking-tight">{user.email || 'Липсва'}</span>
+                                    </div>
+                                </div>
+
                                 {user.phone && (
-                                    <p className="text-[10px] text-zinc-400 uppercase tracking-widest flex items-center gap-2">
-                                        📞 {user.phone}
-                                    </p>
+                                    <div className="flex items-center gap-2 group/info">
+                                        <div className="w-8 h-8 rounded-lg bg-zinc-900/50 flex items-center justify-center border border-white/5 text-zinc-500 group-hover/info:text-emerald-500 transition-colors">
+                                            <Phone size={14} />
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-[9px] text-zinc-600 font-black uppercase tracking-[0.2em] leading-none mb-1">Телефон</span>
+                                            <span className="text-sm font-medium text-zinc-300 tracking-tight">{user.phone}</span>
+                                        </div>
+                                    </div>
                                 )}
+
+                                <div className="flex items-center gap-2 group/info">
+                                    <div className="w-8 h-8 rounded-lg bg-zinc-900/50 flex items-center justify-center border border-white/5 text-zinc-500 group-hover/info:text-blue-500 transition-colors">
+                                        <Calendar size={14} />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-[9px] text-zinc-600 font-black uppercase tracking-[0.2em] leading-none mb-1">Член от</span>
+                                        <span className="text-sm font-medium text-zinc-300 tracking-tight">{new Date(user.created_at).toLocaleDateString('bg-BG')}</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <button onClick={onClose} className="p-3 bg-white/5 hover:bg-white/10 text-zinc-500 hover:text-white transition-all rounded-xl">
-                        <X size={24} />
+
+                    <button 
+                        onClick={onClose} 
+                        className="relative z-10 p-4 bg-zinc-900/50 hover:bg-red-600 hover:text-white text-zinc-500 transition-all rounded-2xl border border-white/5 hover:border-red-500 shadow-xl"
+                    >
+                        <X size={20} />
                     </button>
                 </div>
 
@@ -2319,6 +2285,42 @@ const UserProfileModal: React.FC<{
                                 )}
                             </div>
                         </div>
+
+                        {/* Company Data Section */}
+                        {(user.is_company || user.company_name) && (
+                            <div>
+                                <h3 className="text-[10px] text-zinc-500 uppercase tracking-widest mb-4 font-black flex items-center gap-2">
+                                    <Building2 size={12} className="text-blue-500" />
+                                    Данни на фирмата
+                                </h3>
+                                <div className="bg-blue-600/5 border border-blue-600/10 rounded-xl p-4 space-y-3">
+                                    <div>
+                                        <p className="text-[8px] text-zinc-500 uppercase font-bold tracking-widest">Наименование</p>
+                                        <p className="text-xs text-white font-bold">{user.company_name || '—'}</p>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div>
+                                            <p className="text-[8px] text-zinc-500 uppercase font-bold tracking-widest">ЕИК/Булстат</p>
+                                            <p className="text-xs text-white font-mono">{user.bulstat || '—'}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-[8px] text-zinc-500 uppercase font-bold tracking-widest">ДДС Номер</p>
+                                            <p className="text-xs text-white font-mono">
+                                                {user.vat_registered ? (user.vat_number || 'Регистрирана') : 'Не'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p className="text-[8px] text-zinc-500 uppercase font-bold tracking-widest">МОЛ</p>
+                                        <p className="text-xs text-white">{user.company_person || '—'}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[8px] text-zinc-500 uppercase font-bold tracking-widest">Адрес</p>
+                                        <p className="text-[10px] text-zinc-400 leading-tight">{user.company_address || '—'}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         {user.admin_notes && (
                             <div>
