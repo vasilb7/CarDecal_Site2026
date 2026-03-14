@@ -22,8 +22,11 @@ jobs:
       - name: Install Dependencies
         run: npm install @supabase/supabase-js dotenv
 
+      - name: Verify Files
+        run: ls -la
+
       - name: Run Keep-Alive Script
-        run: node scripts/supabase-keep-alive.js
+        run: node supabase-keep-alive.js
         env:
           FORCE_RUN: "true"
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
