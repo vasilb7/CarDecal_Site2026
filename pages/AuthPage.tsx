@@ -64,38 +64,7 @@ const SupabaseInput = React.forwardRef(({ label, type = "text", name, required, 
   );
 });
 
-// Password Rules specific to match exactly the layout
-const PasswordRules = ({ password }: { password: string }) => {
-  const rules = [
-    { label: "Главна буква", test: /[A-Z]/ },
-    { label: "Малка буква", test: /[a-z]/ },
-    { label: "Цифра", test: /[0-9]/ },
-    { label: "Специален символ (напр. !?<>@#$%)", test: /[^A-Za-z0-9]/ },
-    { label: "8 или повече символа", test: /.{8,}/ },
-  ];
 
-  return (
-    <div className="flex flex-col space-y-1.5 mt-3 mb-6">
-      {rules.map((rule, idx) => {
-        const passed = rule.test.test(password);
-        return (
-          <div key={idx} className="flex items-center gap-2">
-            {passed ? (
-               <div className="w-[14px] h-[14px] rounded-full bg-zinc-500 flex items-center justify-center">
-                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-950">
-                   <polyline points="20 6 9 17 4 12"></polyline>
-                 </svg>
-               </div>
-            ) : (
-               <div className="w-[14px] h-[14px] rounded-full border-[1.5px] border-zinc-500"></div>
-            )}
-            <span className="text-[13px] text-zinc-500">{rule.label}</span>
-          </div>
-        );
-      })}
-    </div>
-  );
-};
 
 export default function AuthPage() {
   const navigate = useNavigate();
@@ -464,7 +433,7 @@ export default function AuthPage() {
                 required
               />
 
-              {regPassword.length > 0 && <PasswordRules password={regPassword} />}
+
 
               <div className="flex justify-center mt-2 min-h-[65px] w-full overflow-hidden">
                 <Turnstile siteKey="0x4AAAAAACn8KBpSOynPkBCf" onSuccess={(token) => setCaptchaToken(token)} options={{ theme: 'dark', size: 'flexible' }} />
