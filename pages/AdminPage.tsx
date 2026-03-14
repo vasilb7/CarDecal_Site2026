@@ -439,8 +439,9 @@ const ProductsTab: React.FC = () => {
     const [isNewProduct, setIsNewProduct] = useState(false);
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
-    const [sortBy, setSortBy] = useState<'slug' | 'dimensions' | 'price' | 'name'>('slug');
+    const [sortBy, setSortBy] = useState<'slug' | 'dimensions' | 'price' | 'name' | 'date'>('date');
     const [sizeFilter, setSizeFilter] = useState<string>('All');
+    const [categoryFilter, setCategoryFilter] = useState<string>('All');
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 20;
@@ -515,6 +516,16 @@ const ProductsTab: React.FC = () => {
         });
     }, [products]);
 
+    const availableCategories = useMemo(() => {
+        const cats = new Set<string>();
+        products.forEach(p => {
+            p.categories.forEach(cat => {
+                if (!cat.toLowerCase().includes('cm')) cats.add(cat);
+            });
+        });
+        return Array.from(cats).sort();
+    }, [products]);
+
     // ── Filter + Sort ────────────────────────────────────────────────────
     const filtered = products
         .filter(p => {
@@ -540,6 +551,10 @@ const ProductsTab: React.FC = () => {
                 if (pSize !== sizeFilter && !hasSizeInCats) return false;
             }
 
+            if (categoryFilter !== 'All') {
+                if (!p.categories.includes(categoryFilter)) return false;
+            }
+
             if (showHidden) {
                 if (!p.is_hidden) return false;
             } else {
@@ -558,6 +573,9 @@ const ProductsTab: React.FC = () => {
                 const numB = parseFloat(b.dimensions?.replace(/[^\d.]/g, '') ?? '0');
                 return numA - numB;
             }
+            if (sortBy === 'date') {
+                return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+            }
             if (sortBy === 'name') {
                 return (a.name_bg || a.name).localeCompare(b.name_bg || b.name);
             }
@@ -573,11 +591,11 @@ const ProductsTab: React.FC = () => {
     // Reset to page 1 on filter change
     useEffect(() => {
         setCurrentPage(1);
-    }, [search, sortBy, sizeFilter]);
+    }, [search, sortBy, sizeFilter, categoryFilter]);
 
     // Scroll to top on page change
     useEffect(() => {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        window.scrollTo({ top: 0 });
     }, [currentPage]);
 
     const paginatedProducts = useMemo(() => {
@@ -625,10 +643,11 @@ const ProductsTab: React.FC = () => {
                         onChange={e => setSortBy(e.target.value as typeof sortBy)}
                         className="bg-black/40 border border-white/10 text-zinc-300 text-xs uppercase tracking-widest px-3 py-2.5 focus:outline-none focus:border-red-600/60 cursor-pointer"
                     >
+                        <option value="date">Най-нови</option>
                         <option value="slug">По Slug</option>
-                        <option value="dimensions">Сортирай по Размер</option>
-                        <option value="price">Сортирай по Цена</option>
-                        <option value="name">Сортирай по Название</option>
+                        <option value="dimensions">По Размер</option>
+                        <option value="price">По Цена</option>
+                        <option value="name">По Название</option>
                     </select>
 
                     {/* Size Filter */}
@@ -640,6 +659,17 @@ const ProductsTab: React.FC = () => {
                         <option value="All">Всички размери</option>
                         {availableSizes.map(size => (
                             <option key={size} value={size}>{size}</option>
+                        ))}
+                    </select>
+
+                    <select
+                        value={categoryFilter}
+                        onChange={e => setCategoryFilter(e.target.value)}
+                        className="bg-black/40 border border-white/10 text-zinc-300 text-xs uppercase tracking-widest px-3 py-2.5 focus:outline-none focus:border-red-600/60 cursor-pointer"
+                    >
+                        <option value="All">Всички категории</option>
+                        {availableCategories.map(cat => (
+                            <option key={cat} value={cat}>{cat}</option>
                         ))}
                     </select>
 
@@ -687,7 +717,8 @@ const ProductsTab: React.FC = () => {
                         {paginatedProducts.map(p => (
                             <div
                                 key={p.id}
-                                className="group relative bg-zinc-900 border border-white/5 hover:border-red-600/40 transition-all duration-200 overflow-hidden flex flex-col"
+                                onClick={() => { setEditProduct(p); setIsNewProduct(false); }}
+                                className="group relative bg-zinc-900 border border-white/5 hover:border-red-600/40 transition-all duration-200 overflow-hidden flex flex-col cursor-pointer"
                             >
                                 {/* Image */}
                                 <div className="relative aspect-square bg-zinc-950 overflow-hidden"
@@ -696,6 +727,7 @@ const ProductsTab: React.FC = () => {
                                          src={p.avatar}
                                          alt={p.name_bg || p.name}
                                          className="w-full h-full object-contain p-3 group-hover:scale-110 transition-transform duration-300"
+                                         loading="lazy"
                                      />
                                     {/* Badges */}
                                     <div className="absolute top-2 left-2 flex flex-col gap-1">
@@ -712,16 +744,16 @@ const ProductsTab: React.FC = () => {
                                         )}
                                     </div>
                                     {/* Actions overlay */}
-                                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 lg:group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
                                         <button
-                                            onClick={() => { setEditProduct(p); setIsNewProduct(false); }}
+                                            onClick={(e) => { e.stopPropagation(); setEditProduct(p); setIsNewProduct(false); }}
                                             className="p-2.5 bg-white text-black hover:bg-red-600 hover:text-white transition-colors rounded-sm"
                                             title="Редактирай"
                                         >
                                             <Edit3 className="w-4 h-4" />
                                         </button>
                                         <button
-                                            onClick={() => handleDelete(p.id)}
+                                            onClick={(e) => { e.stopPropagation(); handleDelete(p.id); }}
                                             disabled={deletingId === p.id}
                                             className="p-2.5 bg-white text-black hover:bg-red-600 hover:text-white transition-colors rounded-sm disabled:opacity-40"
                                             title="Изтрий"
@@ -3824,7 +3856,7 @@ const DashboardTab: React.FC = () => {
 // ─── Orders Tab ───────────────────────────────────────────────────────────
 interface RegularOrder {
     id: string;
-    order_number: number;
+    order_number: string;
     user_id: string | null;
     items: any[];
     total_amount: number;
@@ -4008,7 +4040,7 @@ const OrdersTab: React.FC = () => {
     const filteredOrders = useMemo(() => {
         return orders.filter(order => {
             const matchesSearch = 
-                order.order_number.toString().includes(searchTerm) ||
+                order.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 order.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
                 order.shipping_details.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 order.shipping_details.phone.includes(searchTerm);
@@ -4213,7 +4245,8 @@ const OrdersTab: React.FC = () => {
                         font-weight: 900;
                         color: var(--primary);
                         margin: 0 0 4px 0;
-                        letter-spacing: -0.5px;
+                        letter-spacing: 1px;
+                        font-family: 'Courier New', Courier, monospace;
                     }
 
                     .order-date {
@@ -4958,7 +4991,7 @@ const OrdersTab: React.FC = () => {
                             <div className="flex-1 space-y-4">
                                 <div className="flex items-center justify-between border-b border-white/5 pb-4">
                                     <div>
-                                        <h3 className="text-sm font-black text-white uppercase tracking-wider">Поръчка #{order.order_number}</h3>
+                                        <h3 className="text-sm font-black text-white uppercase tracking-wider font-mono">Поръчка #{order.order_number}</h3>
                                         <p className="text-[10px] text-zinc-500 uppercase tracking-widest mt-1">
                                             {new Date(order.created_at).toLocaleString('bg-BG')}
                                         </p>
@@ -6433,11 +6466,12 @@ const ArchivedUsersTab: React.FC = () => {
 
 // ─── Main Admin Page ──────────────────────────────────────────────────────
 const AdminPage: React.FC = () => {
-    const { user, profile, loading, isAdmin, isEditor, userRole } = useAuth();
+    const { user, profile, loading, isAdmin, isEditor, userRole, signOut } = useAuth();
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
     const [scheduledCount, setScheduledCount] = useState(0);
     const [newBugsCount, setNewBugsCount] = useState(0);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
     useEffect(() => {
         const fetchCounts = async () => {
@@ -6466,6 +6500,10 @@ const AdminPage: React.FC = () => {
         return () => {
             supabase.removeChannel(channel);
         };
+    }, [activeTab]);
+
+    useEffect(() => {
+        setIsSidebarOpen(false); // Close sidebar on tab change (mobile)
     }, [activeTab]);
 
     useEffect(() => {
@@ -6507,11 +6545,44 @@ const AdminPage: React.FC = () => {
     ];
 
     return (
-        <div className="min-h-screen bg-[#0a0a0a] text-white">
+        <div className="min-h-screen bg-[#0a0a0a] text-white overflow-x-hidden">
             <SEO title="Админ Панел" />
-            <div className="flex min-h-screen">
+            
+            {/* Mobile Header */}
+            <header className="lg:hidden h-16 bg-black border-b border-white/5 flex items-center justify-between px-4 sticky top-0 z-[60]">
+                <button 
+                    onClick={() => setIsSidebarOpen(true)}
+                    className="p-2 text-zinc-400 hover:text-white"
+                >
+                    <LayoutGrid size={24} />
+                </button>
+                <h1 className="text-sm font-black uppercase tracking-widest text-white">
+                    {navItems.find(i => i.id === activeTab)?.label}
+                </h1>
+                <div className="w-10" /> {/* Spacer */}
+            </header>
+
+            <div className="flex relative">
+                {/* Mobile Backdrop */}
+                <AnimatePresence>
+                    {isSidebarOpen && (
+                        <motion.div 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setIsSidebarOpen(false)}
+                            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] lg:hidden"
+                        />
+                    )}
+                </AnimatePresence>
+
                 {/* Sidebar */}
-                <aside className="w-64 bg-black border-r border-white/5 flex flex-col py-8 flex-shrink-0">
+                <aside className={`fixed lg:sticky top-0 left-0 bottom-0 w-72 bg-black border-r border-white/5 flex flex-col py-8 z-[80] transition-transform duration-300 lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+                    <div className="lg:hidden absolute top-4 right-4">
+                        <button onClick={() => setIsSidebarOpen(false)} className="p-2 text-zinc-500 hover:text-white">
+                            <X size={24} />
+                        </button>
+                    </div>
                     <div className="px-6 mb-8">
                         <p className="text-xs uppercase tracking-[0.3em] text-zinc-500 mb-1">Admin Panel</p>
                         <p className="text-white font-bold">{profile?.full_name || user.email}</p>
@@ -6537,20 +6608,27 @@ const AdminPage: React.FC = () => {
                             </button>
                         ))}
                     </nav>
-                    <div className="px-3 mt-auto">
+                    <div className="px-3 mt-auto space-y-1 mb-6">
                         <button
                             onClick={() => navigate('/')}
-                            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-zinc-500 hover:text-white transition-colors"
+                            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-zinc-500 hover:text-white transition-colors border-l-2 border-transparent"
                         >
                             <ArrowLeft className="w-4 h-4" />
                             Към сайта
+                        </button>
+                        <button
+                            onClick={signOut}
+                            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-500 hover:text-red-400 hover:bg-red-500/10 transition-all border-l-2 border-transparent"
+                        >
+                            <LogOut className="w-4 h-4" />
+                            Изход
                         </button>
                     </div>
                 </aside>
 
                 {/* Main Content */}
-                <main className="flex-1 p-8 overflow-y-auto">
-                    <header className="mb-10 flex items-center justify-between">
+                <main className="flex-1 p-4 lg:p-8 overflow-y-auto w-full">
+                    <header className="mb-10 lg:flex items-center justify-between hidden">
                         <div>
                             <h1 className="text-2xl font-black uppercase tracking-tighter text-white">
                                 {navItems.find(i => i.id === activeTab)?.label}

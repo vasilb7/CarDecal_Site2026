@@ -9,6 +9,7 @@ import SEO from '../components/SEO';
 import { AvatarCropModal } from '../components/AvatarCropModal';
 import { isValidPhone as isValidBulgarianPhone, isValidFullName, formatToE164, formatPhoneNumber } from '../lib/utils';
 import DevicesSection from '../components/profile/DevicesSection';
+import AddressesTab from '../components/profile/AddressesTab';
 import {
     User, Camera, LogOut, Settings, ShoppingBag,
     ChevronRight, Save, Loader2, Lock,
@@ -23,7 +24,7 @@ import {
 } from 'lucide-react';
 
 // ─── Типове ─────────────────────────────────────────────────────────────────
-type ProfileTab = 'dashboard' | 'orders' | 'settings' | 'addresses' | 'favorites' | 'library' | 'cards' | 'wallet' | 'invoices' | 'returns' | 'guarantees' | 'textbooks';
+type ProfileTab = 'dashboard' | 'orders' | 'settings' | 'addresses' | 'favorites' | 'wallet';
 
 // ─── Custom Confirm Dialog ──────────────────────────────────────────────────
 interface ConfirmDialogProps {
@@ -720,13 +721,7 @@ const DashboardGrid: React.FC<{
         { id: 'addresses', label: 'Моите адреси', icon: MapPin },
         { id: 'orders', label: 'Моите поръчки', icon: ShoppingBag },
         { id: 'favorites', label: 'Любими продукти', icon: Heart },
-        { id: 'library', label: 'Е-библиотека', icon: Library },
-        { id: 'cards', label: 'Моите карти', icon: CreditCard },
         { id: 'wallet', label: 'Портфейл', icon: Wallet },
-        { id: 'invoices', label: 'Фактури', icon: FileText },
-        { id: 'returns', label: 'Връщане на продукт', icon: Undo2 },
-        { id: 'guarantees', label: 'Моите гаранции', icon: Shield },
-        { id: 'textbooks', label: 'Заявка за учебници', icon: BookOpen },
         { id: 'logout', label: 'Изход', icon: LogOut, action: onSignOut },
     ];
 
@@ -963,6 +958,7 @@ const ProfilePage: React.FC = () => {
                     </button>
                     <h2 className="flex-1 text-center font-bold text-zinc-900 mr-10">
                         {activeTab === 'orders' ? 'Моите поръчки' : 
+                         activeTab === 'addresses' ? 'Моите адреси' :
                          activeTab === 'settings' ? 'Настройки' : 'Профил'}
                     </h2>
                 </div>
@@ -981,6 +977,7 @@ const ProfilePage: React.FC = () => {
                         </button>
                         <h2 className="text-sm font-black uppercase tracking-[0.2em] text-white">
                              {activeTab === 'orders' ? 'Моите поръчки' : 
+                              activeTab === 'addresses' ? 'Моите адреси' :
                               activeTab === 'settings' ? 'Настройки' : 'Раздел'}
                         </h2>
                         <div className="w-20" /> {/* Spacer */}
@@ -1019,10 +1016,13 @@ const ProfilePage: React.FC = () => {
                                         handleDeleteAccount={handleDeleteAccount}
                                     />
                                 )}
+                                {activeTab === 'addresses' && (
+                                    <AddressesTab />
+                                )}
                             </div>
                         )}
 
-                        {!['dashboard', 'orders', 'settings'].includes(activeTab) && (
+                        {!['dashboard', 'orders', 'settings', 'addresses'].includes(activeTab) && (
                             <div className="max-w-4xl mx-auto px-6 py-20 text-center">
                                 <div className="w-24 h-24 bg-zinc-900 border border-white/5 rounded-full flex items-center justify-center mx-auto mb-6 text-zinc-700">
                                     <Info className="w-12 h-12" />

@@ -84,13 +84,45 @@ const CheckoutPage: React.FC = () => {
         fullName: '',
         email: '',
         phone: '+359 ',
-        deliveryType: 'econt' as 'econt' | 'speedy',
+        deliveryType: 'econt' as 'econt' | 'speedy' | 'address',
         city: '',
         econtOffice: '',
         speedyOffice: '',
+        streetAddress: '',
+        neighborhood: '',
         notes: ''
     });
     const [saveForFuture, setSaveForFuture] = useState(true);
+    const [savedAddresses, setSavedAddresses] = useState<any[]>([]);
+
+    useEffect(() => {
+        if (user) {
+            supabase.from('user_addresses').select('*').order('is_default', { ascending: false }).then(({data}) => {
+                if (data && data.length > 0) {
+                    setSavedAddresses(data);
+                    const defaultAddr = data.find(a => a.is_default) || data[0];
+                    if (defaultAddr && !formData.fullName) {
+                        handleUseSavedAddress(defaultAddr);
+                    }
+                }
+            });
+        }
+    }, [user]);
+
+    const handleUseSavedAddress = (addr: any) => {
+        setFormData(prev => ({
+            ...prev,
+            fullName: addr.full_name,
+            phone: formatPhoneNumber(addr.phone),
+            deliveryType: addr.delivery_type,
+            city: addr.city,
+            econtOffice: addr.delivery_type === 'econt' ? addr.street_address : '',
+            speedyOffice: addr.delivery_type === 'speedy' ? addr.street_address : '',
+            streetAddress: addr.delivery_type === 'address' ? addr.street_address : '',
+            neighborhood: addr.neighborhood || '',
+        }));
+        setErrors({});
+    };
 
     // Initial load from profile
     useEffect(() => {
@@ -135,10 +167,23 @@ const CheckoutPage: React.FC = () => {
         if (!isValidBulgarianPhone(formData.phone)) newErrors.phone = "Невалиден телефон! (8-15 цифри)";
         if (!formData.city.trim()) newErrors.city = "Въведете град";
         
-        const activeOffice = formData.deliveryType === 'econt' ? formData.econtOffice : formData.speedyOffice;
-        const officeKey = formData.deliveryType === 'econt' ? 'econtOffice' : 'speedyOffice';
+        let activeOffice = '';
+        let officeKey = '';
+        
+        if (formData.deliveryType === 'econt') {
+            activeOffice = formData.econtOffice;
+            officeKey = 'econtOffice';
+        } else if (formData.deliveryType === 'speedy') {
+            activeOffice = formData.speedyOffice;
+            officeKey = 'speedyOffice';
+        } else {
+            activeOffice = formData.streetAddress;
+            officeKey = 'streetAddress';
+        }
 
-        if (!activeOffice.trim()) newErrors[officeKey] = "Въведете име или номер на офис";
+        if (!activeOffice.trim()) {
+            newErrors[officeKey] = formData.deliveryType === 'address' ? "Въведете точен адрес" : "Въведете име или номер на офис";
+        }
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -243,7 +288,7 @@ const CheckoutPage: React.FC = () => {
                 promo_discount_amount: promoDiscountAmount,
                 shipping_details: {
                     ...formData,
-                    officeName: formData.deliveryType === 'econt' ? formData.econtOffice : formData.speedyOffice
+                    officeName: formData.deliveryType === 'econt' ? formData.econtOffice : formData.deliveryType === 'speedy' ? formData.speedyOffice : formData.streetAddress
                 },
                 status: 'pending',
                 payment_method: 'cash_on_delivery'
@@ -335,6 +380,33 @@ const CheckoutPage: React.FC = () => {
                                     exit={{ opacity: 0, x: 10 }}
                                     className="space-y-8"
                                 >
+                                    {savedAddresses.length > 0 && (
+                                        <div className="bg-[#0a0a0a] border border-red-600/30 rounded-[2rem] p-6 sm:p-8 relative overflow-hidden">
+                                            <div className="absolute top-0 right-0 p-4 opacity-10"><MapPin size={80} className="text-red-500"/></div>
+                                            <h2 className="text-xs font-black uppercase tracking-widest text-red-500 mb-4 relative z-10 flex items-center gap-2">
+                                                <MapPin size={16} /> Вашите запазени адреси
+                                            </h2>
+                                            <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar relative z-10">
+                                                {savedAddresses.map(addr => (
+                                                    <button 
+                                                        type="button" 
+                                                        key={addr.id} 
+                                                        onClick={() => handleUseSavedAddress(addr)} 
+                                                        className="shrink-0 text-left bg-[#111] hover:bg-zinc-900 border border-white/10 hover:border-red-500/50 p-4 rounded-xl transition-all min-w-[220px]"
+                                                    >
+                                                        <div className="flex items-center gap-2 mb-2">
+                                                             {addr.delivery_type === 'address' ? <MapPin size={14} className="text-red-500" /> : <Building2 size={14} className="text-white/50" />}
+                                                             <span className="text-xs font-bold text-white capitalize">
+                                                                {addr.delivery_type === 'address' ? 'До адрес' : addr.delivery_type === 'econt' ? 'Еконт' : 'Speedy'}
+                                                             </span>
+                                                        </div>
+                                                        <p className="text-[11px] text-zinc-400 font-medium truncate">{addr.city}, {addr.street_address}</p>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
                                     {/* Section 1: Customer Info */}
                                     <div className="bg-[#0a0a0a] border border-white/5 rounded-[2rem] p-6 sm:p-8">
                                         <div className="flex items-center gap-3 mb-6">
@@ -411,7 +483,7 @@ const CheckoutPage: React.FC = () => {
                                             </div>
                                         </div>
 
-                                        <div className="grid grid-cols-2 gap-4 mb-8">
+                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
                                             <ShippingMethodCard 
                                                 id="econt" icon={Building2} title="Econt Офис" description="До офис на Еконт" time="1-2 дни"
                                                 isActive={formData.deliveryType === 'econt'} onClick={() => setFormData(p => ({...p, deliveryType: 'econt'}))}
@@ -419,6 +491,10 @@ const CheckoutPage: React.FC = () => {
                                             <ShippingMethodCard 
                                                 id="speedy" icon={Building2} title="Speedy Офис" description="До офис на Спиди" time="1-2 дни"
                                                 isActive={formData.deliveryType === 'speedy'} onClick={() => setFormData(p => ({...p, deliveryType: 'speedy'}))}
+                                            />
+                                            <ShippingMethodCard 
+                                                id="address" icon={MapPin} title="Личен Адрес" description="До точен адрес" time="1-3 дни"
+                                                isActive={formData.deliveryType === 'address'} onClick={() => setFormData(p => ({...p, deliveryType: 'address'}))}
                                             />
                                         </div>
 
@@ -433,19 +509,31 @@ const CheckoutPage: React.FC = () => {
                                                     {errors.city && <p className="text-[10px] text-red-600 font-bold uppercase mt-1.5 ml-1">{errors.city}</p>}
                                                 </div>
                                                 
-                                                <div>
-                                                    <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500 mb-2 block ml-1">Офис на Куриер <span className="text-red-600">*</span></label>
+                                                {formData.deliveryType === 'address' && (
+                                                    <div>
+                                                        <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500 mb-2 block ml-1">Квартал / Район</label>
+                                                        <input 
+                                                            type="text" name="neighborhood" value={formData.neighborhood} onChange={handleInputChange}
+                                                            className={inputStyle('neighborhood')} placeholder="Опционално"
+                                                        />
+                                                    </div>
+                                                )}
+
+                                                <div className={formData.deliveryType === 'address' ? 'sm:col-span-2' : ''}>
+                                                    <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500 mb-2 block ml-1">
+                                                        {formData.deliveryType === 'address' ? 'Точен Адрес' : 'Офис на Куриер'} <span className="text-red-600">*</span>
+                                                    </label>
                                                     <input 
                                                         type="text" 
-                                                        name={formData.deliveryType === 'econt' ? 'econtOffice' : 'speedyOffice'}
-                                                        value={formData.deliveryType === 'econt' ? formData.econtOffice : formData.speedyOffice} 
+                                                        name={formData.deliveryType === 'econt' ? 'econtOffice' : formData.deliveryType === 'speedy' ? 'speedyOffice' : 'streetAddress'}
+                                                        value={formData.deliveryType === 'econt' ? formData.econtOffice : formData.deliveryType === 'speedy' ? formData.speedyOffice : formData.streetAddress} 
                                                         onChange={handleInputChange}
-                                                        className={inputStyle(formData.deliveryType === 'econt' ? 'econtOffice' : 'speedyOffice')} 
-                                                        placeholder="Напр. Офис Център"
+                                                        className={inputStyle(formData.deliveryType === 'econt' ? 'econtOffice' : formData.deliveryType === 'speedy' ? 'speedyOffice' : 'streetAddress')} 
+                                                        placeholder={formData.deliveryType === 'address' ? 'Улица, номер, вход, етаж, ап.' : 'Напр. Офис Център'}
                                                     />
-                                                    {(errors.econtOffice || errors.speedyOffice) && (
+                                                    {(errors.econtOffice || errors.speedyOffice || errors.streetAddress) && (
                                                         <p className="text-[10px] text-red-600 font-bold uppercase mt-1.5 ml-1">
-                                                            {errors.econtOffice || errors.speedyOffice}
+                                                            {errors.econtOffice || errors.speedyOffice || errors.streetAddress}
                                                         </p>
                                                     )}
                                                 </div>
@@ -525,12 +613,17 @@ const CheckoutPage: React.FC = () => {
                                                 <div>
                                                     <h3 className="text-[9px] font-black uppercase text-zinc-600 tracking-[0.2em] mb-2">Начин на доставка</h3>
                                                     <div className="flex items-center gap-2 text-white">
-                                                         <Building2 size={14} className="text-red-600" />
+                                                         {formData.deliveryType === 'address' ? <MapPin size={14} className="text-red-600" /> : <Building2 size={14} className="text-red-600" />}
                                                          <span className="text-sm font-black uppercase tracking-tight">
-                                                            {formData.deliveryType === 'econt' ? 'Еконт Офис' : 'Спиди Офис'}
+                                                            {formData.deliveryType === 'econt' ? 'Еконт Офис' : formData.deliveryType === 'speedy' ? 'Спиди Офис' : 'До Личен Адрес'}
                                                          </span>
                                                     </div>
-                                                    <p className="text-xs text-zinc-400 mt-1.5">{formData.city}, {formData.deliveryType === 'econt' ? formData.econtOffice : formData.speedyOffice}</p>
+                                                    <p className="text-xs text-zinc-400 mt-1.5">
+                                                        {formData.city}, {formData.deliveryType === 'econt' ? formData.econtOffice : formData.deliveryType === 'speedy' ? formData.speedyOffice : formData.streetAddress}
+                                                    </p>
+                                                    {formData.deliveryType === 'address' && formData.neighborhood && (
+                                                        <p className="text-xs text-zinc-500 mt-0.5">кв. {formData.neighborhood}</p>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>

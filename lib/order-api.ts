@@ -34,7 +34,7 @@ export interface Order {
     payment_method: string;
     created_at: string;
     updated_at: string;
-    order_number: number;
+    order_number: string;
 }
 
 export const getOrderById = async (orderId: string): Promise<Order> => {
