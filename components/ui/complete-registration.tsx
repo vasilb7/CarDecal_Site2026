@@ -434,9 +434,9 @@ export const CompleteRegistrationModal = () => {
                                                 required
                                             />
                                             <FloatingInput 
-                                                label="ЕИК / Булстат (9 цифри)"
+                                                label="ЕИК / Булстат (9-13 цифри)"
                                                 value={bulstat}
-                                                onChange={(e: any) => setBulstat(e.target.value.replace(/[^0-9]/g, '').slice(0, 9))}
+                                                onChange={(e: any) => setBulstat(e.target.value.replace(/[^0-9]/g, '').slice(0, 13))}
                                                 placeholder="напр. 123456789"
                                                 required
                                             />

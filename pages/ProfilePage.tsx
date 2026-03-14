@@ -905,7 +905,7 @@ const CompanyTab: React.FC<{ profile: any }> = ({ profile }) => {
                                     setForm({
                                         ...form, 
                                         vat_registered: next,
-                                        vat_number: next ? `BG${form.bulstat}` : ''
+                                        vat_number: next ? form.vat_number : ''
                                     });
                                 }}
                                 className={`text-[10px] font-black uppercase px-2 py-1 rounded transition-colors ${form.vat_registered ? 'bg-red-600 text-white' : 'bg-white/5 text-zinc-500 hover:bg-white/10'}`}

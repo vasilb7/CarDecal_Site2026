@@ -583,7 +583,7 @@ export default function AuthPage() {
               <form onSubmit={onCompleteOnboarding} className="space-y-4 fade-in">
                 <div className="space-y-4 pt-2">
                   <SupabaseInput label="Име на фирмата" name="companyName" value={companyName} onChange={(e: any) => setCompanyName(e.target.value)} placeholder="Пример: Декал Дизайн ЕООД" required />
-                  <SupabaseInput label="ЕИК / Булстат" name="bulstat" value={bulstat} onChange={(e: any) => setBulstat(e.target.value.replace(/[^0-9]/g, '').slice(0, 9))} placeholder="9 цифри (напр. 123456789)" required />
+                  <SupabaseInput label="ЕИК / Булстат" name="bulstat" value={bulstat} onChange={(e: any) => setBulstat(e.target.value.replace(/[^0-9]/g, '').slice(0, 13))} placeholder="9-13 цифри" required />
                   
                   <div className="flex items-center gap-2 px-1 cursor-pointer w-fit" onClick={() => setIsVatRegistered(!isVatRegistered)}>
                     <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${isVatRegistered ? 'bg-red-600 border-red-600' : 'border-zinc-700 bg-zinc-900'}`}>
