@@ -816,6 +816,42 @@ const CompanyTab: React.FC<{ profile: any }> = ({ profile }) => {
     const inputCls = 'w-full bg-white/5 border border-white/10 text-white text-sm px-4 py-3 rounded-xl focus:border-red-600 outline-none transition-all';
     const labelCls = 'block text-[10px] text-zinc-500 uppercase font-black tracking-widest mb-2';
 
+    const isFormDifferent = () => {
+        if (!profile) return false;
+        return (
+            form.company_name !== (profile.company_name || '') ||
+            form.bulstat !== (profile.bulstat || '') ||
+            form.vat_registered !== (profile.vat_registered || false) ||
+            form.vat_number !== (profile.vat_number || '') ||
+            form.company_address !== (profile.company_address || '') ||
+            form.company_person !== (profile.company_person || '')
+        );
+    };
+
+    const handleCancel = () => {
+        if (profile) {
+            setForm({
+                company_name: profile.company_name || '',
+                bulstat: profile.bulstat || '',
+                vat_registered: profile.vat_registered || false,
+                vat_number: profile.vat_number || '',
+                company_address: profile.company_address || '',
+                company_person: profile.company_person || ''
+            });
+        }
+        setEditing(false);
+    };
+
+    const toggleVat = () => {
+        const next = !form.vat_registered;
+        setForm({
+            ...form, 
+            vat_registered: next,
+            // Only clear it if we are switching TO 'not registered' AND we don't have a saved one to revert to
+            vat_number: next ? (form.vat_number || profile?.vat_number || '') : ''
+        });
+    };
+
     if (!editing) {
         return (
             <div className="space-y-6">
@@ -900,14 +936,7 @@ const CompanyTab: React.FC<{ profile: any }> = ({ profile }) => {
                         <div className="flex items-center justify-between mb-2">
                             <label className={labelCls + " mb-0"}>ДДС Номер</label>
                             <button 
-                                onClick={() => {
-                                    const next = !form.vat_registered;
-                                    setForm({
-                                        ...form, 
-                                        vat_registered: next,
-                                        vat_number: next ? form.vat_number : ''
-                                    });
-                                }}
+                                onClick={toggleVat}
                                 className={`text-[10px] font-black uppercase px-2 py-1 rounded transition-colors ${form.vat_registered ? 'bg-red-600 text-white' : 'bg-white/5 text-zinc-500 hover:bg-white/10'}`}
                             >
                                 {form.vat_registered ? 'Регистрирана' : 'Не е регистрирана'}
@@ -941,15 +970,15 @@ const CompanyTab: React.FC<{ profile: any }> = ({ profile }) => {
 
                 <div className="flex gap-4 mt-10">
                     <button 
-                        onClick={() => setEditing(false)}
+                        onClick={handleCancel}
                         className="flex-1 py-4 bg-white/5 border border-white/10 text-white text-xs font-black uppercase tracking-widest hover:bg-white/10 rounded-2xl transition-all"
                     >
                         Отказ
                     </button>
                     <button 
                         onClick={handleSave}
-                        disabled={loading}
-                        className="flex-1 py-4 bg-red-600 text-white text-xs font-black uppercase tracking-widest hover:bg-red-700 rounded-2xl transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                        disabled={loading || !isFormDifferent()}
+                        className="flex-1 py-4 bg-red-600 text-white text-xs font-black uppercase tracking-widest hover:bg-red-700 rounded-2xl transition-all disabled:opacity-50 disabled:grayscale flex items-center justify-center gap-2"
                     >
                         {loading && <Loader2 size={16} className="animate-spin" />}
                         Запази промените
