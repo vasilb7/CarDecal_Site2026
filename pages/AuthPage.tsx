@@ -9,7 +9,7 @@ import { isValidPhone as isValidBulgarianPhone, isValidFullName, formatToE164, f
 import ReportBugModal from '../components/ReportBugModal';
 import { hasProfanity } from '../lib/profanity';
 import { Turnstile } from '@marsidev/react-turnstile';
-import { Eye, EyeOff, Loader2, CheckCircle2 } from 'lucide-react';
+import { Eye, EyeOff, Loader2, CheckCircle2, ArrowLeft, Building2, User } from 'lucide-react';
 
 const GoogleIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -87,6 +87,13 @@ export default function AuthPage() {
   const phoneInputRef = useRef<HTMLInputElement>(null);
   const [regEmail, setRegEmail] = useState("");
   const [regPassword, setRegPassword] = useState("");
+
+  // Company registration state
+  const [isCompany, setIsCompany] = useState<boolean | null>(null);
+  const [companyName, setCompanyName] = useState("");
+  const [bulstat, setBulstat] = useState("");
+  const [companyAddress, setCompanyAddress] = useState("");
+  const [companyPerson, setCompanyPerson] = useState("");
 
   // Recovery Fields
   const [recoveryEmail, setRecoveryEmail] = useState("");
@@ -233,7 +240,16 @@ export default function AuthPage() {
       const { error } = await supabase.auth.signUp({
         email: regEmail, password: regPassword,
         options: {
-          data: { full_name: regName.trim(), phone: normalizedPhone, role: 'user' },
+          data: { 
+            full_name: regName.trim(), 
+            phone: normalizedPhone, 
+            role: 'user',
+            is_company: isCompany,
+            company_name: isCompany ? companyName : null,
+            bulstat: isCompany ? bulstat : null,
+            company_address: isCompany ? companyAddress : null,
+            company_person: isCompany ? companyPerson : null
+          },
           captchaToken
         },
       });
@@ -384,69 +400,112 @@ export default function AuthPage() {
               <div className="flex-1 h-[1px] bg-zinc-800"></div>
             </div>
 
-            <form onSubmit={onSignUp} className="space-y-4">
-              <SupabaseInput label="Име и Фамилия" name="name" value={regName} onChange={(e: any) => setRegName(e.target.value)} required />
-              <SupabaseInput 
-                ref={phoneInputRef}
-                label="Телефон" 
-                name="phone" 
-                type="tel" 
-                value={regPhone} 
-                onFocus={(e: any) => {
-                  const val = e.target.value;
-                  setTimeout(() => e.target.setSelectionRange(val.length, val.length), 0);
-                }}
-                onKeyDown={(e: any) => {
-                  if (e.target.selectionStart <= 5 && (e.key === 'Backspace' || e.key === 'ArrowLeft' || e.key === 'Home')) {
-                    e.preventDefault();
-                  }
-                }}
-                onSelect={(e: any) => {
-                  const start = e.target.selectionStart;
-                  if (start !== null && start < 5) {
-                    e.target.setSelectionRange(5, Math.max(5, e.target.selectionEnd || 5));
-                  }
-                }}
-                onChange={(e: any) => {
-                  const val = e.target.value;
-                  const formatted = formatPhoneNumber(val);
-                  setRegPhone(formatted);
-                }} 
-                onClick={(e: any) => {
-                  if (e.target.selectionStart < 5) {
-                    e.target.setSelectionRange(e.target.value.length, e.target.value.length);
-                  }
-                }}
-                placeholder="+359 88 888 8888" 
-                required 
-              />
-              <SupabaseInput label="Имейл" name="email" type="email" value={regEmail} onChange={(e: any) => setRegEmail(e.target.value)} required />
-              
-              <SupabaseInput 
-                label="Парола"
-                name="password"
-                type={showPassword ? "text" : "password"}
-                icon={showPassword ? EyeOff : Eye}
-                onToggleIcon={() => setShowPassword(!showPassword)}
-                onChange={(e: any) => handlePasswordChange(e, setRegPassword)}
-                value={regPassword}
-                required
-              />
-
-
-
-              <div className="flex justify-center mt-2 min-h-[65px] w-full overflow-hidden">
-                <Turnstile siteKey="0x4AAAAAACn8KBpSOynPkBCf" onSuccess={(token) => setCaptchaToken(token)} options={{ theme: 'dark', size: 'flexible' }} />
+            {isCompany === null ? (
+              <div className="space-y-6 py-4 fade-in">
+                <h2 className="text-[18px] font-medium text-white text-center">Искате ли да регистрирате фирма?</h2>
+                <div className="grid grid-cols-2 gap-4">
+                  <button
+                    onClick={() => setIsCompany(true)}
+                    className="flex flex-col items-center justify-center p-6 bg-zinc-900 border border-zinc-800 rounded-2xl hover:border-red-600 hover:bg-red-600/5 transition-all group"
+                  >
+                    <Building2 className="mb-3 text-zinc-500 group-hover:text-red-500" size={32} />
+                    <span className="text-[14px] font-medium text-zinc-300">Да, фирма</span>
+                  </button>
+                  <button
+                    onClick={() => setIsCompany(false)}
+                    className="flex flex-col items-center justify-center p-6 bg-zinc-900 border border-zinc-800 rounded-2xl hover:border-red-600 hover:bg-red-600/5 transition-all group"
+                  >
+                    <User className="mb-3 text-zinc-500 group-hover:text-red-500" size={32} />
+                    <span className="text-[14px] font-medium text-zinc-300">Не, частно лице</span>
+                  </button>
+                </div>
               </div>
+            ) : (
+              <form onSubmit={onSignUp} className="space-y-4 fade-in">
+                <div className="flex items-center justify-between mb-4">
+                  <button 
+                    type="button" 
+                    onClick={() => setIsCompany(null)}
+                    className="text-[12px] text-zinc-500 hover:text-white flex items-center gap-1 transition-colors"
+                  >
+                    <ArrowLeft size={14} /> Назад
+                  </button>
+                  <span className="text-[12px] text-red-500 font-bold uppercase tracking-widest">
+                    {isCompany ? 'Фирмена регистрация' : 'Лична регистрация'}
+                  </span>
+                </div>
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center py-2 rounded-md transition-colors text-[14px] font-medium disabled:opacity-50"
-              >
-                {loading ? <Loader2 size={18} className="animate-spin" /> : "Регистрация"}
-              </button>
-            </form>
+                <SupabaseInput label="Име и Фамилия" name="name" value={regName} onChange={(e: any) => setRegName(e.target.value)} required />
+                
+                {isCompany && (
+                  <div className="space-y-4 pt-2 border-t border-zinc-900 mt-4">
+                    <SupabaseInput label="Име на фирмата" name="companyName" value={companyName} onChange={(e: any) => setCompanyName(e.target.value)} required />
+                    <SupabaseInput label="ЕИК / Булстат" name="bulstat" value={bulstat} onChange={(e: any) => setBulstat(e.target.value)} required />
+                    <SupabaseInput label="Адрес на регистрация" name="companyAddress" value={companyAddress} onChange={(e: any) => setCompanyAddress(e.target.value)} required />
+                    <SupabaseInput label="МОЛ" name="companyPerson" value={companyPerson} onChange={(e: any) => setCompanyPerson(e.target.value)} required />
+                  </div>
+                )}
+
+                <SupabaseInput 
+                  ref={phoneInputRef}
+                  label="Телефон" 
+                  name="phone" 
+                  type="tel" 
+                  value={regPhone} 
+                  onFocus={(e: any) => {
+                    const val = e.target.value;
+                    setTimeout(() => e.target.setSelectionRange(val.length, val.length), 0);
+                  }}
+                  onKeyDown={(e: any) => {
+                    if (e.target.selectionStart <= 5 && (e.key === 'Backspace' || e.key === 'ArrowLeft' || e.key === 'Home')) {
+                      e.preventDefault();
+                    }
+                  }}
+                  onSelect={(e: any) => {
+                    const start = e.target.selectionStart;
+                    if (start !== null && start < 5) {
+                      e.target.setSelectionRange(5, Math.max(5, e.target.selectionEnd || 5));
+                    }
+                  }}
+                  onChange={(e: any) => {
+                    const val = e.target.value;
+                    const formatted = formatPhoneNumber(val);
+                    setRegPhone(formatted);
+                  }} 
+                  onClick={(e: any) => {
+                    if (e.target.selectionStart < 5) {
+                      e.target.setSelectionRange(e.target.value.length, e.target.value.length);
+                    }
+                  }}
+                  placeholder="+359 88 888 8888" 
+                  required 
+                />
+                <SupabaseInput label="Имейл" name="email" type="email" value={regEmail} onChange={(e: any) => setRegEmail(e.target.value)} required />
+                
+                <SupabaseInput 
+                  label="Парола"
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  icon={showPassword ? EyeOff : Eye}
+                  onToggleIcon={() => setShowPassword(!showPassword)}
+                  onChange={(e: any) => handlePasswordChange(e, setRegPassword)}
+                  value={regPassword}
+                  required
+                />
+
+                <div className="flex justify-center mt-2 min-h-[65px] w-full overflow-hidden">
+                  <Turnstile siteKey="0x4AAAAAACn8KBpSOynPkBCf" onSuccess={(token) => setCaptchaToken(token)} options={{ theme: 'dark', size: 'flexible' }} />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center py-2 rounded-md transition-colors text-[14px] font-medium disabled:opacity-50"
+                >
+                  {loading ? <Loader2 size={18} className="animate-spin" /> : "Регистрация"}
+                </button>
+              </form>
+            )}
 
             <div className="mt-8 text-center text-[14px] text-zinc-500">
               Вече имате профил?{' '}
