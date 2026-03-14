@@ -338,7 +338,7 @@ export default function AuthPage() {
       const from = (location.state as any)?.from || '/';
       navigate(from, { replace: true });
     } catch (err: any) {
-      showToast(err.message || 'Грешка при запис на данните', 'error');
+      showToast(translateAuthError(err), 'error');
     } finally {
       setLoading(false);
     }
@@ -359,7 +359,7 @@ export default function AuthPage() {
         setRecoverySent(true);
       }
     } catch (err: any) {
-      showToast(err.message || 'Възникна грешка при изпращането на имейла', 'error');
+      showToast(translateAuthError(err), 'error');
     } finally {
       setLoading(false);
     }

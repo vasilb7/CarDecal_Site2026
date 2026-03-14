@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase';
 import { useTranslation } from 'react-i18next';
 import { Loader2, User, Phone, CheckSquare, Square } from 'lucide-react';
 import { useToast } from '../Toast/ToastProvider';
+import { translateAuthError } from '../../lib/passwordUtils';
 import { isValidBulgarianPhone, formatToE164, formatPhoneNumber } from '../../lib/utils';
 
 const FloatingInput = ({ 
@@ -280,7 +281,7 @@ export const CompleteRegistrationModal = () => {
             
         } catch (error: any) {
             console.error('Error completing registration:', error);
-            showToast(error.message || 'Възникна грешка при завършване на регистрацията.', 'error');
+            showToast(translateAuthError(error), 'error');
         } finally {
             setLoading(false);
         }

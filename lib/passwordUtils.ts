@@ -133,6 +133,7 @@ export function translateAuthError(error: any): string {
     if (msg.includes('network') || msg.includes('fetch')) return 'Проблем с връзката. Проверете интернет свързаността си.';
     if (msg.includes('timeout')) return 'Заявката отне твърде дълго. Моля, опитайте отново.';
     if (msg.includes('reauthentication')) return 'За сигурност, моля влезте отново преди да промените паролата.';
+    if (msg.includes('captcha') || msg.includes('timeout-or-duplicate')) return 'Моля, потвърдете, че не сте робот (отметката в долната част).';
 
     // Fallback: return a clean message
     return 'Възникна грешка. Моля, опитайте отново.';
