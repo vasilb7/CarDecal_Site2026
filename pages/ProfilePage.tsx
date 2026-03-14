@@ -1004,7 +1004,7 @@ const ProfilePage: React.FC = () => {
                             />
                         )}
                         
-                        {(activeTab === 'orders' || activeTab === 'settings') && (
+                        {(activeTab === 'orders' || activeTab === 'settings' || activeTab === 'addresses') && (
                             <div className="max-w-4xl mx-auto px-6">
                                 {activeTab === 'orders' && <OrdersTab orders={orders} loading={ordersLoading} user={user} />}
                                 {activeTab === 'settings' && (
