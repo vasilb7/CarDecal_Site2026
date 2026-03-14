@@ -115,7 +115,9 @@ export const CompleteRegistrationModal = () => {
         if (!user || authLoading) {
             needsCompletion = false;
         } else {
-            needsCompletion = !userName || !userPhone;
+            // Re-check for onboarding_completed if profile is loaded
+            const isOnboardingDone = profile?.onboarding_completed ?? false;
+            needsCompletion = !userName || !userPhone || !isOnboardingDone;
         }
 
         if (needsCompletion) {
@@ -200,6 +202,7 @@ export const CompleteRegistrationModal = () => {
             // Update profile first to check for uniqueness
             const updateData: any = { 
                 full_name: name.trim(), 
+                onboarding_completed: true,
                 updated_at: new Date().toISOString()
             };
             

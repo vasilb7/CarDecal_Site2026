@@ -14,7 +14,7 @@ import {
     UserCheck, UserX, Crown, Upload, Video, Film, AlertCircle, Mail,
     Megaphone, Palette, Type, ShoppingBag, Receipt, Printer, Download,
     FileText, BoxSelect, LayoutGrid, ClipboardCheck, Boxes, FileJson, Clock, Bug,
-    Banknote, TrendingUp, Key, ChevronRight, History, Ticket
+    Banknote, TrendingUp, Key, ChevronRight, History, Ticket, Building2
 } from 'lucide-react';
 import { revokeAllUserDevices } from '../lib/device-service';
 import { useToast } from '../components/Toast/ToastProvider';
@@ -144,7 +144,17 @@ interface DBUser {
     deletion_request_status: string | null;
     deletion_admin_notes: string | null;
     deletion_scheduled_at?: string | null;
+    is_company: boolean;
+    company_name: string | null;
+    bulstat: string | null;
+    company_address: string | null;
+    company_person: string | null;
+    vat_registered: boolean;
+    vat_number: string | null;
+    onboarding_completed: boolean;
+    phone: string | null;
 }
+
 
 // ─── Product Edit Modal ────────────────────────────────────────────────────
 const ProductEditModal: React.FC<{
@@ -932,6 +942,8 @@ const UsersTab: React.FC = () => {
     const [modHistory, setModHistory] = useState<any[]>([]);
     const [modHistoryLoading, setModHistoryLoading] = useState(false);
     const [modStatusFilter, setModStatusFilter] = useState<'all' | 'active' | 'temporarily_suspended' | 'permanently_banned'>('all');
+    const [onboardingFilter, setOnboardingFilter] = useState<'all' | 'completed' | 'pending'>('completed'); // Default to showing only completed
+
     
     // Auto-refresh timer to re-evaluate effective statuses
     const [tick, setTick] = useState(0);
@@ -953,8 +965,16 @@ const UsersTab: React.FC = () => {
         setLoading(true);
         const { data, error } = await supabase
             .from('profiles')
-            .select('id,email,full_name,avatar_url,role,is_banned,banned_reason,created_at,last_login_at,last_device_info,last_ip_address,ip_history,admin_notes,moderation_status,banned_until,public_reason,internal_reason,moderator_notes,banned_by,unbanned_by,unban_reason,deletion_requested_at,deletion_request_status,deletion_admin_notes,deletion_scheduled_at')
+            .select(`
+                id,email,full_name,avatar_url,role,is_banned,banned_reason,created_at,last_login_at,
+                last_device_info,last_ip_address,ip_history,admin_notes,moderation_status,banned_until,
+                public_reason,internal_reason,moderator_notes,banned_by,unbanned_by,unban_reason,
+                deletion_requested_at,deletion_request_status,deletion_admin_notes,deletion_scheduled_at,
+                is_company,company_name,bulstat,company_address,company_person,vat_registered,
+                vat_number,onboarding_completed,phone
+            `)
             .order('created_at', { ascending: false });
+
         if (!error && data) setUsers(data as DBUser[]);
         setLoading(false);
     }, []);
@@ -995,12 +1015,19 @@ const UsersTab: React.FC = () => {
 
     const filtered = users.filter(u => {
         const matchesSearch = u.email?.toLowerCase().includes(search.toLowerCase()) ||
-            u.full_name?.toLowerCase().includes(search.toLowerCase());
+            u.full_name?.toLowerCase().includes(search.toLowerCase()) ||
+            u.company_name?.toLowerCase().includes(search.toLowerCase()) ||
+            u.bulstat?.toLowerCase().includes(search.toLowerCase());
         const effectiveStatus = getEffectiveStatus(u);
 
-        if (modStatusFilter === 'all') return matchesSearch;
-        return matchesSearch && effectiveStatus === modStatusFilter;
+        if (modStatusFilter !== 'all' && effectiveStatus !== modStatusFilter) return false;
+        
+        if (onboardingFilter === 'completed' && !u.onboarding_completed) return false;
+        if (onboardingFilter === 'pending' && u.onboarding_completed) return false;
+
+        return matchesSearch;
     });
+
 
     const handleRoleUpdate = (user: DBUser, targetRole: 'user' | 'editor' | 'admin') => {
         if (targetRole === 'user') {
@@ -1347,8 +1374,28 @@ const UsersTab: React.FC = () => {
                     </button>
                 </div>
 
+                {/* Onboarding Filter Pills */}
+                <div className="flex items-center gap-2 flex-wrap mb-1">
+                    {[
+                        { key: 'all', label: 'Всички Профили', count: users.length },
+                        { key: 'completed', label: 'Завършени', count: users.filter(u => u.onboarding_completed).length },
+                        { key: 'pending', label: 'Непълни (Onboarding)', count: users.filter(u => !u.onboarding_completed).length },
+                    ].map(f => (
+                        <button
+                            key={f.key}
+                            onClick={() => setOnboardingFilter(f.key as any)}
+                            className={`px-3 py-2 text-[10px] uppercase tracking-widest border transition-all flex items-center gap-1.5 ${onboardingFilter === f.key ? 'border-red-600/60 bg-red-600/20 text-white' : 'border-white/5 text-zinc-500 hover:text-zinc-400'}`}
+                        >
+                            {f.key === 'pending' && <Clock className="w-3 h-3 text-red-500" />}
+                            {f.label}
+                            {f.count > 0 && <span className="text-[9px] opacity-60">({f.count})</span>}
+                        </button>
+                    ))}
+                </div>
+
                 {/* Status Filter Pills */}
                 <div className="flex items-center gap-2 flex-wrap">
+
                     {[
                         { key: 'all', label: 'Всички', count: users.length },
                         { key: 'active', label: 'Активни', count: users.filter(u => getEffectiveStatus(u) === 'active').length },
@@ -1397,14 +1444,22 @@ const UsersTab: React.FC = () => {
                                     <div className="flex items-center gap-2 flex-wrap">
                                         <p className="text-white font-medium text-sm group-hover/row:text-red-500 transition-colors uppercase tracking-tight">{u.full_name || 'Без Име'}</p>
                                         <span className={`text-[10px] px-2 py-0.5 uppercase tracking-widest border ${badge.cls}`}>{badge.label}</span>
+                                        {u.is_company && <span className="text-[10px] bg-blue-900/30 text-blue-400 px-2 py-0.5 uppercase tracking-widest border border-blue-900/20 flex items-center gap-1"><Building2 size={10} /> Фирма</span>}
+                                        {!u.onboarding_completed && <span className="text-[10px] bg-red-900/30 text-red-400 px-2 py-0.5 uppercase tracking-widest border border-red-900/20">Непълна регистрация</span>}
                                         {u.deletion_scheduled_at && (() => {
+
                                             const daysLeft = Math.ceil((new Date(u.deletion_scheduled_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
                                             return <span className="text-[10px] bg-red-900/30 text-red-500 px-2 py-0.5 uppercase tracking-widest border border-red-900/40">Изтриване след {Math.max(0, daysLeft)} дни</span>;
                                         })()}
                                         {hasDeletionRequest && !u.deletion_scheduled_at && <span className="text-[10px] bg-purple-900/30 text-purple-400 px-2 py-0.5 uppercase tracking-widest border border-purple-900/20">Заявка изтриване</span>}
                                         {u.id === currentUser?.id && <span className="text-[10px] bg-zinc-800 text-zinc-400 px-2 py-0.5 uppercase tracking-widest">Аз</span>}
                                     </div>
-                                    <p className="text-zinc-500 text-xs">{u.email}</p>
+                                    <p className="text-zinc-500 text-xs flex items-center gap-2">
+                                        {u.email}
+                                        {u.is_company && u.company_name && <span className="text-blue-400/80">• {u.company_name}</span>}
+                                        {u.phone && <span className="text-zinc-400 tracking-wider">• {u.phone}</span>}
+                                    </p>
+
                                     {!isActive && u.public_reason && (
                                         <p className="text-red-400/60 text-xs mt-0.5">Причина: {u.public_reason}</p>
                                     )}

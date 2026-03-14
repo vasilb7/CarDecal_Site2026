@@ -20,11 +20,13 @@ import {
     ExternalLink, Trash2, ArrowLeft, Eye, 
     EyeOff, X, AlertTriangle, AlertCircle, KeyRound, 
     PackageOpen, CheckCircle2, Truck, Megaphone, ClipboardCheck,
-    Library, FileText, Heart, Wallet, BookOpen, Undo2
+    Library, FileText, Heart, Wallet, BookOpen, Undo2, Building2
 } from 'lucide-react';
 
+
 // ─── Типове ─────────────────────────────────────────────────────────────────
-type ProfileTab = 'dashboard' | 'orders' | 'settings' | 'addresses' | 'favorites' | 'wallet';
+type ProfileTab = 'dashboard' | 'orders' | 'settings' | 'addresses' | 'favorites' | 'wallet' | 'company';
+
 
 // ─── Custom Confirm Dialog ──────────────────────────────────────────────────
 interface ConfirmDialogProps {
@@ -710,6 +712,217 @@ const SettingsTab: React.FC<{
 };
 
 
+// ─── Таб Данни на Фирма ──────────────────────────────────────────────────
+const CompanyTab: React.FC<{ profile: any }> = ({ profile }) => {
+    const { refreshProfile } = useAuth();
+    const { showToast } = useToast();
+    
+    const [loading, setLoading] = useState(false);
+    const [editing, setEditing] = useState(false);
+    
+    const [form, setForm] = useState({
+        company_name: profile?.company_name || '',
+        bulstat: profile?.bulstat || '',
+        vat_registered: profile?.vat_registered || false,
+        vat_number: profile?.vat_number || '',
+        company_address: profile?.company_address || '',
+        company_person: profile?.company_person || ''
+    });
+
+    useEffect(() => {
+        if (profile) {
+            setForm({
+                company_name: profile.company_name || '',
+                bulstat: profile.bulstat || '',
+                vat_registered: profile.vat_registered || false,
+                vat_number: profile.vat_number || '',
+                company_address: profile.company_address || '',
+                company_person: profile.company_person || ''
+            });
+        }
+    }, [profile]);
+
+    const handleSave = async () => {
+        if (!form.company_name || !form.bulstat || !form.company_address || !form.company_person) {
+            showToast('Моля, попълнете всички задължителни полета.', 'error');
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const { error } = await supabase
+                .from('profiles')
+                .update({
+                    company_name: form.company_name,
+                    bulstat: form.bulstat,
+                    vat_registered: form.vat_registered,
+                    vat_number: form.vat_number,
+                    company_address: form.company_address,
+                    company_person: form.company_person,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', profile.id);
+
+            if (error) throw error;
+
+            await refreshProfile();
+            setEditing(false);
+            showToast('Данните на фирмата бяха обновени успешно!', 'success');
+        } catch (e: any) {
+            showToast(e.message || 'Грешка при запис.', 'error');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const inputCls = 'w-full bg-white/5 border border-white/10 text-white text-sm px-4 py-3 rounded-xl focus:border-red-600 outline-none transition-all';
+    const labelCls = 'block text-[10px] text-zinc-500 uppercase font-black tracking-widest mb-2';
+
+    if (!editing) {
+        return (
+            <div className="space-y-6">
+                <div className="bg-[#0a0a0a] border border-white/10 rounded-3xl overflow-hidden shadow-2xl">
+                    <div className="p-8 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
+                        <div>
+                            <h3 className="text-white font-bold text-lg uppercase tracking-widest">Данни на фирмата</h3>
+                            <p className="text-zinc-500 text-xs mt-1">Информация за фактуриране</p>
+                        </div>
+                        <button 
+                            onClick={() => setEditing(true)}
+                            className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-xs font-bold hover:bg-white/10 transition-all flex items-center gap-2"
+                        >
+                            <Edit3 size={14} />
+                            Редактирай
+                        </button>
+                    </div>
+                    
+                    <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div>
+                            <p className={labelCls}>Наименование</p>
+                            <p className="text-white text-base font-medium">{form.company_name}</p>
+                        </div>
+                        <div>
+                            <p className={labelCls}>ЕИК / Булстат</p>
+                            <p className="text-white text-base font-medium font-mono tracking-wider">{form.bulstat}</p>
+                        </div>
+                        <div>
+                            <p className={labelCls}>ДДС Номер</p>
+                            <p className="text-white text-base font-medium font-mono tracking-wider">
+                                {form.vat_registered ? form.vat_number : 'Не е регистрирана по ДДС'}
+                            </p>
+                        </div>
+                        <div>
+                            <p className={labelCls}>МОЛ</p>
+                            <p className="text-white text-base font-medium">{form.company_person}</p>
+                        </div>
+                        <div className="md:col-span-2">
+                            <p className={labelCls}>Адрес на регистрация</p>
+                            <p className="text-white text-base font-medium leading-relaxed">{form.company_address}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="space-y-6">
+            <div className="bg-[#0a0a0a] border border-white/10 rounded-3xl p-8 shadow-2xl">
+                <div className="flex items-center gap-4 mb-10">
+                    <div className="w-12 h-12 rounded-2xl bg-red-600/10 border border-red-600/20 flex items-center justify-center">
+                        <Building2 className="w-6 h-6 text-red-500" />
+                    </div>
+                    <div>
+                        <h3 className="text-white font-bold text-xl">Редактиране на данни</h3>
+                        <p className="text-zinc-500 text-sm">Всички полета са задължителни</p>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="md:col-span-2">
+                        <label className={labelCls}>Наименование на фирмата</label>
+                        <input 
+                            className={inputCls} 
+                            value={form.company_name} 
+                            onChange={e => setForm({...form, company_name: e.target.value})} 
+                        />
+                    </div>
+                    <div>
+                        <label className={labelCls}>ЕИК / Булстат</label>
+                        <input 
+                            className={inputCls} 
+                            value={form.bulstat} 
+                            onChange={e => {
+                                const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 13);
+                                setForm({...form, bulstat: val});
+                            }} 
+                        />
+                    </div>
+                    <div>
+                        <div className="flex items-center justify-between mb-2">
+                            <label className={labelCls + " mb-0"}>ДДС Номер</label>
+                            <button 
+                                onClick={() => {
+                                    const next = !form.vat_registered;
+                                    setForm({
+                                        ...form, 
+                                        vat_registered: next,
+                                        vat_number: next ? `BG${form.bulstat}` : ''
+                                    });
+                                }}
+                                className={`text-[10px] font-black uppercase px-2 py-1 rounded transition-colors ${form.vat_registered ? 'bg-red-600 text-white' : 'bg-white/5 text-zinc-500 hover:bg-white/10'}`}
+                            >
+                                {form.vat_registered ? 'Регистрирана' : 'Не е регистрирана'}
+                            </button>
+                        </div>
+                        <input 
+                            className={inputCls} 
+                            value={form.vat_number} 
+                            disabled={!form.vat_registered}
+                            onChange={e => setForm({...form, vat_number: e.target.value.toUpperCase()})}
+                            placeholder={form.vat_registered ? "BG..." : "Няма ДДС"}
+                        />
+                    </div>
+                    <div>
+                        <label className={labelCls}>МОЛ</label>
+                        <input 
+                            className={inputCls} 
+                            value={form.company_person} 
+                            onChange={e => setForm({...form, company_person: e.target.value})} 
+                        />
+                    </div>
+                    <div className="md:col-span-2">
+                        <label className={labelCls}>Адрес на регистрация</label>
+                        <textarea 
+                            className={inputCls + " min-h-[100px] resize-none"} 
+                            value={form.company_address} 
+                            onChange={e => setForm({...form, company_address: e.target.value})} 
+                        />
+                    </div>
+                </div>
+
+                <div className="flex gap-4 mt-10">
+                    <button 
+                        onClick={() => setEditing(false)}
+                        className="flex-1 py-4 bg-white/5 border border-white/10 text-white text-xs font-black uppercase tracking-widest hover:bg-white/10 rounded-2xl transition-all"
+                    >
+                        Отказ
+                    </button>
+                    <button 
+                        onClick={handleSave}
+                        disabled={loading}
+                        className="flex-1 py-4 bg-red-600 text-white text-xs font-black uppercase tracking-widest hover:bg-red-700 rounded-2xl transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                        {loading && <Loader2 size={16} className="animate-spin" />}
+                        Запази промените
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+
 const DashboardGrid: React.FC<{
     profile: any;
     user: any;
@@ -720,10 +933,12 @@ const DashboardGrid: React.FC<{
         { id: 'settings', label: 'Настройки', icon: Settings },
         { id: 'addresses', label: 'Моите адреси', icon: MapPin },
         { id: 'orders', label: 'Моите поръчки', icon: ShoppingBag },
+        { id: 'company', label: 'Данни на фирма', icon: Building2, hidden: !profile?.is_company },
         { id: 'favorites', label: 'Любими продукти', icon: Heart },
         { id: 'wallet', label: 'Портфейл', icon: Wallet },
         { id: 'logout', label: 'Изход', icon: LogOut, action: onSignOut },
-    ];
+    ].filter(c => !c.hidden);
+
 
     const firstName = profile?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'Васил';
     const fullName = profile?.full_name || user?.email?.split('@')[0] || 'Васил Бенков';
@@ -959,8 +1174,10 @@ const ProfilePage: React.FC = () => {
                     <h2 className="flex-1 text-center font-bold text-zinc-900 mr-10">
                         {activeTab === 'orders' ? 'Моите поръчки' : 
                          activeTab === 'addresses' ? 'Моите адреси' :
+                         activeTab === 'company' ? 'Данни на фирма' :
                          activeTab === 'settings' ? 'Настройки' : 'Профил'}
                     </h2>
+
                 </div>
             )}
 
@@ -978,8 +1195,10 @@ const ProfilePage: React.FC = () => {
                         <h2 className="text-sm font-black uppercase tracking-[0.2em] text-white">
                              {activeTab === 'orders' ? 'Моите поръчки' : 
                               activeTab === 'addresses' ? 'Моите адреси' :
+                              activeTab === 'company' ? 'Данни на фирма' :
                               activeTab === 'settings' ? 'Настройки' : 'Раздел'}
                         </h2>
+
                         <div className="w-20" /> {/* Spacer */}
                     </div>
                 </div>
@@ -1004,9 +1223,11 @@ const ProfilePage: React.FC = () => {
                             />
                         )}
                         
-                        {(activeTab === 'orders' || activeTab === 'settings' || activeTab === 'addresses') && (
+                        {(activeTab === 'orders' || activeTab === 'settings' || activeTab === 'addresses' || activeTab === 'company') && (
                             <div className="max-w-4xl mx-auto px-6">
                                 {activeTab === 'orders' && <OrdersTab orders={orders} loading={ordersLoading} user={user} />}
+                                {activeTab === 'company' && <CompanyTab profile={profile} />}
+
                                 {activeTab === 'settings' && (
                                     <SettingsTab
                                         profile={profile}
@@ -1022,7 +1243,8 @@ const ProfilePage: React.FC = () => {
                             </div>
                         )}
 
-                        {!['dashboard', 'orders', 'settings', 'addresses'].includes(activeTab) && (
+                        {!['dashboard', 'orders', 'settings', 'addresses', 'company'].includes(activeTab) && (
+
                             <div className="max-w-4xl mx-auto px-6 py-20 text-center">
                                 <div className="w-24 h-24 bg-zinc-900 border border-white/5 rounded-full flex items-center justify-center mx-auto mb-6 text-zinc-700">
                                     <Info className="w-12 h-12" />

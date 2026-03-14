@@ -72,7 +72,7 @@ export default function AuthPage() {
   const location = useLocation();
   const { t } = useTranslation();
   const { showToast } = useToast();
-  const { user } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
 
 
   const [view, setView] = useState<'login' | 'register' | 'recovery' | 'onboarding'>('login');
@@ -120,6 +120,12 @@ export default function AuthPage() {
     else if (location.pathname === '/recovery') setView('recovery');
     else setView('login');
   }, [location.pathname]);
+
+  useEffect(() => {
+    if (user && !authLoading && profile && !profile.onboarding_completed) {
+      setView('onboarding');
+    }
+  }, [user, authLoading, profile]);
 
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>, setter: (v: string) => void) => {
     const val = e.target.value;
@@ -259,12 +265,7 @@ export default function AuthPage() {
           data: { 
             full_name: regName.trim(), 
             phone: normalizedPhone, 
-            role: 'user',
-            is_company: isCompany,
-            company_name: isCompany ? companyName : null,
-            bulstat: isCompany ? bulstat : null,
-            company_address: isCompany ? companyAddress : null,
-            company_person: isCompany ? companyPerson : null
+            role: 'user'
           },
           captchaToken
         },
@@ -288,8 +289,10 @@ export default function AuthPage() {
     try {
       const updateData: any = {
         is_company: !!isCompany,
+        onboarding_completed: true,
         updated_at: new Date().toISOString()
       };
+
 
       if (isCompany) {
         updateData.company_name = companyName;
