@@ -110,7 +110,10 @@ export const CompleteRegistrationModal = () => {
         } else {
             // Re-check for onboarding_completed if profile is loaded
             const isOnboardingDone = profile?.onboarding_completed ?? false;
-            needsCompletion = !userName || !userPhone || !isOnboardingDone;
+            const isEmailUser = user?.app_metadata?.provider === 'email';
+
+            // Only show for non-email users (e.g. Google) who have incomplete data
+            needsCompletion = !isEmailUser && (!userName || !userPhone || !isOnboardingDone);
         }
 
         if (needsCompletion) {
