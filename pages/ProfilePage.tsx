@@ -1023,8 +1023,9 @@ const FavoritesTab: React.FC = () => {
             {favoriteProducts.map(product => (
                 <div key={product.slug} className="relative group">
                     <ProductCard product={product} />
-                    <div className="absolute top-3 left-3 z-10 pointer-events-none">
-                        <div className="bg-red-600/90 backdrop-blur-md text-white text-[9px] font-black uppercase px-2 py-1 rounded shadow-xl border border-white/10 tracking-widest">
+                    <div className="absolute top-4 left-4 z-10 pointer-events-none">
+                        <div className="bg-red-600 text-white text-[10px] font-black uppercase px-3 py-1.5 rounded-full shadow-[0_0_20px_rgba(220,38,38,0.5)] border border-white/20 tracking-[0.15em] flex items-center gap-1.5 backdrop-blur-sm">
+                            <Heart size={10} className="fill-white" />
                             Любим
                         </div>
                     </div>
