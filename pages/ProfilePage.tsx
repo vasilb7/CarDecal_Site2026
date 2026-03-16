@@ -998,7 +998,7 @@ const FavoritesTab: React.FC = () => {
     const { products } = useProducts();
     const navigate = useNavigate();
     const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 5;
+    const itemsPerPage = typeof window !== 'undefined' && window.innerWidth < 768 ? 5 : 6;
 
     const favoriteProducts = products.filter(p => wishlist.some(item => item.slug === p.slug));
     const totalPages = Math.ceil(favoriteProducts.length / itemsPerPage);
