@@ -46,7 +46,7 @@ const ProductCard: React.FC<ProductCardProps> = memo(({ product, isPriority = fa
 
   const CardContent = (
     <div
-      className="bg-[#141414] rounded-[28px] md:rounded-[40px] p-4 md:p-8 flex flex-col justify-between relative shadow-2xl border border-white/[0.03] transition-all duration-500 ease-out h-full overflow-hidden lg:hover:-translate-y-3 lg:hover:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5),0_0_20px_rgba(220,38,38,0.2)] lg:hover:border-red-600/20"
+      className="bg-[#141414] rounded-[28px] md:rounded-[40px] p-2.5 md:p-8 flex flex-col justify-between relative shadow-2xl border border-white/[0.03] transition-all duration-500 ease-out h-full overflow-hidden lg:hover:-translate-y-3 lg:hover:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5),0_0_20px_rgba(220,38,38,0.2)] lg:hover:border-red-600/20"
     >
       {/* Product Image Area */}
       <div className="relative w-full aspect-video md:aspect-[4/3] flex-shrink-0 mb-4 md:mb-6">

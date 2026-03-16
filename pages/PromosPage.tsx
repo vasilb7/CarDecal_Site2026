@@ -117,7 +117,7 @@ const PromosPage: React.FC = () => {
     return offset;
   };
 
-  const bgClass = "bg-[#280905]";
+  const bgClass = "bg-[#6a140b]";
 
   return (
     <div className={cn("min-h-screen pt-12 md:pt-32 pb-0 overflow-hidden flex flex-col items-center relative", bgClass)}>
@@ -125,7 +125,7 @@ const PromosPage: React.FC = () => {
       
       {/* Royal Background Pattern Overlay */}
       <div 
-        className="fixed inset-0 z-0 opacity-[0.12] pointer-events-none"
+        className="fixed inset-0 z-0 opacity-[0.20] pointer-events-none"
         style={{ 
           backgroundImage: "url('/royal.png')", 
           backgroundRepeat: "repeat",

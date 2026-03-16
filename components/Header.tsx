@@ -395,10 +395,20 @@ const Header: React.FC = () => {
                     {/* Desktop Nav */}
                     <nav className="hidden lg:flex items-center space-x-12 ml-16 flex-grow">
                         {menuLinks.map(link => (
-                            <NavLink key={link.path} to={link.path} className={({ isActive }) =>
-                                `relative text-xs uppercase tracking-widest transition-colors duration-300 hover:text-[#ff0000] ${isActive ? 'text-[#ff0000]' : 'text-text-primary'
-                                } after:content-[''] after:absolute after:left-0 after:bottom-[-4px] after:w-full after:h-[1px] after:bg-[#ff0000] after:transition-transform after:duration-300 after:scale-x-0 ${isActive ? 'after:scale-x-100' : 'hover:after:scale-x-50'}`
-                            }>
+                            <NavLink 
+                                key={link.path} 
+                                to={link.path} 
+                                onClick={(e) => {
+                                    if (location.pathname === link.path) {
+                                        e.preventDefault();
+                                    }
+                                    closeMenu();
+                                }}
+                                className={({ isActive }) =>
+                                    `relative text-xs uppercase tracking-widest transition-colors duration-300 hover:text-[#ff0000] ${isActive ? 'text-[#ff0000]' : 'text-text-primary'
+                                    } after:content-[''] after:absolute after:left-0 after:bottom-[-4px] after:w-full after:h-[1px] after:bg-[#ff0000] after:transition-transform after:duration-300 after:scale-x-0 ${isActive ? 'after:scale-x-100' : 'hover:after:scale-x-50'}`
+                                }
+                            >
                                 {link.label}
                             </NavLink>
                         ))}
@@ -582,7 +592,12 @@ const Header: React.FC = () => {
                                         <NavLink 
                                             key={link.path}
                                             to={link.path} 
-                                            onClick={closeMenu} 
+                                            onClick={(e) => {
+                                                if (location.pathname === link.path) {
+                                                    e.preventDefault();
+                                                }
+                                                closeMenu();
+                                            }}
                                             className="group"
                                         >
                                             {({ isActive }) => (

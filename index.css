@@ -50,6 +50,7 @@ html {
   scrollbar-gutter: stable;
   /* Prevent horizontal stretch on mobile */
   width: 100%;
+  scroll-behavior: smooth;
 }
 
 body {

@@ -1240,26 +1240,27 @@ const ProfilePage: React.FC = () => {
         <div className="min-h-screen bg-[#0a0a0a]">
             {/* ──── Header Mobile ──── */}
             {activeTab !== 'dashboard' && (
-                <div className="bg-white border-b border-zinc-100 flex items-center px-4 h-16 sm:hidden sticky top-0 z-50">
+                <div className="bg-black/90 backdrop-blur-xl border-b border-white/5 flex items-center px-4 h-16 sm:hidden sticky top-0 z-[60]">
                     <button 
                         onClick={() => setActiveTab('dashboard')}
-                        className="p-2 text-zinc-500 hover:text-zinc-900 transition-colors"
+                        className="p-2 text-zinc-400 hover:text-white transition-colors"
                     >
                         <ArrowLeft className="w-6 h-6" />
                     </button>
-                    <h2 className="flex-1 text-center font-bold text-zinc-900 mr-10">
+                    <h2 className="flex-1 text-center font-black text-[10px] uppercase tracking-[0.2em] text-white mr-10">
                         {activeTab === 'orders' ? 'Моите поръчки' : 
                          activeTab === 'addresses' ? 'Моите адреси' :
                          activeTab === 'company' ? 'Данни на фирма' :
-                         activeTab === 'settings' ? 'Настройки' : 'Профил'}
+                         activeTab === 'settings' ? 'Настройки' : 
+                         activeTab === 'wallet' ? 'Портфейл' :
+                         activeTab === 'favorites' ? 'Любими продукти' : 'Раздел'}
                     </h2>
-
                 </div>
             )}
 
             {/* ──── Desktop Header (Compact when NOT in dashboard) ──── */}
             {activeTab !== 'dashboard' && (
-                <div className="hidden sm:block bg-zinc-950 border-b border-white/5 py-4">
+                <div className="hidden sm:block bg-black/90 backdrop-blur-xl border-b border-white/5 py-5 sticky top-0 z-[45]">
                     <div className="max-w-6xl mx-auto px-6 flex items-center justify-between">
                         <button 
                             onClick={() => setActiveTab('dashboard')}
@@ -1272,7 +1273,9 @@ const ProfilePage: React.FC = () => {
                              {activeTab === 'orders' ? 'Моите поръчки' : 
                               activeTab === 'addresses' ? 'Моите адреси' :
                               activeTab === 'company' ? 'Данни на фирма' :
-                              activeTab === 'settings' ? 'Настройки' : 'Раздел'}
+                              activeTab === 'settings' ? 'Настройки' : 
+                              activeTab === 'wallet' ? 'Портфейл' :
+                              activeTab === 'favorites' ? 'Любими продукти' : 'Раздел'}
                         </h2>
 
                         <div className="w-20" /> {/* Spacer */}

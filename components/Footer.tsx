@@ -1,6 +1,7 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
+import { Facebook, Instagram, Youtube, Send } from 'lucide-react';
 
 interface RollingLinkProps {
   to?: string;
@@ -32,23 +33,20 @@ const RollingLink: React.FC<RollingLinkProps> = ({ to, href, className, children
 const Footer: React.FC = () => {
   const location = useLocation();
 
-  let topBgClass = "bg-background";
   const path = location.pathname;
 
-  if (path === '/') {
-    topBgClass = "bg-red-600";
-  } else if (path.startsWith('/catalog')) {
-    topBgClass = "bg-[#0F0F0F]";
-  } else if (path === '/profile' || path === '/cart' || path === '/contact' || path === '/privacy' || path === '/terms' || path === '/delivery') {
-    topBgClass = "bg-[#0a0a0a]";
-  } else if (path === '/custom-orders') {
-    topBgClass = "bg-[#080808]";
-  } else if (path === '/promos') {
-    topBgClass = "bg-[#280905]";
-  }
+  // Determine the background color for the "corners" to match the page theme
+  const outerBgClass = useMemo(() => {
+    if (path === '/') return "bg-[#dc2626]";
+    if (path === '/promos') return "bg-[#6a140b]";
+    if (path === '/contact') return "bg-[#5d4a27]";
+    if (path === '/custom-orders') return "bg-[#080808]";
+    if (path.startsWith('/catalog')) return "bg-[#0F0F0F]";
+    return "bg-[#0a0a0a]";
+  }, [path]);
 
   return (
-    <footer className={`${topBgClass} pt-0 pb-0 w-full relative z-10 overflow-hidden -mt-1`}>
+    <footer className={`${outerBgClass} pt-0 pb-0 w-full relative z-10 overflow-hidden -mt-1`}>
       {/* Subtle top transition overlay - lightweight CSS gradient instead of repeated image */}
       <div 
         className="absolute inset-x-0 top-0 h-64 z-0 opacity-[0.03] pointer-events-none"
@@ -61,28 +59,26 @@ const Footer: React.FC = () => {
       <div className="bg-[#ff0000] rounded-t-[2rem] sm:rounded-t-[2.5rem] lg:rounded-t-[4rem] px-2 pt-2 sm:px-3 sm:pt-3 lg:px-4 lg:pt-4 flex flex-col relative w-full overflow-hidden pb-6">
 
         {/* ── INNER DARK BOX ── */}
-        <div className="
-          bg-[#1b1c18] relative w-full overflow-hidden
-          rounded-[1.7rem] sm:rounded-[2.2rem] lg:rounded-[3.5rem]
-          min-h-[500px] sm:min-h-0 sm:aspect-[4/3] lg:aspect-[21/9] flex flex-col items-center justify-center
-        ">
+        <div 
+          className="
+            bg-[#1b1c18] relative w-full overflow-hidden
+            rounded-[1.7rem] sm:rounded-[2.2rem] lg:rounded-[3.5rem]
+            min-h-[500px] flex flex-col items-center justify-start pt-10 sm:pt-16 lg:pt-24 pb-12
+          "
+        >
 
-          {/* ── LOGO — Independent Container ── */}
-          <motion.div 
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="absolute top-[8%] sm:top-[10%] lg:top-[8%] left-0 right-0 flex justify-center pointer-events-none z-20"
-          >
-            <img 
-              src="/LOGO.webp" 
-              alt="CarDecal Logo" 
-              className="h-12 sm:h-20 lg:h-28 w-auto object-contain"
-            />
-          </motion.div>
+          {/* Star Pattern Overlay - Higher contrast for visual depth */}
+          <div 
+            className="absolute inset-0 z-0 opacity-[0.07] pointer-events-none"
+            style={{ 
+              backgroundImage: "url('/star.svg')", 
+              backgroundRepeat: "repeat",
+              backgroundSize: "120px",
+            }}
+          />
 
-          {/* ── HUGE CENTER TEXT — Independent Container ── */}
-          <div className="absolute top-[28%] sm:top-[25%] lg:top-[30%]
-            left-0 right-0 flex flex-col items-center pointer-events-none z-10 w-full scale-[0.9] xs:scale-100">
+          {/* ── HUGE CENTER TEXT ── */}
+          <div className="relative flex flex-col items-center pointer-events-none z-10 w-full mb-10 sm:mb-16 lg:mb-20 scale-[0.85] xs:scale-100">
             <div className="font-black uppercase tracking-tighter
               drop-shadow-[0_20px_40px_rgba(0,0,0,0.7)] flex flex-col items-center">
 
@@ -100,39 +96,70 @@ const Footer: React.FC = () => {
             </div>
           </div>
 
-          {/* ── MENUS — bottom section ── */}
-          <div className="relative w-full z-40 px-6 sm:px-12 lg:px-24 xl:px-40 pb-12 sm:pb-8 lg:pb-12 mt-auto sm:mt-0 sm:absolute sm:bottom-[15%]
-            flex flex-row justify-between items-start gap-8">
+          {/* ── MENUS GRID ── */}
+          <div className="relative w-full z-40 px-6 sm:px-12 lg:px-24 xl:px-32 pb-8 mt-auto">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-y-10 gap-x-8 mb-12">
+              
+              {/* Col 1: Logo & Slogan */}
+              <div className="col-span-2 md:col-span-1 flex flex-col items-start gap-2">
+                <span className="text-2xl sm:text-3xl font-black text-white tracking-tighter uppercase leading-none">
+                  CAR <span className="text-red-600">DECAL</span>
+                </span>
+                <span className="text-[10px] sm:text-xs text-white/50 font-bold uppercase tracking-widest leading-relaxed">
+                  Висок клас стикери <br /> над 1000+ дизайна
+                </span>
+              </div>
 
-            {/* Страници */}
-            <div className="flex flex-col items-start text-left flex-1">
-              <span className="text-[10px] sm:text-[10px] lg:text-[12px]
-                text-white/40 font-black tracking-[0.2em] mb-6 sm:mb-4">
-                СТРАНИЦИ
-              </span>
-              <div className="flex flex-col gap-4 sm:gap-[0.8vw] lg:gap-[1vw] items-start">
-                <RollingLink to="/catalog"  className="text-lg sm:text-[2.2vw] lg:text-[1.8vw] xl:text-[1.5vw] font-black uppercase text-white leading-none inline-block">КАТАЛОГ</RollingLink>
-                <RollingLink to="/promos"   className="text-lg sm:text-[2.2vw] lg:text-[1.8vw] xl:text-[1.5vw] font-black uppercase text-white leading-none inline-block">ПРОМОЦИИ</RollingLink>
-                <RollingLink to="/about"    className="text-lg sm:text-[2.2vw] lg:text-[1.8vw] xl:text-[1.5vw] font-black uppercase text-white leading-none inline-block">ЗА НАС</RollingLink>
-                <RollingLink to="/custom-orders" className="text-lg sm:text-[2.2vw] lg:text-[1.8vw] xl:text-[1.5vw] font-black uppercase text-white leading-none inline-block">ПОРЪЧКИ</RollingLink>
-                <RollingLink to="/contact"  className="text-lg sm:text-[2.2vw] lg:text-[1.8vw] xl:text-[1.5vw] font-black uppercase text-white leading-none inline-block">КОНТАКТИ</RollingLink>
+              {/* Col 2: Страници */}
+              <div className="flex flex-col items-start gap-4 sm:gap-6">
+                <span className="text-[11px] sm:text-sm text-white font-black tracking-[0.2em] uppercase">МЕНЮ</span>
+                <div className="flex flex-col gap-2.5 sm:gap-4">
+                  <RollingLink to="/catalog" className="text-sm sm:text-base font-bold uppercase text-white/70 hover:text-white transition-colors">КАТАЛОГ</RollingLink>
+                  <RollingLink to="/promos" className="text-sm sm:text-base font-bold uppercase text-white/70 hover:text-white transition-colors">ПРОМОЦИИ</RollingLink>
+                  <RollingLink to="/about" className="text-sm sm:text-base font-bold uppercase text-white/70 hover:text-white transition-colors">ЗА НАС</RollingLink>
+                </div>
+              </div>
+
+              {/* Col 3: Поръчки */}
+              <div className="flex flex-col items-start gap-4 sm:gap-6">
+                <span className="text-[11px] sm:text-sm text-white font-black tracking-[0.2em] uppercase">ПОРЪЧКИ</span>
+                <div className="flex flex-col gap-2.5 sm:gap-4">
+                  <RollingLink to="/custom-orders" className="text-sm sm:text-base font-bold uppercase text-white/70 hover:text-white transition-colors">ИНДИВИДУАЛНИ</RollingLink>
+                  <RollingLink to="/contact" className="text-sm sm:text-base font-bold uppercase text-white/70 hover:text-white transition-colors">КОНТАКТИ</RollingLink>
+                </div>
+              </div>
+
+              {/* Col 4: Инфо */}
+              <div className="flex flex-col items-start gap-4 sm:gap-6">
+                <span className="text-[11px] sm:text-sm text-white font-black tracking-[0.2em] uppercase">ИНФО</span>
+                <div className="flex flex-col gap-2.5 sm:gap-4">
+                  <RollingLink to="/privacy" className="text-sm sm:text-base font-bold uppercase text-white/70 hover:text-white transition-colors">ПОВЕРИТЕЛНОСТ</RollingLink>
+                  <RollingLink to="/terms" className="text-sm sm:text-base font-bold uppercase text-white/70 hover:text-white transition-colors">ОБЩИ УСЛОВИЯ</RollingLink>
+                  <RollingLink to="/delivery" className="text-sm sm:text-base font-bold uppercase text-white/70 hover:text-white transition-colors">ДОСТАВКА</RollingLink>
+                </div>
               </div>
             </div>
 
-            {/* Социални */}
-            <div className="flex flex-col items-end text-right flex-1">
-              <span className="text-[10px] sm:text-[10px] lg:text-[12px]
-                text-white/40 font-black tracking-[0.2em] mb-6 sm:mb-4">
-                ПОСЛЕДВАЙ НИ
-              </span>
-              <div className="flex flex-col gap-4 sm:gap-[0.8vw] lg:gap-[1vw] items-end">
-                <RollingLink href="https://www.tiktok.com/@cardecal4?_r=1&_t=ZN-94RmUa0RCeE" target="_blank" rel="noopener noreferrer" className="text-lg sm:text-[2.2vw] lg:text-[1.8vw] xl:text-[1.5vw] font-black uppercase text-white leading-none inline-block">TIKTOK</RollingLink>
-                <RollingLink href="https://www.instagram.com/cardecal1?igsh=eWd3b3FpdXN0NXRp" target="_blank" rel="noopener noreferrer" className="text-lg sm:text-[2.2vw] lg:text-[1.8vw] xl:text-[1.5vw] font-black uppercase text-white leading-none inline-block">INSTAGRAM</RollingLink>
-                <RollingLink href="https://youtube.com/@cardecal?si=NT1sZsww7fp8cKIR" target="_blank" rel="noopener noreferrer" className="text-lg sm:text-[2.2vw] lg:text-[1.8vw] xl:text-[1.5vw] font-black uppercase text-white leading-none inline-block">YOUTUBE</RollingLink>
-                <RollingLink href="https://www.facebook.com/share/18yePjATNr/" target="_blank" rel="noopener noreferrer" className="text-lg sm:text-[2.2vw] lg:text-[1.8vw] xl:text-[1.5vw] font-black uppercase text-white leading-none inline-block">FACEBOOK</RollingLink>
+            {/* Horizontal Line Separator */}
+            <div className="w-full h-px bg-white/10 mb-8" />
+
+            {/* Social Icons & Secondary Copyright */}
+            <div className="flex flex-col items-center gap-6">
+              <div className="flex items-center gap-4">
+                <a href="https://www.facebook.com/share/18yePjATNr/" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full border border-white/20 flex items-center justify-center text-white/70 hover:text-white hover:border-white transition-all">
+                  <Facebook size={18} />
+                </a>
+                <a href="https://www.instagram.com/cardecal1?igsh=eWd3b3FpdXN0NXRp" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full border border-white/20 flex items-center justify-center text-white/70 hover:text-white hover:border-white transition-all">
+                  <Instagram size={18} />
+                </a>
+                <a href="https://youtube.com/@cardecal?si=NT1sZsww7fp8cKIR" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full border border-white/20 flex items-center justify-center text-white/70 hover:text-white hover:border-white transition-all">
+                  <Youtube size={18} />
+                </a>
+                <a href="https://www.tiktok.com/@cardecal4?_r=1&_t=ZN-94RmUa0RCeE" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full border border-white/20 flex items-center justify-center text-white/70 hover:text-white hover:border-white transition-all">
+                  <svg size="18" viewBox="0 0 24 24" fill="currentColor" className="w-[18px] h-[18px]"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1.04-.1z"/></svg>
+                </a>
               </div>
             </div>
-
           </div>
 
         </div>
@@ -154,7 +181,7 @@ const Footer: React.FC = () => {
                 rounded-md whitespace-nowrap
                 shadow-[0_5px_20px_rgba(0,0,0,0.7)]
                 hover:bg-white hover:text-black
-                hover:shadow-[0_10px_30px_rgba(0,0,0,0.4)]">
+                hover:shadow-[0_10px_30px_rgba(0,0,0,0.4)] transition-all">
               СВЪРЖИ СЕ С НАС
             </Link>
           </div>

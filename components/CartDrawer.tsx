@@ -269,7 +269,14 @@ export const CartDrawer: React.FC = () => {
                       Нямате добавени артикули
                     </p>
                     <button
-                      onClick={() => { navigate('/catalog'); close(); }}
+                      onClick={() => { 
+                        if (window.location.pathname === '/catalog') {
+                          close();
+                        } else {
+                          navigate('/catalog'); 
+                          close(); 
+                        }
+                      }}
                       className="px-6 py-4 text-[11px] font-bold uppercase tracking-[0.25em] bg-white/5 hover:bg-white/10 text-white rounded-xl transition-colors border border-white/10"
                     >
                       КЪМ КАТАЛОГА

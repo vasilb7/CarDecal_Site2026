@@ -47,28 +47,36 @@ const CatalogPage: React.FC = () => {
     // Dynamic Categories, Sizes & Tag counts
     const filterStats = useMemo(() => {
         const catMap: Record<string, number> = {};
-        const sizeSet = new Set<string>();
         const dynamicSizeSet = new Set<string>();
         let maxP = 20;
         
+        // Use pending category if mobile drawer is open to show real-time sizes
+        const activeCategoryForSizes = isMobileFiltersOpen ? pendingCategory : selectedCategory;
+
         allProducts.forEach(p => {
             // Global categories count
             p.categories.forEach(cat => {
-                const isSizeCandidate = cat.toLowerCase().includes('cm') || /^\d+x\d+$/.test(cat.toLowerCase());
+                const isSizeCandidate = cat.toLowerCase().includes('cm') || 
+                                      /^\d+x\d+$/.test(cat.toLowerCase()) || 
+                                      /^\d+×\d+$/.test(cat);
                 if (!isSizeCandidate) {
                     catMap[cat] = (catMap[cat] || 0) + 1;
                 }
             });
 
-            // Global sizes for initial list if needed, but we'll focus on dynamic filtering
-            const productSizes = p.categories.filter(cat => 
-                cat.toLowerCase().includes('cm') || /^\d+x\d+$/.test(cat.toLowerCase())
-            );
-            if (p.size) productSizes.push(p.size);
+            // Dynamic sizes logic:
+            // Check if product belongs to the currently active category (real-time for mobile)
+            const matchesCategory = activeCategoryForSizes === 'All' || p.categories.includes(activeCategoryForSizes);
             
-            // Check if product belongs to selected category for dynamic sizes
-            const matchesCategory = selectedCategory === 'All' || p.categories.includes(selectedCategory);
             if (matchesCategory) {
+                // Find sizes associated with this product
+                const productSizes = p.categories.filter(cat => 
+                    cat.toLowerCase().includes('cm') || 
+                    /^\d+x\d+$/.test(cat.toLowerCase()) ||
+                    /^\d+×\d+$/.test(cat) 
+                );
+                if (p.size) productSizes.push(p.size);
+                
                 productSizes.forEach(s => dynamicSizeSet.add(s));
             }
 
@@ -78,10 +86,19 @@ const CatalogPage: React.FC = () => {
 
         const genericSizes = ['small', 'medium', 'large', 'various', 'xl', 'xxl'];
         const finalSizes = Array.from(dynamicSizeSet)
-            .filter(s => !genericSizes.includes(s.toLowerCase()))
+            .filter(s => {
+                const isGeneric = genericSizes.includes(s.toLowerCase());
+                const isDimension = s.toLowerCase().includes('cm') || 
+                                  /^\d+x\d+$/.test(s.toLowerCase()) || 
+                                  /^\d+×\d+$/.test(s);
+                return !isGeneric && isDimension;
+            })
             .sort((a, b) => {
-                const aNum = parseInt(a) || 0;
-                const bNum = parseInt(b) || 0;
+                // Custom sort to handle "30x40" and "10cm" types
+                const aMatch = a.match(/\d+/);
+                const bMatch = b.match(/\d+/);
+                const aNum = aMatch ? parseInt(aMatch[0]) : 0;
+                const bNum = bMatch ? parseInt(bMatch[0]) : 0;
                 return aNum - bNum;
             });
 
@@ -90,7 +107,7 @@ const CatalogPage: React.FC = () => {
             sizes: finalSizes,
             maxPrice: maxP
         };
-    }, [allProducts, selectedCategory]);
+    }, [allProducts, selectedCategory, pendingCategory, isMobileFiltersOpen]);
 
     // Prices distribution data
     const priceBins = useMemo(() => {
@@ -250,30 +267,24 @@ const CatalogPage: React.FC = () => {
 
     // Scroll to top when page or filters change
     useEffect(() => {
-        // Skip scroll-to-top if:
-        // 1. A modal is open
         if (isModalOpen) return;
-
-        // 2. Check if we just returned to this page from a modal/back button
-        // We look at the URL params. If they match our state, it's likely a restoration event.
-        const params = new URLSearchParams(location.search);
-        const urlPage = parseInt(params.get('page') || '1');
-        const urlQ = params.get('q') || '';
         
-        // If we transition to a state that is ALREADY in the URL, don't scroll up.
-        // This is the key to preventing the "jump" when closing modals.
-        if (urlPage === currentPage && urlQ === searchTerm && window.scrollY > 0) {
-            // Check if we were previously in a modal (using a ref or state)
-            // For now, let's just return if the scroll position is non-zero,
-            // assuming the browser or user wants to stay here.
-            return;
+        // Use a threshold to avoid jitter, but ensure it's smooth
+        if (window.scrollY > 20) {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
         }
-        
-        // Only scroll if we are definitely NOT at the top already (prevents jitter)
-        if (window.scrollY > 100) {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-    }, [currentPage, searchTerm, selectedSizes.join(','), selectedCategory, sortBy]);
+    }, [
+        currentPage, 
+        searchTerm, 
+        selectedSizes.join(','), 
+        selectedCategory, 
+        sortBy, 
+        priceRange[0], 
+        priceRange[1]
+    ]);
 
     // Sync initial price range once products load
     useEffect(() => {
@@ -424,7 +435,13 @@ const CatalogPage: React.FC = () => {
                 const nameB = (b.nameBg || b.name).toLowerCase();
                 return nameA.localeCompare(nameB, i18n.language);
             }
-            return 0;
+            
+            // Stable Natural Sort Fallback:
+            // This MUST match the naturalSort in ProductsContext to prevent "hallucinations"
+            const numA = parseInt(a.slug.match(/\d+/)?.[0] ?? '0', 10);
+            const numB = parseInt(b.slug.match(/\d+/)?.[0] ?? '0', 10);
+            if (numA !== numB) return numA - numB;
+            return a.slug.localeCompare(b.slug);
         });
     }, [allProducts, searchTerm, selectedCategory, priceRange, selectedSizes, sortBy, i18n.language]);
 
@@ -716,7 +733,7 @@ const CatalogPage: React.FC = () => {
 
             <div className="flex">
                 {/* --- Sidebar (Desktop) --- */}
-                <aside className="w-[300px] xl:w-[340px] h-screen sticky top-0 bg-[#0F0F0F] border-r border-[#262626] p-8 pb-32 overflow-y-auto no-scrollbar hidden lg:flex flex-col">
+                <aside className="w-[300px] xl:w-[340px] h-[calc(100vh-96px)] sticky top-[80px] sm:top-[96px] bg-[#0F0F0F] border-r border-[#262626] p-8 pb-32 overflow-y-auto no-scrollbar hidden lg:flex flex-col">
                     <div className="flex items-center gap-4 mb-10 text-white">
                         <SlidersHorizontal size={22} className="text-[#A3A3A3]" />
                         <h2 className="text-[18px] font-bold tracking-tight">{t('catalog.filters')}</h2>
@@ -726,138 +743,140 @@ const CatalogPage: React.FC = () => {
                     </div>
                 </aside>
 
-                <main className="flex-1 p-4 md:p-8 lg:p-12">
+                <main className="flex-1 px-2 py-4 md:p-8 lg:p-12">
                     <div className="max-w-[1600px] 2xl:max-w-[1800px] mx-auto">
-                        {/* Header Section */}
-                        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-6">
-                            <div className="w-full md:w-auto">
-                                <h1 className="text-[28px] md:text-[36px] xl:text-[42px] font-black text-white mb-2 md:mb-4">
-                                    {selectedCategory === 'All' ? t('catalog.welcome_modules.all') : selectedCategory}
-                                </h1>
-                                {/* Filter Chips */}
-                                <div className="flex flex-wrap gap-2 items-center">
-                                    {selectedCategory !== 'All' && (
-                                        <div className="bg-[#1A1A1A] border border-[#262626] rounded-full px-3 py-1.5 md:px-4 md:py-2 flex items-center gap-2 text-[12px] md:text-sm text-[#A3A3A3]">
-                                            <span>{selectedCategory}</span>
-                                            <button onClick={() => handleSetSelectedCategory('All')} className="hover:text-white transition-colors">
-                                                <X size={14} />
-                                            </button>
-                                        </div>
-                                    )}
-                                    { (priceRange[0] > 0 || priceRange[1] < filterStats.maxPrice) && (
-                                        <div className="bg-[#1A1A1A] border border-[#262626] rounded-full px-3 py-1.5 md:px-4 md:py-2 flex items-center gap-2 text-[12px] md:text-sm text-[#A3A3A3]">
-                                            <span>€{priceRange[0].toFixed(0)}-{priceRange[1].toFixed(0)}</span>
-                                            <button onClick={() => { setPriceRange([0, filterStats.maxPrice]); handleSetCurrentPage(1); }} className="hover:text-white transition-colors">
-                                                <X size={14} />
-                                            </button>
-                                        </div>
-                                    )}
-                                    {selectedSizes.map((size) => (
-                                        <div key={size} className="bg-[#1A1A1A] border border-[#262626] rounded-full px-3 py-1.5 md:px-4 md:py-2 flex items-center gap-2 text-[12px] md:text-sm text-[#A3A3A3]">
-                                            <span>{size}</span>
-                                            <button onClick={() => handleSetSelectedSizes(prev => prev.filter(s => s !== size))} className="hover:text-white transition-colors">
-                                                <X size={14} />
-                                            </button>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Catalog Actions Row (Sort, Search, Count, View) */}
-                            <div className="flex flex-wrap items-center gap-3 md:gap-4 w-full md:w-auto ml-auto">
-                                <div className="relative shrink-0 hidden md:block">
-                                    <button 
-                                        onClick={() => setIsSortOpen(!isSortOpen)}
-                                        className="flex items-center gap-2 hover:text-white transition-colors py-2 text-xs md:text-[13px] text-[#A3A3A3]"
-                                    >
-                                        <span className="font-medium whitespace-nowrap">
-                                            Сортиране
-                                        </span>
-                                        <ChevronDown size={14} className={`transition-transform duration-300 ${isSortOpen ? 'rotate-180' : ''}`} />
-                                    </button>
-                                    
-                                    <AnimatePresence>
-                                        {isSortOpen && (
-                                            <>
-                                                <motion.div 
-                                                    initial={{ opacity: 0 }}
-                                                    animate={{ opacity: 1 }}
-                                                    exit={{ opacity: 0 }}
-                                                    className="fixed inset-0 z-40"
-                                                    onClick={() => setIsSortOpen(false)}
-                                                />
-                                                <motion.div 
-                                                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                                                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                                                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                                    className="absolute top-full right-0 mt-2 w-56 bg-[#1A1A1A] border border-[#262626] rounded-2xl py-2 z-50 shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden"
-                                                >
-                                                    {[
-                                                        { id: 'default',   label: t('catalog.sort.default') },
-                                                        { id: 'price_asc',  label: t('catalog.sort.price_asc') },
-                                                        { id: 'price_desc', label: t('catalog.sort.price_desc') },
-                                                        { id: 'name_asc',   label: t('catalog.sort.name_asc') }
-                                                    ].map((opt) => (
-                                                        <button 
-                                                            key={opt.id}
-                                                            onClick={() => { handleSetSortBy(opt.id); setIsSortOpen(false); }} 
-                                                            className={`w-full text-left px-5 py-3.5 text-xs transition-colors hover:bg-white/5 flex items-center justify-between ${sortBy === opt.id ? 'text-white font-bold bg-white/5' : 'text-[#737373]'}`}
-                                                        >
-                                                            {opt.label}
-                                                            {sortBy === opt.id && <div className="w-1.5 h-1.5 rounded-full bg-red-600 shadow-[0_0_8px_rgba(239,68,68,0.6)]" />}
-                                                        </button>
-                                                    ))}
-                                                </motion.div>
-                                            </>
+                        {/* Sticky Header Section */}
+                        <div className="relative z-30 bg-[#0F0F0F]/80 backdrop-blur-xl -mx-4 md:-mx-8 lg:-mx-12 px-4 md:px-8 lg:px-12 pt-4 md:pt-8 pb-4 mb-8 border-b border-white/5">
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                                <div className="w-full md:w-auto">
+                                    <h1 className="text-[28px] md:text-[36px] xl:text-[42px] font-black text-white mb-2 md:mb-4">
+                                        {selectedCategory === 'All' ? t('catalog.welcome_modules.all') : selectedCategory}
+                                    </h1>
+                                    {/* Filter Chips */}
+                                    <div className="flex flex-wrap gap-2 items-center">
+                                        {selectedCategory !== 'All' && (
+                                            <div className="bg-[#1A1A1A] border border-[#262626] rounded-full px-3 py-1.5 md:px-4 md:py-2 flex items-center gap-2 text-[12px] md:text-sm text-[#A3A3A3]">
+                                                <span>{selectedCategory}</span>
+                                                <button onClick={() => handleSetSelectedCategory('All')} className="hover:text-white transition-colors">
+                                                    <X size={14} />
+                                                </button>
+                                            </div>
                                         )}
-                                    </AnimatePresence>
-                                </div>
-                                
-                                <div className="hidden md:flex items-center justify-center bg-[#1A1A1A] rounded-full px-4 py-2 text-[10px] font-bold text-white uppercase tracking-[0.2em] shrink-0 border border-[#262626]">
-                                    {filteredProducts.length} РЕЗУЛТАТА
+                                        { (priceRange[0] > 0 || priceRange[1] < filterStats.maxPrice) && (
+                                            <div className="bg-[#1A1A1A] border border-[#262626] rounded-full px-3 py-1.5 md:px-4 md:py-2 flex items-center gap-2 text-[12px] md:text-sm text-[#A3A3A3]">
+                                                <span>€{priceRange[0].toFixed(0)}-{priceRange[1].toFixed(0)}</span>
+                                                <button onClick={() => { setPriceRange([0, filterStats.maxPrice]); handleSetCurrentPage(1); }} className="hover:text-white transition-colors">
+                                                    <X size={14} />
+                                                </button>
+                                            </div>
+                                        )}
+                                        {selectedSizes.map((size) => (
+                                            <div key={size} className="bg-[#1A1A1A] border border-[#262626] rounded-full px-3 py-1.5 md:px-4 md:py-2 flex items-center gap-2 text-[12px] md:text-sm text-[#A3A3A3]">
+                                                <span>{size}</span>
+                                                <button onClick={() => handleSetSelectedSizes(prev => prev.filter(s => s !== size))} className="hover:text-white transition-colors">
+                                                    <X size={14} />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
 
-                                {/* Mobile Action Row (Sort, Search, View) */}
-                                <div className="flex w-full items-center justify-between gap-3 lg:hidden">
-                                    <div className="relative flex items-center shrink-0">
-                                        <select 
-                                            value={sortBy}
-                                            onChange={(e) => handleSetSortBy(e.target.value)}
-                                            className="appearance-none bg-transparent text-[#737373] hover:text-white transition-colors text-xs font-medium focus:outline-none cursor-pointer pr-4 z-10"
+                                {/* Catalog Actions Row (Sort, Search, Count, View) */}
+                                <div className="flex flex-wrap items-center gap-3 md:gap-4 w-full md:w-auto ml-auto">
+                                    <div className="relative shrink-0 hidden md:block">
+                                        <button 
+                                            onClick={() => setIsSortOpen(!isSortOpen)}
+                                            className="flex items-center gap-2 hover:text-white transition-colors py-2 text-xs md:text-[13px] text-[#A3A3A3]"
                                         >
-                                            <option value="default" className="text-black bg-white">{t('catalog.sort.default')}</option>
-                                            <option value="price_asc" className="text-black bg-white">{t('catalog.sort.price_asc')}</option>
-                                            <option value="price_desc" className="text-black bg-white">{t('catalog.sort.price_desc')}</option>
-                                            <option value="name_asc" className="text-black bg-white">{t('catalog.sort.name_asc')}</option>
-                                        </select>
-                                        <ChevronDown size={14} className="text-[#737373] absolute right-0 pointer-events-none" />
+                                            <span className="font-medium whitespace-nowrap">
+                                                Сортиране
+                                            </span>
+                                            <ChevronDown size={14} className={`transition-transform duration-300 ${isSortOpen ? 'rotate-180' : ''}`} />
+                                        </button>
+                                        
+                                        <AnimatePresence>
+                                            {isSortOpen && (
+                                                <>
+                                                    <motion.div 
+                                                        initial={{ opacity: 0 }}
+                                                        animate={{ opacity: 1 }}
+                                                        exit={{ opacity: 0 }}
+                                                        className="fixed inset-0 z-40"
+                                                        onClick={() => setIsSortOpen(false)}
+                                                    />
+                                                    <motion.div 
+                                                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                        className="absolute top-full right-0 mt-2 w-56 bg-[#1A1A1A] border border-[#262626] rounded-2xl py-2 z-50 shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden"
+                                                    >
+                                                        {[
+                                                            { id: 'default',   label: t('catalog.sort.default') },
+                                                            { id: 'price_asc',  label: t('catalog.sort.price_asc') },
+                                                            { id: 'price_desc', label: t('catalog.sort.price_desc') },
+                                                            { id: 'name_asc',   label: t('catalog.sort.name_asc') }
+                                                        ].map((opt) => (
+                                                            <button 
+                                                                key={opt.id}
+                                                                onClick={() => { handleSetSortBy(opt.id); setIsSortOpen(false); }} 
+                                                                className={`w-full text-left px-5 py-3.5 text-xs transition-colors hover:bg-white/5 flex items-center justify-between ${sortBy === opt.id ? 'text-white font-bold bg-white/5' : 'text-[#737373]'}`}
+                                                            >
+                                                                {opt.label}
+                                                                {sortBy === opt.id && <div className="w-1.5 h-1.5 rounded-full bg-red-600 shadow-[0_0_8px_rgba(239,68,68,0.6)]" />}
+                                                            </button>
+                                                        ))}
+                                                    </motion.div>
+                                                </>
+                                            )}
+                                        </AnimatePresence>
                                     </div>
                                     
-                                    <div className="flex-1 relative">
-                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#525252]" size={14} />
-                                        <input 
-                                            type="text"
-                                            placeholder="Търсене..."
-                                            value={localSearchValue}
-                                            onChange={(e) => handleSetSearchTerm(e.target.value)}
-                                            className="w-full bg-[#1A1A1A] border border-[#262626] focus:border-[#404040] rounded-full py-2.5 pl-9 pr-3 text-[13px] text-white outline-none transition-all"
-                                        />
+                                    <div className="hidden md:flex items-center justify-center bg-[#1A1A1A] rounded-full px-4 py-2 text-[10px] font-bold text-white uppercase tracking-[0.2em] shrink-0 border border-[#262626]">
+                                        {filteredProducts.length} РЕЗУЛТАТА
                                     </div>
 
-                                    {/* View Switcher */}
-                                    <div className="flex items-center bg-[#1A1A1A] border border-[#262626] rounded-full p-1 shrink-0">
-                                        <button 
-                                            onClick={() => setIsGridView(false)}
-                                            className={`p-1.5 rounded-full transition-all ${!isGridView ? 'bg-white text-black shadow-[0_0_10px_rgba(255,255,255,0.2)]' : 'text-[#737373] hover:text-white'}`}
-                                        >
-                                            <List size={14} />
-                                        </button>
-                                        <button 
-                                            onClick={() => setIsGridView(true)}
-                                            className={`p-1.5 rounded-full transition-all ${isGridView ? 'bg-white text-black shadow-[0_0_10px_rgba(255,255,255,0.2)]' : 'text-[#737373] hover:text-white'}`}
-                                        >
-                                            <LayoutGrid size={14} />
-                                        </button>
+                                    {/* Mobile Action Row (Sort, Search, View) */}
+                                    <div className="flex w-full items-center justify-between gap-3 lg:hidden">
+                                        <div className="relative flex items-center shrink-0">
+                                            <select 
+                                                value={sortBy}
+                                                onChange={(e) => handleSetSortBy(e.target.value)}
+                                                className="appearance-none bg-transparent text-[#737373] hover:text-white transition-colors text-xs font-medium focus:outline-none cursor-pointer pr-4 z-10"
+                                            >
+                                                <option value="default" className="text-black bg-white">{t('catalog.sort.default')}</option>
+                                                <option value="price_asc" className="text-black bg-white">{t('catalog.sort.price_asc')}</option>
+                                                <option value="price_desc" className="text-black bg-white">{t('catalog.sort.price_desc')}</option>
+                                                <option value="name_asc" className="text-black bg-white">{t('catalog.sort.name_asc')}</option>
+                                            </select>
+                                            <ChevronDown size={14} className="text-[#737373] absolute right-0 pointer-events-none" />
+                                        </div>
+                                        
+                                        <div className="flex-1 relative">
+                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#525252]" size={14} />
+                                            <input 
+                                                type="text"
+                                                placeholder="Търсене..."
+                                                value={localSearchValue}
+                                                onChange={(e) => handleSetSearchTerm(e.target.value)}
+                                                className="w-full bg-[#1A1A1A] border border-[#262626] focus:border-[#404040] rounded-full py-2.5 pl-9 pr-3 text-[13px] text-white outline-none transition-all"
+                                            />
+                                        </div>
+
+                                        {/* View Switcher */}
+                                        <div className="flex items-center bg-[#1A1A1A] border border-[#262626] rounded-full p-1 shrink-0">
+                                            <button 
+                                                onClick={() => setIsGridView(false)}
+                                                className={`p-1.5 rounded-full transition-all ${!isGridView ? 'bg-white text-black shadow-[0_0_10px_rgba(255,255,255,0.2)]' : 'text-[#737373] hover:text-white'}`}
+                                            >
+                                                <List size={14} />
+                                            </button>
+                                            <button 
+                                                onClick={() => setIsGridView(true)}
+                                                className={`p-1.5 rounded-full transition-all ${isGridView ? 'bg-white text-black shadow-[0_0_10px_rgba(255,255,255,0.2)]' : 'text-[#737373] hover:text-white'}`}
+                                            >
+                                                <LayoutGrid size={14} />
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -929,7 +948,7 @@ const CatalogPage: React.FC = () => {
                                 )}
                             </div>
                         ) : (
-                            <div className={`grid ${isGridView ? 'grid-cols-2' : 'grid-cols-1'} md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3 gap-3 md:gap-8 lg:gap-10 min-h-[500px]`}>
+                            <div className={`grid ${isGridView ? 'grid-cols-2' : 'grid-cols-1'} md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3 gap-2 md:gap-8 lg:gap-10 min-h-[500px]`}>
                                 {paginatedProducts.map((product, index) => (
                                     <motion.div
                                         key={product.slug}
