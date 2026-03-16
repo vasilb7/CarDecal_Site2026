@@ -534,7 +534,7 @@ const HomePage: React.FC = () => {
                 displayProducts.map((product, index) => (
                   <div
                     key={product.slug}
-                    className="flex-shrink-0 w-[75%] sm:w-[55%] md:w-auto snap-center lg:hover:-translate-y-2 transition-transform duration-300"
+                    className="flex-shrink-0 w-[92%] sm:w-[65%] md:w-auto snap-center lg:hover:-translate-y-2 transition-transform duration-300"
                   >
                     <FeaturedProductCard product={product} isPriority={index < 4} />
                   </div>

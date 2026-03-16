@@ -45,7 +45,7 @@ const FeaturedProductCard: React.FC<FeaturedProductCardProps> = memo(({
   const CardContent = (
     <div className="bg-gradient-to-b from-[#141414] to-[#0A0A0A] rounded-[24px] md:rounded-[32px] p-5 md:p-8 flex flex-col h-full justify-between relative shadow-2xl border border-white/5 transition-all duration-500 ease-out overflow-hidden group/card lg:hover:-translate-y-3 lg:hover:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.8),0_0_25px_rgba(212,175,55,0.25)] lg:hover:border-[#D4AF37]/30">
       {/* Product Image Area */}
-      <div className="relative w-full aspect-video md:aspect-[4/3] flex-shrink-0 mb-4 min-h-0">
+      <div className="relative w-full aspect-square md:aspect-[4/3] flex-shrink-0 mb-4 min-h-0">
         <div className="absolute inset-0 flex items-center justify-center transition-transform duration-700 ease-out group-hover/card:scale-105">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(212,175,55,0.2)_0%,transparent_60%)] blur-2xl pointer-events-none opacity-0 group-hover/card:opacity-100 transition-opacity duration-500" />
 
@@ -72,7 +72,7 @@ const FeaturedProductCard: React.FC<FeaturedProductCardProps> = memo(({
       {/* Footer Content */}
       <div className="w-full mt-auto pt-4 border-t border-white/10 flex flex-col gap-2 shrink-0">
         <h3
-          className="text-xs md:text-sm lg:text-base font-black text-white leading-snug line-clamp-2 uppercase tracking-tight group-hover/card:text-[#D4AF37] transition-colors w-full"
+          className="text-sm md:text-sm lg:text-base font-black text-white leading-snug line-clamp-2 uppercase tracking-tight group-hover/card:text-[#D4AF37] transition-colors w-full"
           title={name}
         >
           {name}

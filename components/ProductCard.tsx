@@ -46,10 +46,10 @@ const ProductCard: React.FC<ProductCardProps> = memo(({ product, isPriority = fa
 
   const CardContent = (
     <div
-      className="bg-[#141414] rounded-[28px] md:rounded-[40px] p-2.5 md:p-8 flex flex-col justify-between relative shadow-2xl border border-white/[0.03] transition-all duration-500 ease-out h-full overflow-hidden lg:hover:-translate-y-3 lg:hover:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5),0_0_20px_rgba(220,38,38,0.2)] lg:hover:border-red-600/20"
+      className="bg-[#141414] rounded-[28px] md:rounded-[40px] p-4 md:p-8 flex flex-col justify-between relative shadow-2xl border border-white/[0.03] transition-all duration-500 ease-out h-full overflow-hidden lg:hover:-translate-y-3 lg:hover:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5),0_0_20px_rgba(220,38,38,0.2)] lg:hover:border-red-600/20"
     >
       {/* Product Image Area */}
-      <div className="relative w-full aspect-video md:aspect-[4/3] flex-shrink-0 mb-4 md:mb-6">
+      <div className="relative w-full aspect-square md:aspect-[4/3] flex-shrink-0 mb-4 md:mb-6">
         <div className="absolute inset-0 flex items-center justify-center group-hover:scale-110 transition-transform duration-700 ease-out">
           {/* Subtle Soft Glow behind the item - Red hint for Catalog */}
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(220,38,38,0.05)_0%,transparent_70%)] blur-3xl pointer-events-none" />
@@ -78,7 +78,7 @@ const ProductCard: React.FC<ProductCardProps> = memo(({ product, isPriority = fa
       {/* Footer Content */}
       <div className="w-full flex items-end justify-between mt-auto pt-6 border-t border-white/5">
         <div className="space-y-1 md:space-y-1.5 overflow-hidden">
-          <h3 className="text-sm md:text-lg font-black text-white leading-tight truncate uppercase tracking-tight">
+          <h3 className="text-base md:text-lg font-black text-white leading-tight truncate uppercase tracking-tight">
             {name}
           </h3>
           <p className="text-[10px] md:text-xs text-[#888] font-bold uppercase tracking-[0.2em] truncate">
