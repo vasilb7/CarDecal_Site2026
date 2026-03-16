@@ -6640,7 +6640,7 @@ const AdminPage: React.FC = () => {
                 </AnimatePresence>
 
                 {/* Sidebar */}
-                <aside className={`fixed lg:sticky top-0 left-0 bottom-0 w-72 bg-black border-r border-white/5 flex flex-col py-8 z-[80] transition-transform duration-300 lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+                <aside className={`fixed top-0 left-0 bottom-0 w-72 bg-black border-r border-white/5 flex flex-col py-8 z-[80] transition-transform duration-300 lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
                     <div className="lg:hidden absolute top-4 right-4">
                         <button onClick={() => setIsSidebarOpen(false)} className="p-2 text-zinc-500 hover:text-white">
                             <X size={24} />
@@ -6689,8 +6689,11 @@ const AdminPage: React.FC = () => {
                     </div>
                 </aside>
 
+                {/* Sidebar Spacer for Desktop */}
+                <div className="hidden lg:block w-72 shrink-0" />
+
                 {/* Main Content */}
-                <main className="flex-1 p-4 lg:p-8 overflow-y-auto w-full">
+                <main className="flex-1 p-4 lg:p-8 w-full min-h-screen">
                     <header className="mb-10 lg:flex items-center justify-between hidden">
                         <div>
                             <h1 className="text-2xl font-black uppercase tracking-tighter text-white">
