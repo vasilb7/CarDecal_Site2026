@@ -69,23 +69,11 @@ export const PromoCodesTab = () => {
         }
 
         try {
-            // Validation: Prevent past dates for new entries
-            const now = new Date();
             const fromDate = validFrom ? new Date(validFrom) : null;
             const untilDate = validUntil ? new Date(validUntil) : null;
 
-            if (!editingId && fromDate && fromDate < new Date(now.getTime() - 300000)) { // 5 min grace
-                showToast('Началната дата не може да бъде в миналото.', 'warning');
-                return;
-            }
-
             if (untilDate && fromDate && untilDate <= fromDate) {
                 showToast('Крайната дата трябва да е след началната.', 'warning');
-                return;
-            }
-
-            if (untilDate && untilDate < now) {
-                showToast('Крайната дата не може да бъде в миналото.', 'warning');
                 return;
             }
 
@@ -366,7 +354,6 @@ export const PromoCodesTab = () => {
                                     <input
                                         type="datetime-local"
                                         value={validFrom}
-                                        min={!editingId ? new Date().toISOString().slice(0, 16) : undefined}
                                         onChange={(e) => setValidFrom(e.target.value)}
                                         className={inputClasses}
                                     />
@@ -379,7 +366,6 @@ export const PromoCodesTab = () => {
                                     <input
                                         type="datetime-local"
                                         value={validUntil}
-                                        min={validFrom || new Date().toISOString().slice(0, 16)}
                                         onChange={(e) => setValidUntil(e.target.value)}
                                         className={inputClasses}
                                     />
