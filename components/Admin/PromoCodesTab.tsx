@@ -17,6 +17,7 @@ export const PromoCodesTab = () => {
     const [maxUses, setMaxUses] = useState<number | ''>('');
     const [maxUsesPerUser, setMaxUsesPerUser] = useState<number | ''>('');
     const [minOrderAmount, setMinOrderAmount] = useState<number | ''>('');
+    const [validFrom, setValidFrom] = useState('');
     const [validUntil, setValidUntil] = useState('');
     const [conditionType, setConditionType] = useState<'none' | 'new_users' | 'loyal_customers'>('none');
     const [conditionValue, setConditionValue] = useState<number | ''>('');
@@ -68,6 +69,26 @@ export const PromoCodesTab = () => {
         }
 
         try {
+            // Validation: Prevent past dates for new entries
+            const now = new Date();
+            const fromDate = validFrom ? new Date(validFrom) : null;
+            const untilDate = validUntil ? new Date(validUntil) : null;
+
+            if (!editingId && fromDate && fromDate < new Date(now.getTime() - 300000)) { // 5 min grace
+                showToast('Началната дата не може да бъде в миналото.', 'warning');
+                return;
+            }
+
+            if (untilDate && fromDate && untilDate <= fromDate) {
+                showToast('Крайната дата трябва да е след началната.', 'warning');
+                return;
+            }
+
+            if (untilDate && untilDate < now) {
+                showToast('Крайната дата не може да бъде в миналото.', 'warning');
+                return;
+            }
+
             const payload = {
                 code: newCode.toUpperCase(),
                 discount_type: discountType,
@@ -75,6 +96,7 @@ export const PromoCodesTab = () => {
                 max_uses: maxUses === '' ? null : Number(maxUses),
                 max_uses_per_user: maxUsesPerUser === '' ? null : Number(maxUsesPerUser),
                 min_order_amount: minOrderAmount === '' ? null : Number(minOrderAmount),
+                valid_from: validFrom || null,
                 valid_until: validUntil || null,
                 condition_type: conditionType,
                 condition_value: conditionValue === '' ? null : Number(conditionValue)
@@ -130,10 +152,21 @@ export const PromoCodesTab = () => {
         setMinOrderAmount(code.min_order_amount ?? '');
         
         // Format date for datetime-local input (YYYY-MM-DDTHH:MM)
+        if (code.valid_from) {
+            const date = new Date(code.valid_from);
+            // Adjust to local ISO string
+            const offset = date.getTimezoneOffset() * 60000;
+            const localISOTime = new Date(date.getTime() - offset).toISOString().slice(0, 16);
+            setValidFrom(localISOTime);
+        } else {
+            setValidFrom('');
+        }
+
         if (code.valid_until) {
             const date = new Date(code.valid_until);
-            const formatted = date.toISOString().slice(0, 16);
-            setValidUntil(formatted);
+            const offset = date.getTimezoneOffset() * 60000;
+            const localISOTime = new Date(date.getTime() - offset).toISOString().slice(0, 16);
+            setValidUntil(localISOTime);
         } else {
             setValidUntil('');
         }
@@ -153,6 +186,7 @@ export const PromoCodesTab = () => {
         setMaxUses('');
         setMaxUsesPerUser('');
         setMinOrderAmount('');
+        setValidFrom('');
         setValidUntil('');
         setConditionType('none');
         setConditionValue('');
@@ -326,12 +360,26 @@ export const PromoCodesTab = () => {
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t border-white/5">
                                 <div>
                                     <label className={labelClasses}>
+                                        Валиден от (начална дата)
+                                        <InfoTooltip text="Кодът ще стане активен автоматично от тази дата." />
+                                    </label>
+                                    <input
+                                        type="datetime-local"
+                                        value={validFrom}
+                                        min={!editingId ? new Date().toISOString().slice(0, 16) : undefined}
+                                        onChange={(e) => setValidFrom(e.target.value)}
+                                        className={inputClasses}
+                                    />
+                                </div>
+                                <div>
+                                    <label className={labelClasses}>
                                         Валиден до (крайна дата)
                                         <InfoTooltip text="Дата и час, след които кодът автоматично ще се деактивира." />
                                     </label>
                                     <input
                                         type="datetime-local"
                                         value={validUntil}
+                                        min={validFrom || new Date().toISOString().slice(0, 16)}
                                         onChange={(e) => setValidUntil(e.target.value)}
                                         className={inputClasses}
                                     />
@@ -407,9 +455,11 @@ export const PromoCodesTab = () => {
                                                     <span className="text-white font-black text-sm tracking-wider">{c.code}</span>
                                                     <span className={`text-[9px] uppercase tracking-widest font-bold mt-1 ${
                                                         !c.is_active ? 'text-red-500' : 
+                                                        (c.valid_from && new Date(c.valid_from) > new Date()) ? 'text-blue-500' :
                                                         (c.valid_until && new Date(c.valid_until) < new Date()) ? 'text-orange-500' : 'text-green-500'
                                                     }`}>
                                                         {!c.is_active ? 'Спрян' : 
+                                                         (c.valid_from && new Date(c.valid_from) > new Date()) ? 'Предстои' :
                                                          (c.valid_until && new Date(c.valid_until) < new Date()) ? 'Изтекъл' : 'Активен'}
                                                     </span>
                                                 </div>
@@ -434,14 +484,19 @@ export const PromoCodesTab = () => {
                                             {(c.max_uses_per_user && c.max_uses_per_user > 0) && <div className="text-[9px] text-zinc-400 mt-1 uppercase font-bold">Лимит: {c.max_uses_per_user}/човек</div>}
                                         </td>
                                         <td className="p-4">
-                                            {c.valid_until && (
-                                                <div className="text-xs text-zinc-300 font-bold mb-1">
-                                                    До: {new Date(c.valid_until).toLocaleDateString('bg-BG')}
+                                            {c.valid_from && (
+                                                <div className="text-[10px] text-zinc-400 font-bold mb-1">
+                                                    От: {new Date(c.valid_from).toLocaleString('bg-BG', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })}
                                                 </div>
                                             )}
-                                            {c.condition_type === 'new_users' && <div className="text-[9px] uppercase tracking-widest text-blue-400 font-black">Само нови</div>}
-                                            {c.condition_type === 'loyal_customers' && <div className="text-[9px] uppercase tracking-widest text-purple-400 font-black">Лоялни (+{c.condition_value})</div>}
-                                            {c.condition_type === 'none' && !c.valid_until && <div className="text-[9px] uppercase tracking-widest text-zinc-600 font-black">Завинаги / Всички</div>}
+                                            {c.valid_until && (
+                                                <div className="text-[10px] text-zinc-200 font-bold mb-1">
+                                                    До: {new Date(c.valid_until).toLocaleString('bg-BG', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                                                </div>
+                                            )}
+                                            {c.condition_type === 'new_users' && <div className="text-[9px] uppercase tracking-widest text-blue-400 font-black mt-1">Само нови</div>}
+                                            {c.condition_type === 'loyal_customers' && <div className="text-[9px] uppercase tracking-widest text-purple-400 font-black mt-1">Лоялни (+{c.condition_value})</div>}
+                                            {c.condition_type === 'none' && !c.valid_until && !c.valid_from && <div className="text-[9px] uppercase tracking-widest text-zinc-600 font-black mt-1">Завинаги / Всички</div>}
                                         </td>
                                         <td className="p-4">
                                             <div className="flex justify-end gap-2">

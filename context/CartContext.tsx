@@ -11,7 +11,8 @@ export interface PromoCode {
   code: string;
   discount_type: 'percentage' | 'fixed_amount';
   discount_value: number;
-  min_order_amount?: number | null;
+  valid_from?: string | null;
+  valid_until?: string | null;
 }
 
 export interface CartItem {
@@ -289,7 +290,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         const { data, error } = await supabase
           .from('promo_codes')
-          .select('is_active, valid_until, max_uses, current_uses')
+          .select('is_active, valid_from, valid_until, max_uses, current_uses')
           .eq('id', appliedPromo.id)
           .single();
 
@@ -299,11 +300,12 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         const now = new Date();
+        const isNotYetActive = data.valid_from && new Date(data.valid_from) > now;
         const isExpired = data.valid_until && new Date(data.valid_until) < now;
         const isLimitReached = data.max_uses && data.current_uses >= data.max_uses;
 
-        if (!data.is_active || isExpired || isLimitReached) {
-          removePromo(false); // Show toast if it's an initial check failure
+        if (!data.is_active || isNotYetActive || isExpired || isLimitReached) {
+          removePromo(false); 
         }
       } catch (err) {
         console.error('Promo verification failed:', err);
@@ -311,6 +313,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     verifyPromo();
+
+    // 2. Periodic check (every 30 seconds) in case time passes
+    const interval = setInterval(verifyPromo, 30000);
 
     // 2. Real-time monitor for status changes (Now works thanks to RLS policy update)
     const channel = supabase
@@ -332,11 +337,12 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
           } else if (payload.eventType === 'UPDATE') {
             const up = payload.new as any;
             const now = new Date();
+            const isNotYetActive = up.valid_from && new Date(up.valid_from) > now;
             const isExpired = up.valid_until && new Date(up.valid_until) < now;
             const isLimitReached = up.max_uses && up.current_uses >= up.max_uses;
             
-            if (up.is_active === false || isExpired || isLimitReached) {
-              removePromo(false); // Show toast for real-time deactivation
+            if (up.is_active === false || isNotYetActive || isExpired || isLimitReached) {
+              removePromo(false); 
             }
           }
         }
@@ -345,6 +351,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return () => {
       supabase.removeChannel(channel);
+      clearInterval(interval);
     };
   }, [appliedPromo?.id, appliedPromo?.code, showToast, removePromo]);
 
