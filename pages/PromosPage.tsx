@@ -44,7 +44,18 @@ const PromosPage: React.FC = () => {
         }
 
         // 3. Filter coupons based on conditions
-        let filteredPromos = allPromos || [];
+        const now = new Date();
+        let filteredPromos = (allPromos || []).filter(p => {
+          const from = p.valid_from ? new Date(p.valid_from) : null;
+          const until = p.valid_until ? new Date(p.valid_until) : null;
+          
+          // Hide if not yet active
+          if (from && from > now) return false;
+          // Hide if expired
+          if (until && until < now) return false;
+          
+          return true;
+        });
 
         // Filter by usage (already used)
         if (userEmail && filteredPromos.length > 0) {

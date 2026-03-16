@@ -15,6 +15,7 @@ export interface CouponData {
   discount_type: 'percentage' | 'fixed_amount';
   discount_value: number;
   description?: string;
+  valid_from?: string;
   valid_until?: string;
   is_active: boolean;
   min_order_amount?: number;
@@ -79,7 +80,9 @@ export const CouponCard: React.FC<CouponCardProps> = ({ coupon, index, bgClass =
       code: coupon.code,
       discount_type: coupon.discount_type,
       discount_value: coupon.discount_value,
-      min_order_amount: coupon.min_order_amount
+      min_order_amount: coupon.min_order_amount,
+      valid_from: coupon.valid_from,
+      valid_until: coupon.valid_until
     });
   };
 

@@ -11,6 +11,7 @@ export interface PromoCode {
   code: string;
   discount_type: 'percentage' | 'fixed_amount';
   discount_value: number;
+  min_order_amount?: number | null;
   valid_from?: string | null;
   valid_until?: string | null;
 }
@@ -128,9 +129,18 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }
 
   // Apply promo code on top if available and valid
-  const isPromoValid = !!appliedPromo && (!appliedPromo.min_order_amount || subtotal >= appliedPromo.min_order_amount);
+  const now = new Date();
+  const isPromoValid = !!appliedPromo && 
+    (!appliedPromo.min_order_amount || subtotal >= appliedPromo.min_order_amount) &&
+    (!appliedPromo.valid_from || new Date(appliedPromo.valid_from) <= now) &&
+    (!appliedPromo.valid_until || new Date(appliedPromo.valid_until) > now);
+
   const promoError = (appliedPromo && appliedPromo.min_order_amount && subtotal < appliedPromo.min_order_amount) 
     ? `Добавете още ${(appliedPromo.min_order_amount - subtotal).toFixed(2)} € за да използвате този код` 
+    : (appliedPromo && appliedPromo.valid_from && new Date(appliedPromo.valid_from) > now)
+    ? `Кодът ще бъде активен след ${new Date(appliedPromo.valid_from).toLocaleString('bg-BG')}`
+    : (appliedPromo && appliedPromo.valid_until && new Date(appliedPromo.valid_until) < now)
+    ? `Кодът е изтекъл`
     : null;
 
   let promoDiscountAmount = 0;
