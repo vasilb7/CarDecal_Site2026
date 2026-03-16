@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { normalizeSearch } from '../lib/search-utils';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useProducts } from '../hooks/useProducts';
 import { useSiteSettings } from '../context/SiteSettingsContext';
 import {
@@ -97,7 +97,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     );
 };
 
-type AdminTab = 'dashboard' | 'homepage' | 'messages' | 'maintenance' | 'products' | 'users' | 'archived_users' | 'custom_orders' | 'orders' | 'bugs' | 'stealth' | 'security';
+type AdminTab = 'dashboard' | 'homepage' | 'messages' | 'maintenance' | 'products' | 'users' | 'archived_users' | 'custom_orders' | 'orders' | 'bugs' | 'stealth' | 'security' | 'promo_codes';
 
 interface DBProduct {
     id: string;
@@ -6525,7 +6525,13 @@ const ArchivedUsersTab: React.FC = () => {
 const AdminPage: React.FC = () => {
     const { user, profile, loading, isAdmin, isEditor, userRole, signOut } = useAuth();
     const navigate = useNavigate();
-    const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
+    const [searchParams, setSearchParams] = useSearchParams();
+    const activeTab = (searchParams.get('tab') as AdminTab) || 'dashboard';
+
+    const setActiveTab = (tab: AdminTab) => {
+        setSearchParams({ tab });
+        if (isSidebarOpen) setIsSidebarOpen(false);
+    };
     const [scheduledCount, setScheduledCount] = useState(0);
     const [newBugsCount, setNewBugsCount] = useState(0);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -6603,7 +6609,7 @@ const AdminPage: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-[#0a0a0a] text-white overflow-x-hidden">
-            <SEO title="Админ Панел" />
+            <SEO title={`Админ - ${navItems.find(i => i.id === activeTab)?.label || 'Панел'}`} />
             
             {/* Mobile Header */}
             <header className="lg:hidden h-16 bg-black border-b border-white/5 flex items-center justify-between px-4 sticky top-0 z-[60]">

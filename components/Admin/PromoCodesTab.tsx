@@ -84,8 +84,8 @@ export const PromoCodesTab = () => {
                 max_uses: maxUses === '' ? null : Number(maxUses),
                 max_uses_per_user: maxUsesPerUser === '' ? null : Number(maxUsesPerUser),
                 min_order_amount: minOrderAmount === '' ? null : Number(minOrderAmount),
-                valid_from: validFrom || null,
-                valid_until: validUntil || null,
+                valid_from: validFrom ? new Date(validFrom).toISOString() : null,
+                valid_until: validUntil ? new Date(validUntil).toISOString() : null,
                 condition_type: conditionType,
                 condition_value: conditionValue === '' ? null : Number(conditionValue)
             };
@@ -142,7 +142,6 @@ export const PromoCodesTab = () => {
         // Format date for datetime-local input (YYYY-MM-DDTHH:MM)
         if (code.valid_from) {
             const date = new Date(code.valid_from);
-            // Adjust to local ISO string
             const offset = date.getTimezoneOffset() * 60000;
             const localISOTime = new Date(date.getTime() - offset).toISOString().slice(0, 16);
             setValidFrom(localISOTime);
