@@ -1056,10 +1056,10 @@ const UsersTab: React.FC = () => {
 
     // ─── Moderation Actions ──────────────────────────────────────────────
     const openModModal = (user: DBUser, mode: typeof modModal extends null ? never : NonNullable<typeof modModal>['mode']) => {
-        setModPublicReason('');
-        setModInternalReason('');
-        setModNotes('');
-        setModBannedUntil('');
+        setModPublicReason(user.public_reason || '');
+        setModInternalReason(user.internal_reason || '');
+        setModNotes(user.moderator_notes || '');
+        setModBannedUntil(user.banned_until ? new Date(user.banned_until).toISOString().slice(0, 16) : '');
         setModModal({ user, mode });
         if (mode === 'view_history') {
             fetchModerationHistory(user.id);
@@ -1512,18 +1512,30 @@ const UsersTab: React.FC = () => {
                                     {u.id !== currentUser?.id && (
                                         <div className="flex items-center gap-2 border-l border-white/5 pl-2 ml-1">
                                             {isActive ? (
-                                                <>
-                                                    <button onClick={() => openModModal(u, 'temp_ban')} className="p-2.5 text-amber-500/60 hover:text-amber-500 hover:bg-amber-500/10 transition-all" title="Temp Ban">
-                                                        <Clock size={16} />
-                                                    </button>
-                                                    <button onClick={() => openModModal(u, 'perm_ban')} className="p-2.5 text-red-500/60 hover:text-red-500 hover:bg-red-500/10 transition-all" title="Perm Ban">
-                                                        <ShieldBan size={16} />
-                                                    </button>
-                                                </>
-                                            ) : (
-                                                <button onClick={() => openModModal(u, 'unban')} className="p-2.5 text-emerald-500/60 hover:text-emerald-500 hover:bg-emerald-500/10 transition-all" title="Restore User">
-                                                    <UserCheck size={16} />
+                                                <button 
+                                                    onClick={() => openModModal(u, 'temp_ban')} 
+                                                    className="flex items-center gap-2 px-3 py-2 bg-red-600/10 text-red-500 hover:bg-red-600 hover:text-white border border-red-600/20 transition-all rounded-lg text-[10px] font-black uppercase tracking-widest"
+                                                >
+                                                    <ShieldBan size={14} />
+                                                    Забрани
                                                 </button>
+                                            ) : (
+                                                <div className="flex items-center gap-1.5">
+                                                    <button 
+                                                        onClick={() => openModModal(u, u.moderation_status === 'permanently_banned' ? 'perm_ban' : 'temp_ban')} 
+                                                        className="p-2.5 text-amber-500/60 hover:text-amber-500 hover:bg-amber-500/10 transition-all border border-amber-500/20 rounded-lg" 
+                                                        title="Редактирай Забрана"
+                                                    >
+                                                        <Edit3 size={16} />
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => openModModal(u, 'unban')} 
+                                                        className="p-2.5 text-emerald-500/60 hover:text-emerald-500 hover:bg-emerald-500/10 transition-all border border-emerald-500/20 rounded-lg" 
+                                                        title="Възстанови Потребител"
+                                                    >
+                                                        <UserCheck size={16} />
+                                                    </button>
+                                                </div>
                                             )}
                                         </div>
                                     )}
@@ -1582,12 +1594,8 @@ const UsersTab: React.FC = () => {
                                     </div>
                                     <div>
                                         <h3 className="text-lg font-bold text-white uppercase tracking-tight">
-                                            {modModal.mode === 'temp_ban' && 'Временно Ограничение'}
-                                            {modModal.mode === 'perm_ban' && 'Перманентно Ограничение'}
-                                            {modModal.mode === 'unban' && 'Възстановяване'}
-                                            {modModal.mode === 'extend' && 'Удължаване'}
-                                            {modModal.mode === 'convert_to_perm' && 'Конвертиране в Перманентно'}
-                                            {modModal.mode === 'view_history' && 'История на Модерация'}
+                                            {modModal.mode === 'view_history' ? 'История на Модерация' : 
+                                             modModal.mode === 'unban' ? 'Възстановяване' : 'Модерация на потребител'}
                                         </h3>
                                         <p className="text-zinc-500 text-xs">{modModal.user.email}</p>
                                     </div>
@@ -1634,6 +1642,24 @@ const UsersTab: React.FC = () => {
                             ) : (
                                 /* Action Forms */
                                 <div className="space-y-4">
+                                    {/* Type Switcher */}
+                                    {modModal.mode !== 'unban' && (
+                                        <div className="flex items-center gap-2 p-1 bg-black/40 border border-white/5 rounded-lg mb-4">
+                                            <button 
+                                                onClick={() => setModModal({...modModal, mode: 'temp_ban'})}
+                                                className={`flex-1 py-2 text-[10px] uppercase font-black tracking-widest transition-all rounded-md ${modModal.mode === 'temp_ban' || modModal.mode === 'extend' ? 'bg-amber-600 text-black' : 'text-zinc-500 hover:text-white'}`}
+                                            >
+                                                Временно
+                                            </button>
+                                            <button 
+                                                onClick={() => setModModal({...modModal, mode: 'perm_ban'})}
+                                                className={`flex-1 py-2 text-[10px] uppercase font-black tracking-widest transition-all rounded-md ${modModal.mode === 'perm_ban' || modModal.mode === 'convert_to_perm' ? 'bg-red-600 text-white' : 'text-zinc-500 hover:text-white'}`}
+                                            >
+                                                Завинаги (Бан)
+                                            </button>
+                                        </div>
+                                    )}
+
                                     {/* Duration for temp_ban and extend */}
                                     {(modModal.mode === 'temp_ban' || modModal.mode === 'extend') && (
                                         <div>
@@ -1843,11 +1869,9 @@ const UserProfileModal: React.FC<{
                 </td>
                 <td style="padding: 14px 16px; text-align: right; white-space: nowrap;">
                     <div style="font-weight: 600; font-size: 13px; color: #4A0000;">${Number(item.price).toFixed(2)} \u20ac</div>
-                    <div style="font-size: 10px; color: #666666; margin-top: 2px;">${(Number(item.price) * 1.95583).toFixed(2)} \u043b\u0432.</div>
                 </td>
                 <td style="padding: 14px 16px; text-align: right; white-space: nowrap;">
                     <div style="font-weight: 800; color: #000000; font-size: 14px;">${(Number(item.price) * item.quantity).toFixed(2)} \u20ac</div>
-                    <div style="font-size: 10px; color: #666666; margin-top: 2px;">${(Number(item.price) * item.quantity * 1.95583).toFixed(2)} \u043b\u0432.</div>
                 </td>
             </tr>
         `).join('');
@@ -1910,7 +1934,6 @@ const UserProfileModal: React.FC<{
                     .total-amount { text-align: right; }
                     .total-eur { font-size: 32px; font-weight: 900; color: var(--accent-red); line-height: 1; letter-spacing: -1px; }
                     .total-eur-currency { font-size: 16px; font-weight: 700; margin-left: 4px; }
-                    .total-bgn { font-size: 15px; font-weight: 700; color: var(--text-muted); margin-top: 6px; }
                     .footer { display: flex; justify-content: space-between; align-items: flex-end; padding-top: 30px; border-top: 2px solid var(--border-light); }
                     .footer-message { max-width: 400px; }
                     .footer-thankyou { font-size: 16px; font-weight: 800; color: var(--primary); margin: 0 0 8px 0; }
@@ -1955,7 +1978,7 @@ const UserProfileModal: React.FC<{
                         </div>
                     </div>
 
-                    ${isFreeShipping ? '<div class="free-shipping-badge">\u2714 \u041f\u043e\u0440\u044a\u0447\u043a\u0430\u0442\u0430 \u0435 \u0441 \u0411\u0415\u0417\u041f\u041b\u0410\u0422\u041d\u0410 \u0434\u043e\u0441\u0442\u0430\u0432\u043a\u0430 (\u043d\u0430\u0434 150 \u043b\u0432.)</div>' : ''}
+                    ${isFreeShipping ? '<div class="free-shipping-badge">\u2714 \u041f\u043e\u0440\u044a\u0447\u043a\u0430\u0442\u0430 \u0435 \u0441 \u0411\u0415\u0417\u041f\u041b\u0410\u0422\u041d\u0410 \u0434\u043e\u0441\u0442\u0430\u0432\u043a\u0430 (\u043d\u0430\u0434 76.69 \u20ac)</div>' : ''}
 
                     <div class="cards-grid">
                         <div class="info-card">
@@ -2031,7 +2054,7 @@ const UserProfileModal: React.FC<{
                                 <span>\u0414\u043e\u0441\u0442\u0430\u0432\u043a\u0430</span>
                                 <span class="summary-val">
                                     ${isFreeShipping 
-                                        ? '<span style="color: #16a34a; font-weight: 800;">\u0411\u0435\u0437\u043f\u043b\u0430\u0442\u043d\u0430 (\u043d\u0430\u0434 150 \u043b\u0432.)</span>' 
+                                        ? '<span style="color: #16a34a; font-weight: 800;">\u0411\u0435\u0437\u043f\u043b\u0430\u0442\u043d\u0430 (\u043d\u0430\u0434 76.69 \u20ac)</span>' 
                                         : '\u041f\u043e \u0442\u0430\u0440\u0438\u0444\u0430 \u043d\u0430 \u043a\u0443\u0440\u0438\u0435\u0440\u0430'}
                                 </span>
                             </div>
@@ -2039,7 +2062,6 @@ const UserProfileModal: React.FC<{
                                 <span>\u041c\u0435\u0436\u0434\u0438\u043d\u043d\u0430 \u0441\u0443\u043c\u0430</span>
                                 <div class="summary-val">
                                     ${rawSubtotal.toFixed(2)} EUR
-                                    <div style="font-size: 10px; color: var(--text-muted); font-weight: 500; margin-top:2px;">${(rawSubtotal * 1.95583).toFixed(2)} \u043b\u0432.</div>
                                 </div>
                             </div>
                             ${hasDiscount ? `
@@ -2047,7 +2069,6 @@ const UserProfileModal: React.FC<{
                                 <span style="font-weight: 700;">\u041e\u0442\u0441\u0442\u044a\u043f\u043a\u0430</span>
                                 <div class="summary-val" style="color: #16a34a;">
                                     -${discountAmount.toFixed(2)} EUR
-                                    <div style="font-size: 10px; opacity: 0.8; font-weight: 500; margin-top:2px;">-${(discountAmount * 1.95583).toFixed(2)} \u043b\u0432.</div>
                                 </div>
                             </div>
                             ` : ''}
@@ -2056,7 +2077,6 @@ const UserProfileModal: React.FC<{
                                 <span class="total-label">\u041e\u0411\u0429\u041e \u0417\u0410 \u041f\u041b\u0410\u0429\u0410\u041d\u0415</span>
                                 <div class="total-amount">
                                     <div class="total-eur">${(order.total_amount).toFixed(2)}<span class="total-eur-currency">EUR</span></div>
-                                    <div class="total-bgn">${(order.total_amount * 1.95583).toFixed(2)} BGN</div>
                                 </div>
                             </div>
                         </div>
@@ -4183,11 +4203,9 @@ const OrdersTab: React.FC = () => {
                 </td>
                 <td style="padding: 14px 16px; text-align: right; white-space: nowrap;">
                     <div style="font-weight: 600; font-size: 13px; color: #4A0000;">${Number(item.price).toFixed(2)} €</div>
-                    <div style="font-size: 10px; color: #666666; margin-top: 2px;">${(Number(item.price) * 1.95583).toFixed(2)} лв.</div>
                 </td>
                 <td style="padding: 14px 16px; text-align: right; white-space: nowrap;">
                     <div style="font-weight: 800; color: #000000; font-size: 14px;">${(Number(item.price) * item.quantity).toFixed(2)} €</div>
-                    <div style="font-size: 10px; color: #666666; margin-top: 2px;">${(Number(item.price) * item.quantity * 1.95583).toFixed(2)} лв.</div>
                 </td>
             </tr>
         `).join('');
@@ -4613,7 +4631,7 @@ const OrdersTab: React.FC = () => {
                         </div>
                     </div>
 
-                    ${isFreeShipping ? '<div style="display: inline-block; padding: 8px 16px; background: #dcfce7; border: 1px solid #bbf7d0; border-radius: 8px; font-size: 11px; font-weight: 800; color: #15803d; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 30px;">✔ Поръчката е с БЕЗПЛАТНА доставка (над 150 лв.)</div>' : ''}
+                    ${isFreeShipping ? '<div style="display: inline-block; padding: 8px 16px; background: #dcfce7; border: 1px solid #bbf7d0; border-radius: 8px; font-size: 11px; font-weight: 800; color: #15803d; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 30px;">✔ Поръчката е с БЕЗПЛАТНА доставка (над 76.69 €)</div>' : ''}
 
                     <!-- 2. Customer & Delivery -->
                     <div class="cards-grid">
@@ -4692,7 +4710,7 @@ const OrdersTab: React.FC = () => {
                                 <span>Доставка</span>
                                 <span class="summary-val">
                                     ${isFreeShipping 
-                                        ? '<span style="color: #16a34a; font-weight: 800;">Безплатна (над 150 лв.)</span>' 
+                                        ? '<span style="color: #16a34a; font-weight: 800;">Безплатна (над 76.69 €)</span>' 
                                         : 'По тарифа на куриера'}
                                 </span>
                             </div>
@@ -4700,7 +4718,6 @@ const OrdersTab: React.FC = () => {
                                 <span>Междинна сума</span>
                                 <div class="summary-val">
                                     ${rawSubtotal.toFixed(2)} EUR
-                                    <div style="font-size: 10px; color: var(--text-muted); font-weight: 500; margin-top:2px;">${(rawSubtotal * 1.95583).toFixed(2)} лв.</div>
                                 </div>
                             </div>
                             ${hasDiscount ? `
@@ -4708,7 +4725,6 @@ const OrdersTab: React.FC = () => {
                                 <span style="font-weight: 700;">Отстъпка</span>
                                 <div class="summary-val" style="color: #16a34a;">
                                     -${discountAmount.toFixed(2)} EUR
-                                    <div style="font-size: 10px; opacity: 0.8; font-weight: 500; margin-top:2px;">-${(discountAmount * 1.95583).toFixed(2)} лв.</div>
                                 </div>
                             </div>
                             ` : ''}
@@ -4717,7 +4733,6 @@ const OrdersTab: React.FC = () => {
                                 <span class="total-label">ОБЩО ЗА ПЛАЩАНЕ</span>
                                 <div class="total-amount">
                                     <div class="total-eur">${(order.total_amount).toFixed(2)}<span class="total-eur-currency">EUR</span></div>
-                                    <div class="total-bgn">${(order.total_amount * 1.95583).toFixed(2)} BGN</div>
                                 </div>
                             </div>
                         </div>
@@ -6567,6 +6582,27 @@ const AdminPage: React.FC = () => {
 
     useEffect(() => {
         setIsSidebarOpen(false); // Close sidebar on tab change (mobile)
+    }, [activeTab]);
+
+    // Handle URL hash sync for navigation tracking and persistence
+    useEffect(() => {
+        const handleHashChange = () => {
+            const hash = window.location.hash.replace('#', '') as AdminTab;
+            const validTabs: AdminTab[] = ['dashboard', 'homepage', 'messages', 'products', 'orders', 'custom_orders', 'promo_codes', 'users', 'archived_users', 'bugs', 'maintenance', 'stealth', 'security'];
+            if (hash && validTabs.includes(hash)) {
+                setActiveTab(hash);
+            }
+        };
+
+        handleHashChange(); // initial
+        window.addEventListener('hashchange', handleHashChange);
+        return () => window.removeEventListener('hashchange', handleHashChange);
+    }, []);
+
+    useEffect(() => {
+        if (window.location.hash.replace('#', '') !== activeTab) {
+            window.location.hash = activeTab;
+        }
     }, [activeTab]);
 
     useEffect(() => {

@@ -5,6 +5,7 @@ import { useProducts } from '../hooks/useProducts';
 import { useCart } from '../context/CartContext';
 import { useToast } from '../hooks/useToast';
 import { useUI } from '../context/UIContext';
+import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getOptimizedUrl } from '../lib/cloudinary-utils';
 import OptimizedImage from './ui/OptimizedImage';
@@ -23,7 +24,8 @@ import {
     ZoomIn,
     ZoomOut,
     Share2,
-    Search
+    Search,
+    Heart
 } from 'lucide-react';
 
 const Lightbox: React.FC<{ src: string; onClose: () => void }> = ({ src, onClose }) => (
@@ -62,10 +64,12 @@ const ProductQuickViewModal: React.FC = () => {
     const { addToCart } = useCart();
     const { showToast } = useToast();
     const { isCartOpen, setIsProductModalOpen } = useUI();
+    const { user } = useAuth();
     
     // Find product
     const product = getProductBySlug(slug || '');
     const [isVisible, setIsVisible] = useState(false);
+    const [isFavorite, setIsFavorite] = useState(false);
     const [activeIdx, setActiveIdx] = useState(0);
     const [quantity, setQuantity] = useState(1);
     const [zoomActive, setZoomActive] = useState(false);
@@ -74,6 +78,30 @@ const ProductQuickViewModal: React.FC = () => {
     const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
     const [addedFeedback, setAddedFeedback] = useState(false);
     const [isAdding, setIsAdding] = useState(false);
+    const transformRef = useRef<any>(null);
+
+    // Handle back button for zoom
+    useEffect(() => {
+        if (zoomActive) {
+            // Push a temporary state so the "Back" button doesn't close the modal immediately
+            window.history.pushState({ isZoom: true }, '');
+
+            const handlePopState = (e: PopStateEvent) => {
+                // If the user navigates back while we're in zoom mode, just exit zoom
+                if (zoomActive) {
+                    setZoomActive(false);
+                    if (transformRef.current) {
+                        transformRef.current.resetTransform(300);
+                    }
+                }
+            };
+
+            window.addEventListener('popstate', handlePopState);
+            return () => {
+                window.removeEventListener('popstate', handlePopState);
+            };
+        }
+    }, [zoomActive]);
 
     const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -312,6 +340,7 @@ const ProductQuickViewModal: React.FC = () => {
                             
                             {/* The actual high-res image with Pan & Zoom */}
                             <TransformWrapper 
+                                ref={transformRef}
                                 initialScale={1} 
                                 minScale={1} 
                                 maxScale={3} 
@@ -324,23 +353,46 @@ const ProductQuickViewModal: React.FC = () => {
                                 {({ resetTransform }) => {
                                     return (
                                     <>
-                                        <TransformComponent wrapperClass="!w-full !max-h-[70vh]" contentClass="!flex !items-center !justify-center !w-full !h-full">
-                                            <OptimizedImage
-                                                src={mainSrc}
-                                                alt={product.nameBg || product.name}
-                                                className={`w-full max-h-[70vh] object-contain drop-shadow-[0_20px_50px_rgba(0,0,0,0.8)] relative z-10 transition-all ${zoomActive ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'}`}
-                                                priority={true}
-                                                widths={[400, 800, 1200]}
-                                                sizes="(max-width: 1024px) 100vw, 60vw"
-                                                objectFit="contain"
-                                            />
-                                        </TransformComponent>
+                                        <div className="absolute inset-0 w-full h-full">
+                                            <TransformComponent wrapperClass="!absolute !inset-0 !w-full !h-full" contentClass="!flex !items-center !justify-center !w-full !h-full !p-8 lg:!p-16">
+                                                <OptimizedImage
+                                                    src={mainSrc}
+                                                    alt={product.nameBg || product.name}
+                                                    className={`w-full h-full object-contain drop-shadow-[0_20px_50px_rgba(0,0,0,0.8)] relative z-10 transition-all ${zoomActive ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'}`}
+                                                    priority={true}
+                                                    widths={[400, 800, 1200]}
+                                                    sizes="(max-width: 1024px) 100vw, 60vw"
+                                                    objectFit="contain"
+                                                />
+                                            </TransformComponent>
+                                        </div>
                                         
                                         {/* Action Buttons Container */}
-                                        {images.length > 1 && (
-                                            <div className="absolute bottom-4 right-4 md:bottom-6 md:right-6 flex items-center gap-3 z-20">
-                                                <AnimatePresence>
-                                                    {!zoomActive && (
+                                        <div className="absolute bottom-4 right-4 md:bottom-6 md:right-6 flex items-center gap-3 z-30 pointer-events-none">
+                                            <AnimatePresence>
+                                                {!zoomActive && (
+                                                    <>
+                                                        {user && (
+                                                            <motion.button
+                                                                initial={{ opacity: 0, scale: 0.8, x: 20 }}
+                                                                animate={{ opacity: 1, scale: 1, x: 0 }}
+                                                                exit={{ opacity: 0, scale: 0.8, x: 20 }}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    const newState = !isFavorite;
+                                                                    setIsFavorite(newState);
+                                                                    showToast(
+                                                                        newState ? `Добавено в любими: ${product.nameBg || product.name}` : `Премахнато от любими: ${product.nameBg || product.name}`,
+                                                                        "success"
+                                                                    );
+                                                                }}
+                                                                className={`p-3 md:p-4 rounded-full border transition-all shadow-[0_4px_20px_rgba(0,0,0,0.5)] active:scale-95 flex items-center justify-center backdrop-blur-md pointer-events-auto ${isFavorite ? 'bg-red-600 border-red-500 text-white' : 'bg-black/80 border-white/20 text-white hover:bg-black/90'}`}
+                                                                title={isFavorite ? "Премахни от любими" : "Добави в любими"}
+                                                            >
+                                                                <Heart size={22} className={`md:w-6 md:h-6 drop-shadow-md ${isFavorite ? 'fill-white' : ''}`} />
+                                                            </motion.button>
+                                                        )}
+
                                                         <motion.button
                                                             initial={{ opacity: 0, scale: 0.8, x: 20 }}
                                                             animate={{ opacity: 1, scale: 1, x: 0 }}
@@ -349,31 +401,33 @@ const ProductQuickViewModal: React.FC = () => {
                                                                 e.stopPropagation();
                                                                 setIsShareOpen(true);
                                                             }}
-                                                            className="p-3 md:p-4 rounded-full border text-white/80 hover:text-white transition-all shadow-[0_4px_20px_rgba(0,0,0,0.5)] active:scale-90 flex items-center justify-center bg-black/80 border-white/10 hover:bg-black/90 hover:border-white/20"
+                                                            className="p-3 md:p-4 rounded-full border text-white transition-all shadow-[0_4px_20px_rgba(0,0,0,0.5)] active:scale-95 flex items-center justify-center bg-black/80 border-white/20 hover:bg-black/90 backdrop-blur-md pointer-events-auto"
                                                             title="Сподели"
                                                         >
-                                                            <Share2 size={22} className="md:w-6 md:h-6" />
+                                                            <Share2 size={22} className="md:w-6 md:h-6 drop-shadow-md" />
                                                         </motion.button>
-                                                    )}
-                                                </AnimatePresence>
+                                                    </>
+                                                )}
+                                            </AnimatePresence>
 
-                                                <button 
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        if (zoomActive) {
-                                                            resetTransform(300);
-                                                            setZoomActive(false);
-                                                        } else {
-                                                            setZoomActive(true);
-                                                        }
-                                                    }}
-                                                    className={`p-3 md:p-4 rounded-full border text-white/80 hover:text-white transition-all shadow-[0_4px_20px_rgba(0,0,0,0.5)] active:scale-90 flex items-center justify-center ${zoomActive ? 'bg-red-500/80 border-red-500/50' : 'bg-black/80 border-white/10 hover:bg-black/90 hover:border-white/20'}`}
-                                                    title={zoomActive ? "Излез от приближаване" : "Докосни за приближаване"}
-                                                >
-                                                    {zoomActive ? <ZoomOut size={22} className="md:w-6 md:h-6" /> : <ZoomIn size={22} className="md:w-6 md:h-6" />}
-                                                </button>
-                                            </div>
-                                        )}
+                                            <button 
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    if (zoomActive) {
+                                                        resetTransform(300);
+                                                        setZoomActive(false);
+                                                        // If we manually exit zoom, we should go back in history to remove the dummy state
+                                                        window.history.back();
+                                                    } else {
+                                                        setZoomActive(true);
+                                                    }
+                                                }}
+                                                className={`p-3 md:p-4 rounded-full border text-white shadow-[0_4px_20px_rgba(0,0,0,0.5)] active:scale-95 flex items-center justify-center backdrop-blur-md pointer-events-auto transition-all duration-300 ${zoomActive ? 'bg-red-600/90 border-red-500/50 opacity-70' : 'bg-black/80 border-white/20 hover:bg-black/90 opacity-100'}`}
+                                                title={zoomActive ? "Излез от приближаване" : "Докосни за приближаване"}
+                                            >
+                                                {zoomActive ? <ZoomOut size={22} className="md:w-6 md:h-6 drop-shadow-md" /> : <ZoomIn size={22} className="md:w-6 md:h-6 drop-shadow-md" />}
+                                            </button>
+                                        </div>
                                     </>
                                 )}}
                             </TransformWrapper>
@@ -436,7 +490,7 @@ const ProductQuickViewModal: React.FC = () => {
 
                     {/* RIGHT COLUMN: Details & Actions */}
                     <div className="w-full lg:w-[45%] xl:w-[40%] shrink-0 flex flex-col lg:h-full relative bg-[#080808] z-20 shadow-[-10px_0_30px_rgba(0,0,0,0.5)]">
-                        <div className="flex-1 p-6 md:p-10 lg:p-12 xl:p-16 lg:overflow-y-auto no-scrollbar pb-[240px] md:pb-[240px] lg:pb-10 space-y-10">
+                        <div className="flex-1 p-6 md:p-10 lg:p-12 xl:p-16 lg:overflow-y-auto no-scrollbar pb-[120px] md:pb-[140px] lg:pb-10 space-y-10">
                             
                             {/* Header Section */}
                             <div>

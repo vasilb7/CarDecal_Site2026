@@ -23,6 +23,9 @@ export const PromoCodesTab = () => {
     const [conditionValue, setConditionValue] = useState<number | ''>('');
     const [editingId, setEditingId] = useState<string | null>(null);
 
+    const [showExpired, setShowExpired] = useState(false);
+    const [tick, setTick] = useState(0);
+
     const fetchCodes = async () => {
         setLoading(true);
         try {
@@ -32,7 +35,6 @@ export const PromoCodesTab = () => {
                 .order('created_at', { ascending: false });
 
             if (error) {
-                // Return silently if table does not exist or user hasn't ran migration
                 if (error.code === '42P01') {
                     showToast('Трябва да стартирате SQL миграцията за промо кодовете в Supabase редактора.', 'error');
                 } else {
@@ -50,7 +52,35 @@ export const PromoCodesTab = () => {
 
     useEffect(() => {
         fetchCodes();
+
+        // Realtime subscription
+        const channel = supabase
+            .channel('promo_codes_realtime')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'promo_codes' }, (payload) => {
+                if (payload.eventType === 'INSERT') {
+                    setCodes(prev => [payload.new, ...prev]);
+                } else if (payload.eventType === 'UPDATE') {
+                    setCodes(prev => prev.map(c => c.id === payload.new.id ? payload.new : c));
+                } else if (payload.eventType === 'DELETE') {
+                    setCodes(prev => prev.filter(c => c.id !== payload.old.id));
+                }
+            })
+            .subscribe();
+
+        // Ticker to re-evaluate expiration every 5 seconds
+        const interval = setInterval(() => setTick(t => t + 1), 5000);
+
+        return () => {
+            supabase.removeChannel(channel);
+            clearInterval(interval);
+        };
     }, []);
+
+    const filteredCodes = codes.filter(c => {
+        const isExpired = c.valid_until && new Date(c.valid_until).getTime() <= Date.now();
+        if (!showExpired && isExpired) return false;
+        return true;
+    });
 
     const generateRandomCode = () => {
         const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -219,13 +249,21 @@ export const PromoCodesTab = () => {
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
-            <div className="flex items-center justify-between bg-[#111] p-6 rounded-3xl border border-white/5">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#111] p-6 rounded-3xl border border-white/5">
                 <div>
                     <h2 className="text-xl font-black uppercase tracking-widest text-white flex items-center gap-3">
                         <Ticket className="text-red-500" size={24} /> 
                         Промо Кодове
                     </h2>
-                    <p className="text-xs text-zinc-500 uppercase mt-1">Управление на кодове за отстъпка</p>
+                    <div className="flex items-center gap-4 mt-1">
+                        <p className="text-xs text-zinc-500 uppercase">Управление на кодове за отстъпка</p>
+                        <button 
+                            onClick={() => setShowExpired(!showExpired)}
+                            className={`text-[9px] uppercase font-black tracking-widest px-2 py-1 rounded border transition-all ${showExpired ? 'bg-red-600/10 border-red-600/30 text-red-500' : 'bg-white/5 border-white/10 text-zinc-500 hover:text-zinc-300'}`}
+                        >
+                            {showExpired ? 'Скрий изтекли' : 'Покажи изтекли'}
+                        </button>
+                    </div>
                 </div>
                 <button
                     onClick={() => isAdding ? cancelEditing() : setIsAdding(true)}
@@ -425,14 +463,14 @@ export const PromoCodesTab = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5">
-                            {codes.length === 0 ? (
+                            {filteredCodes.length === 0 ? (
                                 <tr>
                                     <td colSpan={5} className="p-8 text-center text-zinc-600 text-xs uppercase tracking-widest font-black">
                                         Няма съществуващи промо кодове
                                     </td>
                                 </tr>
                             ) : (
-                                codes.map(c => (
+                                filteredCodes.map(c => (
                                     <tr key={c.id} className={`hover:bg-white/[0.02] transition-colors ${!c.is_active ? 'opacity-50' : ''}`}>
                                         <td className="p-4">
                                             <div className="flex items-center gap-3">

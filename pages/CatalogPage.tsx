@@ -746,7 +746,7 @@ const CatalogPage: React.FC = () => {
                 <main className="flex-1 px-2 py-4 md:p-8 lg:p-12">
                     <div className="max-w-[1600px] 2xl:max-w-[1800px] mx-auto">
                         {/* Sticky Header Section */}
-                        <div className="relative z-30 bg-[#0F0F0F]/80 backdrop-blur-xl -mx-4 md:-mx-8 lg:-mx-12 px-4 md:px-8 lg:px-12 pt-4 md:pt-8 pb-4 mb-8 border-b border-white/5">
+                        <div className="relative z-30 bg-[#0F0F0F]/80 backdrop-blur-xl -mx-2 md:-mx-8 lg:-mx-12 px-2 md:px-8 lg:px-12 pt-4 md:pt-8 pb-4 mb-8 border-b border-white/5 transition-all">
                             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                                 <div className="w-full md:w-auto">
                                     <h1 className="text-[28px] md:text-[36px] xl:text-[42px] font-black text-white mb-2 md:mb-4">

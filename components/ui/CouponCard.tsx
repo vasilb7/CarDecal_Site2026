@@ -69,7 +69,7 @@ export const CouponCard: React.FC<CouponCardProps> = ({ coupon, index, bgClass =
     }
     
     if (coupon.min_order_amount && subtotal < coupon.min_order_amount) {
-      showToast(`Купон ${coupon.code} ще бъде активиран след като достигнете мин. ${coupon.min_order_amount} BGN (${(coupon.min_order_amount / 1.95583).toFixed(2)} EUR)`, 'warning');
+      showToast(`Купон ${coupon.code} ще бъде активиран след като достигнете мин. ${coupon.min_order_amount} €`, 'warning');
     } else {
       showToast(`Активиран купон: ${coupon.code}`, 'success');
     }
@@ -88,7 +88,7 @@ export const CouponCard: React.FC<CouponCardProps> = ({ coupon, index, bgClass =
 
   const discountDisplay = coupon.discount_type === 'percentage' 
     ? `${coupon.discount_value}%` 
-    : `${(coupon.discount_value * 0.51).toFixed(0)}€`;
+    : `${coupon.discount_value}€`;
     
   return (
     <div className={cn(
@@ -218,7 +218,7 @@ export const CouponCard: React.FC<CouponCardProps> = ({ coupon, index, bgClass =
                <div className="flex items-center gap-1.5 md:gap-2">
                   <Info className="w-3 h-3 text-zinc-500" />
                   <span className="text-[9px] md:text-[10px] text-zinc-500 uppercase font-medium">
-                      Мин. поръчка: {Math.round(coupon.min_order_amount * 0.51)}eur/{coupon.min_order_amount}bgn.
+                      Мин. поръчка: {coupon.min_order_amount}€
                   </span>
                </div>
              )}
