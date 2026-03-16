@@ -997,8 +997,16 @@ const FavoritesTab: React.FC = () => {
     const { wishlist } = useWishlist();
     const { products } = useProducts();
     const navigate = useNavigate();
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 5;
 
     const favoriteProducts = products.filter(p => wishlist.some(item => item.slug === p.slug));
+    const totalPages = Math.ceil(favoriteProducts.length / itemsPerPage);
+
+    const paginatedProducts = favoriteProducts.slice(
+        (currentPage - 1) * itemsPerPage,
+        currentPage * itemsPerPage
+    );
 
     if (favoriteProducts.length === 0) {
         return (
@@ -1019,18 +1027,56 @@ const FavoritesTab: React.FC = () => {
     }
 
     return (
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 lg:gap-6 pb-20">
-            {favoriteProducts.map(product => (
-                <div key={product.slug} className="relative group">
-                    <ProductCard product={product} />
-                    <div className="absolute top-4 left-4 z-10 pointer-events-none">
-                        <div className="bg-red-600 text-white text-[10px] font-black uppercase px-3 py-1.5 rounded-full shadow-[0_0_20px_rgba(220,38,38,0.5)] border border-white/20 tracking-[0.15em] flex items-center gap-1.5 backdrop-blur-sm">
-                            <Heart size={10} className="fill-white" />
-                            Любим
+        <div className="pb-20">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+                {paginatedProducts.map(product => (
+                    <div key={product.slug} className="relative group">
+                        <ProductCard product={product} />
+                        <div className="absolute top-4 left-4 z-10 pointer-events-none">
+                            <div className="bg-red-600 text-white text-[10px] font-black uppercase px-3 py-1.5 rounded-full shadow-[0_0_20px_rgba(220,38,38,0.5)] border border-white/20 tracking-[0.15em] flex items-center gap-1.5 backdrop-blur-sm">
+                                <Heart size={10} className="fill-white" />
+                                Любим
+                            </div>
                         </div>
                     </div>
+                ))}
+            </div>
+
+            {totalPages > 1 && (
+                <div className="mt-12 flex items-center justify-center gap-2">
+                    <button 
+                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                        disabled={currentPage === 1}
+                        className="w-10 h-10 flex items-center justify-center rounded-xl bg-white/5 text-zinc-400 hover:text-white disabled:opacity-20 transition-all border border-white/5"
+                    >
+                        <ArrowLeft size={16} />
+                    </button>
+                    
+                    <div className="flex items-center gap-2">
+                        {[...Array(totalPages)].map((_, i) => (
+                            <button
+                                key={i + 1}
+                                onClick={() => setCurrentPage(i + 1)}
+                                className={`w-10 h-10 flex items-center justify-center rounded-xl text-[13px] font-black transition-all ${
+                                    currentPage === i + 1 
+                                    ? 'bg-red-600 text-white shadow-lg shadow-red-600/20' 
+                                    : 'bg-white/5 text-zinc-500 hover:text-white'
+                                }`}
+                            >
+                                {i + 1}
+                            </button>
+                        ))}
+                    </div>
+
+                    <button 
+                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                        disabled={currentPage === totalPages}
+                        className="w-10 h-10 flex items-center justify-center rounded-xl bg-white/5 text-zinc-400 hover:text-white disabled:opacity-20 transition-all border border-white/5"
+                    >
+                        <ArrowRight size={16} />
+                    </button>
                 </div>
-            ))}
+            )}
         </div>
     );
 };
