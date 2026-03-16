@@ -5,6 +5,9 @@ import { supabase } from '../lib/supabase';
 import { logSecurityEvent, recordProfileChange } from '../lib/security';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useToast } from '../components/Toast/ToastProvider';
+import { useWishlist } from '../context/WishlistContext';
+import { useProducts } from '../hooks/useProducts';
+import ProductCard from '../components/ProductCard';
 import SEO from '../components/SEO';
 import { AvatarCropModal } from '../components/AvatarCropModal';
 import { isValidPhone as isValidBulgarianPhone, isValidFullName, formatToE164, formatPhoneNumber } from '../lib/utils';
@@ -990,6 +993,48 @@ const CompanyTab: React.FC<{ profile: any }> = ({ profile }) => {
 };
 
 
+const FavoritesTab: React.FC = () => {
+    const { wishlist } = useWishlist();
+    const { products } = useProducts();
+    const navigate = useNavigate();
+
+    const favoriteProducts = products.filter(p => wishlist.some(item => item.slug === p.slug));
+
+    if (favoriteProducts.length === 0) {
+        return (
+            <div className="py-20 text-center">
+                <div className="w-20 h-20 bg-white/5 border border-white/10 rounded-full flex items-center justify-center mx-auto mb-6 text-zinc-500">
+                    <Heart className="w-10 h-10" strokeWidth={1} />
+                </div>
+                <h3 className="text-xl font-bold text-white mb-2 uppercase tracking-widest">Нямате любими продукти</h3>
+                <p className="text-zinc-500 max-w-sm mx-auto mb-8">Добавете продукти в любими, за да ги виждате тук.</p>
+                <button 
+                    onClick={() => navigate('/catalog')}
+                    className="px-8 py-4 bg-red-600 text-white text-xs font-black uppercase tracking-widest hover:bg-red-700 rounded-2xl transition-all shadow-lg shadow-red-600/20"
+                >
+                    Към каталога
+                </button>
+            </div>
+        );
+    }
+
+    return (
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 lg:gap-6 pb-20">
+            {favoriteProducts.map(product => (
+                <div key={product.slug} className="relative group">
+                    <ProductCard product={product} />
+                    <div className="absolute top-3 left-3 z-10 pointer-events-none">
+                        <div className="bg-red-600/90 backdrop-blur-md text-white text-[9px] font-black uppercase px-2 py-1 rounded shadow-xl border border-white/10 tracking-widest">
+                            Любим
+                        </div>
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+};
+
+
 const DashboardGrid: React.FC<{
     profile: any;
     user: any;
@@ -1302,10 +1347,11 @@ const ProfilePage: React.FC = () => {
                             />
                         )}
                         
-                        {(activeTab === 'orders' || activeTab === 'settings' || activeTab === 'addresses' || activeTab === 'company') && (
-                            <div className="max-w-4xl mx-auto px-6">
+                        {(activeTab === 'orders' || activeTab === 'settings' || activeTab === 'addresses' || activeTab === 'company' || activeTab === 'favorites') && (
+                            <div className={`${activeTab === 'favorites' ? 'max-w-6xl' : 'max-w-4xl'} mx-auto px-6`}>
                                 {activeTab === 'orders' && <OrdersTab orders={orders} loading={ordersLoading} user={user} />}
                                 {activeTab === 'company' && <CompanyTab profile={profile} />}
+                                {activeTab === 'favorites' && <FavoritesTab />}
 
                                 {activeTab === 'settings' && (
                                     <SettingsTab
@@ -1322,7 +1368,7 @@ const ProfilePage: React.FC = () => {
                             </div>
                         )}
 
-                        {!['dashboard', 'orders', 'settings', 'addresses', 'company'].includes(activeTab) && (
+                        {!['dashboard', 'orders', 'settings', 'addresses', 'company', 'favorites'].includes(activeTab) && (
 
                             <div className="max-w-4xl mx-auto px-6 py-20 text-center">
                                 <div className="w-24 h-24 bg-zinc-900 border border-white/5 rounded-full flex items-center justify-center mx-auto mb-6 text-zinc-700">

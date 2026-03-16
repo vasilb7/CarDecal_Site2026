@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useProducts } from '../hooks/useProducts';
 import { useCart } from '../context/CartContext';
 import { useToast } from '../hooks/useToast';
+import { useWishlist } from '../context/WishlistContext';
 import { useUI } from '../context/UIContext';
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -69,7 +70,7 @@ const ProductQuickViewModal: React.FC = () => {
     // Find product
     const product = getProductBySlug(slug || '');
     const [isVisible, setIsVisible] = useState(false);
-    const [isFavorite, setIsFavorite] = useState(false);
+    const { toggleWishlist, isInWishlist } = useWishlist();
     const [activeIdx, setActiveIdx] = useState(0);
     const [quantity, setQuantity] = useState(1);
     const [zoomActive, setZoomActive] = useState(false);
@@ -379,17 +380,17 @@ const ProductQuickViewModal: React.FC = () => {
                                                                 exit={{ opacity: 0, scale: 0.8, x: 20 }}
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
-                                                                    const newState = !isFavorite;
-                                                                    setIsFavorite(newState);
+                                                                    toggleWishlist(product.slug);
+                                                                    const newState = !isInWishlist(product.slug);
                                                                     showToast(
                                                                         newState ? `Добавено в любими: ${product.nameBg || product.name}` : `Премахнато от любими: ${product.nameBg || product.name}`,
                                                                         "success"
                                                                     );
                                                                 }}
-                                                                className={`p-3 md:p-4 rounded-full border transition-all shadow-[0_4px_20px_rgba(0,0,0,0.5)] active:scale-95 flex items-center justify-center backdrop-blur-md pointer-events-auto ${isFavorite ? 'bg-red-600 border-red-500 text-white' : 'bg-black/80 border-white/20 text-white hover:bg-black/90'}`}
-                                                                title={isFavorite ? "Премахни от любими" : "Добави в любими"}
+                                                                className={`p-3 md:p-4 rounded-full border transition-all shadow-[0_4px_20px_rgba(0,0,0,0.5)] active:scale-95 flex items-center justify-center backdrop-blur-md pointer-events-auto ${isInWishlist(product.slug) ? 'bg-red-600 border-red-500 text-white' : 'bg-black/80 border-white/20 text-white hover:bg-black/90'}`}
+                                                                title={isInWishlist(product.slug) ? "Премахни от любими" : "Добави в любими"}
                                                             >
-                                                                <Heart size={22} className={`md:w-6 md:h-6 drop-shadow-md ${isFavorite ? 'fill-white' : ''}`} />
+                                                                <Heart size={22} className={`md:w-6 md:h-6 drop-shadow-md ${isInWishlist(product.slug) ? 'fill-white' : ''}`} />
                                                             </motion.button>
                                                         )}
 

@@ -19,6 +19,7 @@ import {
 import { UIProvider } from "./context/UIContext";
 import { CartProvider } from "./context/CartContext";
 import { ProductsProvider } from "./context/ProductsContext";
+import { WishlistProvider } from "./context/WishlistContext";
 import { Loader2 } from "lucide-react";
 import { CompleteRegistrationModal } from "./components/ui/complete-registration";
 import ReportBugModal from "./components/ReportBugModal";
@@ -457,13 +458,15 @@ function App() {
     <BrowserRouter>
       <SiteSettingsProvider>
         <UIProvider>
-          <ProductsProvider>
-          <ToastProvider>
-            <CartProvider>
-                <AppContent />
-            </CartProvider>
-          </ToastProvider>
-          </ProductsProvider>
+          <WishlistProvider>
+            <ProductsProvider>
+              <ToastProvider>
+                <CartProvider>
+                    <AppContent />
+                </CartProvider>
+              </ToastProvider>
+            </ProductsProvider>
+          </WishlistProvider>
         </UIProvider>
       </SiteSettingsProvider>
     </BrowserRouter>
