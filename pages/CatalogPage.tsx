@@ -55,7 +55,7 @@ const CatalogPage: React.FC = () => {
         // Use pending category if mobile drawer is open to show real-time sizes
         const activeCategoryForSizes = isMobileFiltersOpen ? pendingCategory : selectedCategory;
 
-        allProducts.forEach(p => {
+        activeProducts.forEach(p => {
             // Global categories count
             p.categories.forEach(cat => {
                 const isSizeCandidate = cat.toLowerCase().includes('cm') || 
@@ -109,7 +109,7 @@ const CatalogPage: React.FC = () => {
             sizes: finalSizes,
             maxPrice: maxP
         };
-    }, [allProducts, selectedCategory, pendingCategory, isMobileFiltersOpen]);
+    }, [activeProducts, selectedCategory, pendingCategory, isMobileFiltersOpen]);
 
     // Dynamic Categories: Filter out categories that consist only of hidden products
     const dynamicCategories = useMemo(() => {
