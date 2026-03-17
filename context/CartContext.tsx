@@ -277,16 +277,72 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [appliedPromo, showToast]);
 
-  // Cleanup timeouts on unmount and listen for global clear cart event
+  // Synchronize cart across tabs (Storage Event + Focus/Visibility)
   useEffect(() => {
+    const syncFromLocalStorage = () => {
+      // Don't sync if we are currently clearing the cart locally to avoid race conditions
+      if (isClearingRef.current) return;
+
+      try {
+        const savedCart = localStorage.getItem('cardecal_cart');
+        if (savedCart) {
+          const parsed = JSON.parse(savedCart);
+          const sanitized = parsed.map((item: CartItem) => {
+            let size = item.selectedSize || '';
+            if (/various|различни|small/i.test(size)) size = '7 см';
+            if (size.toLowerCase() === '7cm') size = '7 см';
+            return { ...item, selectedSize: size, isRemoving: false };
+          });
+          
+          // Check if items actually changed before updating state to prevent re-renders
+          setItems(prev => {
+            const currentStr = JSON.stringify(prev.filter(i => !i.isRemoving));
+            const newStr = JSON.stringify(sanitized);
+            return currentStr !== newStr ? sanitized : prev;
+          });
+        } else {
+          setItems(prev => prev.length > 0 ? [] : prev);
+        }
+
+        const savedPromo = localStorage.getItem('cardecal_promo');
+        if (savedPromo) {
+          const parsed = JSON.parse(savedPromo);
+          setAppliedPromo(prev => JSON.stringify(prev) !== JSON.stringify(parsed) ? parsed : prev);
+        } else {
+          setAppliedPromo(prev => prev !== null ? null : prev);
+        }
+      } catch (err) {
+        console.error('Failed to sync cart from storage:', err);
+      }
+    };
+
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'cardecal_cart' || e.key === 'cardecal_promo' || e.key === null) { // null means clear()
+        syncFromLocalStorage();
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        syncFromLocalStorage();
+      }
+    };
+
     const handleClearCartEvent = () => {
        clearCart();
        localStorage.removeItem('cardecal_cart');
     };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('focus', syncFromLocalStorage);
+    window.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('clear_local_cart', handleClearCartEvent);
 
     return () => {
         Object.values(removeTimeouts.current).forEach(clearTimeout);
+        window.removeEventListener('storage', handleStorageChange);
+        window.removeEventListener('focus', syncFromLocalStorage);
+        window.removeEventListener('visibilitychange', handleVisibilityChange);
         window.removeEventListener('clear_local_cart', handleClearCartEvent);
     };
   }, []);
