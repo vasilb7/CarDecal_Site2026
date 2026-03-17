@@ -17,8 +17,9 @@ const CatalogPage: React.FC = () => {
     const { t, i18n } = useTranslation();
     const { isMobileNavOpen } = useUI();
     const { category: urlCategory } = useParams<{ category?: string }>();
-    const { getAllProducts, loading } = useProducts();
+    const { getAllProducts, loading, categories: dbCategoriesMetadata } = useProducts();
     const allProducts = getAllProducts();
+    const activeProducts = useMemo(() => allProducts.filter(p => !p.isHidden), [allProducts]);
 
     const [searchParams, setSearchParams] = useSearchParams();
     const location = useLocation();
@@ -114,22 +115,42 @@ const CatalogPage: React.FC = () => {
     const dynamicCategories = useMemo(() => {
         const catMap: Record<string, number> = {};
         
-        allProducts.forEach(p => {
-            // Only count towards categories if NOT hidden
-            if (!p.isHidden) {
-                p.categories.forEach(cat => {
-                    const isSizeCandidate = cat.toLowerCase().includes('cm') || 
-                                          /^\d+x\d+$/.test(cat.toLowerCase()) || 
-                                          /^\d+×\d+$/.test(cat);
-                    if (!isSizeCandidate) {
-                        catMap[cat] = (catMap[cat] || 0) + 1;
-                    }
+        activeProducts.forEach(p => {
+            p.categories.forEach(cat => {
+                const isSizeCandidate = cat.toLowerCase().includes('cm') || 
+                                      /^\d+x\d+$/.test(cat.toLowerCase()) || 
+                                      /^\d+×\d+$/.test(cat);
+                if (!isSizeCandidate) {
+                    catMap[cat] = (catMap[cat] || 0) + 1;
+                }
+            });
+        });
+
+        // Use metadata from categories table to get Bulgarian names and order
+        const filtered = dbCategoriesMetadata
+            .filter(cat => catMap[cat.name])
+            .map(cat => ({
+                name: cat.name,
+                name_bg: cat.name_bg || cat.name,
+                count: catMap[cat.name] || 0,
+                display_order: cat.display_order || 0
+            }));
+
+        // Append any categories found in products but not in metadata table (just in case)
+        const metadataNames = new Set(dbCategoriesMetadata.map(c => c.name));
+        Object.entries(catMap).forEach(([name, count]) => {
+            if (!metadataNames.has(name)) {
+                filtered.push({
+                    name,
+                    name_bg: name,
+                    count,
+                    display_order: 999
                 });
             }
         });
 
-        return Object.entries(catMap).map(([name, count]) => ({ name, count }));
-    }, [allProducts]);
+        return filtered.sort((a, b) => a.display_order - b.display_order);
+    }, [activeProducts, dbCategoriesMetadata]);
 
     // Prices distribution data
     const priceBins = useMemo(() => {
@@ -608,7 +629,7 @@ const CatalogPage: React.FC = () => {
                             )}
                             <span className="text-[14px]">{t('catalog.all')}</span>
                         </div>
-                        <span className="text-xs text-[#525252]">{allProducts.length}</span>
+                        <span className="text-xs text-[#525252]">{activeProducts.length}</span>
                     </li>
                     {dynamicCategories.map((cat) => (
                         <li 
@@ -622,7 +643,7 @@ const CatalogPage: React.FC = () => {
                                 ) : (
                                     <div className="w-1.5 h-1.5 rounded-full bg-transparent group-hover:bg-[#A3A3A3] transition-colors" />
                                 )}
-                                <span className="text-[14px]">{cat.name}</span>
+                                <span className="text-[14px]">{cat.name_bg}</span>
                             </div>
                             <span className="text-xs text-[#525252]">{cat.count}</span>
                         </li>
