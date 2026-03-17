@@ -103,12 +103,33 @@ const CatalogPage: React.FC = () => {
                 return aNum - bNum;
             });
 
-        return { 
+        return {
             categories: Object.entries(catMap).map(([name, count]) => ({ name, count })),
             sizes: finalSizes,
             maxPrice: maxP
         };
     }, [allProducts, selectedCategory, pendingCategory, isMobileFiltersOpen]);
+
+    // Dynamic Categories: Filter out categories that consist only of hidden products
+    const dynamicCategories = useMemo(() => {
+        const catMap: Record<string, number> = {};
+        
+        allProducts.forEach(p => {
+            // Only count towards categories if NOT hidden
+            if (!p.isHidden) {
+                p.categories.forEach(cat => {
+                    const isSizeCandidate = cat.toLowerCase().includes('cm') || 
+                                          /^\d+x\d+$/.test(cat.toLowerCase()) || 
+                                          /^\d+×\d+$/.test(cat);
+                    if (!isSizeCandidate) {
+                        catMap[cat] = (catMap[cat] || 0) + 1;
+                    }
+                });
+            }
+        });
+
+        return Object.entries(catMap).map(([name, count]) => ({ name, count }));
+    }, [allProducts]);
 
     // Prices distribution data
     const priceBins = useMemo(() => {
@@ -143,14 +164,14 @@ const CatalogPage: React.FC = () => {
                 return;
             }
 
-            const match = filterStats.categories.find(c => c.name.toLowerCase() === urlCategory.toLowerCase());
+            const match = dynamicCategories.find(c => c.name.toLowerCase() === urlCategory.toLowerCase());
             if (match) {
                 setSelectedCategory(match.name);
             } else {
                 setSelectedCategory(urlCategory);
             }
         }
-    }, [urlCategory, filterStats.categories, filterStats.sizes]);
+    }, [urlCategory, dynamicCategories, filterStats.sizes]);
 
     // Determine current state based on URL, if param is absent, fall back to default
     const currentSearchTerm = searchParams.get('q') || '';
@@ -407,6 +428,15 @@ const CatalogPage: React.FC = () => {
 
             return true;
         }).sort((a, b) => {
+            // Priority 1: Top Order (Manually set position 1, 2, 3...)
+            const topA = a.top_order ?? Infinity;
+            const topB = b.top_order ?? Infinity;
+            
+            if (topA !== topB) {
+                return topA - topB;
+            }
+
+            // Priority 2: Selected Sort Method
             const priceA = a.price_eur || a.wholesalePriceEur || 0;
             const priceB = b.price_eur || b.wholesalePriceEur || 0;
             if (sortBy === 'price_asc') return priceA - priceB;
@@ -417,8 +447,7 @@ const CatalogPage: React.FC = () => {
                 return nameA.localeCompare(nameB, i18n.language);
             }
             
-            // Stable Natural Sort Fallback:
-            // This MUST match the naturalSort in ProductsContext to prevent "hallucinations"
+            // Priority 3: Stable Natural Sort Fallback (Slug-based)
             const numA = parseInt(a.slug.match(/\d+/)?.[0] ?? '0', 10);
             const numB = parseInt(b.slug.match(/\d+/)?.[0] ?? '0', 10);
             if (numA !== numB) return numA - numB;
@@ -430,11 +459,11 @@ const CatalogPage: React.FC = () => {
     const searchDictionary = useMemo(() => {
         const dictionary = Array.from(new Set([
             ...allProducts.map(p => p.nameBg || p.name),
-            ...filterStats.categories.map(c => c.name),
+            ...dynamicCategories.map(c => c.name),
             'черепи', 'бебе', 'кола', 'мерцедес', 'ауди', 'бмв', 'фолксваген', 'монстър', 'стикери'
         ].flatMap(s => s.toLowerCase().split(/\s+/).filter(w => w.length > 2))));
         return dictionary;
-    }, [allProducts, filterStats.categories]);
+    }, [allProducts, dynamicCategories]);
 
     // Search Suggestion Logic
     const searchSuggestion = useMemo(() => {
@@ -581,7 +610,7 @@ const CatalogPage: React.FC = () => {
                         </div>
                         <span className="text-xs text-[#525252]">{allProducts.length}</span>
                     </li>
-                    {filterStats.categories.map((cat) => (
+                    {dynamicCategories.map((cat) => (
                         <li 
                             key={cat.name} 
                             onClick={() => setCat(cat.name)}

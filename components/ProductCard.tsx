@@ -81,6 +81,11 @@ const ProductCard: React.FC<ProductCardProps> = memo(({ product, isPriority = fa
           <h3 className="text-base md:text-lg font-black text-white leading-tight truncate uppercase tracking-tight">
             {name}
           </h3>
+          {product.top_order && (
+            <p className="text-[10px] md:text-[11px] font-black uppercase tracking-widest text-[#D4AF37] mt-0.5">
+              Топ продукт #{product.top_order}
+            </p>
+          )}
           <p className="text-[10px] md:text-xs text-[#888] font-bold uppercase tracking-[0.2em] truncate">
             {shortDesc}
           </p>

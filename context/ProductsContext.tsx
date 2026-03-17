@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import type { Product, Post, Highlight } from '../types';
+import type { Product, Post, Highlight, Category } from '../types';
 import { supabase } from '../lib/supabase';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -26,6 +26,7 @@ const mapRow = (p: any): Product => ({
   isHidden:         !!p.is_hidden,
   posts:            Array.isArray(p.posts)        ? (p.posts        as Post[])      : [],
   highlights:       Array.isArray(p.highlights)   ? (p.highlights   as Highlight[]) : [],
+  top_order:        p.top_order      ?? null,
 });
 
 const naturalSort = (a: Product, b: Product) => {
@@ -43,12 +44,15 @@ interface ProductsContextType {
   getAllProducts: () => Product[];
   getProductBySlug: (slug: string) => Product | undefined;
   getFeaturedProducts: (count?: number) => Product[];
+  categories: Category[];
+  fetchCategories: () => Promise<void>;
 }
 
 const ProductsContext = createContext<ProductsContextType | null>(null);
 
 export const ProductsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
   const fetchAll = useCallback(async () => {
@@ -86,8 +90,22 @@ export const ProductsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   }, []);
 
+  const fetchCategories = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .order('display_order', { ascending: true });
+      if (error) throw error;
+      setCategories(data || []);
+    } catch (err) {
+      console.error('Error fetching categories:', err);
+    }
+  }, []);
+
   useEffect(() => {
     fetchAll();
+    fetchCategories();
 
     const channel = supabase
       .channel('products-realtime')
@@ -98,19 +116,26 @@ export const ProductsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           fetchAll();
         }
       )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'categories' },
+        () => {
+          fetchCategories();
+        }
+      )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [fetchAll]);
+  }, [fetchAll, fetchCategories]);
 
   const getAllProducts       = ()                  : Product[]           => products;
   const getProductBySlug    = (slug: string)       : Product | undefined => products.find(p => p.slug.toLowerCase() === (slug || '').toLowerCase());
   const getFeaturedProducts = (count = 6)          : Product[]           => products.filter(p => p.isBestSeller).slice(0, count);
 
   return (
-    <ProductsContext.Provider value={{ products, loading, getAllProducts, getProductBySlug, getFeaturedProducts }}>
+    <ProductsContext.Provider value={{ products, loading, getAllProducts, getProductBySlug, getFeaturedProducts, categories, fetchCategories }}>
       {children}
     </ProductsContext.Provider>
   );

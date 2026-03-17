@@ -138,8 +138,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       if (event === 'SIGNED_OUT') {
         setProfile(null);
         setLoading(false);
-        // Ensure cart is cleared on any sign out event (refresh, session expire, etc)
-        window.dispatchEvent(new Event("clear_local_cart"));
+        // Ensure cart is preserved on any sign out event
+        // window.dispatchEvent(new Event("clear_local_cart"));
       }
 
       if (event === 'SIGNED_IN' && session?.user) {
@@ -179,7 +179,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         setSession(null);
         sessionStorage.clear();
         // Supabase will handle its own token cleanup when it notices they are gone
-        window.dispatchEvent(new Event("clear_local_cart"));
+        // window.dispatchEvent(new Event("clear_local_cart"));
       }
     };
 
@@ -342,8 +342,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         }
       });
       
-      // 6. Dispatch event to clear local cart state
-      window.dispatchEvent(new Event("clear_local_cart"));
+      // 6. Dispatch event to clear local cart state (DISABLED - requested to remember)
+      // window.dispatchEvent(new Event("clear_local_cart"));
 
       // 7. Sync logout to other tabs
       authChannel?.postMessage('logout');

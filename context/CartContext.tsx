@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { useToast } from '../components/Toast/ToastProvider';
 import { supabase } from '../lib/supabase';
+import { useAuth } from './AuthContext';
 
 export const EXCHANGE_RATE = 1.95583;
 export const FREE_SHIPPING_THRESHOLD_BGN = 150;
@@ -89,6 +90,82 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const removeTimeouts = useRef<Record<string, NodeJS.Timeout>>({});
   const isClearingRef = useRef(false);
+  const { user } = useAuth();
+  const [isInitialSyncDone, setIsInitialSyncDone] = useState(false);
+
+  // Sync with DB when user logs in
+  useEffect(() => {
+    if (!user) {
+      setIsInitialSyncDone(false);
+      return;
+    }
+
+    const syncCartWithDB = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('user_carts')
+          .select('items')
+          .eq('user_id', user.id)
+          .single();
+
+        if (error && error.code !== 'PGRST116') {
+          console.error('Error fetching user cart:', error);
+          setIsInitialSyncDone(true); // Don't block local updates if DB fetch fails
+          return;
+        }
+
+        const dbItems = (data?.items || []) as CartItem[];
+        
+        if (dbItems.length > 0) {
+          setItems(prevLocalItems => {
+            // Start with DB items
+            const merged = [...dbItems];
+            
+            // Merge local guest items
+            prevLocalItems.forEach(localItem => {
+              const index = merged.findIndex(i => i.id === localItem.id);
+              if (index > -1) {
+                // Combine quantities for same items
+                merged[index] = {
+                  ...merged[index],
+                  quantity: merged[index].quantity + localItem.quantity
+                };
+              } else {
+                merged.push(localItem);
+              }
+            });
+            return merged;
+          });
+        }
+        
+        setIsInitialSyncDone(true);
+      } catch (err) {
+        console.error('Failed to sync user cart:', err);
+        setIsInitialSyncDone(true);
+      }
+    };
+
+    syncCartWithDB();
+  }, [user?.id]);
+
+  // Persist to DB whenever items change
+  useEffect(() => {
+    if (!user || !isInitialSyncDone) return;
+
+    const timeout = setTimeout(async () => {
+      try {
+        await supabase.from('user_carts').upsert({
+          user_id: user.id,
+          items: items.filter(i => !i.isRemoving),
+          updated_at: new Date().toISOString()
+        });
+      } catch (err) {
+        console.error('Failed to push cart to DB:', err);
+      }
+    }, 1000); // 1s debounce
+
+    return () => clearTimeout(timeout);
+  }, [items, user?.id, isInitialSyncDone]);
 
   useEffect(() => {
     try {

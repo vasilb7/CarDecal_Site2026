@@ -43,6 +43,7 @@ export interface Product {
    wholesalePrice?: string | null;
    wholesalePriceEur?: number;
    isHidden?: boolean;
+   top_order?: number | null;
  }
 
 
@@ -95,4 +96,13 @@ export interface ModerationHistoryEntry {
   banned_until: string | null;
   metadata: Record<string, any>;
   created_at: string;
+}
+
+export interface Category {
+  id: string;
+  name: string;
+  name_bg: string | null;
+  icon?: string | null;
+  display_order?: number;
+  created_at?: string;
 }

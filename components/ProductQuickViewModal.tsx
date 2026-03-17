@@ -507,15 +507,35 @@ const ProductQuickViewModal: React.FC = () => {
                                             Произведено от CarDecal
                                         </span>
                                     </div>
-                                    {product.size && (
-                                        <div className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-xl text-white font-black uppercase text-[10px] tracking-widest shadow-2xl">
-                                            {product.size}
-                                        </div>
-                                    )}
+                                    <div className="flex items-center gap-2">
+                                        {product.isBestSeller && (
+                                            <div className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-xl text-white font-black uppercase text-[10px] tracking-widest shadow-2xl">
+                                                Бестселър
+                                            </div>
+                                        )}
+                                        {product.isHidden && (
+                                            <div className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-xl text-white font-black uppercase text-[10px] tracking-widest shadow-2xl">
+                                                Скрито
+                                            </div>
+                                        )}
+                                        {product.size && (
+                                            <div className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-xl text-white font-black uppercase text-[10px] tracking-widest shadow-2xl">
+                                                {product.size}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                                 <h1 className="text-2xl md:text-3xl xl:text-4xl font-black uppercase tracking-tight leading-tight text-white mb-2 break-words">
                                     {product.nameBg || product.name}
                                 </h1>
+                                {product.top_order && (
+                                    <div className="flex items-center gap-2 mt-1 mb-4">
+                                        <div className="w-2 h-2 bg-[#D4AF37] rounded-full animate-pulse shadow-[0_0_10px_#D4AF37]" />
+                                        <span className="text-[11px] md:text-xs font-black uppercase tracking-[0.2em] text-[#D4AF37]">
+                                            Топ продукт #{product.top_order}
+                                        </span>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Variant Selection Buttons - Only if cardImages exist */}

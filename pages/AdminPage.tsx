@@ -97,7 +97,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     );
 };
 
-type AdminTab = 'dashboard' | 'homepage' | 'messages' | 'maintenance' | 'products' | 'users' | 'archived_users' | 'custom_orders' | 'orders' | 'bugs' | 'stealth' | 'security' | 'promo_codes';
+type AdminTab = 'dashboard' | 'homepage' | 'messages' | 'maintenance' | 'products' | 'users' | 'archived_users' | 'custom_orders' | 'orders' | 'bugs' | 'stealth' | 'security' | 'promo_codes' | 'categories';
 
 interface DBProduct {
     id: string;
@@ -115,6 +115,7 @@ interface DBProduct {
     card_images?: string[] | null;
     is_hidden: boolean;
     updated_at: string;
+    top_order: number | null;
 }
 
 interface DBUser {
@@ -155,6 +156,14 @@ interface DBUser {
     phone: string | null;
 }
 
+interface Category {
+    id: string;
+    name: string;
+    name_bg: string | null;
+    display_order: number;
+    icon?: string | null;
+}
+
 // ─── Moderation Status Helper ──────────────────────────────────────────────
 const getEffectiveStatus = (u: DBUser): string => {
     if (!u) return 'active';
@@ -182,6 +191,8 @@ const ProductEditModal: React.FC<{
         };
     }, []);
 
+    const { categories: dbCategories, fetchCategories } = useProducts();
+
     const [form, setForm] = useState({
         slug: product?.slug || '',
         name: product?.name || '',
@@ -194,10 +205,22 @@ const ProductEditModal: React.FC<{
         categories: (product?.categories || []).join(', '),
         card_images: product?.card_images || [],
         is_hidden: product?.is_hidden || false,
+        is_different_item: product ? (product.categories?.includes('Всички') && !product.categories?.includes('Стикери')) : false,
+        top_order: product?.top_order?.toString() || '',
     });
     const [saving, setSaving] = useState(false);
     const [uploading, setUploading] = useState<string | null>(null);
     const [error, setError] = useState('');
+
+    const toggleCategorySelection = (catName: string) => {
+        let current = form.categories.split(',').map(c => c.trim()).filter(Boolean);
+        if (current.includes(catName)) {
+            current = current.filter(c => c !== catName);
+        } else {
+            current.push(catName);
+        }
+        setForm(prev => ({ ...prev, categories: current.join(', ') }));
+    };
 
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: 'avatar' | 'cover_image') => {
         if (!e.target.files?.[0]) return;
@@ -246,11 +269,35 @@ const ProductEditModal: React.FC<{
                 cover_image: form.cover_image || null,
                 is_best_seller: form.is_best_seller,
                 dimensions: form.dimensions || null,
-                categories: form.categories.split(',').map(c => c.trim()).filter(Boolean),
-                card_images: form.card_images.filter(Boolean),
                 is_hidden: form.is_hidden,
+                top_order: form.top_order ? parseInt(form.top_order) : null,
                 updated_at: new Date().toISOString(),
             };
+
+            // Auto-categorization logic
+            let finalCategories = form.categories.split(',').map(c => c.trim()).filter(Boolean);
+            
+            // Fixed categories names as per user request
+            const CAT_ALL = "Всички";
+            const CAT_STICKERS = "Стикери";
+            const CAT_ALL_STICKERS = "Всички стикери";
+
+            // Always add "Всички" if not present
+            if (!finalCategories.includes(CAT_ALL)) {
+                finalCategories.unshift(CAT_ALL);
+            }
+
+            if (form.is_different_item) {
+                // If it's a different item, ensure it DOES NOT have sticker categories
+                finalCategories = finalCategories.filter(c => c !== CAT_STICKERS && c !== CAT_ALL_STICKERS);
+            } else {
+                // If it's a standard sticker, ensure it has sticker categories
+                if (!finalCategories.includes(CAT_STICKERS)) finalCategories.push(CAT_STICKERS);
+                if (!finalCategories.includes(CAT_ALL_STICKERS)) finalCategories.push(CAT_ALL_STICKERS);
+            }
+
+            payload.categories = finalCategories;
+            payload.card_images = form.card_images.filter(Boolean);
 
             if (isNew) {
                 const { error } = await supabase.from('products').insert(payload);
@@ -395,13 +442,83 @@ const ProductEditModal: React.FC<{
                     <div className="grid grid-cols-1 gap-4">
                         <div>
                             <label className="block text-xs uppercase tracking-widest text-zinc-400 mb-1.5">Размери</label>
-                            <input value={form.dimensions} onChange={e => setForm(p => ({...p, dimensions: e.target.value}))} className={inputClass} placeholder="6 x 6 cm" />
+                            <input 
+                                value={form.dimensions} 
+                                onChange={e => {
+                                    let val = e.target.value;
+                                    // If user types a digit and it's currently empty, or just a number, 
+                                    // we can help. But let's just do a blur handler or simple check.
+                                    setForm(p => ({...p, dimensions: val}));
+                                }} 
+                                onBlur={e => {
+                                    let val = e.target.value.trim();
+                                    if (!val) return;
+                                    
+                                    // Check if it's already got 'см' or 'cm'
+                                    if (val.toLowerCase().endsWith('см') || val.toLowerCase().endsWith('cm')) return;
+
+                                    // Pattern 1: Simple number (e.g., "5")
+                                    const isNumber = !isNaN(Number(val));
+                                    
+                                    // Pattern 2: Dimension string (e.g., "30x40", "30 x 40", "30*40")
+                                    const dimensionPattern = /^\d+(\s*[xX*]\s*\d+)+$/;
+                                    const isPattern = dimensionPattern.test(val);
+
+                                    if (isNumber || isPattern) {
+                                        setForm(p => ({...p, dimensions: val + ' см'}));
+                                    }
+                                }}
+                                className={inputClass} 
+                                placeholder="5 см" 
+                            />
                         </div>
                     </div>
 
                     <div>
-                        <label className="block text-xs uppercase tracking-widest text-zinc-400 mb-1.5">Категории (разделени със запетая)</label>
-                        <input value={form.categories} onChange={e => setForm(p => ({...p, categories: e.target.value}))} className={inputClass} placeholder="JDM, Anime, Racing" />
+                        <label className="block text-xs uppercase tracking-widest text-zinc-400 mb-3">Категории</label>
+                        <div className="flex flex-wrap gap-2 mb-3">
+                            {dbCategories.map(cat => {
+                                const isSelected = form.categories.split(',').map(c => c.trim()).includes(cat.name);
+                                return (
+                                    <button
+                                        key={cat.id}
+                                        type="button"
+                                        onClick={() => toggleCategorySelection(cat.name)}
+                                        className={`px-3 py-1.5 rounded-lg border text-[10px] uppercase font-bold tracking-widest transition-all ${
+                                            isSelected 
+                                                ? 'bg-red-600 border-red-600 text-white shadow-[0_0_15px_rgba(220,38,38,0.3)]' 
+                                                : 'bg-white/5 border-white/10 text-zinc-500 hover:border-white/20'
+                                        }`}
+                                    >
+                                        {cat.name_bg || cat.name}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                        <div className="relative group">
+                            <Tag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600 group-focus-within:text-red-600 transition-colors" />
+                            <input 
+                                value={form.categories} 
+                                onChange={e => setForm(p => ({...p, categories: e.target.value}))} 
+                                className={`${inputClass} pl-10`} 
+                                placeholder="Ръчно въвеждане (разделени със запетая)..." 
+                            />
+                        </div>
+                    </div>
+
+                    <div className="bg-red-600/5 border border-red-600/10 p-4 rounded-xl">
+                        <label className="block text-[10px] uppercase tracking-widest text-red-500 font-black mb-2">ТОП ПРОДУКТ (Номер на подредба)</label>
+                        <div className="flex items-center gap-3">
+                            <input 
+                                type="number" 
+                                min="1" 
+                                value={form.top_order} 
+                                onChange={e => setForm(p => ({...p, top_order: e.target.value}))} 
+                                className={`${inputClass} !bg-black/60`} 
+                                placeholder="пр: 1, 2, 3..." 
+                            />
+                            <p className="text-[10px] text-zinc-500 italic max-w-[200px]">Ако е попълнено, продуктът ще излиза първи в своята категория (подреден по този номер).</p>
+                        </div>
                     </div>
 
                     <div className="flex items-center gap-6">
@@ -413,7 +530,7 @@ const ProductEditModal: React.FC<{
                             >
                                 <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${form.is_best_seller ? 'translate-x-5' : 'translate-x-0'}`} />
                             </button>
-                            <span className="text-sm text-zinc-300 uppercase tracking-widest">Топ Продукт</span>
+                            <span className="text-sm text-zinc-300 uppercase tracking-widest">Бестселър</span>
                         </div>
 
                         <div className="flex items-center gap-3">
@@ -427,6 +544,20 @@ const ProductEditModal: React.FC<{
                             <div className="flex items-center gap-2">
                                 <EyeOff className={`w-4 h-4 ${form.is_hidden ? 'text-amber-500' : 'text-zinc-500'}`} />
                                 <span className="text-sm text-zinc-300 uppercase tracking-widest">Скрит артикул</span>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setForm(p => ({...p, is_different_item: !p.is_different_item}))}
+                                className={`w-10 h-5 rounded-full transition-colors relative ${form.is_different_item ? 'bg-blue-600' : 'bg-zinc-700'}`}
+                            >
+                                <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${form.is_different_item ? 'translate-x-5' : 'translate-x-0'}`} />
+                            </button>
+                            <div className="flex items-center gap-2">
+                                <ShoppingBag className={`w-4 h-4 ${form.is_different_item ? 'text-blue-500' : 'text-zinc-500'}`} />
+                                <span className="text-sm text-zinc-300 uppercase tracking-widest">Различен артикул (не е стикер)</span>
                             </div>
                         </div>
                     </div>
@@ -483,7 +614,7 @@ const ProductsTab: React.FC = () => {
         while (true) {
             const { data, error } = await supabase
                 .from('products')
-                .select('id,slug,name,name_bg,avatar,price,price_eur,wholesale_price,wholesale_price_eur,is_best_seller,categories,dimensions,cover_image,is_hidden,updated_at')
+                .select('id,slug,name,name_bg,avatar,price,price_eur,wholesale_price,wholesale_price_eur,is_best_seller,categories,dimensions,cover_image,is_hidden,updated_at,top_order')
                 .order('id', { ascending: false })
                 .range(rFrom, rFrom + rSize - 1);
                 
@@ -6728,6 +6859,185 @@ const ArchivedUsersTab: React.FC = () => {
     );
 };
 
+// ─── Categories Tab ────────────────────────────────────────────────────────
+const CategoriesTab: React.FC = () => {
+    const { categories, fetchCategories } = useProducts();
+    const { showToast } = useToast();
+    const [loading, setLoading] = useState(false);
+    const [editCat, setEditCat] = useState<Category | null>(null);
+    const [isNew, setIsNew] = useState(false);
+    
+    const [form, setForm] = useState({
+        name: '',
+        name_bg: '',
+        display_order: 0,
+        icon: ''
+    });
+
+    useEffect(() => {
+        if (editCat) {
+            setForm({
+                name: editCat.name,
+                name_bg: editCat.name_bg || '',
+                display_order: editCat.display_order || 0,
+                icon: editCat.icon || ''
+            });
+        } else {
+            setForm({ name: '', name_bg: '', display_order: 0, icon: '' });
+        }
+    }, [editCat]);
+
+    const handleSave = async () => {
+        if (!form.name) return showToast("Името е задължително", "error");
+        setLoading(true);
+        try {
+            if (isNew) {
+                const { error } = await supabase.from('categories').insert([form]);
+                if (error) throw error;
+                showToast("Категорията е създадена", "success");
+            } else {
+                const { error } = await supabase.from('categories').update(form).eq('id', editCat!.id);
+                if (error) throw error;
+                showToast("Промените са запазени", "success");
+            }
+            setIsNew(false);
+            setEditCat(null);
+            fetchCategories();
+        } catch (err: any) {
+            showToast(err.message, "error");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDelete = async (id: string) => {
+        if (!window.confirm("Сигурни ли сте? Това може да повлияе на филтрите.")) return;
+        try {
+            const { error } = await supabase.from('categories').delete().eq('id', id);
+            if (error) throw error;
+            showToast("Изтрито", "success");
+            fetchCategories();
+        } catch (err: any) {
+            showToast(err.message, "error");
+        }
+    };
+
+    return (
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <div className="flex items-center justify-between">
+                <div>
+                    <h2 className="text-xl font-bold uppercase tracking-widest text-white">Управление на Категории</h2>
+                    <p className="text-zinc-500 text-xs mt-1 uppercase tracking-widest">Подреждане и редакция на продуктови групи</p>
+                </div>
+                <button 
+                    onClick={() => { setIsNew(true); setEditCat(null); }}
+                    className="flex items-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-bold text-[10px] uppercase tracking-widest transition-all rounded-xl shadow-[0_0_20px_rgba(220,38,38,0.2)]"
+                >
+                    <Plus size={16} /> Нова Категория
+                </button>
+            </div>
+
+            <div className="bg-[#111] border border-white/5 rounded-2xl overflow-hidden">
+                <table className="w-full text-left border-collapse">
+                    <thead>
+                        <tr className="border-b border-white/5 bg-white/2">
+                            <th className="px-6 py-4 text-[10px] uppercase font-black text-zinc-500 tracking-widest">Ред</th>
+                            <th className="px-6 py-4 text-[10px] uppercase font-black text-zinc-500 tracking-widest">Име (System)</th>
+                            <th className="px-6 py-4 text-[10px] uppercase font-black text-zinc-500 tracking-widest">Име (Български)</th>
+                            <th className="px-6 py-4 text-[10px] uppercase font-black text-zinc-500 tracking-widest">Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5">
+                        {categories.map((cat) => (
+                            <tr key={cat.id} className="group hover:bg-white/[0.02] transition-colors">
+                                <td className="px-6 py-4">
+                                    <span className="text-xs font-mono text-zinc-500">{cat.display_order}</span>
+                                </td>
+                                <td className="px-6 py-4 text-sm font-bold text-white">{cat.name}</td>
+                                <td className="px-6 py-4 text-sm text-zinc-400">{cat.name_bg || '—'}</td>
+                                <td className="px-6 py-4">
+                                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button onClick={() => setEditCat(cat)} className="p-2 text-zinc-500 hover:text-white transition-colors">
+                                            <Edit3 size={16} />
+                                        </button>
+                                        <button onClick={() => handleDelete(cat.id)} className="p-2 text-zinc-500 hover:text-red-500 transition-colors">
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+
+            <AnimatePresence>
+                {(isNew || editCat) && (
+                    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
+                        <motion.div 
+                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                            className="bg-[#111] border border-white/10 w-full max-w-md overflow-hidden shadow-2xl rounded-2xl"
+                        >
+                            <div className="p-6">
+                                <h3 className="text-sm font-black uppercase tracking-widest text-white mb-6">
+                                    {isNew ? 'Добави Категория' : 'Редактирай Категория'}
+                                </h3>
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-[10px] uppercase tracking-widest text-zinc-500 mb-2">Име (System - за филтри)</label>
+                                        <input 
+                                            value={form.name} 
+                                            onChange={e => setForm(f => ({...f, name: e.target.value}))}
+                                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-red-600"
+                                            placeholder="пр: JDM"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] uppercase tracking-widest text-zinc-500 mb-2">Име (BG - за показване)</label>
+                                        <input 
+                                            value={form.name_bg} 
+                                            onChange={e => setForm(f => ({...f, name_bg: e.target.value}))}
+                                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-red-600"
+                                            placeholder="пр: Японски стикери"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] uppercase tracking-widest text-zinc-500 mb-2">Пореден Номер</label>
+                                        <input 
+                                            type="number"
+                                            value={form.display_order} 
+                                            onChange={e => setForm(f => ({...f, display_order: parseInt(e.target.value) || 0}))}
+                                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-red-600"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="flex gap-3 mt-8">
+                                    <button 
+                                        onClick={() => { setIsNew(false); setEditCat(null); }}
+                                        className="flex-1 py-4 border border-white/10 text-zinc-500 text-[10px] uppercase font-bold tracking-widest hover:text-white transition-all rounded-xl"
+                                    >
+                                        Отказ
+                                    </button>
+                                    <button 
+                                        onClick={handleSave}
+                                        disabled={loading}
+                                        className="flex-1 py-4 bg-red-600 text-white font-bold text-[10px] uppercase tracking-widest hover:bg-red-700 transition-all rounded-xl flex items-center justify-center gap-2"
+                                    >
+                                        {loading ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                                        Запази
+                                    </button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+};
+
 // ─── Main Admin Page ──────────────────────────────────────────────────────
 const AdminPage: React.FC = () => {
     const { user, profile, loading, isAdmin, isEditor, userRole, signOut } = useAuth();
@@ -6786,7 +7096,7 @@ const AdminPage: React.FC = () => {
     useEffect(() => {
         const handleHashChange = () => {
             const hash = window.location.hash.replace('#', '') as AdminTab;
-            const validTabs: AdminTab[] = ['dashboard', 'homepage', 'messages', 'products', 'orders', 'custom_orders', 'promo_codes', 'users', 'archived_users', 'bugs', 'maintenance', 'stealth', 'security'];
+            const validTabs: AdminTab[] = ['dashboard', 'homepage', 'messages', 'products', 'orders', 'custom_orders', 'categories', 'promo_codes', 'users', 'archived_users', 'bugs', 'maintenance', 'stealth', 'security'];
             if (hash && validTabs.includes(hash)) {
                 setActiveTab(hash);
             }
@@ -6826,6 +7136,7 @@ const AdminPage: React.FC = () => {
         { id: 'homepage' as AdminTab, label: 'Начална', icon: Film },
         { id: 'messages' as AdminTab, label: 'Съобщения', icon: Megaphone },
         { id: 'products' as AdminTab, label: 'Стикери', icon: Package },
+        { id: 'categories' as AdminTab, label: 'Категории', icon: Tag },
         { id: 'orders' as AdminTab, label: 'Поръчки', icon: CheckCircle },
         { id: 'custom_orders' as AdminTab, label: 'Индивидуални', icon: Edit3 },
         { id: 'promo_codes' as AdminTab, label: 'Отстъпки', icon: Ticket },
@@ -6949,6 +7260,7 @@ const AdminPage: React.FC = () => {
                     {activeTab === 'messages' && <MessagesTab />}
                     {activeTab === 'maintenance' && <MaintenanceSettingsSection />}
                     {activeTab === 'products' && <ProductsTab />}
+                    {activeTab === 'categories' && <CategoriesTab />}
                     {activeTab === 'orders' && <OrdersTab />}
                     {activeTab === 'custom_orders' && <CustomOrdersTab />}
                     {activeTab === 'promo_codes' && <PromoCodesTab />}

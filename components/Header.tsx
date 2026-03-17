@@ -489,7 +489,6 @@ const Header: React.FC = () => {
                                                 <button 
                                                      onClick={async () => { 
                                                          await signOut(); 
-                                                         clearCart();
                                                          setIsProfileMenuOpen(false);
                                                          showToast(t('toast.logout_success'), "success");
                                                          navigate('/');
