@@ -296,7 +296,6 @@ export const StealthTab: React.FC = () => {
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            onClick={() => setShowConfirmModal(false)}
                             className="absolute inset-0 bg-black/80 backdrop-blur-sm"
                         />
                         <motion.div

@@ -36,7 +36,7 @@ const UnbanNotification: React.FC = () => {
         initial={{ opacity: 0, y: 50, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="fixed bottom-6 right-6 md:bottom-10 md:right-10 z-[100] max-w-sm w-full bg-emerald-950/95 border border-emerald-500/30 backdrop-blur-xl shadow-2xl rounded-2xl p-5"
+        className="fixed bottom-6 left-4 right-4 md:left-auto md:right-10 md:bottom-10 z-[100] max-w-sm mx-auto md:mx-0 w-[calc(100%-32px)] md:w-full bg-emerald-950/95 border border-emerald-500/30 backdrop-blur-xl shadow-2xl rounded-2xl p-5"
       >
         <button 
           onClick={handleDismiss}

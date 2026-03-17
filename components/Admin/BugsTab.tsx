@@ -187,7 +187,7 @@ export const BugsTab: React.FC = () => {
 
             <AnimatePresence>
                 {selectedImage && (
-                    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/95 backdrop-blur-sm" onClick={() => setSelectedImage(null)}>
+                    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/95 backdrop-blur-sm">
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}

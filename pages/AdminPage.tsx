@@ -155,6 +155,17 @@ interface DBUser {
     phone: string | null;
 }
 
+// ─── Moderation Status Helper ──────────────────────────────────────────────
+const getEffectiveStatus = (u: DBUser): string => {
+    if (!u) return 'active';
+    if (u.moderation_status === 'temporarily_suspended' && u.banned_until) {
+        if (new Date(u.banned_until).getTime() <= Date.now()) {
+            return 'active';
+        }
+    }
+    return u.moderation_status || 'active';
+};
+
 
 // ─── Product Edit Modal ────────────────────────────────────────────────────
 const ProductEditModal: React.FC<{
@@ -939,26 +950,18 @@ const UsersTab: React.FC = () => {
     const [modInternalReason, setModInternalReason] = useState('');
     const [modNotes, setModNotes] = useState('');
     const [modBannedUntil, setModBannedUntil] = useState('');
+    const [modSendCoupon, setModSendCoupon] = useState(false);
+    const [modCouponValue, setModCouponValue] = useState<number>(10);
     const [modHistory, setModHistory] = useState<any[]>([]);
     const [modHistoryLoading, setModHistoryLoading] = useState(false);
     const [modStatusFilter, setModStatusFilter] = useState<'all' | 'active' | 'temporarily_suspended' | 'permanently_banned'>('all');
     const [onboardingFilter, setOnboardingFilter] = useState<'all' | 'completed' | 'pending'>('all'); // Default to showing all users to prevent confusion
 
     
-    // Auto-refresh timer to re-evaluate effective statuses
     const [tick, setTick] = useState(0);
     useEffect(() => {
         const interval = setInterval(() => setTick(t => t + 1), 30000); // Re-render every 30s
         return () => clearInterval(interval);
-    }, []);
-
-    const getEffectiveStatus = useCallback((u: DBUser): string => {
-        if (u.moderation_status === 'temporarily_suspended' && u.banned_until) {
-            if (new Date(u.banned_until).getTime() <= Date.now()) {
-                return 'active';
-            }
-        }
-        return u.moderation_status;
     }, []);
 
     const fetchUsers = useCallback(async () => {
@@ -1020,7 +1023,11 @@ const UsersTab: React.FC = () => {
             u.bulstat?.toLowerCase().includes(search.toLowerCase());
         const effectiveStatus = getEffectiveStatus(u);
 
-        if (modStatusFilter !== 'all' && effectiveStatus !== modStatusFilter) return false;
+        if (modStatusFilter === 'deletion_requests') {
+            if (!u.deletion_requested_at) return false;
+        } else if (modStatusFilter !== 'all' && effectiveStatus !== modStatusFilter) {
+            return false;
+        }
         
         if (onboardingFilter === 'completed' && !u.onboarding_completed) return false;
         if (onboardingFilter === 'pending' && u.onboarding_completed) return false;
@@ -1056,10 +1063,30 @@ const UsersTab: React.FC = () => {
 
     // ─── Moderation Actions ──────────────────────────────────────────────
     const openModModal = (user: DBUser, mode: typeof modModal extends null ? never : NonNullable<typeof modModal>['mode']) => {
-        setModPublicReason(user.public_reason || '');
-        setModInternalReason(user.internal_reason || '');
-        setModNotes(user.moderator_notes || '');
-        setModBannedUntil(user.banned_until ? new Date(user.banned_until).toISOString().slice(0, 16) : '');
+        // Reset states to avoid leakage
+        setModCouponValue(0);
+        
+        // Clear reasons if we are in unban mode to prevent ban reasons from appearing as unban reasons
+        if (mode === 'unban') {
+            setModPublicReason('Вашият акаунт беше възстановен успешно от администратор. Извиняваме се за причиненото неудобство!');
+            setModInternalReason('');
+            setModNotes(user.moderator_notes || '');
+            setModBannedUntil('');
+        } else {
+            setModPublicReason(user.public_reason || '');
+            setModInternalReason(user.internal_reason || '');
+            setModNotes(user.moderator_notes || '');
+            
+            // Helper for local datetime-local string (YYYY-MM-DDTHH:mm)
+            const toLocalISO = (dateStr: string | null) => {
+                if (!dateStr) return '';
+                const d = new Date(dateStr);
+                const pad = (n: number) => n.toString().padStart(2, '0');
+                return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+            };
+            
+            setModBannedUntil(toLocalISO(user.banned_until));
+        }
         setModModal({ user, mode });
         if (mode === 'view_history') {
             fetchModerationHistory(user.id);
@@ -1178,6 +1205,48 @@ const UsersTab: React.FC = () => {
     const applyUnban = async () => {
         if (!modModal) return;
         setUpdatingId(modModal.user.id);
+        
+        let finalPublicReason = modPublicReason || 'Вашият акаунт беше възстановен от администратор';
+        let couponDetails = "";
+
+        // ─── Generate Apology Coupon ───────────────────────────────────
+        if (modSendCoupon) {
+            try {
+                const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+                let couponCode = 'SORRY-';
+                for (let i = 0; i < 6; i++) {
+                    couponCode += characters.charAt(Math.floor(Math.random() * characters.length));
+                }
+                
+                const now = new Date();
+                const expiry = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days valid
+
+                const { error: promoError } = await supabase.from('promo_codes').insert({
+                    code: couponCode,
+                    discount_type: 'percentage',
+                    discount_value: modCouponValue,
+                    max_uses: 1,
+                    max_uses_per_user: 1,
+                    is_active: true,
+                    valid_from: now.toISOString(),
+                    valid_until: expiry.toISOString(),
+                    condition_type: 'none',
+                    condition_value: null,
+                    current_uses: 0
+                });
+
+                if (!promoError) {
+                    couponDetails = `\n\nВ знак на извинение за причиненото неудобство, Ви подаряваме купон за -${modCouponValue}% отстъпка:\n${couponCode}\n(Валиден 30 дни)`;
+                    finalPublicReason += couponDetails;
+                } else {
+                    console.error("Coupon generation error:", promoError);
+                    showToast("Грешка при генериране на купон, но потребителят ще бъде възстановен.", "warning");
+                }
+            } catch (err) {
+                console.error("Coupon exception:", err);
+            }
+        }
+
         try {
             const { error } = await supabase.from('profiles').update({
                 moderation_status: 'active',
@@ -1189,7 +1258,10 @@ const UsersTab: React.FC = () => {
                 banned_by: null,
                 banned_reason: null,
                 unbanned_by: currentUser?.id,
-                unban_reason: modPublicReason || 'Възстановен от администратор'
+                unban_reason: finalPublicReason,
+                deletion_requested_at: null, // Clear request
+                deletion_scheduled_at: null,
+                deletion_request_status: null
             }).eq('id', modModal.user.id);
             if (error) throw error;
 
@@ -1198,7 +1270,8 @@ const UsersTab: React.FC = () => {
                 action_type: 'unban',
                 admin_id: currentUser?.id,
                 admin_email: currentUser?.email,
-                public_reason: modPublicReason || 'Възстановен от администратор',
+                public_reason: finalPublicReason,
+                internal_reason: 'Restored via unban/restore action' + (modSendCoupon ? ` with -${modCouponValue}% coupon` : ''),
                 moderator_notes: modNotes || null,
             });
 
@@ -1210,15 +1283,19 @@ const UsersTab: React.FC = () => {
                 public_reason: null, 
                 internal_reason: null,
                 moderator_notes: null,
-                unban_reason: modPublicReason || 'Възстановен от администратор'
+                unban_reason: finalPublicReason,
+                deletion_requested_at: null,
+                deletion_scheduled_at: null,
+                deletion_request_status: null
             } : u));
-            showToast('Потребителят е възстановен', 'success');
+            showToast(`Потребителят е възстановен успешно${modSendCoupon ? ' и му е изпратено извинение с купон' : ''}`, 'success');
             await logSecurityEvent('account_unlocked', modModal.user.id, { action: 'unban', admin: currentUser?.email });
         } catch (err: any) {
             showToast('Грешка: ' + err.message, 'error');
         } finally {
             setUpdatingId(null);
             setModModal(null);
+            setModSendCoupon(false);
         }
     };
 
@@ -1323,6 +1400,7 @@ const UsersTab: React.FC = () => {
         const status = getEffectiveStatus(user);
         if (status === 'permanently_banned') return { label: 'Перманентно Огр.', cls: 'bg-red-900/40 text-red-400 border-red-900/20' };
         if (status === 'temporarily_suspended') return { label: 'Временно Огр.', cls: 'bg-amber-900/40 text-amber-400 border-amber-900/20' };
+        if (user.deletion_requested_at) return { label: 'ПОИСКАНО ИЗТРИВАНЕ', cls: 'bg-red-600/20 text-red-500 border-red-600/40' };
         return { label: 'Активен', cls: 'bg-emerald-900/30 text-emerald-400 border-emerald-900/20' };
     };
 
@@ -1400,6 +1478,7 @@ const UsersTab: React.FC = () => {
                             { key: 'active', label: 'Активни', count: users.filter(u => getEffectiveStatus(u) === 'active').length },
                             { key: 'temporarily_suspended', label: 'Временно', count: users.filter(u => getEffectiveStatus(u) === 'temporarily_suspended').length },
                             { key: 'permanently_banned', label: 'Перманентно', count: users.filter(u => getEffectiveStatus(u) === 'permanently_banned').length },
+                            { key: 'deletion_requests', label: 'Заявки за Изтриване', count: users.filter(u => !!u.deletion_requested_at).length },
                         ].map(f => (
                             <button
                                 key={f.key}
@@ -1448,6 +1527,11 @@ const UsersTab: React.FC = () => {
                                                 {u.full_name || u.email?.split('@')[0] || 'Unknown'}
                                             </p>
                                             <span className={`text-[9px] px-2 py-0.5 rounded font-black uppercase tracking-widest border ${badge.cls}`}>{badge.label}</span>
+                                            {hasDeletionRequest && (
+                                                <span className="text-[9px] bg-red-600 text-white px-2 py-0.5 rounded font-black uppercase tracking-widest border border-red-500 shadow-[0_0_10px_rgba(220,38,38,0.5)] flex items-center gap-1 animate-pulse">
+                                                    <Trash2 size={10} /> ЗАЯВКА ЗА ИЗТРИВАНЕ
+                                                </span>
+                                            )}
                                             {u.is_company && u.company_name && (
                                                 <span className="text-[9px] bg-blue-900/40 text-blue-400 px-2 py-0.5 rounded font-black uppercase tracking-widest border border-blue-800/20 flex items-center gap-1">
                                                     <Building2 size={10} /> {u.company_name}
@@ -1571,7 +1655,7 @@ const UsersTab: React.FC = () => {
             {/* ─── MODERATION MODAL ─────────────────────────────────── */}
             <AnimatePresence>
                 {modModal && (
-                    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setModModal(null)}>
+                    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
@@ -1686,7 +1770,9 @@ const UsersTab: React.FC = () => {
                                                         type="button"
                                                         onClick={() => {
                                                             const dt = new Date(Date.now() + d.hours * 3600000);
-                                                            setModBannedUntil(dt.toISOString().slice(0, 16));
+                                                            const pad = (n: number) => n.toString().padStart(2, '0');
+                                                            const localStr = `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+                                                            setModBannedUntil(localStr);
                                                         }}
                                                         className="px-2.5 py-1 text-[10px] border border-white/10 text-zinc-400 hover:text-white hover:border-white/20 transition-all rounded"
                                                     >
@@ -1697,7 +1783,6 @@ const UsersTab: React.FC = () => {
                                         </div>
                                     )}
 
-                                    {/* Public Reason */}
                                     <div>
                                         <label className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold block mb-1.5">
                                             {modModal.mode === 'unban' ? 'Причина за възстановяване' : 'Публична причина'} (видима за потребителя)
@@ -1706,10 +1791,54 @@ const UsersTab: React.FC = () => {
                                             rows={2}
                                             value={modPublicReason}
                                             onChange={e => setModPublicReason(e.target.value)}
-                                            placeholder={modModal.mode === 'unban' ? "Причина за възстановяване..." : "Нарушение на Общите условия..."}
+                                            placeholder={modModal.mode === 'unban' ? "Вашият акаунт беше възстановен..." : "Нарушение на Общите условия..."}
                                             className="w-full bg-black/40 border border-white/10 text-white text-sm px-4 py-2.5 focus:outline-none focus:border-red-600/60 resize-none rounded-lg"
                                         />
                                     </div>
+
+                                    {/* ─── Give Coupon UI (Specific for Restoration) ───────────────── */}
+                                    {modModal.mode === 'unban' && (
+                                        <div className="p-4 bg-emerald-950/20 border border-emerald-500/10 rounded-xl space-y-4">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <Ticket className="w-4 h-4 text-emerald-500" />
+                                                    <span className="text-[10px] uppercase font-black tracking-widest text-emerald-500">Подари купон за извинение</span>
+                                                </div>
+                                                <button 
+                                                    onClick={() => setModSendCoupon(!modSendCoupon)}
+                                                    className={`w-10 h-5 rounded-full relative transition-colors ${modSendCoupon ? 'bg-emerald-600' : 'bg-zinc-800'}`}
+                                                >
+                                                    <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${modSendCoupon ? 'left-6' : 'left-1'}`} />
+                                                </button>
+                                            </div>
+
+                                            {modSendCoupon && (
+                                                <motion.div 
+                                                    initial={{ opacity: 0, height: 0 }}
+                                                    animate={{ opacity: 1, height: 'auto' }}
+                                                    className="space-y-3 pt-2 border-t border-emerald-500/10"
+                                                >
+                                                    <div>
+                                                        <label className="text-[9px] text-zinc-500 uppercase font-bold block mb-1">Стойност на отстъпката (%)</label>
+                                                        <div className="flex gap-2">
+                                                            {[10, 15, 20, 30, 50].map(val => (
+                                                                <button
+                                                                    key={val}
+                                                                    onClick={() => setModCouponValue(val)}
+                                                                    className={`px-3 py-1 rounded-lg text-[10px] font-bold border transition-all ${modCouponValue === val ? 'bg-emerald-600 border-emerald-500 text-white' : 'bg-black/40 border-white/5 text-zinc-500 hover:text-white'}`}
+                                                                >
+                                                                    {val}%
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                    <p className="text-[9px] text-zinc-500 leading-relaxed italic">
+                                                        * Системата ще генерира уникален код и ще го добави към съобщението за потребителя. Кодът ще е валиден за 1 използване в рамките на 30 дни.
+                                                    </p>
+                                                </motion.div>
+                                            )}
+                                        </div>
+                                    )}
 
                                     {/* Internal Reason (not for unban) */}
                                     {modModal.mode !== 'unban' && (
@@ -1798,6 +1927,7 @@ const UserProfileModal: React.FC<{
     user: DBUser;
     onClose: () => void;
 }> = ({ user, onClose }) => {
+    const { user: currentUser } = useAuth();
     const [orders, setOrders] = useState<RegularOrder[]>([]);
     const [customOrders, setCustomOrders] = useState<CustomOrder[]>([]);
     const [profileHistory, setProfileHistory] = useState<any[]>([]);
@@ -2201,10 +2331,12 @@ const UserProfileModal: React.FC<{
                                         <Shield size={10} />
                                         {user.role === 'admin' ? 'Администратор' : user.role === 'editor' ? 'Редактор' : 'Потребител'}
                                     </span>
-                                    {user.is_banned && (
-                                        <span className="text-[10px] px-3 py-1.5 rounded-lg font-black uppercase tracking-widest bg-red-950/50 text-red-500 border border-red-500/20 flex items-center gap-1.5">
+                                    {getEffectiveStatus(user) !== 'active' && (
+                                        <span className={`text-[10px] px-3 py-1.5 rounded-lg font-black uppercase tracking-widest flex items-center gap-1.5 shadow-lg ${
+                                            getEffectiveStatus(user) === 'permanently_banned' ? 'bg-red-950/50 text-red-500 border-red-500/20' : 'bg-amber-950/50 text-amber-500 border-amber-500/20'
+                                        }`}>
                                             <ShieldBan size={10} />
-                                            BANNED
+                                            {getEffectiveStatus(user) === 'permanently_banned' ? 'BANNED' : 'SUSPENDED'}
                                         </span>
                                     )}
                                 </div>
@@ -2257,6 +2389,59 @@ const UserProfileModal: React.FC<{
                 <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
                     {/* Left Side: Stats & Details */}
                     <div className="w-full md:w-80 border-r border-white/5 p-8 space-y-8 bg-black/40">
+                        {user.deletion_requested_at && (
+                            <div className="bg-red-600/10 border border-red-600/20 rounded-2xl p-5 space-y-4 shadow-[0_0_30px_rgba(220,38,38,0.1)] relative overflow-hidden group/del">
+                                <div className="absolute top-0 right-0 p-2 opacity-10 group-hover/del:opacity-20 transition-opacity">
+                                    <Trash2 size={40} />
+                                </div>
+                                <div className="space-y-1 relative z-10">
+                                    <h3 className="text-[10px] text-red-500 uppercase tracking-widest font-black flex items-center gap-2">
+                                        <AlertTriangle size={14} className="animate-pulse" />
+                                        Заявка за изтриване
+                                    </h3>
+                                    <p className="text-[9px] text-zinc-500 uppercase font-black tracking-widest italic">{new Date(user.deletion_requested_at).toLocaleString('bg-BG')}</p>
+                                </div>
+
+                                <div className="flex flex-col gap-2 relative z-10">
+                                    <button 
+                                        onClick={async () => {
+                                            if (confirm('Сигурни ли сте, че искате да ОТКАЖЕТЕ заявката за изтриване?')) {
+                                                const { error } = await supabase.from('profiles').update({ deletion_requested_at: null, deletion_request_status: null }).eq('id', user.id);
+                                                if (error) alert(error.message);
+                                                else {
+                                                    await supabase.from('moderation_history').insert({ user_id: user.id, action_type: 'cancel_deletion', admin_id: currentUser?.id, public_reason: 'Заявката за изтриване е отказана от администратор' });
+                                                    window.location.reload();
+                                                }
+                                            }
+                                        }}
+                                        className="w-full py-2 bg-zinc-800 hover:bg-zinc-700 text-white text-[9px] font-black uppercase tracking-widest rounded-lg border border-white/5 transition-all"
+                                    >
+                                        Откажи заявката
+                                    </button>
+                                    <button 
+                                        onClick={async () => {
+                                            if (confirm('Сигурни ли сте, че искате да АРХИВИРАТЕ (Soft Delete) акаунта? Клиентът няма да може да влиза, но данните му се пазят.')) {
+                                                const { error } = await supabase.from('profiles').update({ 
+                                                    moderation_status: 'permanently_banned', 
+                                                    is_banned: true,
+                                                    public_reason: 'Акаунтът е архивиран по Ваша молба. Данните Ви се пазят за отчетност съгласно Общите условия.',
+                                                    deletion_requested_at: null,
+                                                    deletion_request_status: 'soft_deleted'
+                                                }).eq('id', user.id);
+                                                if (error) alert(error.message);
+                                                else {
+                                                    await supabase.from('moderation_history').insert({ user_id: user.id, action_type: 'soft_delete', admin_id: currentUser?.id, public_reason: 'Акаунтът е архивиран (Soft Delete)' });
+                                                    window.location.reload();
+                                                }
+                                            }
+                                        }}
+                                        className="w-full py-2 bg-red-600 hover:bg-red-700 text-white text-[9px] font-black uppercase tracking-widest rounded-lg shadow-lg shadow-red-600/20 transition-all"
+                                    >
+                                        Архивирай (Soft)
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                         <div>
                             <h3 className="text-[10px] text-zinc-500 uppercase tracking-widest mb-4 font-black">Статистика</h3>
                             <div className="grid grid-cols-2 gap-3">
@@ -3689,7 +3874,6 @@ const MaintenanceSettingsSection: React.FC = () => {
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            onClick={() => setIsActivationMenuOpen(false)}
                             className="absolute inset-0 bg-black/80 backdrop-blur-sm"
                         />
                         <motion.div 
@@ -3870,7 +4054,7 @@ const DashboardTab: React.FC = () => {
             setStats({
                 products: products || 0,
                 users: profilesArr.length,
-                banned: profilesArr.filter((p: any) => p.is_banned && (!p.banned_until || new Date(p.banned_until) > now)).length,
+                banned: profilesArr.filter((p: any) => getEffectiveStatus(p) !== 'active').length,
                 editors: profilesArr.filter((p: any) => p.role === 'editor').length,
                 admins: profilesArr.filter((p: any) => p.role === 'admin').length,
                 monthlyRevenue,
@@ -6549,11 +6733,12 @@ const AdminPage: React.FC = () => {
     };
     const [scheduledCount, setScheduledCount] = useState(0);
     const [newBugsCount, setNewBugsCount] = useState(0);
+    const [deletionRequestsCount, setDeletionRequestsCount] = useState(0);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
     useEffect(() => {
         const fetchCounts = async () => {
-            const [scheduledRes, bugsRes] = await Promise.all([
+            const [scheduledRes, bugsRes, deletionRes] = await Promise.all([
                 supabase
                     .from('profiles')
                     .select('id', { count: 'exact', head: true })
@@ -6561,10 +6746,15 @@ const AdminPage: React.FC = () => {
                 supabase
                     .from('bug_reports')
                     .select('id', { count: 'exact', head: true })
-                    .eq('status', 'new')
+                    .eq('status', 'new'),
+                supabase
+                    .from('profiles')
+                    .select('id', { count: 'exact', head: true })
+                    .not('deletion_requested_at', 'is', null)
             ]);
             setScheduledCount(scheduledRes.count || 0);
             setNewBugsCount(bugsRes.count || 0);
+            setDeletionRequestsCount(deletionRes.count || 0);
         };
         fetchCounts();
 
@@ -6633,7 +6823,7 @@ const AdminPage: React.FC = () => {
         { id: 'promo_codes' as AdminTab, label: 'Отстъпки', icon: Ticket },
         { id: 'bugs' as AdminTab, label: 'Доклади', icon: Bug, badge: newBugsCount },
         ...(isAdmin ? [
-            { id: 'users' as AdminTab, label: 'Потребители', icon: Users },
+            { id: 'users' as AdminTab, label: 'Потребители', icon: Users, badge: deletionRequestsCount },
             { id: 'archived_users' as AdminTab, label: 'Архив Изтрити', icon: Trash2, badge: scheduledCount }
         ] : []),
         { id: 'maintenance' as AdminTab, label: 'Поддръжка', icon: Settings },

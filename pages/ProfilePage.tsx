@@ -1332,7 +1332,7 @@ const ProfilePage: React.FC = () => {
         <div className="min-h-screen bg-[#0a0a0a]">
             {/* ──── Header Mobile ──── */}
             {activeTab !== 'dashboard' && (
-                <div className="bg-black/90 backdrop-blur-xl border-b border-white/5 flex items-center px-4 h-16 sm:hidden sticky top-0 z-[60]">
+                <div className="bg-black/90 backdrop-blur-xl border-b border-white/5 flex items-center px-4 h-16 sm:hidden sticky top-20 z-[60]">
                     <button 
                         onClick={() => setActiveTab('dashboard')}
                         className="p-2 text-zinc-400 hover:text-white transition-colors"
@@ -1352,7 +1352,7 @@ const ProfilePage: React.FC = () => {
 
             {/* ──── Desktop Header (Compact when NOT in dashboard) ──── */}
             {activeTab !== 'dashboard' && (
-                <div className="hidden sm:block bg-black/90 backdrop-blur-xl border-b border-white/5 py-5 sticky top-0 z-[45]">
+                <div className="hidden sm:block bg-black/90 backdrop-blur-xl border-b border-white/5 py-5 sticky top-24 z-[45]">
                     <div className="max-w-6xl mx-auto px-6 flex items-center justify-between">
                         <button 
                             onClick={() => setActiveTab('dashboard')}
