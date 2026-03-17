@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { revokeAllUserDevices } from '../lib/device-service';
 import { useToast } from '../components/Toast/ToastProvider';
-import { uploadToCloudinary } from '../lib/cloudinary-utils';
+import { uploadToCloudinary, deleteFromCloudinary } from '../lib/cloudinary-utils';
 import { BugsTab } from '../components/Admin/BugsTab';
 import { StealthTab } from '../components/Admin/StealthTab';
 import { SecurityTab } from '../components/Admin/SecurityTab';
@@ -282,19 +282,28 @@ const ProductEditModal: React.FC<{
             const CAT_STICKERS = "Стикери";
             const CAT_ALL_STICKERS = "Всички стикери";
 
-            // Always add "Всички" if not present
-            if (!finalCategories.includes(CAT_ALL)) {
-                finalCategories.unshift(CAT_ALL);
-            }
+            // Normalize existing categories and filter out duplicates or case-mismatched "fixed" names
+            finalCategories = form.categories.split(',')
+                .map(c => c.trim())
+                .filter(Boolean)
+                .filter(c => {
+                    const lc = c.toLowerCase();
+                    return lc !== "всички" && lc !== "стикери" && lc !== "всички стикери";
+                });
+            
+            // Always add "Всички" as the first category for consistency
+            finalCategories.unshift(CAT_ALL);
 
             if (form.is_different_item) {
-                // If it's a different item, ensure it DOES NOT have sticker categories
-                finalCategories = finalCategories.filter(c => c !== CAT_STICKERS && c !== CAT_ALL_STICKERS);
+                // Not a sticker, so exclude sticker-specific tags if any manually added
             } else {
                 // If it's a standard sticker, ensure it has sticker categories
-                if (!finalCategories.includes(CAT_STICKERS)) finalCategories.push(CAT_STICKERS);
-                if (!finalCategories.includes(CAT_ALL_STICKERS)) finalCategories.push(CAT_ALL_STICKERS);
+                finalCategories.push(CAT_STICKERS);
+                finalCategories.push(CAT_ALL_STICKERS);
             }
+
+            // Remove duplicates again just in case
+            finalCategories = Array.from(new Set(finalCategories));
 
             payload.categories = finalCategories;
             payload.card_images = form.card_images.filter(Boolean);
@@ -760,16 +769,37 @@ const ProductsTab: React.FC = () => {
     const confirmDeleteAction = async () => {
         if (!confirmDelete) return;
         const id = confirmDelete;
+        
+        // Find the product being deleted to get its images
+        const productToDelete = products.find(p => p.id === id);
+        
         setConfirmDelete(null);
         setDeletingId(id);
+        
         try {
+            // 1. Delete images from Cloudinary if they exist
+            if (productToDelete) {
+                const imageUrls = [
+                    productToDelete.avatar,
+                    productToDelete.cover_image
+                ].filter(Boolean) as string[];
+
+                // Delete all images in parallel
+                await Promise.allSettled(
+                    imageUrls.map(url => deleteFromCloudinary(url))
+                );
+            }
+
+            // 2. Delete entry from Supabase
             await supabase.from('products').delete().eq('id', id);
             await fetchProducts(true);
             showToast('Стикерът е изтрит успешно!', 'success');
-        } catch {
+        } catch (err: any) {
+            console.error('Delete error:', err);
             showToast('Грешка при изтриване.', 'error');
+        } finally {
+            setDeletingId(null);
         }
-        setDeletingId(null);
     };
 
 

@@ -63,6 +63,82 @@ export async function uploadToCloudinary(file: File, folder: string = 'general',
 }
 
 /**
+ * Extracts the public_id from a Cloudinary URL.
+ */
+export function getPublicIdFromUrl(url: string): string | null {
+  if (!url || !url.includes('cloudinary.com')) return null;
+
+  const uploadIndex = url.indexOf('/upload/');
+  if (uploadIndex === -1) return null;
+
+  // Get everything after /upload/
+  const segments = url.substring(uploadIndex + 8).split('/');
+  
+  let i = 0;
+  while (i < segments.length) {
+    const seg = segments[i];
+    // Versions always start with 'v' and are followed by digits
+    if (/^v\d+$/.test(seg)) {
+      i++;
+      break; 
+    }
+    // Transformations segments typically contain ',' or '=' or common prefixes like 'c_', 'w_', 'h_'
+    if (seg.includes(',') || seg.includes('=') || /^(c|w|h|q|f|co|bg|e|l|a|p|fl|du|eo|so|dl|pg|o|r|ac|af|br|cs|d|dn|f|if|ki|l|p|q|spl|tm|val|vc|vs|z)_/.test(seg)) {
+      i++;
+      continue;
+    }
+    break;
+  }
+
+  const publicIdWithExt = segments.slice(i).join('/');
+  const lastDot = publicIdWithExt.lastIndexOf('.');
+  return lastDot !== -1 ? publicIdWithExt.substring(0, lastDot) : publicIdWithExt;
+}
+
+/**
+ * Deletes an image from Cloudinary using its URL.
+ */
+export async function deleteFromCloudinary(url: string, resourceType: 'image' | 'video' | 'auto' = 'image'): Promise<boolean> {
+  const publicId = getPublicIdFromUrl(url);
+  if (!publicId) return false;
+
+  if (!cloudinaryConfig.apiKey || !cloudinaryConfig.apiSecret || !cloudinaryConfig.cloudName) {
+    console.error('Missing Cloudinary config');
+    return false;
+  }
+
+  const timestamp = Math.round(new Date().getTime() / 1000);
+  const params: any = {
+    public_id: publicId,
+    timestamp,
+  };
+
+  const signature = await generateSignature(params, cloudinaryConfig.apiSecret);
+
+  const formData = new FormData();
+  formData.append('public_id', publicId);
+  formData.append('api_key', cloudinaryConfig.apiKey);
+  formData.append('timestamp', timestamp.toString());
+  formData.append('signature', signature);
+
+  try {
+    const response = await fetch(
+      `https://api.cloudinary.com/v1_1/${cloudinaryConfig.cloudName}/${resourceType}/destroy`,
+      {
+        method: 'POST',
+        body: formData,
+      }
+    );
+
+    const data = await response.json();
+    return data.result === 'ok';
+  } catch (error) {
+    console.error('Cloudinary delete error:', error);
+    return false;
+  }
+}
+
+/**
  * Optimizes a Cloudinary URL by adding auto-format, auto-quality, and optional resizing.
  */
 export function getOptimizedUrl(url: string, options: { width?: number; height?: number; crop?: string; blur?: number } = {}): string {

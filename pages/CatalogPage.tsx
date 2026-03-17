@@ -127,8 +127,10 @@ const CatalogPage: React.FC = () => {
         });
 
         // Use metadata from categories table to get Bulgarian names and order
+        const EXCLUDED_NAMES = ["Всички", "Стикери", "Всички стикери"];
+        
         const filtered = dbCategoriesMetadata
-            .filter(cat => catMap[cat.name])
+            .filter(cat => catMap[cat.name] && !EXCLUDED_NAMES.includes(cat.name))
             .map(cat => ({
                 name: cat.name,
                 name_bg: cat.name_bg || cat.name,
@@ -139,7 +141,8 @@ const CatalogPage: React.FC = () => {
         // Append any categories found in products but not in metadata table (just in case)
         const metadataNames = new Set(dbCategoriesMetadata.map(c => c.name));
         Object.entries(catMap).forEach(([name, count]) => {
-            if (!metadataNames.has(name)) {
+            const isExcluded = EXCLUDED_NAMES.some(ex => ex.toLowerCase() === name.toLowerCase());
+            if (!metadataNames.has(name) && !isExcluded) {
                 filtered.push({
                     name,
                     name_bg: name,
