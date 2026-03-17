@@ -21,6 +21,7 @@ export const PromoCodesTab = () => {
     const [validUntil, setValidUntil] = useState('');
     const [conditionType, setConditionType] = useState<'none' | 'new_users' | 'loyal_customers'>('none');
     const [conditionValue, setConditionValue] = useState<number | ''>('');
+    const [targetUserId, setTargetUserId] = useState('');
     const [editingId, setEditingId] = useState<string | null>(null);
 
     const [showExpired, setShowExpired] = useState(false);
@@ -117,7 +118,8 @@ export const PromoCodesTab = () => {
                 valid_from: validFrom ? new Date(validFrom).toISOString() : null,
                 valid_until: validUntil ? new Date(validUntil).toISOString() : null,
                 condition_type: conditionType,
-                condition_value: conditionValue === '' ? null : Number(conditionValue)
+                condition_value: conditionValue === '' ? null : Number(conditionValue),
+                target_user_id: targetUserId.trim() || null
             };
 
             let error;
@@ -149,6 +151,7 @@ export const PromoCodesTab = () => {
             setValidUntil('');
             setConditionType('none');
             setConditionValue('');
+            setTargetUserId('');
             
             fetchCodes();
         } catch (err: any) {
@@ -190,6 +193,7 @@ export const PromoCodesTab = () => {
         
         setConditionType(code.condition_type);
         setConditionValue(code.condition_value ?? '');
+        setTargetUserId(code.target_user_id ?? '');
         setIsAdding(true);
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
@@ -207,6 +211,7 @@ export const PromoCodesTab = () => {
         setValidUntil('');
         setConditionType('none');
         setConditionValue('');
+        setTargetUserId('');
     };
 
     const toggleStatus = async (id: string, currentStatus: boolean) => {
@@ -438,6 +443,24 @@ export const PromoCodesTab = () => {
                                         />
                                     </motion.div>
                                 )}
+                                <div>
+                                    <label className={labelClasses}>
+                                        Ограничи до потребител (ID)
+                                        <InfoTooltip text="Ако въведете ID на потребител, купонът ще бъде видим и използваем САМО от него. Оставете празно за публичен купон." />
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={targetUserId}
+                                        onChange={(e) => setTargetUserId(e.target.value)}
+                                        className={inputClasses}
+                                        placeholder="User ID (optional)"
+                                    />
+                                    {targetUserId && (
+                                        <p className="text-[9px] text-amber-500 font-bold uppercase mt-1 animate-pulse">
+                                            ⚠️ Този купон ще бъде ПРИВАТЕН (само за 1 акаунт)
+                                        </p>
+                                    )}
+                                </div>
                             </div>
 
                             <div className="flex justify-end pt-6">
@@ -459,6 +482,7 @@ export const PromoCodesTab = () => {
                                 <th className="p-4 text-[9px] uppercase tracking-widest text-zinc-500 font-black">Отстъпка</th>
                                 <th className="p-4 text-[9px] uppercase tracking-widest text-zinc-500 font-black">Използван</th>
                                 <th className="p-4 text-[9px] uppercase tracking-widest text-zinc-500 font-black">Срок / Условие</th>
+                                <th className="p-4 text-[9px] uppercase tracking-widest text-zinc-500 font-black">Ексклузивност</th>
                                 <th className="p-4 text-[9px] uppercase tracking-widest text-zinc-500 font-black text-right">Действия</th>
                             </tr>
                         </thead>
@@ -522,6 +546,17 @@ export const PromoCodesTab = () => {
                                             {c.condition_type === 'none' && !c.valid_until && !c.valid_from && <div className="text-[9px] uppercase tracking-widest text-zinc-600 font-black mt-1">Завинаги / Всички</div>}
                                         </td>
                                         <td className="p-4">
+                                            {c.target_user_id ? (
+                                                <div className="flex items-center gap-2">
+                                                    <span className="bg-amber-500/10 text-amber-500 px-2 py-1 rounded border border-amber-500/20 text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5">
+                                                        <Plus size={10} /> ПЕРСОНАЛЕН
+                                                    </span>
+                                                </div>
+                                            ) : (
+                                                <span className="text-zinc-600 text-[9px] uppercase font-bold tracking-widest italic">Публичен</span>
+                                            )}
+                                        </td>
+                                        <td className="p-4 text-right">
                                             <div className="flex justify-end gap-2">
                                                 <button
                                                     onClick={() => startEditing(c)}

@@ -26,6 +26,7 @@ const PromosPage: React.FC = () => {
           .from('promo_codes')
           .select('*')
           .eq('is_active', true)
+          .or(`target_user_id.is.null,target_user_id.eq.${user?.id || '00000000-0000-0000-0000-000000000000'}`)
           .order('created_at', { ascending: false });
 
         if (promoError) throw promoError;

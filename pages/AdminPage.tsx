@@ -952,6 +952,7 @@ const UsersTab: React.FC = () => {
     const [modBannedUntil, setModBannedUntil] = useState('');
     const [modSendCoupon, setModSendCoupon] = useState(false);
     const [modCouponValue, setModCouponValue] = useState<number>(10);
+    const [modCouponCode, setModCouponCode] = useState('');
     const [modHistory, setModHistory] = useState<any[]>([]);
     const [modHistoryLoading, setModHistoryLoading] = useState(false);
     const [modStatusFilter, setModStatusFilter] = useState<'all' | 'active' | 'temporarily_suspended' | 'permanently_banned'>('all');
@@ -1072,6 +1073,7 @@ const UsersTab: React.FC = () => {
             setModInternalReason('');
             setModNotes(user.moderator_notes || '');
             setModBannedUntil('');
+            setModCouponCode(`SORRY-${user.full_name?.split(' ')[0].toUpperCase() || 'USER'}-${Math.floor(1000 + Math.random() * 9000)}`);
         } else {
             setModPublicReason(user.public_reason || '');
             setModInternalReason(user.internal_reason || '');
@@ -1212,11 +1214,7 @@ const UsersTab: React.FC = () => {
         // ─── Generate Apology Coupon ───────────────────────────────────
         if (modSendCoupon) {
             try {
-                const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-                let couponCode = 'SORRY-';
-                for (let i = 0; i < 6; i++) {
-                    couponCode += characters.charAt(Math.floor(Math.random() * characters.length));
-                }
+                const couponCode = modCouponCode.trim().toUpperCase() || `SORRY-${modModal.user.id.slice(0, 5).toUpperCase()}`;
                 
                 const now = new Date();
                 const expiry = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days valid
@@ -1232,7 +1230,8 @@ const UsersTab: React.FC = () => {
                     valid_until: expiry.toISOString(),
                     condition_type: 'none',
                     condition_value: null,
-                    current_uses: 0
+                    current_uses: 0,
+                    target_user_id: modModal.user.id
                 });
 
                 if (!promoError) {
@@ -1818,18 +1817,27 @@ const UsersTab: React.FC = () => {
                                                     animate={{ opacity: 1, height: 'auto' }}
                                                     className="space-y-3 pt-2 border-t border-emerald-500/10"
                                                 >
-                                                    <div>
-                                                        <label className="text-[9px] text-zinc-500 uppercase font-bold block mb-1">Стойност на отстъпката (%)</label>
-                                                        <div className="flex gap-2">
-                                                            {[10, 15, 20, 30, 50].map(val => (
-                                                                <button
-                                                                    key={val}
-                                                                    onClick={() => setModCouponValue(val)}
-                                                                    className={`px-3 py-1 rounded-lg text-[10px] font-bold border transition-all ${modCouponValue === val ? 'bg-emerald-600 border-emerald-500 text-white' : 'bg-black/40 border-white/5 text-zinc-500 hover:text-white'}`}
-                                                                >
-                                                                    {val}%
-                                                                </button>
-                                                            ))}
+                                                    <div className="grid grid-cols-2 gap-3">
+                                                        <div>
+                                                            <label className="text-[9px] text-zinc-500 uppercase font-bold block mb-1">Код на Купона</label>
+                                                            <input
+                                                                type="text"
+                                                                value={modCouponCode}
+                                                                onChange={e => setModCouponCode(e.target.value)}
+                                                                className="w-full bg-black/40 border border-white/5 text-white text-xs px-3 py-2 rounded-lg focus:outline-none focus:border-emerald-500/50"
+                                                                placeholder="SORRY-CODE"
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <label className="text-[9px] text-zinc-500 uppercase font-bold block mb-1">Отстъпка (%)</label>
+                                                            <input
+                                                                type="number"
+                                                                value={modCouponValue}
+                                                                onChange={e => setModCouponValue(Number(e.target.value))}
+                                                                className="w-full bg-black/40 border border-white/5 text-white text-xs px-3 py-2 rounded-lg focus:outline-none focus:border-emerald-500/50"
+                                                                min="1"
+                                                                max="100"
+                                                            />
                                                         </div>
                                                     </div>
                                                     <p className="text-[9px] text-zinc-500 leading-relaxed italic">
