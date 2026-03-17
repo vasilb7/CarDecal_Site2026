@@ -63,7 +63,7 @@ const Footer: React.FC = () => {
           className="
             bg-[#1b1c18] relative w-full overflow-hidden
             rounded-[1.7rem] sm:rounded-[2.2rem] lg:rounded-[3.5rem]
-            min-h-[500px] flex flex-col items-center justify-start pt-10 sm:pt-16 lg:pt-24 pb-12
+            min-h-[350px] sm:min-h-[400px] flex flex-col items-center justify-start pt-8 sm:pt-12 lg:pt-16 pb-8
           "
         >
 
@@ -78,27 +78,27 @@ const Footer: React.FC = () => {
           />
 
           {/* ── HUGE CENTER TEXT ── */}
-          <div className="relative flex flex-col items-center pointer-events-none z-10 w-full mb-10 sm:mb-16 lg:mb-20 scale-[0.85] xs:scale-100">
+          <div className="relative flex flex-col items-center pointer-events-none z-10 w-full mb-8 sm:mb-12 lg:mb-14 scale-[0.85] xs:scale-100">
             <div className="font-black uppercase tracking-tighter
               drop-shadow-[0_20px_40px_rgba(0,0,0,0.7)] flex flex-col items-center">
 
               {/* Ред 1 */}
-              <div className="flex flex-row items-center gap-[2vw] leading-[0.85] mb-2 sm:mb-[0.5vw]">
-                <span className="text-[9.5vw] sm:text-[9.5vw] lg:text-[8.5vw] xl:text-[7.5vw] text-white">ПРЕОТКРИЙ</span>
-                <span className="text-[9.5vw] sm:text-[9.5vw] lg:text-[8.5vw] xl:text-[7.5vw] text-[#dc2626]">СТИЛА</span>
+              <div className="flex flex-row items-center gap-[2vw] leading-[0.85] mb-1 sm:mb-[0.5vw]">
+                <span className="text-[7.5vw] sm:text-[7vw] lg:text-[6vw] xl:text-[5vw] text-white">ПРЕОТКРИЙ</span>
+                <span className="text-[7.5vw] sm:text-[7vw] lg:text-[6vw] xl:text-[5vw] text-[#dc2626]">СТИЛА</span>
               </div>
 
               {/* Ред 2 */}
               <div className="flex flex-row items-center gap-[2vw] leading-[0.85]">
-                <span className="text-[9.5vw] sm:text-[9.5vw] lg:text-[8.5vw] xl:text-[7.5vw] text-white">ЗА</span>
-                <span className="text-[9.5vw] sm:text-[9.5vw] lg:text-[8.5vw] xl:text-[7.5vw] text-[#dc2626]">СЕБЕ СИ.</span>
+                <span className="text-[7.5vw] sm:text-[7vw] lg:text-[6vw] xl:text-[5vw] text-white">ЗА</span>
+                <span className="text-[7.5vw] sm:text-[7vw] lg:text-[6vw] xl:text-[5vw] text-[#dc2626]">СЕБЕ СИ.</span>
               </div>
             </div>
           </div>
 
           {/* ── MENUS GRID ── */}
-          <div className="relative w-full z-40 px-6 sm:px-12 lg:px-24 xl:px-32 pb-8 mt-auto">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-y-10 gap-x-8 mb-12">
+          <div className="relative w-full z-40 px-6 sm:px-12 lg:px-24 xl:px-32 pb-4 mt-auto">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-y-8 gap-x-8 mb-8">
               
               {/* Col 1: Logo & Slogan */}
               <div className="col-span-2 md:col-span-1 flex flex-col items-start gap-2">
@@ -111,31 +111,31 @@ const Footer: React.FC = () => {
               </div>
 
               {/* Col 2: Страници */}
-              <div className="flex flex-col items-start gap-4 sm:gap-6">
-                <span className="text-[11px] sm:text-sm text-white font-black tracking-[0.2em] uppercase">МЕНЮ</span>
-                <div className="flex flex-col gap-2.5 sm:gap-4">
-                  <RollingLink to="/catalog" className="text-sm sm:text-base font-bold uppercase text-white/70 hover:text-white transition-colors">КАТАЛОГ</RollingLink>
-                  <RollingLink to="/promos" className="text-sm sm:text-base font-bold uppercase text-white/70 hover:text-white transition-colors">ПРОМОЦИИ</RollingLink>
-                  <RollingLink to="/about" className="text-sm sm:text-base font-bold uppercase text-white/70 hover:text-white transition-colors">ЗА НАС</RollingLink>
+              <div className="flex flex-col items-start gap-3 sm:gap-4">
+                <span className="text-[10px] sm:text-xs text-white font-black tracking-[0.2em] uppercase">МЕНЮ</span>
+                <div className="flex flex-col gap-1.5 sm:gap-2.5">
+                  <RollingLink to="/catalog" className="text-xs sm:text-sm font-bold uppercase text-white/70 hover:text-white transition-colors">КАТАЛОГ</RollingLink>
+                  <RollingLink to="/promos" className="text-xs sm:text-sm font-bold uppercase text-white/70 hover:text-white transition-colors">ПРОМОЦИИ</RollingLink>
+                  <RollingLink to="/about" className="text-xs sm:text-sm font-bold uppercase text-white/70 hover:text-white transition-colors">ЗА НАС</RollingLink>
                 </div>
               </div>
 
               {/* Col 3: Поръчки */}
-              <div className="flex flex-col items-start gap-4 sm:gap-6">
-                <span className="text-[11px] sm:text-sm text-white font-black tracking-[0.2em] uppercase">ПОРЪЧКИ</span>
-                <div className="flex flex-col gap-2.5 sm:gap-4">
-                  <RollingLink to="/custom-orders" className="text-sm sm:text-base font-bold uppercase text-white/70 hover:text-white transition-colors">ИНДИВИДУАЛНИ</RollingLink>
-                  <RollingLink to="/contact" className="text-sm sm:text-base font-bold uppercase text-white/70 hover:text-white transition-colors">КОНТАКТИ</RollingLink>
+              <div className="flex flex-col items-start gap-3 sm:gap-4">
+                <span className="text-[10px] sm:text-xs text-white font-black tracking-[0.2em] uppercase">ПОРЪЧКИ</span>
+                <div className="flex flex-col gap-1.5 sm:gap-2.5">
+                  <RollingLink to="/custom-orders" className="text-xs sm:text-sm font-bold uppercase text-white/70 hover:text-white transition-colors">ИНДИВИДУАЛНИ</RollingLink>
+                  <RollingLink to="/contact" className="text-xs sm:text-sm font-bold uppercase text-white/70 hover:text-white transition-colors">КОНТАКТИ</RollingLink>
                 </div>
               </div>
 
               {/* Col 4: Инфо */}
-              <div className="flex flex-col items-start gap-4 sm:gap-6">
-                <span className="text-[11px] sm:text-sm text-white font-black tracking-[0.2em] uppercase">ИНФО</span>
-                <div className="flex flex-col gap-2.5 sm:gap-4">
-                  <RollingLink to="/privacy" className="text-sm sm:text-base font-bold uppercase text-white/70 hover:text-white transition-colors">ПОВЕРИТЕЛНОСТ</RollingLink>
-                  <RollingLink to="/terms" className="text-sm sm:text-base font-bold uppercase text-white/70 hover:text-white transition-colors">ОБЩИ УСЛОВИЯ</RollingLink>
-                  <RollingLink to="/delivery" className="text-sm sm:text-base font-bold uppercase text-white/70 hover:text-white transition-colors">ДОСТАВКА</RollingLink>
+              <div className="flex flex-col items-start gap-3 sm:gap-4">
+                <span className="text-[10px] sm:text-xs text-white font-black tracking-[0.2em] uppercase">ИНФО</span>
+                <div className="flex flex-col gap-1.5 sm:gap-2.5">
+                  <RollingLink to="/privacy" className="text-xs sm:text-sm font-bold uppercase text-white/70 hover:text-white transition-colors">ПОВЕРИТЕЛНОСТ</RollingLink>
+                  <RollingLink to="/terms" className="text-xs sm:text-sm font-bold uppercase text-white/70 hover:text-white transition-colors">ОБЩИ УСЛОВИЯ</RollingLink>
+                  <RollingLink to="/delivery" className="text-xs sm:text-sm font-bold uppercase text-white/70 hover:text-white transition-colors">ДОСТАВКА</RollingLink>
                 </div>
               </div>
             </div>
@@ -144,19 +144,19 @@ const Footer: React.FC = () => {
             <div className="w-full h-px bg-white/10 mb-8" />
 
             {/* Social Icons & Secondary Copyright */}
-            <div className="flex flex-col items-center gap-6">
-              <div className="flex items-center gap-4">
-                <a href="https://www.facebook.com/share/18yePjATNr/" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full border border-white/20 flex items-center justify-center text-white/70 hover:text-white hover:border-white transition-all">
-                  <Facebook size={18} />
+            <div className="flex flex-col items-center gap-4">
+              <div className="flex items-center gap-3">
+                <a href="https://www.facebook.com/share/18yePjATNr/" target="_blank" rel="noopener noreferrer" className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center text-white/70 hover:text-white hover:border-white transition-all">
+                  <Facebook size={14} />
                 </a>
                 <a href="https://www.instagram.com/cardecal1?igsh=eWd3b3FpdXN0NXRp" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full border border-white/20 flex items-center justify-center text-white/70 hover:text-white hover:border-white transition-all">
                   <Instagram size={18} />
                 </a>
-                <a href="https://youtube.com/@cardecal?si=NT1sZsww7fp8cKIR" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full border border-white/20 flex items-center justify-center text-white/70 hover:text-white hover:border-white transition-all">
-                  <Youtube size={18} />
+                <a href="https://youtube.com/@cardecal?si=NT1sZsww7fp8KIR" target="_blank" rel="noopener noreferrer" className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center text-white/70 hover:text-white hover:border-white transition-all">
+                  <Youtube size={14} />
                 </a>
-                <a href="https://www.tiktok.com/@cardecal4?_r=1&_t=ZN-94RmUa0RCeE" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full border border-white/20 flex items-center justify-center text-white/70 hover:text-white hover:border-white transition-all">
-                  <svg size="18" viewBox="0 0 24 24" fill="currentColor" className="w-[18px] h-[18px]"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1.04-.1z"/></svg>
+                <a href="https://www.tiktok.com/@cardecal4?_r=1&_t=ZN-94RmUa0RCeE" target="_blank" rel="noopener noreferrer" className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center text-white/70 hover:text-white hover:border-white transition-all">
+                  <svg size="14" viewBox="0 0 24 24" fill="currentColor" className="w-[14px] h-[14px]"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1.04-.1z"/></svg>
                 </a>
               </div>
             </div>
@@ -166,7 +166,7 @@ const Footer: React.FC = () => {
         {/* ── END INNER DARK BOX ── */}
 
         {/* ── BOTTOM RED STRIP ── */}
-        <div className="relative flex flex-col items-center justify-center w-full z-40 pt-[48px] sm:pt-[36px] lg:pt-[40px] pb-4">
+        <div className="relative flex flex-col items-center justify-center w-full z-40 pt-[36px] sm:pt-[32px] lg:pt-[36px] pb-3">
 
           {/* Overlapping button */}
           <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50
@@ -174,60 +174,60 @@ const Footer: React.FC = () => {
             <Link
               to="/contact"
               className="inline-flex items-center justify-center
-                px-10 sm:px-12 lg:px-16 py-5 sm:py-3.5 lg:py-4
+                px-8 sm:px-10 lg:px-12 py-3.5 sm:py-2.5 lg:py-3
                 bg-black text-white
-                text-[12px] sm:text-[10px] lg:text-[12px]
+                text-[11px] sm:text-[9px] lg:text-[11px]
                 font-black uppercase tracking-[0.12em] lg:tracking-[0.15em]
                 rounded-md whitespace-nowrap
-                shadow-[0_5px_20px_rgba(0,0,0,0.7)]
+                shadow-[0_5px_15px_rgba(0,0,0,0.6)]
                 hover:bg-white hover:text-black
-                hover:shadow-[0_10px_30px_rgba(0,0,0,0.4)] transition-all">
+                hover:shadow-[0_8px_25px_rgba(0,0,0,0.3)] transition-all">
               СВЪРЖИ СЕ С НАС
             </Link>
           </div>
 
-          <div className="flex flex-col items-center gap-1 mt-1 sm:mt-0">
-            <span className="text-[10px] sm:text-[10px] lg:text-[12px]
-              font-black tracking-[0.2em] uppercase text-black/70 text-center px-4">
+          <div className="flex flex-col items-center gap-1.5 mt-2 sm:mt-0">
+            <span className="text-[9px] sm:text-[10px] lg:text-[11px]
+              font-black tracking-[0.15em] uppercase text-black/60 text-center px-4 mb-2">
               © {new Date().getFullYear()} CARDECAL HQ. ВСИЧКИ ПРАВА ЗАПАЗЕНИ
             </span>
             <div
               className="
-                flex flex-col items-center justify-center gap-2 text-center
+                flex flex-col items-center justify-center w-full
                 sm:flex-row sm:gap-4 sm:justify-center
               "
             >
               <Link
                 to="/privacy"
-                className="text-[9px] sm:text-[9px] lg:text-[11px] font-bold uppercase tracking-[0.1em] text-black/80 hover:text-black transition-colors"
+                className="w-full sm:w-auto py-3 sm:py-0 text-[11px] sm:text-[9px] lg:text-[10px] font-bold uppercase tracking-[0.1em] text-black/80 hover:text-black transition-colors text-center border-b border-black/5 sm:border-0"
               >
                 Политика за поверителност
               </Link>
 
               <Link
                 to="/terms"
-                className="text-[9px] sm:text-[9px] lg:text-[11px] font-bold uppercase tracking-[0.1em] text-black/80 hover:text-black transition-colors"
+                className="w-full sm:w-auto py-3 sm:py-0 text-[11px] sm:text-[9px] lg:text-[10px] font-bold uppercase tracking-[0.1em] text-black/80 hover:text-black transition-colors text-center border-b border-black/5 sm:border-0"
               >
                 Общи условия
               </Link>
 
               <Link
                 to="/delivery"
-                className="text-[9px] sm:text-[9px] lg:text-[11px] font-bold uppercase tracking-[0.1em] text-black/80 hover:text-black transition-colors"
+                className="w-full sm:w-auto py-3 sm:py-0 text-[11px] sm:text-[9px] lg:text-[10px] font-bold uppercase tracking-[0.1em] text-black/80 hover:text-black transition-colors text-center border-b border-black/5 sm:border-0"
               >
                 Доставка и връщане
               </Link>
-            </div>
 
-            <button
-              onClick={(e) => {
-                e.preventDefault();
-                window.dispatchEvent(new Event('open-bug-report'));
-              }}
-              className="text-[9px] sm:text-[9px] lg:text-[11px] font-bold uppercase tracking-[0.1em] text-black/80 hover:text-black transition-colors mt-1"
-            >
-              Докладвай проблем
-            </button>
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  window.dispatchEvent(new Event('open-bug-report'));
+                }}
+                className="w-full sm:w-auto py-3 sm:py-0 text-[11px] sm:text-[9px] lg:text-[10px] font-bold uppercase tracking-[0.1em] text-black/80 hover:text-black transition-colors text-center"
+              >
+                Докладвай проблем
+              </button>
+            </div>
           </div>
 
         </div>

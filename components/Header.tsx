@@ -685,7 +685,7 @@ const Header: React.FC = () => {
                                             <NavLink 
                                                 to={`/login`} 
                                                 onClick={closeMenu} 
-                                                className="flex items-center gap-4 text-[#B0BEC5] hover:text-white transition-colors p-3 -ml-3 rounded-xl hover:bg-white/5 min-h-[48px]"
+                                                className="flex items-center gap-4 text-[#B0BEC5] hover:text-white transition-colors p-3 -ml-3 rounded-xl hover:bg-white/5 min-h-[56px]"
                                             >
                                                 <div className="w-8 h-8 flex items-center justify-center shrink-0">
                                                     <User className="w-5 h-5 opacity-70" />
@@ -695,7 +695,7 @@ const Header: React.FC = () => {
                                             <NavLink 
                                                 to={`/register`} 
                                                 onClick={closeMenu} 
-                                                className="flex items-center gap-4 text-[#B0BEC5] hover:text-white transition-colors p-3 -ml-3 rounded-xl hover:bg-white/5 min-h-[48px]"
+                                                className="flex items-center gap-4 text-[#B0BEC5] hover:text-white transition-colors p-3 -ml-3 rounded-xl hover:bg-white/5 min-h-[56px]"
                                             >
                                                 <div className="w-8 h-8 flex items-center justify-center shrink-0 bg-white/5 rounded-full">
                                                     <span className="text-xl leading-none -mt-0.5 opacity-80">+</span>

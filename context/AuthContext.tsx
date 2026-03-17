@@ -26,6 +26,9 @@ interface AuthContextType {
   getSecureNow: () => Date;
 }
 
+// Broadcast channel for cross-tab synchronization
+const authChannel = typeof window !== 'undefined' ? new BroadcastChannel('auth_sync') : null;
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
@@ -132,6 +135,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       setSession(session);
       setUser(session?.user ?? null);
 
+      if (event === 'SIGNED_OUT') {
+        setProfile(null);
+        setLoading(false);
+        // Ensure cart is cleared on any sign out event (refresh, session expire, etc)
+        window.dispatchEvent(new Event("clear_local_cart"));
+      }
+
       if (event === 'SIGNED_IN' && session?.user) {
         // Record successful login if not already done in this session
         const recorded = sessionStorage.getItem(`login_recorded_${session.user.id}`);
@@ -159,7 +169,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       }
     });
 
-    return () => subscription.unsubscribe();
+    // Listen for logout events from other tabs
+    const handleLogoutMessage = (event: MessageEvent) => {
+      if (event.data === 'logout') {
+        console.log('Detected logout in another tab, clearing current tab...');
+        // Clear everything locally without re-broadcasting
+        setProfile(null);
+        setUser(null);
+        setSession(null);
+        sessionStorage.clear();
+        // Supabase will handle its own token cleanup when it notices they are gone
+        window.dispatchEvent(new Event("clear_local_cart"));
+      }
+    };
+
+    authChannel?.addEventListener('message', handleLogoutMessage);
+
+    return () => {
+      subscription.unsubscribe();
+      authChannel?.removeEventListener('message', handleLogoutMessage);
+    };
   }, []);
 
   // Real-time Profile Updates
@@ -315,6 +344,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       
       // 6. Dispatch event to clear local cart state
       window.dispatchEvent(new Event("clear_local_cart"));
+
+      // 7. Sync logout to other tabs
+      authChannel?.postMessage('logout');
     } catch (error) {
       console.error("Error during logout:", error);
     }

@@ -108,23 +108,28 @@ const ProductQuickViewModal: React.FC = () => {
 
     const handleCloseFinal = useCallback(() => {
         const backLoc = (location.state as any)?.backgroundLocation;
-        const queryParams = new URLSearchParams(location.search);
-        queryParams.delete('modal');
-
-        // If we have a background location (where we came from), use its path + search
-        const basePath = backLoc?.pathname || (location.state as any)?.from || '/catalog';
-        const fromSearch = backLoc?.search || '';
-        const fromParams = new URLSearchParams(fromSearch);
         
-        // Merge current URL params (like search term 'q' or 'page') into the destination
-        queryParams.forEach((value, key) => {
-            fromParams.set(key, value);
-        });
+        // If we came from a specific page (modal was opened via Link with state)
+        // the best way to return and PRESERVE scroll/state is navigate(-1)
+        if (backLoc) {
+            navigate(-1);
+            return;
+        }
 
-        const finalSearch = fromParams.toString();
-        const finalPath = `${basePath}${finalSearch ? `?${finalSearch}` : ''}`;
+        // Fallback for direct entry or refresh: use the session storage memory we set in App.tsx
+        const savedBg = sessionStorage.getItem('last_valid_bg');
+        if (savedBg) {
+            try {
+                const bg = JSON.parse(savedBg);
+                navigate(`${bg.pathname}${bg.search || ''}`, { replace: true, state: bg.state });
+                return;
+            } catch (e) {
+                console.error("Failed to navigate to saved background", e);
+            }
+        }
 
-        navigate(finalPath, { replace: true, state: { ...backLoc?.state, noScroll: true } });
+        // Ultimate fallback
+        navigate('/catalog', { replace: true });
     }, [location, navigate]);
 
     const handleClose = useCallback(() => {

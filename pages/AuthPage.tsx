@@ -389,7 +389,7 @@ export default function AuthPage() {
             <button
               type="button"
               onClick={handleOAuth}
-              className="w-full bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-zinc-600 text-zinc-200 flex items-center justify-center gap-2 py-2 rounded-md transition-colors text-[14px] font-medium"
+              className="w-full h-[56px] sm:h-11 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-zinc-600 text-zinc-200 flex items-center justify-center gap-2 rounded-xl transition-all text-base sm:text-[14px] font-medium"
             >
               <GoogleIcon />
               Продължи с Google
@@ -435,7 +435,7 @@ export default function AuthPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center py-2 rounded-md transition-colors text-[14px] font-medium disabled:opacity-50"
+                className="w-full h-[56px] sm:h-11 bg-red-600 hover:bg-red-700 text-white flex items-center justify-center rounded-xl transition-all text-base sm:text-[14px] font-medium disabled:opacity-50"
               >
                 {loading ? <Loader2 size={18} className="animate-spin" /> : "Вход"}
               </button>
@@ -464,7 +464,7 @@ export default function AuthPage() {
             <button
               type="button"
               onClick={handleOAuth}
-              className="w-full bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-zinc-600 text-zinc-200 flex items-center justify-center gap-2 py-2 rounded-md transition-colors text-[14px] font-medium"
+              className="w-full h-[56px] sm:h-11 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-zinc-600 text-zinc-200 flex items-center justify-center gap-2 rounded-xl transition-all text-base sm:text-[14px] font-medium"
             >
               <GoogleIcon />
               Продължи с Google
@@ -533,7 +533,7 @@ export default function AuthPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center py-2 rounded-md transition-colors text-[14px] font-medium disabled:opacity-50"
+                className="w-full h-[56px] sm:h-11 bg-red-600 hover:bg-red-700 text-white flex items-center justify-center rounded-xl transition-all text-base sm:text-[14px] font-medium disabled:opacity-50"
               >
                 {loading ? <Loader2 size={18} className="animate-spin" /> : "Регистрация"}
               </button>
@@ -612,14 +612,14 @@ export default function AuthPage() {
                   <button
                     type="button"
                     onClick={() => setIsCompany(null)}
-                    className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white py-2 rounded-md transition-colors text-[14px] font-medium"
+                    className="flex-1 h-[56px] sm:h-11 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl transition-all text-base sm:text-[14px] font-medium"
                   >
                     Назад
                   </button>
                   <button
                     type="submit"
                     disabled={loading}
-                    className="flex-[2] bg-red-600 hover:bg-red-700 text-white flex items-center justify-center py-2 rounded-md transition-colors text-[14px] font-medium disabled:opacity-50"
+                    className="flex-[2] h-[56px] sm:h-11 bg-red-600 hover:bg-red-700 text-white flex items-center justify-center rounded-xl transition-all text-base sm:text-[14px] font-medium disabled:opacity-50"
                   >
                     {loading ? <Loader2 size={18} className="animate-spin" /> : "Запази фирмени данни"}
                   </button>
@@ -653,7 +653,7 @@ export default function AuthPage() {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center py-2 rounded-md transition-colors text-[14px] font-medium disabled:opacity-50"
+                    className="w-full h-[56px] sm:h-11 bg-red-600 hover:bg-red-700 text-white flex items-center justify-center rounded-xl transition-all text-base sm:text-[14px] font-medium disabled:opacity-50"
                   >
                     {loading ? <Loader2 size={18} className="animate-spin" /> : "Изпрати инструкции"}
                   </button>
@@ -684,7 +684,7 @@ export default function AuthPage() {
                 </p>
                 <button 
                     onClick={() => setView('login')}
-                    className="w-full bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-zinc-600 text-zinc-200 flex items-center justify-center py-2 rounded-md transition-colors text-[14px] font-medium"
+                    className="w-full h-[56px] sm:h-11 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-zinc-600 text-zinc-200 flex items-center justify-center rounded-xl transition-all text-base sm:text-[14px] font-medium"
                 >
                     Назад към Вход
                 </button>

@@ -113,24 +113,47 @@ function AppContent() {
     location.pathname.startsWith("/catalog/") &&
     location.pathname.split("/").length === 3;
 
-  // Logic to determine if we should render a background page (for modals)
-  // We MUST preserve search params and existing state to prevent CatalogPage from resetting filters/scroll
-  const backgroundLocation = useMemo(() => {
-    const stateLoc = (location.state as any)?.backgroundLocation;
-    if (stateLoc) return stateLoc;
-    
-    if (isProductPage) {
-      return { pathname: "/catalog", search: location.search, state: location.state };
-    }
-    return null;
-  }, [isProductPage, location.state, location.search]);
-
   // Set scroll restoration to manual globally at app start
   useEffect(() => {
     if ('scrollRestoration' in window.history) {
       window.history.scrollRestoration = 'manual';
     }
   }, []);
+
+  // Persist the last non-product location to sessionStorage to survive refreshes
+  // and prevent "Reset to Page 1" behavior
+  useEffect(() => {
+    if (!isProductPage && location.pathname !== '/login' && location.pathname !== '/register') {
+      const bgInfo = {
+        pathname: location.pathname,
+        search: location.search,
+        state: location.state
+      };
+      sessionStorage.setItem('last_valid_bg', JSON.stringify(bgInfo));
+    }
+  }, [location, isProductPage]);
+
+  // Logic to determine if we should render a background page (for modals)
+  const backgroundLocation = useMemo(() => {
+    const stateLoc = (location.state as any)?.backgroundLocation;
+    if (stateLoc) return stateLoc;
+    
+    // Fallback: If we're on a product page but don't have a background state (direct entry/refresh)
+    // we use the last saved background from session storage
+    if (isProductPage) {
+      const savedBg = sessionStorage.getItem('last_valid_bg');
+      if (savedBg) {
+        try {
+          return JSON.parse(savedBg);
+        } catch (e) {
+          console.error("Failed to parse saved bg", e);
+        }
+      }
+      // Ultimate fallback if nothing is saved
+      return { pathname: "/catalog", search: "", state: {} };
+    }
+    return null;
+  }, [isProductPage, location.state, location.search]);
 
   // Maintenance logic handles automatically via React state
 
@@ -319,7 +342,7 @@ function AppContent() {
                         path="/catalog/:slug"
                         element={
                           <PageWrapper>
-                            <ProductDetailsPage />
+                            <ProductQuickViewModal />
                           </PageWrapper>
                         }
                       />

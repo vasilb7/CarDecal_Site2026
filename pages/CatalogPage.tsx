@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { normalizeSearch, findClosestMatch } from '../lib/search-utils';
 import { useTranslation } from 'react-i18next';
 import { useParams, useLocation } from 'react-router-dom';
@@ -41,6 +41,7 @@ const CatalogPage: React.FC = () => {
     
     const [isSortOpen, setIsSortOpen] = useState(false);
     const [isAtBottom, setIsAtBottom] = useState(false);
+    const paginationRef = useRef<HTMLDivElement>(null);
     const [isGridView, setIsGridView] = useState(false); // Default to 1 column (false) based on "(defaut)" request
     const itemsPerPage = 18;
 
@@ -369,26 +370,6 @@ const CatalogPage: React.FC = () => {
         }
     }, []);
 
-    // Detect scroll to hide floating filter button near the bottom (pagination/footer)
-    useEffect(() => {
-        let ticking = false;
-        const handleScroll = () => {
-            if (!ticking) {
-                ticking = true;
-                requestAnimationFrame(() => {
-                    const scrollPosition = window.scrollY + window.innerHeight;
-                    const bottomPosition = document.documentElement.scrollHeight;
-                    // 450px threshold is roughly the space taken by pagination + footer
-                    setIsAtBottom(bottomPosition - scrollPosition < 450);
-                    ticking = false;
-                });
-            }
-        };
-        handleScroll();
-        window.addEventListener('scroll', handleScroll, { passive: true });
-        return () => window.removeEventListener('scroll', handleScroll);
-    }, []);
-
     const filteredProducts = useMemo(() => {
         const query = searchTerm.toLowerCase().trim();
         const searchVariations = query ? normalizeSearch(query) : [];
@@ -512,6 +493,35 @@ const CatalogPage: React.FC = () => {
     }, [filteredProducts, currentPage]);
 
     const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
+
+    // Detect scroll to hide floating filter button near the bottom (pagination/footer)
+    useEffect(() => {
+        let ticking = false;
+        const handleScroll = () => {
+            if (!ticking) {
+                ticking = true;
+                requestAnimationFrame(() => {
+                    const scrollPosition = window.scrollY + window.innerHeight;
+                    const bottomPosition = document.documentElement.scrollHeight;
+                    
+                    // Check distance to pagination if it exists
+                    let closeToPagination = false;
+                    if (paginationRef.current) {
+                        const rect = paginationRef.current.getBoundingClientRect();
+                        // Hide 60px before reaching pagination for smoother transition
+                        closeToPagination = rect.top < window.innerHeight + 60;
+                    }
+
+                    // 450px threshold is roughly the space taken by footer
+                    setIsAtBottom(closeToPagination || (bottomPosition - scrollPosition < 450));
+                    ticking = false;
+                });
+            }
+        };
+        handleScroll();
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, [totalPages]); // Re-run when total pages change to ensure ref is tracked
 
     // Prefetch logic for pagination
     const prefetchPage = (pageNumber: number) => {
@@ -749,8 +759,11 @@ const CatalogPage: React.FC = () => {
                         <div className="relative z-30 bg-[#0F0F0F]/80 backdrop-blur-xl -mx-2 md:-mx-8 lg:-mx-12 px-2 md:px-8 lg:px-12 pt-4 md:pt-8 pb-4 mb-8 border-b border-white/5 transition-all">
                             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                                 <div className="w-full md:w-auto">
-                                    <h1 className="text-[28px] md:text-[36px] xl:text-[42px] font-black text-white mb-2 md:mb-4">
-                                        {selectedCategory === 'All' ? t('catalog.welcome_modules.all') : selectedCategory}
+                                    <h1 className="text-[28px] md:text-[36px] xl:text-[42px] font-black text-white mb-2 md:mb-4 flex items-center gap-4">
+                                        <span className="leading-none">{selectedCategory === 'All' ? t('catalog.welcome_modules.all') : selectedCategory}</span>
+                                        <span className="text-sm md:text-lg font-bold text-[#575757] lg:hidden">
+                                            {filteredProducts.length}
+                                        </span>
                                     </h1>
                                     {/* Filter Chips */}
                                     <div className="flex flex-wrap gap-2 items-center">
@@ -783,7 +796,7 @@ const CatalogPage: React.FC = () => {
 
                                 {/* Catalog Actions Row (Sort, Search, Count, View) */}
                                 <div className="flex flex-wrap items-center gap-3 md:gap-4 w-full md:w-auto ml-auto">
-                                    <div className="relative shrink-0 hidden md:block">
+                                    <div className="relative shrink-0 hidden lg:block">
                                         <button 
                                             onClick={() => setIsSortOpen(!isSortOpen)}
                                             className="flex items-center gap-2 hover:text-white transition-colors py-2 text-xs md:text-[13px] text-[#A3A3A3]"
@@ -831,7 +844,7 @@ const CatalogPage: React.FC = () => {
                                         </AnimatePresence>
                                     </div>
                                     
-                                    <div className="hidden md:flex items-center justify-center bg-[#1A1A1A] rounded-full px-4 py-2 text-[10px] font-bold text-white uppercase tracking-[0.2em] shrink-0 border border-[#262626]">
+                                    <div className="hidden lg:flex items-center justify-center bg-[#1A1A1A] rounded-full px-4 py-2 text-[10px] font-bold text-white uppercase tracking-[0.2em] shrink-0 border border-[#262626]">
                                         {filteredProducts.length} РЕЗУЛТАТА
                                     </div>
 
@@ -862,20 +875,31 @@ const CatalogPage: React.FC = () => {
                                             />
                                         </div>
 
-                                        {/* View Switcher */}
-                                        <div className="flex items-center bg-[#1A1A1A] border border-[#262626] rounded-full p-1 shrink-0">
+                                        {/* View Switcher - Premium Toggle Style */}
+                                        <div className="flex items-center bg-[#1A1A1A] border border-[#262626] rounded-full p-1 shrink-0 relative">
                                             <button 
                                                 onClick={() => setIsGridView(false)}
-                                                className={`p-1.5 rounded-full transition-all ${!isGridView ? 'bg-white text-black shadow-[0_0_10px_rgba(255,255,255,0.2)]' : 'text-[#737373] hover:text-white'}`}
+                                                className={`relative z-10 p-2 md:p-3 rounded-full transition-all duration-300 ${!isGridView ? 'text-black' : 'text-[#737373] hover:text-white'}`}
                                             >
-                                                <List size={14} />
+                                                <List size={16} className="md:w-[20px] md:h-[20px]" />
                                             </button>
                                             <button 
                                                 onClick={() => setIsGridView(true)}
-                                                className={`p-1.5 rounded-full transition-all ${isGridView ? 'bg-white text-black shadow-[0_0_10px_rgba(255,255,255,0.2)]' : 'text-[#737373] hover:text-white'}`}
+                                                className={`relative z-10 p-2 md:p-3 rounded-full transition-all duration-300 ${isGridView ? 'text-black' : 'text-[#737373] hover:text-white'}`}
                                             >
-                                                <LayoutGrid size={14} />
+                                                <LayoutGrid size={16} className="md:w-[20px] md:h-[20px]" />
                                             </button>
+                                            
+                                            {/* Sliding Pill Background */}
+                                            <motion.div 
+                                                className="absolute top-1 bottom-1 bg-white rounded-full shadow-[0_0_15px_rgba(255,255,255,0.4)]"
+                                                initial={false}
+                                                animate={{ 
+                                                    left: isGridView ? "50%" : "4px",
+                                                    right: isGridView ? "4px" : "50%",
+                                                }}
+                                                transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                                            />
                                         </div>
                                     </div>
                                 </div>
@@ -926,7 +950,7 @@ const CatalogPage: React.FC = () => {
                                             <span className="text-[10px] uppercase tracking-[0.3em] font-black text-zinc-600">Примерни резултати за "{searchSuggestion}"</span>
                                             <div className="h-px flex-1 bg-white/5" />
                                         </div>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 md:gap-8 lg:gap-10">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 gap-6 md:gap-8 lg:gap-10">
                                             {suggestedProducts.map((product) => (
                                                 <ProductCard key={product.slug} product={product} />
                                             ))}
@@ -948,7 +972,7 @@ const CatalogPage: React.FC = () => {
                                 )}
                             </div>
                         ) : (
-                            <div className={`grid ${isGridView ? 'grid-cols-2' : 'grid-cols-1'} md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3 gap-2 md:gap-8 lg:gap-10 min-h-[500px]`}>
+                            <div className={`grid ${isGridView ? 'grid-cols-2 md:grid-cols-2' : 'grid-cols-1 md:grid-cols-1'} lg:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3 gap-4 md:gap-8 lg:gap-10 min-h-[500px]`}>
                                 {paginatedProducts.map((product, index) => (
                                     <motion.div
                                         key={product.slug}
@@ -964,7 +988,10 @@ const CatalogPage: React.FC = () => {
 
                         {/* Pagination - Mobile First Minimalist Style */}
                         {totalPages > 1 && (
-                            <div className="mt-12 md:mt-20 flex items-center gap-2 md:gap-6 overflow-x-auto no-scrollbar py-4 px-2 lg:justify-center w-full max-w-full">
+                            <div 
+                                ref={paginationRef}
+                                className="mt-12 md:mt-20 flex items-center gap-2 md:gap-6 overflow-x-auto no-scrollbar py-4 px-2 lg:justify-center w-full max-w-full"
+                            >
                                 <button 
                                     onClick={() => handleSetCurrentPage(prev => Math.max(1, prev - 1))}
                                     disabled={currentPage === 1}

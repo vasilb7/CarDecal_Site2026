@@ -6,7 +6,7 @@ import { Shield, Truck, Package, X, ArrowLeft } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { DiscountProgress } from '../components/DiscountProgress';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import ErrorStateCard from '../components/ErrorStateCard';
 import SEO from '../components/SEO';
 
@@ -28,6 +28,7 @@ const CartPage: React.FC = () => {
     const { t } = useTranslation();
     const { user } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
 
     const handleCheckout = () => {
         if (!user) {
@@ -231,6 +232,7 @@ const CartPage: React.FC = () => {
                                             {/* Image */}
                                             <Link 
                                                 to={`/catalog/${item.slug}`}
+                                                state={{ backgroundLocation: location }}
                                                 className="w-full md:w-32 h-32 bg-black/50 border border-white/5 rounded-xl overflow-hidden shrink-0 flex items-center justify-center relative p-2 group/img hover:border-white/20 transition-colors"
                                             >
                                                 {item.image ? (
@@ -243,7 +245,7 @@ const CartPage: React.FC = () => {
                                             {/* Details */}
                                             <div className="flex-1 flex flex-col justify-between">
                                                 <div className="pr-8">
-                                                    <Link to={`/catalog/${item.slug}`}>
+                                                    <Link to={`/catalog/${item.slug}`} state={{ backgroundLocation: location }}>
                                                         <h3 className="text-lg md:text-xl font-black text-white uppercase tracking-wider mb-1 line-clamp-2 md:line-clamp-1 hover:text-red-600 transition-colors">
                                                             {item.name}
                                                         </h3>
