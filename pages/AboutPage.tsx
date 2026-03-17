@@ -22,11 +22,7 @@ const AboutSection: React.FC<AboutSectionProps> = ({
   return (
     <div className="flex flex-col md:flex-row items-center justify-center gap-6 md:gap-16 w-full max-w-6xl mx-auto my-8 md:my-12 px-4 overflow-hidden">
       {/* Image Container */}
-      <motion.div
-        initial={{ opacity: 0, x: imagePosition === "left" ? -50 : 50, scale: 0.9 }}
-        whileInView={{ opacity: 1, x: 0, scale: 1 }}
-        viewport={{ once: true, margin: "-100px" }}
-        transition={{ duration: 0.8, delay: delay, ease: "easeOut" }}
+      <div
         className={`w-full max-w-[280px] sm:max-w-[400px] md:w-1/2 aspect-square rounded-full overflow-hidden border-[4px] border-white/5 shadow-2xl relative group shrink-0 ${
           imagePosition === "right" ? "md:order-2" : "md:order-1"
         }`}
@@ -38,14 +34,10 @@ const AboutSection: React.FC<AboutSectionProps> = ({
           loading="lazy"
         />
         <div className="absolute inset-0 rounded-full shadow-[inset_0_0_40px_rgba(0,0,0,0.8)] z-20 pointer-events-none" />
-      </motion.div>
+      </div>
 
       {/* Text Container */}
-      <motion.div
-        initial={{ opacity: 0, x: imagePosition === "left" ? 50 : -50 }}
-        whileInView={{ opacity: 1, x: 0 }}
-        viewport={{ once: true, margin: "-100px" }}
-        transition={{ duration: 0.8, delay: delay + 0.2, ease: "easeOut" }}
+      <div
         className={`w-full md:w-1/2 flex flex-col justify-center text-center md:text-left ${
           imagePosition === "right" ? "md:order-1 md:items-end md:text-right" : "md:order-2 md:items-start"
         }`}
@@ -65,7 +57,7 @@ const AboutSection: React.FC<AboutSectionProps> = ({
         <p className="text-white/70 text-base sm:text-lg font-light leading-relaxed whitespace-pre-line tracking-wide">
           {description}
         </p>
-      </motion.div>
+      </div>
     </div>
   );
 };
@@ -79,11 +71,7 @@ const AboutPage: React.FC = () => {
 
       {/* Hero Section */}
       <section className="relative w-full pt-8 pb-10 md:pt-12 md:pb-16 flex flex-col items-center justify-center text-center px-4">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
-        >
+        <div>
           <h1 className="text-5xl sm:text-6xl md:text-8xl font-black text-white uppercase tracking-tighter mb-4 drop-shadow-[0_10px_20px_rgba(0,0,0,0.8)]">
             Историята на <br className="md:hidden" />
             <span className="text-red-600">CarDecal</span>
@@ -91,7 +79,7 @@ const AboutPage: React.FC = () => {
           <p className="text-white/60 text-sm sm:text-base md:text-lg font-medium tracking-[0.2em] sm:tracking-[0.3em] uppercase max-w-2xl mx-auto">
             Повече от просто стикери. Ние сме страст към детайла и перфекционизъм в изработката.
           </p>
-        </motion.div>
+        </div>
       </section>
 
       {/* Sections */}

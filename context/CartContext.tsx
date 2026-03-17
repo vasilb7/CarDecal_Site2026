@@ -69,7 +69,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
             let size = item.selectedSize || '';
             if (/various|различни|small/i.test(size)) size = '7 см';
             if (size.toLowerCase() === '7cm') size = '7 см';
-            return { ...item, selectedSize: size, isRemoving: false };
+            return { ...item, selectedSize: size };
          });
       }
       return [];
@@ -101,8 +101,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [items]);
 
   const activeItems = items.filter(item => !item.isRemoving);
-  const itemsCount = activeItems.reduce((total, item) => total + item.quantity, 0);
-  const subtotal = activeItems.reduce((total, item) => total + item.price * item.quantity, 0);
+  const itemsCount = activeItems.reduce((total, item) => total + (Number(item.quantity) || 0), 0);
+  const subtotal = activeItems.reduce((total, item) => total + (Number(item.price) * (Number(item.quantity) || 0)), 0);
 
   // Discount Logic
   const DISCOUNT_TIERS = [
@@ -296,7 +296,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
           
           // Check if items actually changed before updating state to prevent re-renders
           setItems(prev => {
-            const currentStr = JSON.stringify(prev.filter(i => !i.isRemoving));
+            const currentStr = JSON.stringify(prev);
             const newStr = JSON.stringify(sanitized);
             return currentStr !== newStr ? sanitized : prev;
           });
@@ -339,7 +339,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     window.addEventListener('clear_local_cart', handleClearCartEvent);
 
     return () => {
-        Object.values(removeTimeouts.current).forEach(clearTimeout);
         window.removeEventListener('storage', handleStorageChange);
         window.removeEventListener('focus', syncFromLocalStorage);
         window.removeEventListener('visibilitychange', handleVisibilityChange);

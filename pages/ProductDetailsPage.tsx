@@ -38,7 +38,7 @@ const Lightbox: React.FC<{ src: string; onClose: () => void }> = ({ src, onClose
     >
         <button
             onClick={onClose}
-            className="absolute top-6 right-6 z-50 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all hover:scale-110 active:scale-90 flex items-center justify-center backdrop-blur-md border border-white/10"
+            className="absolute top-6 right-6 z-50 p-3 bg-zinc-900/90 hover:bg-zinc-800 rounded-full text-white transition-all hover:scale-110 active:scale-90 flex items-center justify-center border border-white/10"
         >
             <X className="w-6 h-6" />
         </button>
@@ -194,12 +194,12 @@ const ProductDetailsPage: React.FC = () => {
                                             e.stopPropagation();
                                             setIsShareOpen(true);
                                         }}
-                                        className="p-3 md:p-4 bg-black/40 backdrop-blur-md rounded-full border border-white/10 text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+                                        className="p-3 md:p-4 bg-black/60 rounded-full border border-white/10 text-white/60 hover:text-white hover:bg-black transition-colors"
                                         title="Сподели"
                                     >
                                         <Share2 size={20} />
                                     </button>
-                                    <div className="p-3 md:p-4 bg-black/40 backdrop-blur-md rounded-full border border-white/10 text-white/60 hover:text-white hover:bg-white/10 transition-colors">
+                                    <div className="p-3 md:p-4 bg-black/60 rounded-full border border-white/10 text-white/60 hover:text-white hover:bg-black transition-colors">
                                         <Maximize2 size={20} />
                                     </div>
                                 </div>
@@ -210,13 +210,13 @@ const ProductDetailsPage: React.FC = () => {
                                 <>
                                     <button 
                                         onClick={() => setActiveIdx(prev => (prev > 0 ? prev - 1 : images.length - 1))}
-                                        className="absolute left-6 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-black/50 backdrop-blur-xl border border-white/10 flex items-center justify-center text-white/50 hover:text-white hover:bg-red-600 transition-all opacity-0 group-hover:opacity-100"
+                                        className="absolute left-6 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-black/70 border border-white/10 flex items-center justify-center text-white/50 hover:text-white hover:bg-red-600 transition-all opacity-0 group-hover:opacity-100"
                                     >
                                         <ArrowLeft size={20} />
                                     </button>
                                     <button 
                                         onClick={() => setActiveIdx(prev => (prev < images.length - 1 ? prev + 1 : 0))}
-                                        className="absolute right-6 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-black/50 backdrop-blur-xl border border-white/10 flex items-center justify-center text-white/50 hover:text-white hover:bg-red-600 transition-all opacity-0 group-hover:opacity-100"
+                                        className="absolute right-6 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-black/70 border border-white/10 flex items-center justify-center text-white/50 hover:text-white hover:bg-red-600 transition-all opacity-0 group-hover:opacity-100"
                                     >
                                         <ArrowRight size={20} />
                                     </button>

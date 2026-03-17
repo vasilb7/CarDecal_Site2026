@@ -7,17 +7,15 @@ interface SEOProps {
     showCartCount?: boolean;
 }
 
-const SEO: React.FC<SEOProps> = ({ title, description, showCartCount = true }) => {
-    const { itemsCount } = useCart();
+const SEO: React.FC<SEOProps> = ({ title, description }) => {
     
     useEffect(() => {
         const baseTitle = "CarDecal";
-        const savedTitle = document.title;
+        const finalTitle = title ? `${baseTitle} - ${title}` : `${baseTitle} - Онлайн Каталог`;
         
-        const cartSuffix = (showCartCount && itemsCount > 0) ? ` (${itemsCount})` : "";
-        const finalTitle = (title ? `${baseTitle} - ${title}` : `${baseTitle} - Онлайн Каталог`) + cartSuffix;
-        
-        document.title = finalTitle;
+        if (document.title !== finalTitle) {
+            document.title = finalTitle;
+        }
 
         if (description) {
             const metaDescription = document.querySelector('meta[name="description"]');
@@ -25,13 +23,7 @@ const SEO: React.FC<SEOProps> = ({ title, description, showCartCount = true }) =
                 metaDescription.setAttribute('content', description);
             }
         }
-
-        return () => {
-            // Only restore if we are unmounting or if title/description changed significantly
-            // In React 18, effect cleanup runs before next effect runs
-            document.title = savedTitle;
-        };
-    }, [title, description, itemsCount, showCartCount]);
+    }, [title, description]);
 
     return null;
 };

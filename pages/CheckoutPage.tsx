@@ -381,7 +381,7 @@ const CheckoutPage: React.FC = () => {
             <SEO title="Завършване на поръчка" />
             
             {/* Minimalist Header */}
-            <header className="h-20 sm:h-24 sticky top-0 bg-black/80 backdrop-blur-xl border-b border-white/5 z-50">
+            <header className="h-20 sm:h-24 sticky top-0 bg-black border-b border-white/5 z-50">
                 <div className="max-w-[1200px] mx-auto h-full px-4 sm:px-6 flex items-center justify-center">
                     <Link to="/" className="flex items-center group">
                         <img src="/LOGO.webp" alt="CarDecal" className="h-8 sm:h-10 w-auto opacity-90 group-hover:opacity-100 transition-opacity" />
@@ -932,7 +932,7 @@ const CheckoutPage: React.FC = () => {
             </main>
 
             {/* Mobile Sticky CTA Bar */}
-            <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-black/80 backdrop-blur-2xl border-t border-white/5 p-4 z-[60] pb-[calc(1rem+env(safe-area-inset-bottom))]">
+            <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-[#0a0a0a] border-t border-white/5 p-4 z-[60] pb-[calc(1rem+env(safe-area-inset-bottom))]">
                 <div className="flex items-center justify-between max-w-[500px] mx-auto">
                     <div>
                         <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-0.5">ОБЩО</p>

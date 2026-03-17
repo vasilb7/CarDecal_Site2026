@@ -565,7 +565,7 @@ const Header: React.FC = () => {
                             exit={{ opacity: 0 }}
                             transition={{ duration: 0.25 }}
                             onClick={handleManualClose}
-                            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[115] lg:hidden"
+                            className="fixed inset-0 bg-black/80 z-[115] lg:hidden"
                         />
 
                         <motion.div 
@@ -575,7 +575,7 @@ const Header: React.FC = () => {
                             transition={{ type: 'spring', damping: 25, stiffness: 220 }}
                             className="fixed inset-y-0 right-0 w-[85%] max-w-sm bg-[#0a0a0a] z-[120] shadow-2xl flex flex-col lg:hidden border-l border-white/5"
                         >
-                            <div className="flex items-center justify-between px-6 h-20 border-b border-white/5 bg-background/60 backdrop-blur-md shrink-0 shadow-sm">
+                            <div className="flex items-center justify-between px-6 h-20 border-b border-white/5 bg-[#0a0a0a] shrink-0 shadow-sm">
                                 <img src="/LOGO.webp" alt="CarDecal Logo" className="h-6 w-auto object-contain" />
                                 <button 
                                     onClick={handleManualClose}

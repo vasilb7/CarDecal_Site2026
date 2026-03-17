@@ -299,7 +299,7 @@ const HomePage: React.FC = () => {
 
   return (
     <div className="bg-background">
-      <SEO title="Начало" />
+      <SEO title="Начало" showCartCount={true} />
       {/* Hero Section */}
       <div className="relative min-h-[100svh] flex flex-col items-center justify-center overflow-hidden bg-black pt-[calc(env(safe-area-inset-top)+theme(spacing.4))] md:pt-0">
         {/* Background Overlay Layer */}

@@ -9,9 +9,10 @@ import { useAuth } from '../context/AuthContext';
 
 export const CartDrawer: React.FC = () => {
   const { isCartOpen, setIsCartOpen } = useUI();
-  const { 
+    const { 
     items, 
     activeItems, 
+    itemsCount,
     subtotal, 
     discountPercentage, 
     total, 
@@ -149,8 +150,8 @@ export const CartDrawer: React.FC = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.25 }}
-            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[130] touch-none"
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 bg-black/60 z-[130] touch-none"
             onClick={close}
           />
 
@@ -159,16 +160,16 @@ export const CartDrawer: React.FC = () => {
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
-            transition={{ type: 'spring', stiffness: 220, damping: 25 }}
+            transition={{ type: 'tween', duration: 0.3, ease: 'easeOut' }}
             className="fixed inset-y-0 right-0 w-[85%] max-w-sm bg-[#0a0a0a] z-[140] border-l border-white/5 flex flex-col shadow-2xl"
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-6 h-20 border-b border-white/5 bg-background/60 backdrop-blur-md shrink-0 shadow-sm relative">
+            <div className="flex items-center justify-between px-6 h-20 border-b border-white/5 bg-[#0a0a0a] shrink-0 shadow-sm relative text-zinc-300">
               <h2 className="text-xl uppercase tracking-[0.15em] font-bold text-white flex items-center gap-2">
                 КОЛИЧКА
-                {items.length > 0 && (
-                  <span className="bg-[#ff0000] text-white text-[10px] font-black px-2 py-0.5 rounded-full tracking-widest leading-tight -translate-y-2">
-                    {items.length}
+                {itemsCount > 0 && (
+                  <span className="min-w-[22px] h-[22px] px-1 bg-[#ff0000] text-white text-[10px] font-black rounded-full flex items-center justify-center tracking-tighter leading-none shadow-[0_0_10px_rgba(255,0,0,0.5)]">
+                    {itemsCount}
                   </span>
                 )}
               </h2>
@@ -397,8 +398,8 @@ export const CartDrawer: React.FC = () => {
                           </span>
                         </div>
                       </div>
-                    );
-                  })
+                      );
+                    })
                 )}
               </div>
             </div>
