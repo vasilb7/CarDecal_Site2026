@@ -213,16 +213,8 @@ const ProductEditModal: React.FC<{
         slug: product?.slug || '',
         name: product?.name || '',
         name_bg: product?.name_bg || '',
-        wholesale_price_eur: (() => {
-            const val = product?.wholesale_price_eur ?? product?.price_eur;
-            if (val !== null && val !== undefined) return val.toString();
-            // Fallback to parsing text fields if EUR fields are missing
-            const fromWholesale = product?.wholesale_price ? parseFloat(product.wholesale_price.replace(/[^\d.]/g, '')) : NaN;
-            if (!isNaN(fromWholesale)) return fromWholesale.toString();
-            const fromPrice = product?.price ? parseFloat(product.price.replace(/[^\d.]/g, '')) : NaN;
-            if (!isNaN(fromPrice)) return fromPrice.toString();
-            return '';
-        })(),
+        price_eur: product?.price_eur?.toString() || '',
+        wholesale_price_eur: product?.wholesale_price_eur?.toString() || '',
         avatar: product?.avatar || '',
         cover_image: product?.cover_image || '',
         is_best_seller: product?.is_best_seller || false,
@@ -284,15 +276,16 @@ const ProductEditModal: React.FC<{
         setSaving(true);
         setError('');
         try {
+            const retailEur = parseFloat(form.price_eur) || null;
             const wholesaleEur = parseFloat(form.wholesale_price_eur) || null;
             const payload: any = {
                 slug: form.slug,
                 name: form.name,
                 name_bg: form.name_bg || null,
-                price_eur: wholesaleEur,
+                price_eur: retailEur,
                 price: null,
                 wholesale_price_eur: wholesaleEur,
-                wholesale_price: null, // Вече не пазим цена в лева в низа
+                wholesale_price: null,
                 avatar: form.avatar,
                 cover_image: form.cover_image || null,
                 is_best_seller: form.is_best_seller,
@@ -365,7 +358,7 @@ const ProductEditModal: React.FC<{
                     </button>
                 </div>
 
-                <div className="p-6 space-y-4">
+                <div className="p-6 space-y-4 overflow-y-auto flex-1 custom-scrollbar">
                     {error && (
                         <div className="bg-red-900/30 border border-red-600/40 px-4 py-3 text-red-400 text-sm flex items-center gap-2">
                             <AlertTriangle className="w-4 h-4 flex-shrink-0" />
@@ -406,7 +399,20 @@ const ProductEditModal: React.FC<{
                             </div>
                         </div>
 
-                        <div className="space-y-4 pt-2 md:pt-0">
+                         <div className="space-y-4 pt-2 md:pt-0">
+                             <div className="p-4 bg-white/[0.03] border border-white/10 rounded-2xl">
+                                <label className="block text-[10px] uppercase tracking-[0.4em] text-zinc-500 mb-3 font-black">Цена на дребно (€)</label>
+                                <div className="relative">
+                                    <input 
+                                        type="number" step="0.01" min="0"
+                                        value={form.price_eur}
+                                        onChange={e => setForm(p => ({...p, price_eur: e.target.value}))}
+                                        className={`${inputClass} !rounded-xl !bg-black/40 !border-white/10 !text-xl !font-mono !h-14 !pl-4 focus:!border-red-600 shadow-2xl`}
+                                        placeholder="0.00"
+                                    />
+                                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 font-bold text-xl font-mono">€</span>
+                                </div>
+                            </div>
                              <div className="p-4 bg-red-600/[0.03] border border-red-600/10 rounded-2xl">
                                 <label className="block text-[10px] uppercase tracking-[0.4em] text-red-500/80 mb-3 font-black">Цена на едро (€)</label>
                                 <div className="relative">
@@ -782,7 +788,7 @@ const ProductsTab: React.FC = () => {
         while (true) {
             const { data, error } = await supabase
                 .from('products')
-                .select('id,slug,name,name_bg,avatar,price,price_eur,wholesale_price,wholesale_price_eur,is_best_seller,categories,dimensions,cover_image,is_hidden,updated_at,top_order')
+                .select('id,slug,name,name_bg,avatar,price,price_eur,wholesale_price,wholesale_price_eur,is_best_seller,categories,dimensions,cover_image,is_hidden,updated_at,top_order,size')
                 .order('id', { ascending: false })
                 .range(rFrom, rFrom + rSize - 1);
                 
