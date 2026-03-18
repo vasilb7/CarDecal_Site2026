@@ -94,49 +94,35 @@ const CatalogPage: React.FC = () => {
     }, [activeProducts, selectedCategory, pendingCategory, isMobileFiltersOpen]);
 
 
-    // Dynamic Categories: Filter out categories that consist only of hidden products
+    // Dynamic Categories - ползваме filterStats.categories за да избегнем дублирана логика
     const dynamicCategories = useMemo(() => {
-        const catMap: Record<string, number> = {};
-        
-        activeProducts.forEach(p => {
-            p.categories.forEach(cat => {
-                const isSizeCandidate = cat.toLowerCase().includes('cm') || 
-                                      /^\d+x\d+$/.test(cat.toLowerCase()) || 
-                                      /^\d+×\d+$/.test(cat);
-                if (!isSizeCandidate) {
-                    catMap[cat] = (catMap[cat] || 0) + 1;
-                }
-            });
-        });
+        const EXCLUDED = new Set(['всички']);
+        const catMap = filterStats.categories.reduce((acc, c) => {
+            if (!EXCLUDED.has(c.name.toLowerCase())) acc[c.name] = c.count;
+            return acc;
+        }, {} as Record<string, number>);
 
-        // Use metadata from categories table to get Bulgarian names and order
-        const EXCLUDED_NAMES = ["Всички"];
-        
+        // Взимаме от metadata таблицата за правилен ред и BG имена
+        const metadataNames = new Set(dbCategoriesMetadata.map(c => c.name));
         const filtered = dbCategoriesMetadata
-            .filter(cat => catMap[cat.name] && !EXCLUDED_NAMES.includes(cat.name))
+            .filter(cat => catMap[cat.name] !== undefined)
             .map(cat => ({
                 name: cat.name,
                 name_bg: cat.name_bg || cat.name,
-                count: catMap[cat.name] || 0,
+                count: catMap[cat.name],
                 display_order: cat.display_order || 0
             }));
 
-        // Append any categories found in products but not in metadata table (just in case)
-        const metadataNames = new Set(dbCategoriesMetadata.map(c => c.name));
+        // Добавяме категории от продукти, ненамерени в metadata
         Object.entries(catMap).forEach(([name, count]) => {
-            const isExcluded = EXCLUDED_NAMES.some(ex => ex.toLowerCase() === name.toLowerCase());
-            if (!metadataNames.has(name) && !isExcluded) {
-                filtered.push({
-                    name,
-                    name_bg: name,
-                    count,
-                    display_order: 999
-                });
+            if (!metadataNames.has(name)) {
+                filtered.push({ name, name_bg: name, count, display_order: 999 });
             }
         });
 
         return filtered.sort((a, b) => a.display_order - b.display_order);
-    }, [activeProducts, dbCategoriesMetadata]);
+    }, [filterStats.categories, dbCategoriesMetadata]);
+
 
     // Prices distribution data
     const priceBins = useMemo(() => {
