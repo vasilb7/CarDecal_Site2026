@@ -133,19 +133,14 @@ interface DBProduct {
     id: string;
     slug: string;
     name: string;
-    name_bg: string | null;
     avatar: string;
     wholesale_price_eur: number | null;
-    price_eur: number | null;
     is_best_seller: boolean;
     categories: string[];
-    dimensions: string | null;
-    cover_image: string | null;
-    card_images?: string[] | null;
+    size: string | null;
     is_hidden: boolean;
     updated_at: string;
     top_order: number | null;
-    wholesale_price: string | null;
 }
 
 interface DBUser {
@@ -226,15 +221,15 @@ const ProductEditModal: React.FC<{
     const [form, setForm] = useState({
         slug: product?.slug || '',
         name: product?.name || '',
-        wholesale_price_eur: product?.wholesalePriceEur?.toString() || product?.wholesale_price_eur?.toString() || '',
+        wholesale_price_eur: product?.wholesale_price_eur?.toString() || '',
         avatar: product?.avatar || '',
-        is_best_seller: product?.isBestSeller || false,
+        is_best_seller: product?.is_best_seller || false,
         size: product?.size || '',
         categories: (product?.categories || []).filter(c => {
             const lc = c.toLowerCase();
             return lc !== 'всички' && !lc.includes('cm') && !/^\d+x\d+$/.test(lc) && !/^\d+×\d+$/.test(lc);
         }).join(', '),
-        is_hidden: product?.isHidden || false,
+        is_hidden: product?.is_hidden || false,
         is_different_item: product ? (product.categories?.includes('Всички') && !product.categories?.includes('Стикери')) : false,
         top_order: product?.top_order?.toString() || '',
         isManualSlug: !!product?.slug,
@@ -678,7 +673,7 @@ const ProductsTab: React.FC = () => {
         while (true) {
             const { data, error } = await supabase
                 .from('products')
-                .select('id,slug,name,name_bg,avatar,price,price_eur,wholesale_price,wholesale_price_eur,is_best_seller,categories,dimensions,cover_image,is_hidden,updated_at,top_order,size')
+                .select('id,slug,name,avatar,wholesale_price_eur,is_best_seller,categories,size,is_hidden,updated_at,top_order')
                 .order('id', { ascending: false })
                 .range(rFrom, rFrom + rSize - 1);
                 
@@ -720,10 +715,7 @@ const ProductsTab: React.FC = () => {
     const availableSizes = useMemo(() => {
         const sizes = new Set<string>();
         products.forEach(p => {
-            if (p.dimensions) sizes.add(p.dimensions);
-            p.categories.forEach(cat => {
-                if (cat.toLowerCase().includes('cm')) sizes.add(cat);
-            });
+            if (p.size) sizes.add(p.size);
         });
         return Array.from(sizes).sort((a,b) => {
             const na = parseFloat(a) || 0;
@@ -762,9 +754,7 @@ const ProductsTab: React.FC = () => {
             }
 
             if (sizeFilter !== 'All') {
-                const pSize = p.dimensions || '';
-                const hasSizeInCats = p.categories.some(c => c === sizeFilter);
-                if (pSize !== sizeFilter && !hasSizeInCats) return false;
+                if (p.size !== sizeFilter) return false;
             }
 
             if (categoryFilter !== 'All') {
@@ -784,16 +774,16 @@ const ProductsTab: React.FC = () => {
                 return (a.wholesale_price_eur ?? 999) - (b.wholesale_price_eur ?? 999);
             }
             if (sortBy === 'dimensions') {
-                // Sort by the numeric part of dimensions e.g. "6 x 6 cm" → 6
-                const numA = parseFloat(a.dimensions?.replace(/[^\d.]/g, '') ?? '0');
-                const numB = parseFloat(b.dimensions?.replace(/[^\d.]/g, '') ?? '0');
+                // Sort by the numeric part of size e.g. "6x6cm" → 6
+                const numA = parseFloat(a.size?.replace(/[^\d.]/g, '') ?? '0');
+                const numB = parseFloat(b.size?.replace(/[^\d.]/g, '') ?? '0');
                 return numA - numB;
             }
             if (sortBy === 'date') {
                 return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
             }
             if (sortBy === 'name') {
-                return (a.name_bg || a.name).localeCompare(b.name_bg || b.name);
+                return a.name.localeCompare(b.name);
             }
             // default: slug natural sort
             const nA = parseInt(a.slug.match(/\d+/)?.[0] ?? '0', 10);
@@ -996,8 +986,8 @@ const ProductsTab: React.FC = () => {
                                                 <EyeOff className="w-2.5 h-2.5" /> Скрит
                                             </span>
                                         )}
-                                        {p.dimensions && (
-                                            <span className="text-[10px] bg-red-600/90 text-white px-2 py-1 font-black uppercase tracking-tighter shadow-lg backdrop-blur-md rounded-br-xl rounded-tl-sm border-l border-b border-red-500/50">{p.dimensions}</span>
+                                        {p.size && (
+                                            <span className="text-[10px] bg-red-600/90 text-white px-2 py-1 font-black uppercase tracking-tighter shadow-lg backdrop-blur-md rounded-br-xl rounded-tl-sm border-l border-b border-red-500/50">{p.size}</span>
                                         )}
                                     </div>
                                     {/* Actions overlay */}
@@ -1025,13 +1015,13 @@ const ProductsTab: React.FC = () => {
                                 {/* Info */}
                                 <div className="p-3 flex flex-col gap-1 flex-1">
                                     <p className="text-white text-xs font-bold uppercase tracking-tight leading-tight line-clamp-2">
-                                        {p.name_bg || p.name}
+                                        {p.name}
                                     </p>
                                     <p className="text-zinc-600 text-[10px] font-mono">{p.slug}</p>
                                     <div className="flex items-center justify-between mt-auto pt-2">
                                         <div className="flex flex-col items-end w-full">
                                             <span className="text-white font-mono font-bold text-xs">
-                                                {(Number(p.wholesale_price_eur || p.price_eur || 0)).toFixed(2)} €
+                                                {(Number(p.wholesale_price_eur || 0)).toFixed(2)} €
                                             </span>
                                         </div>
                                     </div>
@@ -1061,18 +1051,18 @@ const ProductsTab: React.FC = () => {
                                         <div className="flex items-center gap-3">
                                             <img src={p.avatar} alt={p.name} className="w-14 h-14 object-cover bg-zinc-900 flex-shrink-0 border border-white/5" />
                                             <div>
-                                                <p className="text-white font-medium">{p.name_bg || p.name}</p>
+                                                <p className="text-white font-medium">{p.name}</p>
                                                 <p className="text-zinc-500 text-xs font-mono">{p.slug}</p>
                                             </div>
                                             {p.is_best_seller && <span className="text-[10px] bg-red-600/20 text-red-400 px-2 py-0.5 uppercase tracking-widest">Топ</span>}
                                             {p.is_hidden && <span className="text-[10px] bg-amber-600/20 text-amber-500 px-2 py-0.5 uppercase tracking-widest flex items-center gap-1"><EyeOff className="w-3 h-3"/> Скрит</span>}
                                         </div>
                                     </td>
-                                    <td className="py-3 pr-4 text-zinc-300 text-xs font-mono">{p.dimensions || '—'}</td>
+                                    <td className="py-3 pr-4 text-zinc-300 text-xs font-mono">{p.size || '—'}</td>
                                     <td className="py-3 pr-4">
                                         <div className="flex flex-col">
                                             <span className="text-white font-mono text-sm">
-                                                {(Number(p.wholesale_price_eur || p.price_eur || 0)).toFixed(2)} €
+                                                {(Number(p.wholesale_price_eur || 0)).toFixed(2)} €
                                             </span>
                                         </div>
                                     </td>

@@ -139,7 +139,8 @@ const CatalogPage: React.FC = () => {
     // Update selected category if URL changes (Case-insensitive matching)
     useEffect(() => {
         if (urlCategory) {
-            if (urlCategory.toLowerCase() === 'all') {
+            const lcUrl = urlCategory.toLowerCase();
+            if (lcUrl === 'all' || lcUrl === 'всички' || lcUrl === 'vshichki' || lcUrl === '%d0%b2%d1%81%d0%b8%d1%87%d0%ba%d0%b8') {
                 setSelectedCategory('All');
                 return;
             }
@@ -388,20 +389,19 @@ const CatalogPage: React.FC = () => {
             // Search Term Filter
             if (query) {
                 const productName = product.name.toLowerCase();
-                const productNameBg = (product.nameBg || '').toLowerCase();
                 const productSlug = (product.slug || '').toLowerCase();
 
                 const searchMatch = searchVariations.some(v => 
                     productName.includes(v) || 
-                    productNameBg.includes(v) ||
                     productSlug.includes(v)
                 );
                 
                 if (!searchMatch) return false;
             }
 
-            // Category Filter
-            if (selectedCategory !== 'All' && !product.categories.includes(selectedCategory)) return false;
+            // Category Filter - "All" and "Всички" both bypass the filter
+            const isAllCategory = selectedCategory === 'All' || selectedCategory === 'Всички' || selectedCategory === 'vshichki';
+            if (!isAllCategory && !product.categories.includes(selectedCategory)) return false;
 
             // Price Filter
             const price = product.wholesale_price_eur ?? product.wholesalePriceEur ?? 0;
