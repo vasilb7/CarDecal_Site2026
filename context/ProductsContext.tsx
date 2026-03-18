@@ -6,27 +6,26 @@ import { supabase } from '../lib/supabase';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const mapRow = (p: any): Product => ({
+  id:               p.id             ?? undefined,
   slug:             p.slug           ?? '',
   name:             p.name           ?? '',
-  nameBg:           p.name_bg        ?? '',
   avatar:           p.avatar         ?? '',
-  coverImage:       p.cover_image    ?? '',
-  categories:       Array.isArray(p.categories)  ? p.categories  : [],
+  categories:       Array.isArray(p.categories) ? p.categories : [],
   location:         p.location       ?? '',
-  dimensions:       p.dimensions     ?? '',
   size:             p.size           ?? '',
-
+  wholesale_price_eur: p.wholesale_price_eur as number | undefined,
+  wholesalePriceEur:   p.wholesale_price_eur as number | undefined, // alias
   isBestSeller:     !!p.is_best_seller,
-  isVerified:       !!p.is_verified,
-  price:            p.price          ?? '',
-  price_eur:        p.price_eur      as number | undefined,
-  wholesalePrice:   p.wholesale_price   ?? '',
-  wholesalePriceEur: p.wholesale_price_eur as number | undefined,
-  cardImages:       Array.isArray(p.card_images) ? p.card_images  : [],
   isHidden:         !!p.is_hidden,
-  posts:            Array.isArray(p.posts)        ? (p.posts        as Post[])      : [],
-  highlights:       Array.isArray(p.highlights)   ? (p.highlights   as Highlight[]) : [],
   top_order:        p.top_order      ?? null,
+  // legacy - undefined in new schema
+  nameBg:           undefined,
+  coverImage:       undefined,
+  cardImages:       [],
+  dimensions:       p.size           ?? '', // map size -> dimensions for filter compat
+  price_eur:        p.wholesale_price_eur as number | undefined,
+  posts:            [],
+  highlights:       [],
 });
 
 const naturalSort = (a: Product, b: Product) => {
@@ -66,7 +65,7 @@ export const ProductsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       while (true) {
         const { data, error } = await supabase
           .from('products')
-          .select("slug,name,avatar,categories,dimensions,size,wholesale_price_eur,is_best_seller,is_hidden,top_order,card_images,price_eur")
+          .select("id,slug,name,avatar,categories,location,size,wholesale_price_eur,is_best_seller,is_hidden,top_order")
           .order('id', { ascending: false })
           .range(rFrom, rFrom + rSize - 1);
           

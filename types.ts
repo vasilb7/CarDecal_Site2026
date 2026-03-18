@@ -1,51 +1,34 @@
 
-export interface Post {
-  id: string;
-  src: string;
-  type: 'image' | 'video';
-  caption: string;
-  tags: string[];
-  pinned?: boolean;
-  images?: string[];
-  likes: number;
-  date: string;
-}
-
-export interface Highlight {
-  id: string;
-  name: string;
-  coverImage: string;
-  images?: string[];
-}
-
 export interface Product {
-   slug: string;
-   name: string;
-   avatar: string;
-   categories: string[];
-   location: string; // Origin / Brand
-   dimensions: string;
-   size: string;
-   stockStatus?: string;
-   finish?: string;
-   material?: string;
-   description?: string;
-
-   highlights: Highlight[];
-   posts: Post[];
-   coverImage: string;
-   cardImages?: string[];
-   isBestSeller?: boolean;
-   isVerified?: boolean;
-   nameBg?: string;
-   price?: string | null;
-   price_eur?: number;
-   wholesalePrice?: string | null;
-   wholesalePriceEur?: number;
-   isHidden?: boolean;
-   top_order?: number | null;
- }
-
+  id?: string;
+  slug: string;
+  name: string;
+  avatar: string;
+  categories: string[];
+  location: string;
+  size: string;
+  wholesale_price_eur?: number;
+  // aliases used in existing code
+  wholesalePriceEur?: number;
+  isBestSeller?: boolean;
+  isHidden?: boolean;
+  top_order?: number | null;
+  // legacy - kept so old references don't break with undefined
+  nameBg?: string;
+  coverImage?: string;
+  cardImages?: string[];
+  dimensions?: string;
+  price_eur?: number;
+  wholesalePrice?: string;
+  price?: string;
+  posts?: any[];
+  highlights?: any[];
+  isVerified?: boolean;
+  stockStatus?: string;
+  finish?: string;
+  material?: string;
+  description?: string;
+}
 
 export type ModerationStatus = 'active' | 'temporarily_suspended' | 'permanently_banned';
 
@@ -63,10 +46,8 @@ export interface UserProfile {
   is_verified?: boolean;
   verified_until?: string;
   phone?: string;
-  // Legacy ban fields (kept for backward compat)
   is_banned?: boolean;
   banned_reason?: string;
-  // New moderation system
   moderation_status?: ModerationStatus;
   banned_until?: string | null;
   public_reason?: string | null;
@@ -78,7 +59,6 @@ export interface UserProfile {
   deletion_requested_at?: string | null;
   deletion_request_status?: string | null;
   deletion_admin_notes?: string | null;
-  // Existing fields
   deletion_scheduled_at?: string | null;
   deletion_reason?: string | null;
   has_password?: boolean;
@@ -105,4 +85,23 @@ export interface Category {
   icon?: string | null;
   display_order?: number;
   created_at?: string;
+}
+
+export interface Post {
+  id: string;
+  src: string;
+  type: 'image' | 'video';
+  caption: string;
+  tags: string[];
+  pinned?: boolean;
+  images?: string[];
+  likes: number;
+  date: string;
+}
+
+export interface Highlight {
+  id: string;
+  name: string;
+  coverImage: string;
+  images?: string[];
 }

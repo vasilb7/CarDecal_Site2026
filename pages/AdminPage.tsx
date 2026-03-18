@@ -226,22 +226,18 @@ const ProductEditModal: React.FC<{
     const [form, setForm] = useState({
         slug: product?.slug || '',
         name: product?.name || '',
-        name_bg: product?.name_bg || '',
-        price_eur: product?.price_eur?.toString() || '',
-        wholesale_price_eur: product?.wholesale_price_eur?.toString() || '',
+        wholesale_price_eur: product?.wholesalePriceEur?.toString() || product?.wholesale_price_eur?.toString() || '',
         avatar: product?.avatar || '',
-        cover_image: product?.cover_image || '',
-        is_best_seller: product?.is_best_seller || false,
-        dimensions: product?.dimensions || '',
+        is_best_seller: product?.isBestSeller || false,
+        size: product?.size || '',
         categories: (product?.categories || []).filter(c => {
             const lc = c.toLowerCase();
-            return !lc.includes('cm') && !/^\d+x\d+$/.test(lc) && !/^\d+×\d+$/.test(lc);
+            return lc !== 'всички' && !lc.includes('cm') && !/^\d+x\d+$/.test(lc) && !/^\d+×\d+$/.test(lc);
         }).join(', '),
-        card_images: product?.card_images || [],
-        is_hidden: product?.is_hidden || false,
+        is_hidden: product?.isHidden || false,
         is_different_item: product ? (product.categories?.includes('Всички') && !product.categories?.includes('Стикери')) : false,
         top_order: product?.top_order?.toString() || '',
-        isManualSlug: !!product?.slug, // If editing, assume manual. If new and empty, it's not manual.
+        isManualSlug: !!product?.slug,
     });
     const [saving, setSaving] = useState(false);
     const [uploading, setUploading] = useState<string | null>(null);
@@ -299,23 +295,7 @@ const ProductEditModal: React.FC<{
         setError('');
         try {
             const priceEur = parseFloat(form.wholesale_price_eur) || null;
-            const sizeVal = form.dimensions?.trim() || null;
-
-            const payload: any = {
-                slug: form.slug,
-                name: form.name,
-                price_eur: priceEur,
-                wholesale_price_eur: priceEur, // Same value - wholesale only
-                avatar: form.avatar,
-                cover_image: form.avatar || null,
-                is_best_seller: form.is_best_seller,
-                dimensions: sizeVal,
-                size: sizeVal, // Keep in sync with dimensions
-                is_hidden: form.is_hidden,
-                top_order: form.top_order ? parseInt(form.top_order) : null,
-                location: 'Произведено от CarDecal',
-                updated_at: new Date().toISOString(),
-            };
+            const sizeVal = form.size?.trim() || null;
 
             // Categories - filter out sizes, always add "Всички"
             let finalCategories = form.categories
@@ -327,12 +307,22 @@ const ProductEditModal: React.FC<{
                     return lc && lc !== 'всички' && !isSize;
                 });
 
-            // "Всички" е фиксирана за всички
             finalCategories = ['Всички', ...finalCategories];
             finalCategories = Array.from(new Set(finalCategories));
 
-            payload.categories = finalCategories;
-            payload.card_images = form.card_images.filter(Boolean);
+            const payload: any = {
+                slug: form.slug,
+                name: form.name,
+                wholesale_price_eur: priceEur,
+                avatar: form.avatar,
+                is_best_seller: form.is_best_seller,
+                size: sizeVal,
+                is_hidden: form.is_hidden,
+                top_order: form.top_order ? parseInt(form.top_order) : null,
+                location: 'Произведено от CarDecal',
+                categories: finalCategories,
+                updated_at: new Date().toISOString(),
+            };
 
             if (isNew) {
                 const { error } = await supabase.from('products').insert(payload);
