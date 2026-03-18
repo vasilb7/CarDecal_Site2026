@@ -135,9 +135,8 @@ interface DBProduct {
     name: string;
     name_bg: string | null;
     avatar: string;
-    price: string | null;
-    price_eur: number | null;
     wholesale_price_eur: number | null;
+    price_eur: number | null;
     is_best_seller: boolean;
     categories: string[];
     dimensions: string | null;
@@ -420,31 +419,22 @@ const ProductEditModal: React.FC<{
                         </div>
 
                          <div className="space-y-4 pt-2 md:pt-0">
-                             <div className="p-4 bg-white/[0.03] border border-white/10 rounded-2xl">
-                                <label className="block text-[10px] uppercase tracking-[0.4em] text-zinc-500 mb-3 font-black">Цена на дребно (€)</label>
-                                <div className="relative">
-                                    <input 
-                                        type="number" step="0.01" min="0"
-                                        value={form.price_eur}
-                                        onChange={e => setForm(p => ({...p, price_eur: e.target.value}))}
-                                        className={`${inputClass} !rounded-xl !bg-black/40 !border-white/10 !text-xl !font-mono !h-14 !pl-4 focus:!border-red-600 shadow-2xl`}
-                                        placeholder="0.00"
-                                    />
-                                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 font-bold text-xl font-mono">€</span>
-                                </div>
-                            </div>
-                             <div className="p-4 bg-red-600/[0.03] border border-red-600/10 rounded-2xl">
-                                <label className="block text-[10px] uppercase tracking-[0.4em] text-red-500/80 mb-3 font-black">Цена на едро (€)</label>
+                             <div className="p-5 bg-white/[0.03] border border-white/10 rounded-2xl shadow-xl">
+                                <label className="block text-[10px] uppercase tracking-[0.4em] text-zinc-500 mb-4 font-black flex items-center gap-2">
+                                    <span className="p-1 px-2 bg-red-600 text-white rounded text-[8px]">FIX</span>
+                                    Цена (€) / Price (€)
+                                </label>
                                 <div className="relative">
                                     <input 
                                         type="number" step="0.01" min="0"
                                         value={form.wholesale_price_eur}
-                                        onChange={e => setForm(p => ({...p, wholesale_price_eur: e.target.value}))}
-                                        className={`${inputClass} !rounded-xl !bg-black/40 !border-red-600/20 !text-xl !font-mono !h-14 !pl-4 focus:!border-red-600 shadow-2xl`}
+                                        onChange={e => setForm(p => ({...p, wholesale_price_eur: e.target.value, price_eur: e.target.value}))}
+                                        className={`${inputClass} !rounded-xl !bg-black/60 !border-white/10 !text-2xl !font-mono !h-16 !pl-4 focus:!border-red-600 shadow-2xl transition-all`}
                                         placeholder="0.00"
                                     />
-                                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-red-600 font-bold text-xl font-mono">€</span>
+                                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-red-600 font-bold text-2xl font-mono">€</span>
                                 </div>
+                                <p className="mt-2 text-[9px] text-zinc-600 uppercase tracking-widest font-bold">Тази цена ще се показва навсякъде в сайта</p>
                             </div>
                             <div>
                                 <label className="block text-[10px] uppercase tracking-[0.3em] text-zinc-500 mb-2 font-bold">Размери / Dimensions</label>
@@ -1194,13 +1184,10 @@ const ProductsTab: React.FC = () => {
                                     </p>
                                     <p className="text-zinc-600 text-[10px] font-mono">{p.slug}</p>
                                     <div className="flex items-center justify-between mt-auto pt-2">
-                                        <div className="flex flex-col items-end">
-                                            {p.wholesale_price_eur != null && (
-                                                <span className="text-red-400 font-mono font-bold text-xs" title="Цена на едро">{(Number(p.wholesale_price_eur)).toFixed(2)} € (Е)</span>
-                                            )}
-                                            {p.price_eur != null && (
-                                                <span className="text-zinc-500 font-mono text-[10px]" title="Цена на дребно">{(Number(p.price_eur)).toFixed(2)} € (Д)</span>
-                                            )}
+                                        <div className="flex flex-col items-end w-full">
+                                            <span className="text-white font-mono font-bold text-xs">
+                                                {(Number(p.wholesale_price_eur || p.price_eur || 0)).toFixed(2)} €
+                                            </span>
                                         </div>
                                     </div>
                                 </div>
@@ -1217,7 +1204,7 @@ const ProductsTab: React.FC = () => {
                             <tr className="border-b border-white/10 text-left">
                                 <th className="text-xs uppercase tracking-widest text-zinc-500 pb-3 font-normal">Стикер</th>
                                 <th className="text-xs uppercase tracking-widest text-zinc-500 pb-3 font-normal">Размер</th>
-                                <th className="text-xs uppercase tracking-widest text-zinc-500 pb-3 font-normal">Цена Едро (€)</th>
+                                <th className="text-xs uppercase tracking-widest text-zinc-500 pb-3 font-normal">Цена (€)</th>
                                 <th className="text-xs uppercase tracking-widest text-zinc-500 pb-3 font-normal hidden lg:table-cell">Обновен</th>
                                 <th className="pb-3"></th>
                             </tr>
@@ -1237,14 +1224,13 @@ const ProductsTab: React.FC = () => {
                                         </div>
                                     </td>
                                     <td className="py-3 pr-4 text-zinc-300 text-xs font-mono">{p.dimensions || '—'}</td>
+                                    <td className="py-3 pr-4">
                                         <div className="flex flex-col">
-                                            {p.wholesale_price_eur != null ? (
-                                                <span className="text-white font-mono text-sm">{(Number(p.wholesale_price_eur)).toFixed(2)} € <span className="text-[10px] text-zinc-500">(Е)</span></span>
-                                            ) : <span className="text-zinc-700 text-[10px]">Няма едро</span>}
-                                            {p.price_eur != null ? (
-                                                <span className="text-zinc-500 font-mono text-[10px]">{(Number(p.price_eur)).toFixed(2)} € <span className="text-[9px] text-zinc-600">(Д)</span></span>
-                                            ) : <span className="text-zinc-700 text-[9px]">Няма дребно</span>}
+                                            <span className="text-white font-mono text-sm">
+                                                {(Number(p.wholesale_price_eur || p.price_eur || 0)).toFixed(2)} €
+                                            </span>
                                         </div>
+                                    </td>
                                     <td className="py-3 pr-4 hidden lg:table-cell text-zinc-500 text-xs">
                                         {new Date(p.updated_at).toLocaleDateString('bg-BG')}
                                     </td>
