@@ -256,31 +256,12 @@ const ProductEditModal: React.FC<{
         setForm(prev => ({ ...prev, categories: current.join(', ') }));
     };
 
-    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: 'avatar' | 'cover_image') => {
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: 'avatar') => {
         if (!e.target.files?.[0]) return;
         setUploading(field);
         try {
             const url = await uploadToCloudinary(e.target.files[0], 'Decals');
-            if (field === 'avatar') {
-                setForm(prev => ({ ...prev, avatar: url, cover_image: url }));
-            } else {
-                setForm(prev => ({ ...prev, [field]: url }));
-            }
-        } catch (err: any) {
-            setError(err.message || 'Грешка при качване');
-        } finally {
-            setUploading(null);
-        }
-    };
-
-    const handleCardImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
-        if (!e.target.files?.[0]) return;
-        setUploading(`card_${index}`);
-        try {
-            const url = await uploadToCloudinary(e.target.files[0], 'Decals');
-            const newImgs = [...form.card_images];
-            newImgs[index] = url;
-            setForm(prev => ({ ...prev, card_images: newImgs }));
+            setForm(prev => ({ ...prev, avatar: url }));
         } catch (err: any) {
             setError(err.message || 'Грешка при качване');
         } finally {
@@ -367,22 +348,22 @@ const ProductEditModal: React.FC<{
                     )}
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white/[0.02] p-6 rounded-2xl border border-white/5">
+                        {/* LEFT: name + slug */}
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-[10px] uppercase tracking-[0.3em] text-zinc-500 mb-2 font-bold">Наименование (BG)</label>
-                                <input 
-                                    value={form.name_bg || form.name} 
+                                <label className="block text-[10px] uppercase tracking-[0.3em] text-zinc-500 mb-2 font-bold">Наименование</label>
+                                <input
+                                    value={form.name}
                                     onChange={e => {
                                         const val = e.target.value;
                                         setForm(p => ({
-                                            ...p, 
-                                            name: val, 
-                                            name_bg: val,
+                                            ...p,
+                                            name: val,
                                             slug: p.isManualSlug ? p.slug : slugifyBulgarian(val)
                                         }));
-                                    }} 
-                                    className={`${inputClass} !rounded-xl !bg-white/5 !border-white/10 focus:!border-red-600/50 shadow-inner`} 
-                                    placeholder="пр: Бебе в колата момиче" 
+                                    }}
+                                    className={`${inputClass} !rounded-xl !bg-white/5 !border-white/10 focus:!border-red-600/50 shadow-inner`}
+                                    placeholder="пр: Бебе в колата момиче"
                                 />
                             </div>
                             <div>
@@ -390,26 +371,48 @@ const ProductEditModal: React.FC<{
                                     Slug / URL
                                     {!form.isManualSlug && <span className="text-[8px] bg-red-600/20 text-red-500 px-2 py-0.5 rounded-full">Auto</span>}
                                 </label>
-                                <input 
-                                    value={form.slug} 
-                                    onChange={e => setForm(p => ({...p, slug: e.target.value, isManualSlug: true}))} 
-                                    className={`${inputClass} !rounded-xl !bg-white/5 !border-white/10 focus:!border-red-600/50 font-mono text-xs`} 
-                                    placeholder="bebe-v-kolata-momiche" 
+                                <input
+                                    value={form.slug}
+                                    onChange={e => setForm(p => ({...p, slug: e.target.value, isManualSlug: true}))}
+                                    className={`${inputClass} !rounded-xl !bg-white/5 !border-white/10 focus:!border-red-600/50 font-mono text-xs`}
+                                    placeholder="bebe-v-kolata-momiche"
                                 />
+                            </div>
+                            {/* Size */}
+                            <div>
+                                <label className="block text-[10px] uppercase tracking-[0.3em] text-zinc-500 mb-2 font-bold">Размер (Size)</label>
+                                <input
+                                    value={form.size}
+                                    onChange={e => setForm(p => ({...p, size: e.target.value}))}
+                                    onBlur={e => {
+                                        let val = e.target.value.trim();
+                                        if (!val) return;
+                                        if (val.toLowerCase().endsWith('см') || val.toLowerCase().endsWith('cm')) return;
+                                        const isNumber = !isNaN(Number(val));
+                                        const dimensionPattern = /^\d+(\s*[xX*]\s*\d+)+$/;
+                                        if (isNumber || dimensionPattern.test(val)) {
+                                            setForm(p => ({...p, size: val + 'cm'}));
+                                        }
+                                    }}
+                                    className={`${inputClass} !rounded-xl !bg-white/5 !border-white/10`}
+                                    placeholder="пр: 12cm"
+                                />
+                                <p className="mt-1 text-[9px] text-zinc-600 uppercase tracking-widest">Излиза в каталога и в размерните филтри</p>
                             </div>
                         </div>
 
-                         <div className="space-y-4 pt-2 md:pt-0">
-                             <div className="p-5 bg-white/[0.03] border border-white/10 rounded-2xl shadow-xl">
+                        {/* RIGHT: price + avatar */}
+                        <div className="space-y-4 pt-2 md:pt-0">
+                            <div className="p-5 bg-white/[0.03] border border-white/10 rounded-2xl shadow-xl">
                                 <label className="flex items-center gap-2 text-[10px] uppercase tracking-[0.4em] text-zinc-500 mb-4 font-black">
-                                    <span className="p-1 px-2 bg-red-600 text-white rounded text-[8px]">FIX</span>
-                                    Цена (€) / Price (€)
+                                    <span className="p-1 px-2 bg-red-600 text-white rounded text-[8px]">EUR</span>
+                                    Цена на едро (€)
                                 </label>
                                 <div className="relative">
-                                    <input 
+                                    <input
                                         type="number" step="0.01" min="0"
                                         value={form.wholesale_price_eur}
-                                        onChange={e => setForm(p => ({...p, wholesale_price_eur: e.target.value, price_eur: e.target.value}))}
+                                        onChange={e => setForm(p => ({...p, wholesale_price_eur: e.target.value}))}
                                         className={`${inputClass} !rounded-xl !bg-black/60 !border-white/10 !text-2xl !font-mono !h-16 !pl-4 focus:!border-red-600 shadow-2xl transition-all`}
                                         placeholder="0.00"
                                     />
@@ -417,155 +420,52 @@ const ProductEditModal: React.FC<{
                                 </div>
                                 <p className="mt-2 text-[9px] text-zinc-600 uppercase tracking-widest font-bold">Тази цена ще се показва навсякъде в сайта</p>
                             </div>
+
+                            {/* Avatar */}
                             <div>
-                                <label className="block text-[10px] uppercase tracking-[0.3em] text-zinc-500 mb-2 font-bold">Размери / Dimensions</label>
-                                <input 
-                                    value={form.dimensions} 
-                                    onChange={e => setForm(p => ({...p, dimensions: e.target.value}))} 
-                                    className={`${inputClass} !rounded-xl !bg-white/5 !border-white/10`} 
-                                    placeholder="пр: 12 x 12 cm" 
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-6">
-                        <div>
-                            <label className="block text-[10px] uppercase tracking-[0.3em] text-zinc-500 mb-2 font-bold">Основна снимка / Main Image</label>
-                            <div className="flex gap-3">
-                                {form.avatar && (
-                                    <div 
-                                        className="w-14 h-14 rounded-xl bg-black/40 border border-white/10 flex-shrink-0 cursor-zoom-in overflow-hidden group"
-                                        onClick={() => setLightboxUrl(form.avatar)}
-                                    >
-                                        <img src={form.avatar} alt="Main" className="w-full h-full object-contain group-hover:scale-110 transition-transform" />
+                                <label className="block text-[10px] uppercase tracking-[0.3em] text-zinc-500 mb-2 font-bold">Снимка (Avatar)</label>
+                                <div className="flex gap-3">
+                                    {form.avatar && (
+                                        <div
+                                            className="w-14 h-14 rounded-xl bg-black/40 border border-white/10 flex-shrink-0 cursor-zoom-in overflow-hidden group"
+                                            onClick={() => setLightboxUrl(form.avatar)}
+                                        >
+                                            <img src={form.avatar} alt="Avatar" className="w-full h-full object-contain group-hover:scale-110 transition-transform" />
+                                        </div>
+                                    )}
+                                    <div className="relative flex-1">
+                                        <input
+                                            type="text"
+                                            value={form.avatar}
+                                            onChange={e => setForm(p => ({...p, avatar: e.target.value}))}
+                                            className={`${inputClass} !h-14 !pr-12`}
+                                            placeholder="URL или качи файл..."
+                                        />
+                                        <label className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-zinc-500 hover:text-white transition-colors cursor-pointer">
+                                            {uploading === 'avatar' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                                            <input type="file" className="hidden" accept="image/*" onChange={e => handleImageUpload(e, 'avatar')} />
+                                        </label>
                                     </div>
-                                )}
-                                <div className="relative flex-1">
-                                    <input 
-                                        type="text"
-                                        value={form.avatar}
-                                        onChange={e => setForm(p => ({...p, avatar: e.target.value}))}
-                                        className={`${inputClass} !h-14 !pr-12`}
-                                        placeholder="URL към снимка или качи файл..."
-                                    />
-                                    <label className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-zinc-500 hover:text-white transition-colors cursor-pointer">
-                                        {uploading === 'avatar' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                                        <input type="file" className="hidden" accept="image/*" onChange={e => handleImageUpload(e, 'avatar')} />
-                                    </label>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* Gallery Section */}
-                    <div>
-                        <div className="flex items-center justify-between mb-4">
-                            <label className="block text-xs uppercase tracking-widest text-zinc-400">Галерия (Вариации / Card Images)</label>
-                            <button 
-                                type="button"
-                                onClick={() => setForm(p => ({...p, card_images: [...p.card_images, '']}))}
-                                className="text-[10px] bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg hover:bg-white/10 transition-colors flex items-center gap-2 text-white"
-                            >
-                                <Plus size={12} /> Добави снимка
-                            </button>
-                        </div>
-                        <div className="flex gap-2 p-3 bg-black/20 rounded-xl overflow-x-auto custom-scrollbar">
-                            {form.card_images.map((img, idx) => (
-                                <div 
-                                    key={idx} 
-                                    className="relative w-16 h-16 rounded-lg bg-black/40 border border-white/5 flex-shrink-0 cursor-zoom-in group overflow-hidden"
-                                    onClick={() => setLightboxUrl(img)}
-                                >
-                                    <img src={img} alt="" className="w-full h-full object-contain group-hover:scale-110 transition-transform" />
-                                    <button 
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            const next = [...form.card_images];
-                                            next.splice(idx, 1);
-                                            setForm(p => ({...p, card_images: next}));
-                                        }}
-                                        className="absolute top-0.5 right-0.5 w-4 h-4 bg-red-600 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                                    >
-                                        <X size={10} />
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
-                        <div className="grid grid-cols-1 gap-2">
-                            {form.card_images.map((img, i) => (
-                                <div key={i} className="flex gap-2">
-                                    <input 
-                                        value={img} 
-                                        onChange={e => {
-                                            const newImgs = [...form.card_images];
-                                            newImgs[i] = e.target.value;
-                                            setForm(p => ({...p, card_images: newImgs}));
-                                        }} 
-                                        className={inputClass} 
-                                        placeholder="URL към вариация..." 
-                                    />
-                                    <label className="bg-white/5 border border-white/10 px-4 flex items-center justify-center cursor-pointer hover:bg-white/10 transition-colors shrink-0">
-                                        {uploading === `card_${i}` ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                                        <input type="file" className="hidden" accept="image/*" onChange={e => handleCardImageUpload(e, i)} />
-                                    </label>
-                                    <button 
-                                        type="button"
-                                        onClick={() => setForm(p => ({...p, card_images: p.card_images.filter((_, idx) => idx !== i)}))}
-                                        className="bg-red-900/10 border border-red-500/20 px-4 flex items-center justify-center hover:bg-red-900/30 transition-colors"
-                                    >
-                                        <Trash2 className="w-4 h-4 text-red-500" />
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-4">
-                        <div>
-                            <label className="block text-xs uppercase tracking-widest text-zinc-400 mb-1.5">Размери</label>
-                            <input 
-                                value={form.dimensions} 
-                                onChange={e => {
-                                    let val = e.target.value;
-                                    // If user types a digit and it's currently empty, or just a number, 
-                                    // we can help. But let's just do a blur handler or simple check.
-                                    setForm(p => ({...p, dimensions: val}));
-                                }} 
-                                onBlur={e => {
-                                    let val = e.target.value.trim();
-                                    if (!val) return;
-                                    
-                                    // Check if it's already got 'см' or 'cm'
-                                    if (val.toLowerCase().endsWith('см') || val.toLowerCase().endsWith('cm')) return;
-
-                                    // Pattern 1: Simple number (e.g., "5")
-                                    const isNumber = !isNaN(Number(val));
-                                    
-                                    // Pattern 2: Dimension string (e.g., "30x40", "30 x 40", "30*40")
-                                    const dimensionPattern = /^\d+(\s*[xX*]\s*\d+)+$/;
-                                    const isPattern = dimensionPattern.test(val);
-
-                                    if (isNumber || isPattern) {
-                                        setForm(p => ({...p, dimensions: val + ' см'}));
-                                    }
-                                }}
-                                className={inputClass} 
-                                placeholder="5 см" 
-                            />
-                        </div>
-                    </div>
-
+                    {/* Categories */}
                     <div>
                         <div className="flex items-center justify-between mb-3">
                             <label className="block text-xs uppercase tracking-widest text-zinc-400">Категории</label>
-                            <span className="text-[10px] text-zinc-500 uppercase tracking-tighter">Системните се добавят автоматично</span>
+                            <span className="text-[10px] text-zinc-600 uppercase tracking-tighter">"Всички" се добавя автоматично</span>
                         </div>
-                        
+
+                        {/* Selected tags */}
                         <div className="flex flex-wrap gap-2 mb-4 p-3 bg-black/40 border border-white/5 rounded-xl min-h-[44px]">
+                            <div className="px-3 py-1.5 bg-white/5 border border-white/10 text-[10px] text-zinc-500 uppercase font-bold tracking-widest rounded-lg cursor-default">
+                                Всички (auto)
+                            </div>
                             {form.categories.split(',').map(c => c.trim()).filter(c => {
                                 const lc = c.toLowerCase();
-                                return lc && lc !== 'всички' && lc !== 'стикери' && lc !== 'всички стикери';
+                                return lc && lc !== 'всички';
                             }).map(catName => (
                                 <button
                                     key={catName}
@@ -577,45 +477,30 @@ const ProductEditModal: React.FC<{
                                     <X size={12} className="text-red-500 group-hover:text-white" />
                                 </button>
                             ))}
-                            {form.categories.split(',').map(c => c.trim()).filter(c => {
-                                const lc = c.toLowerCase();
-                                return lc && lc === 'всички';
-                            }).map(catName => (
-                                <div key={catName} className="px-3 py-1.5 bg-white/5 border border-white/10 text-[10px] text-zinc-500 uppercase font-bold tracking-widest rounded-lg cursor-default">
-                                    {catName} (Auto)
-                                </div>
-                            ))}
                         </div>
 
+                        {/* Category search */}
                         <div className="relative group mb-3">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600 group-focus-within:text-red-600 transition-colors" />
-                            <input 
-                                onChange={e => {
-                                    const val = e.target.value;
-                                    setCatQuery(val);
-                                }} 
+                            <input
+                                onChange={e => setCatQuery(e.target.value)}
                                 value={catQuery}
-                                className={`${inputClass} pl-10`} 
-                                placeholder="Търси или добави нова категория..." 
+                                className={`${inputClass} pl-10`}
+                                placeholder="Търси или добави нова категория..."
                             />
                             {catQuery && (
-                                <div className="absolute top-full left-0 right-0 z-50 mt-2 bg-[#18181b] border border-white/10 rounded-xl shadow-2xl overflow-hidden backdrop-blur-xl">
+                                <div className="absolute top-full left-0 right-0 z-50 mt-2 bg-[#18181b] border border-white/10 rounded-xl shadow-2xl overflow-hidden">
                                     <div className="max-h-60 overflow-y-auto p-1 custom-scrollbar">
                                         {dbCategories
                                             .filter(c => {
                                                 const lc = c.name.toLowerCase();
-                                                const sq = catQuery.toLowerCase();
-                                                return (lc.includes(sq) || (c.name_bg && c.name_bg.toLowerCase().includes(sq))) &&
-                                                       lc !== 'всички' && lc !== 'стикери' && lc !== 'всички стикери';
+                                                return lc.includes(catQuery.toLowerCase()) && lc !== 'всички';
                                             })
                                             .map(cat => (
                                                 <button
                                                     key={cat.id}
                                                     type="button"
-                                                    onClick={() => {
-                                                        toggleCategorySelection(cat.name);
-                                                        setCatQuery('');
-                                                    }}
+                                                    onClick={() => { toggleCategorySelection(cat.name); setCatQuery(''); }}
                                                     className="w-full text-left px-4 py-3 text-xs text-zinc-300 hover:bg-white/5 hover:text-white transition-colors flex items-center justify-between"
                                                 >
                                                     <span className="uppercase tracking-widest font-bold">{cat.name_bg || cat.name}</span>
@@ -631,12 +516,7 @@ const ProductEditModal: React.FC<{
                                                     if (!name) return;
                                                     setSavingCat(true);
                                                     try {
-                                                        const { data, error } = await supabase
-                                                            .from('categories')
-                                                            .insert([{ name, name_bg: name, display_order: 999 }])
-                                                            .select()
-                                                            .single();
-                                                        if (error) throw error;
+                                                        await supabase.from('categories').insert([{ name, name_bg: name, display_order: 999 }]);
                                                         await fetchCategories();
                                                         toggleCategorySelection(name);
                                                         setCatQuery('');
@@ -657,12 +537,10 @@ const ProductEditModal: React.FC<{
                             )}
                         </div>
 
+                        {/* Quick category buttons */}
                         <div className="flex flex-wrap gap-2">
                             {dbCategories
-                                .filter(cat => {
-                                    const lc = cat.name.toLowerCase();
-                                    return lc !== 'всички' && lc !== 'стикери' && lc !== 'всички стикери';
-                                })
+                                .filter(cat => cat.name.toLowerCase() !== 'всички')
                                 .slice(0, 8)
                                 .map(cat => {
                                     const isSelected = form.categories.split(',').map(c => c.trim()).includes(cat.name);
@@ -672,8 +550,8 @@ const ProductEditModal: React.FC<{
                                             type="button"
                                             onClick={() => toggleCategorySelection(cat.name)}
                                             className={`px-3 py-1.5 rounded-lg border text-[10px] uppercase font-bold tracking-widest transition-all ${
-                                                isSelected 
-                                                    ? 'bg-red-600 border-red-600 text-white shadow-[0_0_15px_rgba(220,38,38,0.3)]' 
+                                                isSelected
+                                                    ? 'bg-red-600 border-red-600 text-white shadow-[0_0_15px_rgba(220,38,38,0.3)]'
                                                     : 'bg-white/5 border-white/10 text-zinc-500 hover:border-white/20'
                                             }`}
                                         >
@@ -685,6 +563,7 @@ const ProductEditModal: React.FC<{
                         </div>
                     </div>
 
+                    {/* Top order */}
                     <div className="bg-gradient-to-br from-red-600/10 to-transparent border border-red-600/20 p-5 rounded-2xl shadow-xl backdrop-blur-sm">
                         <div className="flex items-center gap-3 mb-3">
                             <div className="p-2 bg-red-600 rounded-lg shadow-lg shadow-red-600/40">
@@ -696,24 +575,23 @@ const ProductEditModal: React.FC<{
                             </div>
                         </div>
                         <div className="flex items-center gap-4">
-                            <div className="relative group/input flex-1">
-                                <input 
-                                    type="number" 
-                                    min="1" 
-                                    value={form.top_order} 
-                                    onChange={e => setForm(p => ({...p, top_order: e.target.value}))} 
-                                    className={`${inputClass} !bg-black/60 pl-4 h-12 text-lg font-black text-white group-focus-within/input:border-red-600/50 transition-all`} 
-                                    placeholder="пр: 1, 2, 3..." 
+                            <div className="relative flex-1">
+                                <input
+                                    type="number" min="1"
+                                    value={form.top_order}
+                                    onChange={e => setForm(p => ({...p, top_order: e.target.value}))}
+                                    className={`${inputClass} !bg-black/60 h-12 text-lg font-black text-white`}
+                                    placeholder="пр: 1, 2, 3..."
                                 />
                             </div>
-                            <div className="w-px h-10 bg-white/5" />
                             <p className="text-[10px] text-zinc-500 italic flex-1 leading-relaxed">
-                                Продуктът ще се показва <span className="text-white font-bold not-italic">на първо място</span> в каталога (всички) и в неговата категория според този номер.
+                                Продуктът ще се показва <span className="text-white font-bold not-italic">на първо място</span> в каталога според този номер.
                             </p>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-white/5">
+                    {/* Toggles */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-white/5">
                         <div className="flex items-center gap-3 p-3 bg-white/3 border border-white/5 rounded-2xl hover:bg-white/5 transition-all">
                             <button
                                 type="button"
@@ -739,20 +617,6 @@ const ProductEditModal: React.FC<{
                             <div>
                                 <span className="block text-[10px] uppercase font-black tracking-widest text-[#E2E8F0]">Скрит</span>
                                 <span className="block text-[8px] text-zinc-500 uppercase tracking-tight mt-0.5">Невидим в магазина</span>
-                            </div>
-                        </div>
-
-                        <div className="flex items-center gap-3 p-3 bg-red-600/5 border border-red-600/10 rounded-2xl hover:bg-red-600/10 transition-all">
-                            <button
-                                type="button"
-                                onClick={() => setForm(p => ({...p, is_different_item: !p.is_different_item}))}
-                                className={`w-10 h-5 rounded-full transition-colors relative ${form.is_different_item ? 'bg-blue-600' : 'bg-zinc-700'}`}
-                            >
-                                <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${form.is_different_item ? 'translate-x-5' : 'translate-x-0'}`} />
-                            </button>
-                            <div className="flex items-center gap-2">
-                                <ShoppingBag className={`w-4 h-4 ${form.is_different_item ? 'text-blue-500' : 'text-zinc-500'}`} />
-                                <span className="text-sm text-zinc-300 uppercase tracking-widest">Различен артикул (не е стикер)</span>
                             </div>
                         </div>
                     </div>

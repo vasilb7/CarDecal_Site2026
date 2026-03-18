@@ -51,35 +51,31 @@ const CatalogPage: React.FC = () => {
         const catMap: Record<string, number> = {};
         const dynamicSizeSet = new Set<string>();
         let maxP = 20;
-        
+
         const activeCategoryForSizes = isMobileFiltersOpen ? pendingCategory : selectedCategory;
 
         activeProducts.forEach(p => {
-            // Категории - без "Всички" и без размери
+            // Категории - без "Всички"
             p.categories.forEach(cat => {
                 const lc = cat.toLowerCase();
-                const isSize = lc.includes('cm') || /^\d+x\d+$/.test(lc) || /^\d+×\d+$/.test(lc);
-                if (!isSize && lc !== 'всички') {
+                if (lc !== 'всички') {
                     catMap[cat] = (catMap[cat] || 0) + 1;
                 }
             });
 
-            // Размери - само от dimensions и size полетата
+            // Размери - само от size полето (dimensions е премахнато от схемата)
             const matchesCategory = activeCategoryForSizes === 'All' || p.categories.includes(activeCategoryForSizes);
-            if (matchesCategory) {
-                if (p.dimensions) dynamicSizeSet.add(p.dimensions);
-                if (p.size && p.size !== p.dimensions) dynamicSizeSet.add(p.size);
+            if (matchesCategory && p.size) {
+                dynamicSizeSet.add(p.size);
             }
 
-            const pPrice = p.wholesalePriceEur ?? p.price_eur ?? 0;
+            const pPrice = p.wholesale_price_eur ?? p.wholesalePriceEur ?? 0;
             if (pPrice > maxP) maxP = Math.ceil(pPrice);
         });
 
+        // Сортираме размерите числово
         const finalSizes = Array.from(dynamicSizeSet)
-            .filter(s => {
-                const lc = s.toLowerCase();
-                return lc.includes('cm') || /^\d+x\d+$/.test(lc) || /^\d+×\d+$/.test(lc);
-            })
+            .filter(s => s.trim().length > 0)
             .sort((a, b) => {
                 const aNum = parseInt(a.match(/\d+/)?.[0] || '0');
                 const bNum = parseInt(b.match(/\d+/)?.[0] || '0');
@@ -408,16 +404,12 @@ const CatalogPage: React.FC = () => {
             if (selectedCategory !== 'All' && !product.categories.includes(selectedCategory)) return false;
 
             // Price Filter
-            const price = product.price_eur || product.wholesalePriceEur || 0;
+            const price = product.wholesale_price_eur ?? product.wholesalePriceEur ?? 0;
             if (price < priceRange[0] || price > priceRange[1]) return false;
 
-            // Size Filter
+            // Size Filter - само от size полето
             if (selectedSizes.length > 0) {
-                const isSizeMatch = selectedSizes.some(size => 
-                    product.size === size || 
-                    product.dimensions === size || 
-                    product.categories.includes(size)
-                );
+                const isSizeMatch = selectedSizes.some(size => product.size === size);
                 if (!isSizeMatch) return false;
             }
 
@@ -434,14 +426,12 @@ const CatalogPage: React.FC = () => {
             }
 
             // Priority 2: Selected Sort Method
-            const priceA = a.price_eur || a.wholesalePriceEur || 0;
-            const priceB = b.price_eur || b.wholesalePriceEur || 0;
+            const priceA = a.wholesale_price_eur ?? a.wholesalePriceEur ?? 0;
+            const priceB = b.wholesale_price_eur ?? b.wholesalePriceEur ?? 0;
             if (sortBy === 'price_asc') return priceA - priceB;
             if (sortBy === 'price_desc') return priceB - priceA;
             if (sortBy === 'name_asc') {
-                const nameA = (a.nameBg || a.name).toLowerCase();
-                const nameB = (b.nameBg || b.name).toLowerCase();
-                return nameA.localeCompare(nameB, i18n.language);
+                return a.name.toLowerCase().localeCompare(b.name.toLowerCase(), i18n.language);
             }
             
             // Priority 3: Stable Natural Sort Fallback (Slug-based)
@@ -455,7 +445,7 @@ const CatalogPage: React.FC = () => {
     // Memoized dictionary for faster search suggestions
     const searchDictionary = useMemo(() => {
         const dictionary = Array.from(new Set([
-            ...allProducts.map(p => p.nameBg || p.name),
+            ...allProducts.map(p => p.name),
             ...dynamicCategories.map(c => c.name),
             'черепи', 'бебе', 'кола', 'мерцедес', 'ауди', 'бмв', 'фолксваген', 'монстър', 'стикери'
         ].flatMap(s => s.toLowerCase().split(/\s+/).filter(w => w.length > 2))));
