@@ -233,7 +233,10 @@ const ProductEditModal: React.FC<{
         cover_image: product?.cover_image || '',
         is_best_seller: product?.is_best_seller || false,
         dimensions: product?.dimensions || '',
-        categories: (product?.categories || []).join(', '),
+        categories: (product?.categories || []).filter(c => {
+            const lc = c.toLowerCase();
+            return !lc.includes('cm') && !/^\d+x\d+$/.test(lc) && !/^\d+×\d+$/.test(lc);
+        }).join(', '),
         card_images: product?.card_images || [],
         is_hidden: product?.is_hidden || false,
         is_different_item: product ? (product.categories?.includes('Всички') && !product.categories?.includes('Стикери')) : false,
@@ -325,7 +328,9 @@ const ProductEditModal: React.FC<{
             // Normalize and cleanup
             finalCategories = finalCategories.filter(c => {
                 const lc = c.toLowerCase();
-                return lc && lc !== "всички" && lc !== "стикери" && lc !== "всички стикери";
+                // Remove generic cats and also remove anything that looks like a size
+                const isSizeCandidate = lc.includes('cm') || /^\d+x\d+$/.test(lc) || /^\d+×\d+$/.test(lc);
+                return lc && lc !== "всички" && lc !== "стикери" && lc !== "всички стикери" && !isSizeCandidate;
             });
             
             // Always add "Всички"
@@ -420,7 +425,7 @@ const ProductEditModal: React.FC<{
 
                          <div className="space-y-4 pt-2 md:pt-0">
                              <div className="p-5 bg-white/[0.03] border border-white/10 rounded-2xl shadow-xl">
-                                <label className="block text-[10px] uppercase tracking-[0.4em] text-zinc-500 mb-4 font-black flex items-center gap-2">
+                                <label className="flex items-center gap-2 text-[10px] uppercase tracking-[0.4em] text-zinc-500 mb-4 font-black">
                                     <span className="p-1 px-2 bg-red-600 text-white rounded text-[8px]">FIX</span>
                                     Цена (€) / Price (€)
                                 </label>

@@ -72,14 +72,8 @@ const CatalogPage: React.FC = () => {
             
             if (matchesCategory) {
                 // Find sizes associated with this product
-                const productSizes = p.categories.filter(cat => 
-                    cat.toLowerCase().includes('cm') || 
-                    /^\d+x\d+$/.test(cat.toLowerCase()) ||
-                    /^\d+×\d+$/.test(cat) 
-                );
-                if (p.size) productSizes.push(p.size);
-                
-                productSizes.forEach(s => dynamicSizeSet.add(s));
+                if (p.dimensions) dynamicSizeSet.add(p.dimensions);
+                if (p.size) dynamicSizeSet.add(p.size);
             }
 
             const pPrice = p.price_eur || p.wholesalePriceEur || 0;
@@ -444,7 +438,11 @@ const CatalogPage: React.FC = () => {
 
             // Size Filter
             if (selectedSizes.length > 0) {
-                const isSizeMatch = selectedSizes.some(size => product.size === size || product.categories.includes(size));
+                const isSizeMatch = selectedSizes.some(size => 
+                    product.size === size || 
+                    product.dimensions === size || 
+                    product.categories.includes(size)
+                );
                 if (!isSizeMatch) return false;
             }
 
