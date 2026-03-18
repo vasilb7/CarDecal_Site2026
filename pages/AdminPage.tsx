@@ -303,7 +303,7 @@ const ProductEditModal: React.FC<{
                 wholesale_price_eur: wholesaleEur,
                 wholesale_price: null,
                 avatar: form.avatar,
-                cover_image: form.cover_image || null,
+                cover_image: form.avatar || null, // Автоматично ползваме аватара за корица
                 is_best_seller: form.is_best_seller,
                 dimensions: form.dimensions || null,
                 is_hidden: form.is_hidden,
@@ -454,16 +454,16 @@ const ProductEditModal: React.FC<{
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 gap-6">
                         <div>
-                            <label className="block text-[10px] uppercase tracking-[0.3em] text-zinc-500 mb-2 font-bold">Снимка (Avatar)</label>
+                            <label className="block text-[10px] uppercase tracking-[0.3em] text-zinc-500 mb-2 font-bold">Основна снимка / Main Image</label>
                             <div className="flex gap-3">
                                 {form.avatar && (
                                     <div 
                                         className="w-14 h-14 rounded-xl bg-black/40 border border-white/10 flex-shrink-0 cursor-zoom-in overflow-hidden group"
                                         onClick={() => setLightboxUrl(form.avatar)}
                                     >
-                                        <img src={form.avatar} alt="Avatar" className="w-full h-full object-contain group-hover:scale-110 transition-transform" />
+                                        <img src={form.avatar} alt="Main" className="w-full h-full object-contain group-hover:scale-110 transition-transform" />
                                     </div>
                                 )}
                                 <div className="relative flex-1">
@@ -472,37 +472,11 @@ const ProductEditModal: React.FC<{
                                         value={form.avatar}
                                         onChange={e => setForm(p => ({...p, avatar: e.target.value}))}
                                         className={`${inputClass} !h-14 !pr-12`}
-                                        placeholder="URL към основна снимка"
+                                        placeholder="URL към снимка или качи файл..."
                                     />
                                     <label className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-zinc-500 hover:text-white transition-colors cursor-pointer">
                                         {uploading === 'avatar' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
                                         <input type="file" className="hidden" accept="image/*" onChange={e => handleImageUpload(e, 'avatar')} />
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                        <div>
-                            <label className="block text-[10px] uppercase tracking-[0.3em] text-zinc-500 mb-2 font-bold">Cover Image</label>
-                            <div className="flex gap-3">
-                                {form.cover_image && (
-                                    <div 
-                                        className="w-14 h-14 rounded-xl bg-black/40 border border-white/10 flex-shrink-0 cursor-zoom-in overflow-hidden group"
-                                        onClick={() => setLightboxUrl(form.cover_image)}
-                                    >
-                                        <img src={form.cover_image} alt="Cover" className="w-full h-full object-contain group-hover:scale-110 transition-transform" />
-                                    </div>
-                                )}
-                                <div className="relative flex-1">
-                                    <input 
-                                        type="text"
-                                        value={form.cover_image}
-                                        onChange={e => setForm(p => ({...p, cover_image: e.target.value}))}
-                                        className={`${inputClass} !h-14 !pr-12`}
-                                        placeholder="URL към корица"
-                                    />
-                                    <label className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-zinc-500 hover:text-white transition-colors cursor-pointer">
-                                        {uploading === 'cover_image' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                                        <input type="file" className="hidden" accept="image/*" onChange={e => handleImageUpload(e, 'cover_image')} />
                                     </label>
                                 </div>
                             </div>

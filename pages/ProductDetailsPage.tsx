@@ -79,7 +79,7 @@ const ProductDetailsPage: React.FC = () => {
 
     /* price */
     let price = '';
-    const priceValue = product?.wholesalePriceEur ?? product?.price_eur ?? 0;
+    const priceValue = product?.price_eur ?? product?.wholesalePriceEur ?? 0;
     price = priceValue.toFixed(2);
 
     /* images */
