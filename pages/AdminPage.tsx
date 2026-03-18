@@ -131,6 +131,7 @@ interface DBProduct {
     is_hidden: boolean;
     updated_at: string;
     top_order: number | null;
+    wholesale_price: string | null;
 }
 
 interface DBUser {
@@ -212,7 +213,16 @@ const ProductEditModal: React.FC<{
         slug: product?.slug || '',
         name: product?.name || '',
         name_bg: product?.name_bg || '',
-        wholesale_price_eur: (product?.wholesale_price_eur ?? product?.price_eur)?.toString() || '',
+        wholesale_price_eur: (() => {
+            const val = product?.wholesale_price_eur ?? product?.price_eur;
+            if (val !== null && val !== undefined) return val.toString();
+            // Fallback to parsing text fields if EUR fields are missing
+            const fromWholesale = product?.wholesale_price ? parseFloat(product.wholesale_price.replace(/[^\d.]/g, '')) : NaN;
+            if (!isNaN(fromWholesale)) return fromWholesale.toString();
+            const fromPrice = product?.price ? parseFloat(product.price.replace(/[^\d.]/g, '')) : NaN;
+            if (!isNaN(fromPrice)) return fromPrice.toString();
+            return '';
+        })(),
         avatar: product?.avatar || '',
         cover_image: product?.cover_image || '',
         is_best_seller: product?.is_best_seller || false,
@@ -1124,7 +1134,7 @@ const ProductsTab: React.FC = () => {
                                     <p className="text-zinc-600 text-[10px] font-mono">{p.slug}</p>
                                     <div className="flex items-center justify-between mt-auto pt-2">
                                         {(p.wholesale_price_eur != null || p.price_eur != null) && (
-                                            <span className="text-red-400 font-mono font-bold text-xs">{(p.wholesale_price_eur ?? p.price_eur ?? 0).toFixed(2)} €</span>
+                                            <span className="text-red-400 font-mono font-bold text-xs">{(Number(p.wholesale_price_eur ?? p.price_eur ?? 0)).toFixed(2)} €</span>
                                         )}
                                     </div>
                                 </div>
@@ -1164,7 +1174,7 @@ const ProductsTab: React.FC = () => {
                                     <td className="py-3 pr-4">
                                         <div className="flex flex-col">
                                             {(p.wholesale_price_eur != null || p.price_eur != null)
-                                                ? <span className="text-white font-mono">{(p.wholesale_price_eur ?? p.price_eur ?? 0).toFixed(2)} €</span>
+                                                ? <span className="text-white font-mono">{(Number(p.wholesale_price_eur ?? p.price_eur ?? 0)).toFixed(2)} €</span>
                                                 : <span className="text-zinc-600">—</span>}
                                         </div>
                                     </td>
