@@ -342,8 +342,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         }
       });
       
-      // 6. Dispatch event to clear local cart state (DISABLED - requested to remember)
-      // window.dispatchEvent(new Event("clear_local_cart"));
+      // 6. Изчисти локалната количка при изход - в Supabase данните остават!
+      localStorage.removeItem('cardecal_cart');
+      localStorage.removeItem('cardecal_promo');
+      window.dispatchEvent(new Event('clear_local_cart'));
 
       // 7. Sync logout to other tabs
       authChannel?.postMessage('logout');

@@ -110,32 +110,16 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (error && error.code !== 'PGRST116') {
           console.error('Error fetching user cart:', error);
-          setIsInitialSyncDone(true); // Don't block local updates if DB fetch fails
+          setIsInitialSyncDone(true);
           return;
         }
 
         const dbItems = (data?.items || []) as CartItem[];
         
+        // При login зареждаме САМО от DB.
+        // localStorage е вече изчистен при logout, така че няма нужда от сливане.
         if (dbItems.length > 0) {
-          setItems(prevLocalItems => {
-            // Start with DB items
-            const merged = [...dbItems];
-            
-            // Merge local guest items
-            prevLocalItems.forEach(localItem => {
-              const index = merged.findIndex(i => i.id === localItem.id);
-              if (index > -1) {
-                // Combine quantities for same items
-                merged[index] = {
-                  ...merged[index],
-                  quantity: merged[index].quantity + localItem.quantity
-                };
-              } else {
-                merged.push(localItem);
-              }
-            });
-            return merged;
-          });
+          setItems(dbItems);
         }
         
         setIsInitialSyncDone(true);
@@ -147,6 +131,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     syncCartWithDB();
   }, [user?.id]);
+
 
   // Persist to DB whenever items change
   useEffect(() => {
@@ -406,8 +391,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     const handleClearCartEvent = () => {
-       clearCart();
-       localStorage.removeItem('cardecal_cart');
+      // Изчистваме само state-а в паметта - localStorage вече е изчистен от AuthContext
+      isClearingRef.current = true;
+      Object.values(removeTimeouts.current).forEach(clearTimeout);
+      removeTimeouts.current = {};
+      setItems([]);
+      setAppliedPromo(null);
+      setTimeout(() => { isClearingRef.current = false; }, 2000);
     };
 
     window.addEventListener('storage', handleStorageChange);
