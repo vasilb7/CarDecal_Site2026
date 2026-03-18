@@ -127,7 +127,7 @@ const CatalogPage: React.FC = () => {
         });
 
         // Use metadata from categories table to get Bulgarian names and order
-        const EXCLUDED_NAMES = ["Всички", "Стикери", "Всички стикери"];
+        const EXCLUDED_NAMES = ["Всички"];
         
         const filtered = dbCategoriesMetadata
             .filter(cat => catMap[cat.name] && !EXCLUDED_NAMES.includes(cat.name))

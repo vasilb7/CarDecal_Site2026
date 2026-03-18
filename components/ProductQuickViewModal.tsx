@@ -570,6 +570,15 @@ const ProductQuickViewModal: React.FC = () => {
                             {/* Product Info Description */}
                             <div className="space-y-4">
                                 <h3 className="text-sm uppercase tracking-[0.2em] font-bold text-white/60">Детайли за продукта</h3>
+                                {product.dimensions && (
+                                    <div className="flex items-center gap-3 p-4 bg-white/5 border border-white/10 rounded-2xl">
+                                        <Maximize2 className="w-5 h-5 text-red-600" />
+                                        <div>
+                                            <span className="block text-[10px] uppercase tracking-widest text-[#888] font-black">Размери</span>
+                                            <span className="block text-lg font-mono font-black text-white">{product.dimensions}</span>
+                                        </div>
+                                    </div>
+                                )}
                                 <div className="text-sm md:text-base text-white/60 leading-relaxed font-medium space-y-4">
                                     <p>• Защита: Пълна водоустойчивост и вграден UV филтър срещу избледняване.</p>
                                     <p>• Издръжливост: Устойчиви на автомивка, високи температури и сняг.</p>

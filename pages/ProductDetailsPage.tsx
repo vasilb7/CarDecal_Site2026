@@ -79,8 +79,8 @@ const ProductDetailsPage: React.FC = () => {
 
     /* price */
     let price = '';
-    const priceValue = product?.wholesalePriceEur || product?.price_eur || 0;
-    if (priceValue) price = priceValue.toFixed(2);
+    const priceValue = product?.wholesalePriceEur ?? product?.price_eur ?? 0;
+    price = priceValue.toFixed(2);
 
     /* images */
     const images: string[] = product ? Array.from(new Set([

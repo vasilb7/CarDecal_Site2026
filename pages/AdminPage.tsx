@@ -197,7 +197,7 @@ const ProductEditModal: React.FC<{
         slug: product?.slug || '',
         name: product?.name || '',
         name_bg: product?.name_bg || '',
-        wholesale_price_eur: product?.wholesale_price_eur?.toString() || '',
+        wholesale_price_eur: (product?.wholesale_price_eur ?? product?.price_eur)?.toString() || '',
         avatar: product?.avatar || '',
         cover_image: product?.cover_image || '',
         is_best_seller: product?.is_best_seller || false,
@@ -211,6 +211,8 @@ const ProductEditModal: React.FC<{
     const [saving, setSaving] = useState(false);
     const [uploading, setUploading] = useState<string | null>(null);
     const [error, setError] = useState('');
+    const [catQuery, setCatQuery] = useState('');
+    const [savingCat, setSavingCat] = useState(false);
 
     const toggleCategorySelection = (catName: string) => {
         let current = form.categories.split(',').map(c => c.trim()).filter(Boolean);
@@ -277,29 +279,24 @@ const ProductEditModal: React.FC<{
             // Auto-categorization logic
             let finalCategories = form.categories.split(',').map(c => c.trim()).filter(Boolean);
             
-            // Fixed categories names as per user request
+            // Fixed categories names
             const CAT_ALL = "Всички";
             const CAT_STICKERS = "Стикери";
             const CAT_ALL_STICKERS = "Всички стикери";
 
-            // Normalize existing categories and filter out duplicates or case-mismatched "fixed" names
-            finalCategories = form.categories.split(',')
-                .map(c => c.trim())
-                .filter(Boolean)
-                .filter(c => {
-                    const lc = c.toLowerCase();
-                    return lc !== "всички" && lc !== "стикери" && lc !== "всички стикери";
-                });
+            // Normalize and cleanup
+            finalCategories = finalCategories.filter(c => {
+                const lc = c.toLowerCase();
+                return lc && lc !== "всички" && lc !== "стикери" && lc !== "всички стикери";
+            });
             
-            // Always add "Всички" as the first category for consistency
+            // Always add "Всички"
             finalCategories.unshift(CAT_ALL);
 
-            if (form.is_different_item) {
-                // Not a sticker, so exclude sticker-specific tags if any manually added
-            } else {
+            if (!form.is_different_item) {
                 // If it's a standard sticker, ensure it has sticker categories
-                finalCategories.push(CAT_STICKERS);
-                finalCategories.push(CAT_ALL_STICKERS);
+                if (!finalCategories.includes(CAT_STICKERS)) finalCategories.push(CAT_STICKERS);
+                if (!finalCategories.includes(CAT_ALL_STICKERS)) finalCategories.push(CAT_ALL_STICKERS);
             }
 
             // Remove duplicates again just in case
@@ -484,79 +481,192 @@ const ProductEditModal: React.FC<{
                     </div>
 
                     <div>
-                        <label className="block text-xs uppercase tracking-widest text-zinc-400 mb-3">Категории</label>
-                        <div className="flex flex-wrap gap-2 mb-3">
-                            {dbCategories.map(cat => {
-                                const isSelected = form.categories.split(',').map(c => c.trim()).includes(cat.name);
-                                return (
-                                    <button
-                                        key={cat.id}
-                                        type="button"
-                                        onClick={() => toggleCategorySelection(cat.name)}
-                                        className={`px-3 py-1.5 rounded-lg border text-[10px] uppercase font-bold tracking-widest transition-all ${
-                                            isSelected 
-                                                ? 'bg-red-600 border-red-600 text-white shadow-[0_0_15px_rgba(220,38,38,0.3)]' 
-                                                : 'bg-white/5 border-white/10 text-zinc-500 hover:border-white/20'
-                                        }`}
-                                    >
-                                        {cat.name_bg || cat.name}
-                                    </button>
-                                );
-                            })}
+                        <div className="flex items-center justify-between mb-3">
+                            <label className="block text-xs uppercase tracking-widest text-zinc-400">Категории</label>
+                            <span className="text-[10px] text-zinc-500 uppercase tracking-tighter">Системните се добавят автоматично</span>
                         </div>
-                        <div className="relative group">
-                            <Tag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600 group-focus-within:text-red-600 transition-colors" />
+                        
+                        <div className="flex flex-wrap gap-2 mb-4 p-3 bg-black/40 border border-white/5 rounded-xl min-h-[44px]">
+                            {form.categories.split(',').map(c => c.trim()).filter(c => {
+                                const lc = c.toLowerCase();
+                                return lc && lc !== 'всички' && lc !== 'стикери' && lc !== 'всички стикери';
+                            }).map(catName => (
+                                <button
+                                    key={catName}
+                                    type="button"
+                                    onClick={() => toggleCategorySelection(catName)}
+                                    className="group flex items-center gap-1.5 px-3 py-1.5 bg-red-600/10 border border-red-600/40 text-[10px] text-white uppercase font-bold tracking-widest rounded-lg hover:bg-red-600/20 transition-all"
+                                >
+                                    {catName}
+                                    <X size={12} className="text-red-500 group-hover:text-white" />
+                                </button>
+                            ))}
+                            {form.categories.split(',').map(c => c.trim()).filter(c => {
+                                const lc = c.toLowerCase();
+                                return lc && lc === 'всички';
+                            }).map(catName => (
+                                <div key={catName} className="px-3 py-1.5 bg-white/5 border border-white/10 text-[10px] text-zinc-500 uppercase font-bold tracking-widest rounded-lg cursor-default">
+                                    {catName} (Auto)
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="relative group mb-3">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600 group-focus-within:text-red-600 transition-colors" />
                             <input 
-                                value={form.categories} 
-                                onChange={e => setForm(p => ({...p, categories: e.target.value}))} 
+                                onChange={e => {
+                                    const val = e.target.value;
+                                    setCatQuery(val);
+                                }} 
+                                value={catQuery}
                                 className={`${inputClass} pl-10`} 
-                                placeholder="Ръчно въвеждане (разделени със запетая)..." 
+                                placeholder="Търси или добави нова категория..." 
                             />
+                            {catQuery && (
+                                <div className="absolute top-full left-0 right-0 z-50 mt-2 bg-[#18181b] border border-white/10 rounded-xl shadow-2xl overflow-hidden backdrop-blur-xl">
+                                    <div className="max-h-60 overflow-y-auto p-1 custom-scrollbar">
+                                        {dbCategories
+                                            .filter(c => {
+                                                const lc = c.name.toLowerCase();
+                                                const sq = catQuery.toLowerCase();
+                                                return (lc.includes(sq) || (c.name_bg && c.name_bg.toLowerCase().includes(sq))) &&
+                                                       lc !== 'всички' && lc !== 'стикери' && lc !== 'всички стикери';
+                                            })
+                                            .map(cat => (
+                                                <button
+                                                    key={cat.id}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        toggleCategorySelection(cat.name);
+                                                        setCatQuery('');
+                                                    }}
+                                                    className="w-full text-left px-4 py-3 text-xs text-zinc-300 hover:bg-white/5 hover:text-white transition-colors flex items-center justify-between"
+                                                >
+                                                    <span className="uppercase tracking-widest font-bold">{cat.name_bg || cat.name}</span>
+                                                    {form.categories.split(',').map(cc => cc.trim()).includes(cat.name) && <CheckCircle size={14} className="text-red-500" />}
+                                                </button>
+                                            ))
+                                        }
+                                        {!dbCategories.some(c => c.name.toLowerCase() === catQuery.toLowerCase()) && (
+                                            <button
+                                                type="button"
+                                                onClick={async () => {
+                                                    const name = catQuery.trim();
+                                                    if (!name) return;
+                                                    setSavingCat(true);
+                                                    try {
+                                                        const { data, error } = await supabase
+                                                            .from('categories')
+                                                            .insert([{ name, name_bg: name, display_order: 999 }])
+                                                            .select()
+                                                            .single();
+                                                        if (error) throw error;
+                                                        await fetchCategories();
+                                                        toggleCategorySelection(name);
+                                                        setCatQuery('');
+                                                    } catch (err) {
+                                                        console.error('Add category error:', err);
+                                                    } finally {
+                                                        setSavingCat(false);
+                                                    }
+                                                }}
+                                                className="w-full text-left px-4 py-3 text-xs text-red-500 hover:bg-red-500/10 transition-colors flex items-center gap-2 border-t border-white/5"
+                                            >
+                                                {savingCat ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+                                                <span>Добави "{catQuery}" като нова категория</span>
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="flex flex-wrap gap-2">
+                            {dbCategories
+                                .filter(cat => {
+                                    const lc = cat.name.toLowerCase();
+                                    return lc !== 'всички' && lc !== 'стикери' && lc !== 'всички стикери';
+                                })
+                                .slice(0, 8)
+                                .map(cat => {
+                                    const isSelected = form.categories.split(',').map(c => c.trim()).includes(cat.name);
+                                    return (
+                                        <button
+                                            key={cat.id}
+                                            type="button"
+                                            onClick={() => toggleCategorySelection(cat.name)}
+                                            className={`px-3 py-1.5 rounded-lg border text-[10px] uppercase font-bold tracking-widest transition-all ${
+                                                isSelected 
+                                                    ? 'bg-red-600 border-red-600 text-white shadow-[0_0_15px_rgba(220,38,38,0.3)]' 
+                                                    : 'bg-white/5 border-white/10 text-zinc-500 hover:border-white/20'
+                                            }`}
+                                        >
+                                            {cat.name_bg || cat.name}
+                                        </button>
+                                    );
+                                })
+                            }
                         </div>
                     </div>
 
-                    <div className="bg-red-600/5 border border-red-600/10 p-4 rounded-xl">
-                        <label className="block text-[10px] uppercase tracking-widest text-red-500 font-black mb-2">ТОП ПРОДУКТ (Номер на подредба)</label>
-                        <div className="flex items-center gap-3">
-                            <input 
-                                type="number" 
-                                min="1" 
-                                value={form.top_order} 
-                                onChange={e => setForm(p => ({...p, top_order: e.target.value}))} 
-                                className={`${inputClass} !bg-black/60`} 
-                                placeholder="пр: 1, 2, 3..." 
-                            />
-                            <p className="text-[10px] text-zinc-500 italic max-w-[200px]">Ако е попълнено, продуктът ще излиза първи в своята категория (подреден по този номер).</p>
+                    <div className="bg-gradient-to-br from-red-600/10 to-transparent border border-red-600/20 p-5 rounded-2xl shadow-xl backdrop-blur-sm">
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className="p-2 bg-red-600 rounded-lg shadow-lg shadow-red-600/40">
+                                <TrendingUp className="w-4 h-4 text-white" />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] uppercase tracking-[0.2em] text-red-500 font-black">ТОП ПРОДУКТ (Подредба)</label>
+                                <p className="text-[9px] text-zinc-500 uppercase font-bold tracking-widest mt-0.5">Приоритет в категорията</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <div className="relative group/input flex-1">
+                                <input 
+                                    type="number" 
+                                    min="1" 
+                                    value={form.top_order} 
+                                    onChange={e => setForm(p => ({...p, top_order: e.target.value}))} 
+                                    className={`${inputClass} !bg-black/60 pl-4 h-12 text-lg font-black text-white group-focus-within/input:border-red-600/50 transition-all`} 
+                                    placeholder="пр: 1, 2, 3..." 
+                                />
+                            </div>
+                            <div className="w-px h-10 bg-white/5" />
+                            <p className="text-[10px] text-zinc-500 italic flex-1 leading-relaxed">
+                                Продуктът ще се показва <span className="text-white font-bold not-italic">на първо място</span> в каталога (всички) и в неговата категория според този номер.
+                            </p>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-6">
-                        <div className="flex items-center gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-white/5">
+                        <div className="flex items-center gap-3 p-3 bg-white/3 border border-white/5 rounded-2xl hover:bg-white/5 transition-all">
                             <button
                                 type="button"
                                 onClick={() => setForm(p => ({...p, is_best_seller: !p.is_best_seller}))}
-                                className={`w-10 h-5 rounded-full transition-colors relative ${form.is_best_seller ? 'bg-red-600' : 'bg-zinc-700'}`}
+                                className={`w-12 h-6 rounded-full transition-all relative shadow-inner ${form.is_best_seller ? 'bg-red-600 shadow-red-600/40' : 'bg-zinc-800'}`}
                             >
-                                <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${form.is_best_seller ? 'translate-x-5' : 'translate-x-0'}`} />
+                                <span className={`absolute top-1 left-1.5 w-4 h-4 bg-white rounded-full transition-transform shadow-md ${form.is_best_seller ? 'translate-x-5' : 'translate-x-0'}`} />
                             </button>
-                            <span className="text-sm text-zinc-300 uppercase tracking-widest">Бестселър</span>
-                        </div>
-
-                        <div className="flex items-center gap-3">
-                            <button
-                                type="button"
-                                onClick={() => setForm(p => ({...p, is_hidden: !p.is_hidden}))}
-                                className={`w-10 h-5 rounded-full transition-colors relative ${form.is_hidden ? 'bg-amber-600' : 'bg-zinc-700'}`}
-                            >
-                                <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${form.is_hidden ? 'translate-x-5' : 'translate-x-0'}`} />
-                            </button>
-                            <div className="flex items-center gap-2">
-                                <EyeOff className={`w-4 h-4 ${form.is_hidden ? 'text-amber-500' : 'text-zinc-500'}`} />
-                                <span className="text-sm text-zinc-300 uppercase tracking-widest">Скрит артикул</span>
+                            <div>
+                                <span className="block text-[10px] uppercase font-black tracking-widest text-[#E2E8F0]">Бестселър</span>
+                                <span className="block text-[8px] text-zinc-500 uppercase tracking-tight mt-0.5">Акцент на картата</span>
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 p-3 bg-white/3 border border-white/5 rounded-2xl hover:bg-white/5 transition-all">
+                            <button
+                                type="button"
+                                onClick={() => setForm(p => ({...p, is_hidden: !p.is_hidden}))}
+                                className={`w-12 h-6 rounded-full transition-all relative shadow-inner ${form.is_hidden ? 'bg-amber-600 shadow-amber-600/40' : 'bg-zinc-800'}`}
+                            >
+                                <span className={`absolute top-1 left-1.5 w-4 h-4 bg-white rounded-full transition-transform shadow-md ${form.is_hidden ? 'translate-x-5' : 'translate-x-0'}`} />
+                            </button>
+                            <div>
+                                <span className="block text-[10px] uppercase font-black tracking-widest text-[#E2E8F0]">Скрит</span>
+                                <span className="block text-[8px] text-zinc-500 uppercase tracking-tight mt-0.5">Невидим в магазина</span>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-3 p-3 bg-red-600/5 border border-red-600/10 rounded-2xl hover:bg-red-600/10 transition-all">
                             <button
                                 type="button"
                                 onClick={() => setForm(p => ({...p, is_different_item: !p.is_different_item}))}
@@ -922,7 +1032,7 @@ const ProductsTab: React.FC = () => {
                                             </span>
                                         )}
                                         {p.dimensions && (
-                                            <span className="text-[9px] bg-black/70 text-white/80 px-2 py-0.5 font-mono backdrop-blur-sm">{p.dimensions}</span>
+                                            <span className="text-[10px] bg-red-600/90 text-white px-2 py-1 font-black uppercase tracking-tighter shadow-lg backdrop-blur-md rounded-br-xl rounded-tl-sm border-l border-b border-red-500/50">{p.dimensions}</span>
                                         )}
                                     </div>
                                     {/* Actions overlay */}
@@ -954,8 +1064,8 @@ const ProductsTab: React.FC = () => {
                                     </p>
                                     <p className="text-zinc-600 text-[10px] font-mono">{p.slug}</p>
                                     <div className="flex items-center justify-between mt-auto pt-2">
-                                        {p.wholesale_price_eur != null && (
-                                            <span className="text-red-400 font-mono font-bold text-xs">{p.wholesale_price_eur.toFixed(2)} €</span>
+                                        {(p.wholesale_price_eur != null || p.price_eur != null) && (
+                                            <span className="text-red-400 font-mono font-bold text-xs">{(p.wholesale_price_eur ?? p.price_eur ?? 0).toFixed(2)} €</span>
                                         )}
                                     </div>
                                 </div>
@@ -994,8 +1104,8 @@ const ProductsTab: React.FC = () => {
                                     <td className="py-3 pr-4 text-zinc-300 text-xs font-mono">{p.dimensions || '—'}</td>
                                     <td className="py-3 pr-4">
                                         <div className="flex flex-col">
-                                            {p.wholesale_price_eur != null
-                                                ? <span className="text-white font-mono">{p.wholesale_price_eur.toFixed(2)} €</span>
+                                            {(p.wholesale_price_eur != null || p.price_eur != null)
+                                                ? <span className="text-white font-mono">{(p.wholesale_price_eur ?? p.price_eur ?? 0).toFixed(2)} €</span>
                                                 : <span className="text-zinc-600">—</span>}
                                         </div>
                                     </td>
