@@ -202,7 +202,7 @@ const ProductQuickViewModal: React.FC = () => {
         if (quantity < 1) setQuantity(1);
     };
 
-    const priceValue = product?.price_eur || product?.wholesalePriceEur || 0;
+    const priceValue = product?.price_eur ?? product?.wholesalePriceEur ?? 0;
     
     // Combine main image with card images, ensuring uniqueness
     const images: string[] = product ? Array.from(new Set([

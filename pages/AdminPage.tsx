@@ -263,7 +263,11 @@ const ProductEditModal: React.FC<{
         setUploading(field);
         try {
             const url = await uploadToCloudinary(e.target.files[0], 'Decals');
-            setForm(prev => ({ ...prev, [field]: url }));
+            if (field === 'avatar') {
+                setForm(prev => ({ ...prev, avatar: url, cover_image: url }));
+            } else {
+                setForm(prev => ({ ...prev, [field]: url }));
+            }
         } catch (err: any) {
             setError(err.message || 'Грешка при качване');
         } finally {
