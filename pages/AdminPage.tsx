@@ -298,51 +298,37 @@ const ProductEditModal: React.FC<{
         setSaving(true);
         setError('');
         try {
-            const retailEur = parseFloat(form.price_eur) || null;
-            const wholesaleEur = parseFloat(form.wholesale_price_eur) || null;
+            const priceEur = parseFloat(form.wholesale_price_eur) || null;
+            const sizeVal = form.dimensions?.trim() || null;
+
             const payload: any = {
                 slug: form.slug,
                 name: form.name,
-                name_bg: form.name_bg || null,
-                price_eur: retailEur,
-                price: null,
-                wholesale_price_eur: wholesaleEur,
-                wholesale_price: null,
+                price_eur: priceEur,
+                wholesale_price_eur: priceEur, // Same value - wholesale only
                 avatar: form.avatar,
-                cover_image: form.avatar || null, // Автоматично ползваме аватара за корица
+                cover_image: form.avatar || null,
                 is_best_seller: form.is_best_seller,
-                dimensions: form.dimensions || null,
+                dimensions: sizeVal,
+                size: sizeVal, // Keep in sync with dimensions
                 is_hidden: form.is_hidden,
                 top_order: form.top_order ? parseInt(form.top_order) : null,
+                location: 'Произведено от CarDecal',
                 updated_at: new Date().toISOString(),
             };
 
-            // Auto-categorization logic
-            let finalCategories = form.categories.split(',').map(c => c.trim()).filter(Boolean);
-            
-            // Fixed categories names
-            const CAT_ALL = "Всички";
-            const CAT_STICKERS = "Стикери";
-            const CAT_ALL_STICKERS = "Всички стикери";
+            // Categories - filter out sizes, always add "Всички"
+            let finalCategories = form.categories
+                .split(',')
+                .map(c => c.trim())
+                .filter(c => {
+                    const lc = c.toLowerCase();
+                    const isSize = lc.includes('cm') || /^\d+x\d+$/.test(lc) || /^\d+×\d+$/.test(lc);
+                    return lc && lc !== 'всички' && !isSize;
+                });
 
-            // Normalize and cleanup
-            finalCategories = finalCategories.filter(c => {
-                const lc = c.toLowerCase();
-                // Remove generic cats and also remove anything that looks like a size
-                const isSizeCandidate = lc.includes('cm') || /^\d+x\d+$/.test(lc) || /^\d+×\d+$/.test(lc);
-                return lc && lc !== "всички" && lc !== "стикери" && lc !== "всички стикери" && !isSizeCandidate;
-            });
-            
-            // Always add "Всички"
-            finalCategories.unshift(CAT_ALL);
-
-            if (!form.is_different_item) {
-                // If it's a standard sticker, ensure it has sticker categories
-                if (!finalCategories.includes(CAT_STICKERS)) finalCategories.push(CAT_STICKERS);
-                if (!finalCategories.includes(CAT_ALL_STICKERS)) finalCategories.push(CAT_ALL_STICKERS);
-            }
-
-            // Remove duplicates again just in case
+            // "Всички" е фиксирана за всички
+            finalCategories = ['Всички', ...finalCategories];
             finalCategories = Array.from(new Set(finalCategories));
 
             payload.categories = finalCategories;

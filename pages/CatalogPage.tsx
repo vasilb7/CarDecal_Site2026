@@ -52,49 +52,37 @@ const CatalogPage: React.FC = () => {
         const dynamicSizeSet = new Set<string>();
         let maxP = 20;
         
-        // Use pending category if mobile drawer is open to show real-time sizes
         const activeCategoryForSizes = isMobileFiltersOpen ? pendingCategory : selectedCategory;
 
         activeProducts.forEach(p => {
-            // Global categories count
+            // Категории - без "Всички" и без размери
             p.categories.forEach(cat => {
-                const isSizeCandidate = cat.toLowerCase().includes('cm') || 
-                                      /^\d+x\d+$/.test(cat.toLowerCase()) || 
-                                      /^\d+×\d+$/.test(cat);
-                if (!isSizeCandidate) {
+                const lc = cat.toLowerCase();
+                const isSize = lc.includes('cm') || /^\d+x\d+$/.test(lc) || /^\d+×\d+$/.test(lc);
+                if (!isSize && lc !== 'всички') {
                     catMap[cat] = (catMap[cat] || 0) + 1;
                 }
             });
 
-            // Dynamic sizes logic:
-            // Check if product belongs to the currently active category (real-time for mobile)
+            // Размери - само от dimensions и size полетата
             const matchesCategory = activeCategoryForSizes === 'All' || p.categories.includes(activeCategoryForSizes);
-            
             if (matchesCategory) {
-                // Find sizes associated with this product
                 if (p.dimensions) dynamicSizeSet.add(p.dimensions);
-                if (p.size) dynamicSizeSet.add(p.size);
+                if (p.size && p.size !== p.dimensions) dynamicSizeSet.add(p.size);
             }
 
-            const pPrice = p.price_eur || p.wholesalePriceEur || 0;
+            const pPrice = p.wholesalePriceEur ?? p.price_eur ?? 0;
             if (pPrice > maxP) maxP = Math.ceil(pPrice);
         });
 
-        const genericSizes = ['small', 'medium', 'large', 'various', 'xl', 'xxl'];
         const finalSizes = Array.from(dynamicSizeSet)
             .filter(s => {
-                const isGeneric = genericSizes.includes(s.toLowerCase());
-                const isDimension = s.toLowerCase().includes('cm') || 
-                                  /^\d+x\d+$/.test(s.toLowerCase()) || 
-                                  /^\d+×\d+$/.test(s);
-                return !isGeneric && isDimension;
+                const lc = s.toLowerCase();
+                return lc.includes('cm') || /^\d+x\d+$/.test(lc) || /^\d+×\d+$/.test(lc);
             })
             .sort((a, b) => {
-                // Custom sort to handle "30x40" and "10cm" types
-                const aMatch = a.match(/\d+/);
-                const bMatch = b.match(/\d+/);
-                const aNum = aMatch ? parseInt(aMatch[0]) : 0;
-                const bNum = bMatch ? parseInt(bMatch[0]) : 0;
+                const aNum = parseInt(a.match(/\d+/)?.[0] || '0');
+                const bNum = parseInt(b.match(/\d+/)?.[0] || '0');
                 return aNum - bNum;
             });
 
@@ -104,6 +92,7 @@ const CatalogPage: React.FC = () => {
             maxPrice: maxP
         };
     }, [activeProducts, selectedCategory, pendingCategory, isMobileFiltersOpen]);
+
 
     // Dynamic Categories: Filter out categories that consist only of hidden products
     const dynamicCategories = useMemo(() => {
