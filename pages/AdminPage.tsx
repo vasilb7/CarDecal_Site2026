@@ -112,6 +112,21 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     );
 };
 
+const Lightbox: React.FC<{ src: string; onClose: () => void }> = ({ src, onClose }) => (
+    <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-[1000] bg-black/95 flex items-center justify-center p-4"
+        onClick={onClose}
+    >
+        <button onClick={onClose} className="absolute top-6 right-6 text-white hover:text-red-500 transition-colors">
+            <X size={32} />
+        </button>
+        <img src={src} alt="Full view" className="max-w-full max-h-full object-contain rounded-lg shadow-2xl" />
+    </motion.div>
+);
+
 type AdminTab = 'dashboard' | 'homepage' | 'messages' | 'maintenance' | 'products' | 'users' | 'archived_users' | 'custom_orders' | 'orders' | 'bugs' | 'stealth' | 'security' | 'promo_codes' | 'categories';
 
 interface DBProduct {
@@ -231,6 +246,7 @@ const ProductEditModal: React.FC<{
     const [error, setError] = useState('');
     const [catQuery, setCatQuery] = useState('');
     const [savingCat, setSavingCat] = useState(false);
+    const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
     const toggleCategorySelection = (catName: string) => {
         let current = form.categories.split(',').map(c => c.trim()).filter(Boolean);
@@ -438,24 +454,58 @@ const ProductEditModal: React.FC<{
                         </div>
                     </div>
 
-                    <div>
-                        <label className="block text-xs uppercase tracking-widest text-zinc-400 mb-1.5">Снимка (Avatar)</label>
-                        <div className="flex gap-2">
-                            <input value={form.avatar} onChange={e => setForm(p => ({...p, avatar: e.target.value}))} className={inputClass} placeholder="URL към снимка..." />
-                            <label className="bg-white/5 border border-white/10 px-4 flex items-center justify-center cursor-pointer hover:bg-white/10 transition-colors shrink-0">
-                                {uploading === 'avatar' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                                <input type="file" className="hidden" accept="image/*" onChange={e => handleImageUpload(e, 'avatar')} />
-                            </label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label className="block text-[10px] uppercase tracking-[0.3em] text-zinc-500 mb-2 font-bold">Снимка (Avatar)</label>
+                            <div className="flex gap-3">
+                                {form.avatar && (
+                                    <div 
+                                        className="w-14 h-14 rounded-xl bg-black/40 border border-white/10 flex-shrink-0 cursor-zoom-in overflow-hidden group"
+                                        onClick={() => setLightboxUrl(form.avatar)}
+                                    >
+                                        <img src={form.avatar} alt="Avatar" className="w-full h-full object-contain group-hover:scale-110 transition-transform" />
+                                    </div>
+                                )}
+                                <div className="relative flex-1">
+                                    <input 
+                                        type="text"
+                                        value={form.avatar}
+                                        onChange={e => setForm(p => ({...p, avatar: e.target.value}))}
+                                        className={`${inputClass} !h-14 !pr-12`}
+                                        placeholder="URL към основна снимка"
+                                    />
+                                    <label className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-zinc-500 hover:text-white transition-colors cursor-pointer">
+                                        {uploading === 'avatar' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                                        <input type="file" className="hidden" accept="image/*" onChange={e => handleImageUpload(e, 'avatar')} />
+                                    </label>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    <div>
-                        <label className="block text-xs uppercase tracking-widest text-zinc-400 mb-1.5">Cover Image</label>
-                        <div className="flex gap-2">
-                            <input value={form.cover_image} onChange={e => setForm(p => ({...p, cover_image: e.target.value}))} className={inputClass} placeholder="URL към корица..." />
-                            <label className="bg-white/5 border border-white/10 px-4 flex items-center justify-center cursor-pointer hover:bg-white/10 transition-colors shrink-0">
-                                {uploading === 'cover_image' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                                <input type="file" className="hidden" accept="image/*" onChange={e => handleImageUpload(e, 'cover_image')} />
-                            </label>
+                        <div>
+                            <label className="block text-[10px] uppercase tracking-[0.3em] text-zinc-500 mb-2 font-bold">Cover Image</label>
+                            <div className="flex gap-3">
+                                {form.cover_image && (
+                                    <div 
+                                        className="w-14 h-14 rounded-xl bg-black/40 border border-white/10 flex-shrink-0 cursor-zoom-in overflow-hidden group"
+                                        onClick={() => setLightboxUrl(form.cover_image)}
+                                    >
+                                        <img src={form.cover_image} alt="Cover" className="w-full h-full object-contain group-hover:scale-110 transition-transform" />
+                                    </div>
+                                )}
+                                <div className="relative flex-1">
+                                    <input 
+                                        type="text"
+                                        value={form.cover_image}
+                                        onChange={e => setForm(p => ({...p, cover_image: e.target.value}))}
+                                        className={`${inputClass} !h-14 !pr-12`}
+                                        placeholder="URL към корица"
+                                    />
+                                    <label className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-zinc-500 hover:text-white transition-colors cursor-pointer">
+                                        {uploading === 'cover_image' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                                        <input type="file" className="hidden" accept="image/*" onChange={e => handleImageUpload(e, 'cover_image')} />
+                                    </label>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -471,7 +521,29 @@ const ProductEditModal: React.FC<{
                                 <Plus size={12} /> Добави снимка
                             </button>
                         </div>
-                        <div className="space-y-3">
+                        <div className="flex gap-2 p-3 bg-black/20 rounded-xl overflow-x-auto custom-scrollbar">
+                            {form.card_images.map((img, idx) => (
+                                <div 
+                                    key={idx} 
+                                    className="relative w-16 h-16 rounded-lg bg-black/40 border border-white/5 flex-shrink-0 cursor-zoom-in group overflow-hidden"
+                                    onClick={() => setLightboxUrl(img)}
+                                >
+                                    <img src={img} alt="" className="w-full h-full object-contain group-hover:scale-110 transition-transform" />
+                                    <button 
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            const next = [...form.card_images];
+                                            next.splice(idx, 1);
+                                            setForm(p => ({...p, card_images: next}));
+                                        }}
+                                        className="absolute top-0.5 right-0.5 w-4 h-4 bg-red-600 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                    >
+                                        <X size={10} />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                        <div className="grid grid-cols-1 gap-2">
                             {form.card_images.map((img, i) => (
                                 <div key={i} className="flex gap-2">
                                     <input 
@@ -751,6 +823,11 @@ const ProductEditModal: React.FC<{
                     </button>
                 </div>
             </motion.div>
+            <AnimatePresence>
+                {lightboxUrl && (
+                    <Lightbox src={lightboxUrl} onClose={() => setLightboxUrl(null)} />
+                )}
+            </AnimatePresence>
         </div>
     );
 };
@@ -1139,9 +1216,14 @@ const ProductsTab: React.FC = () => {
                                     </p>
                                     <p className="text-zinc-600 text-[10px] font-mono">{p.slug}</p>
                                     <div className="flex items-center justify-between mt-auto pt-2">
-                                        {(p.wholesale_price_eur != null || p.price_eur != null) && (
-                                            <span className="text-red-400 font-mono font-bold text-xs">{(Number(p.wholesale_price_eur ?? p.price_eur ?? 0)).toFixed(2)} €</span>
-                                        )}
+                                        <div className="flex flex-col items-end">
+                                            {p.wholesale_price_eur != null && (
+                                                <span className="text-red-400 font-mono font-bold text-xs" title="Цена на едро">{(Number(p.wholesale_price_eur)).toFixed(2)} € (Е)</span>
+                                            )}
+                                            {p.price_eur != null && (
+                                                <span className="text-zinc-500 font-mono text-[10px]" title="Цена на дребно">{(Number(p.price_eur)).toFixed(2)} € (Д)</span>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1177,13 +1259,14 @@ const ProductsTab: React.FC = () => {
                                         </div>
                                     </td>
                                     <td className="py-3 pr-4 text-zinc-300 text-xs font-mono">{p.dimensions || '—'}</td>
-                                    <td className="py-3 pr-4">
                                         <div className="flex flex-col">
-                                            {(p.wholesale_price_eur != null || p.price_eur != null)
-                                                ? <span className="text-white font-mono">{(Number(p.wholesale_price_eur ?? p.price_eur ?? 0)).toFixed(2)} €</span>
-                                                : <span className="text-zinc-600">—</span>}
+                                            {p.wholesale_price_eur != null ? (
+                                                <span className="text-white font-mono text-sm">{(Number(p.wholesale_price_eur)).toFixed(2)} € <span className="text-[10px] text-zinc-500">(Е)</span></span>
+                                            ) : <span className="text-zinc-700 text-[10px]">Няма едро</span>}
+                                            {p.price_eur != null ? (
+                                                <span className="text-zinc-500 font-mono text-[10px]">{(Number(p.price_eur)).toFixed(2)} € <span className="text-[9px] text-zinc-600">(Д)</span></span>
+                                            ) : <span className="text-zinc-700 text-[9px]">Няма дребно</span>}
                                         </div>
-                                    </td>
                                     <td className="py-3 pr-4 hidden lg:table-cell text-zinc-500 text-xs">
                                         {new Date(p.updated_at).toLocaleDateString('bg-BG')}
                                     </td>
