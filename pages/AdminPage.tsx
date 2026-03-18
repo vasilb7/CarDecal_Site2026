@@ -11,6 +11,7 @@ import {
     Search, Plus, Edit3, Trash2, Shield, ShieldBan,
     ChevronDown, ChevronUp, Save, X, CheckCircle, AlertTriangle,
     Eye, EyeOff, Tag, Image, ArrowLeft, Loader2, RefreshCw,
+    Award, Layers,
     UserCheck, UserX, Crown, Upload, Video, Film, AlertCircle, Mail,
     Megaphone, Palette, Type, ShoppingBag, Receipt, Printer, Download,
     FileText, BoxSelect, LayoutGrid, ClipboardCheck, Boxes, FileJson, Clock, Bug,
@@ -26,6 +27,20 @@ import { PromoCodesTab } from '../components/Admin/PromoCodesTab';
 import SEO from '../components/SEO';
 import { logSecurityEvent } from '../lib/security';
 import DevicesSection from '../components/profile/DevicesSection';
+import OptimizedImage from '../components/ui/OptimizedImage';
+
+// ─── Slugify Helper ─────────────────────────────────────────────────────────
+const slugifyBulgarian = (text: string): string => {
+    const map: Record<string, string> = {
+        'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm', 'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u', 'ф': 'f', 'х': 'h', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'sht', 'ъ': 'a', 'ь': 'y', 'ю': 'yu', 'я': 'ya'
+    };
+    return text.toLowerCase()
+        .split('')
+        .map(char => map[char] || char)
+        .join('')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+};
 
 // ─── Custom Confirm Dialog ──────────────────────────────────────────────────
 interface ConfirmDialogProps {
@@ -207,6 +222,7 @@ const ProductEditModal: React.FC<{
         is_hidden: product?.is_hidden || false,
         is_different_item: product ? (product.categories?.includes('Всички') && !product.categories?.includes('Стикери')) : false,
         top_order: product?.top_order?.toString() || '',
+        isManualSlug: !!product?.slug, // If editing, assume manual. If new and empty, it's not manual.
     });
     const [saving, setSaving] = useState(false);
     const [uploading, setUploading] = useState<string | null>(null);
@@ -325,10 +341,10 @@ const ProductEditModal: React.FC<{
     return (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
             <motion.div 
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className="bg-[#111] border border-white/10 w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+                initial={{ opacity: 0, scale: 0.95, y: 30 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 30 }}
+                className="bg-[#0a0a0a] border border-white/10 w-full max-w-4xl max-h-[92vh] overflow-hidden shadow-[0_0_100px_rgba(220,38,38,0.15)] flex flex-col rounded-[2rem]"
             >
                 <div className="flex items-center justify-between p-6 border-b border-white/10">
                     <h2 className="text-lg font-bold uppercase tracking-widest text-white">
@@ -347,37 +363,60 @@ const ProductEditModal: React.FC<{
                         </div>
                     )}
 
-                    <div className="grid grid-cols-1 gap-4">
-                        <div>
-                            <label className="block text-xs uppercase tracking-widest text-zinc-400 mb-1.5">Slug (URL)</label>
-                            <input value={form.slug} onChange={e => setForm(p => ({...p, slug: e.target.value}))} className={inputClass} placeholder="6cm-01" />
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-4">
-                        <div>
-                            <label className="block text-xs uppercase tracking-widest text-zinc-400 mb-1.5">Наименование</label>
-                            <input 
-                                value={form.name_bg || form.name} 
-                                onChange={e => setForm(p => ({...p, name: e.target.value, name_bg: e.target.value}))} 
-                                className={inputClass} 
-                                placeholder="Орлови Очи" 
-                            />
-                        </div>
-                    </div>
-
-                    {/* Only Wholesale Price */}
-                    <div className="bg-black/20 border border-white/5 p-4">
-                        <p className="text-xs uppercase tracking-widest text-red-600 mb-3 font-bold">Цена на едро (в евро €)</p>
-                        <div className="grid grid-cols-1">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white/[0.02] p-6 rounded-2xl border border-white/5">
+                        <div className="space-y-4">
                             <div>
-                                <label className="block text-xs text-zinc-500 mb-1.5">Цена на едро (€)</label>
+                                <label className="block text-[10px] uppercase tracking-[0.3em] text-zinc-500 mb-2 font-bold">Наименование (BG)</label>
                                 <input 
-                                    type="number" step="0.01" min="0"
-                                    value={form.wholesale_price_eur}
-                                    onChange={e => setForm(p => ({...p, wholesale_price_eur: e.target.value}))}
-                                    className={inputClass}
-                                    placeholder="2.99"
+                                    value={form.name_bg || form.name} 
+                                    onChange={e => {
+                                        const val = e.target.value;
+                                        setForm(p => ({
+                                            ...p, 
+                                            name: val, 
+                                            name_bg: val,
+                                            slug: p.isManualSlug ? p.slug : slugifyBulgarian(val)
+                                        }));
+                                    }} 
+                                    className={`${inputClass} !rounded-xl !bg-white/5 !border-white/10 focus:!border-red-600/50 shadow-inner`} 
+                                    placeholder="пр: Бебе в колата момиче" 
+                                />
+                            </div>
+                            <div>
+                                <label className="text-[10px] uppercase tracking-[0.3em] text-zinc-500 mb-2 font-bold flex items-center justify-between">
+                                    Slug / URL
+                                    {!form.isManualSlug && <span className="text-[8px] bg-red-600/20 text-red-500 px-2 py-0.5 rounded-full">Auto</span>}
+                                </label>
+                                <input 
+                                    value={form.slug} 
+                                    onChange={e => setForm(p => ({...p, slug: e.target.value, isManualSlug: true}))} 
+                                    className={`${inputClass} !rounded-xl !bg-white/5 !border-white/10 focus:!border-red-600/50 font-mono text-xs`} 
+                                    placeholder="bebe-v-kolata-momiche" 
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-4 pt-2 md:pt-0">
+                             <div className="p-4 bg-red-600/[0.03] border border-red-600/10 rounded-2xl">
+                                <label className="block text-[10px] uppercase tracking-[0.4em] text-red-500/80 mb-3 font-black">Цена на едро (€)</label>
+                                <div className="relative">
+                                    <input 
+                                        type="number" step="0.01" min="0"
+                                        value={form.wholesale_price_eur}
+                                        onChange={e => setForm(p => ({...p, wholesale_price_eur: e.target.value}))}
+                                        className={`${inputClass} !rounded-xl !bg-black/40 !border-red-600/20 !text-xl !font-mono !h-14 !pl-4 focus:!border-red-600 shadow-2xl`}
+                                        placeholder="0.00"
+                                    />
+                                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-red-600 font-bold text-xl font-mono">€</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-[10px] uppercase tracking-[0.3em] text-zinc-500 mb-2 font-bold">Размери / Dimensions</label>
+                                <input 
+                                    value={form.dimensions} 
+                                    onChange={e => setForm(p => ({...p, dimensions: e.target.value}))} 
+                                    className={`${inputClass} !rounded-xl !bg-white/5 !border-white/10`} 
+                                    placeholder="пр: 12 x 12 cm" 
                                 />
                             </div>
                         </div>
@@ -912,43 +951,63 @@ const ProductsTab: React.FC = () => {
         }
     };
 
+    const totalStickers = products.length;
+    const hiddenCount = products.filter(p => p.is_hidden).length;
+    const bestSellerCount = products.filter(p => p.is_best_seller).length;
 
     return (
-        <div>
+        <div className="space-y-8 pb-20">
+            {/* ── Stats Row ── */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                {[
+                    { label: 'Общо Артикули', value: totalStickers, icon: Package, color: 'text-white' },
+                    { label: 'Скрити', value: hiddenCount, icon: EyeOff, color: 'text-amber-500' },
+                    { label: 'Топ Продукти', value: bestSellerCount, icon: Award, color: 'text-red-500' },
+                    { label: 'Категории', value: availableCategories.length, icon: Layers, color: 'text-blue-500' },
+                ].map((s, i) => (
+                    <div key={i} className="bg-white/[0.03] border border-white/5 p-6 rounded-[1.5rem] relative overflow-hidden group hover:bg-white/[0.05] transition-all duration-500">
+                        <div className="absolute top-0 left-0 w-1 h-full bg-red-600/0 group-hover:bg-red-600 transition-all duration-500" />
+                        <div className="flex items-center justify-between mb-2">
+                            <s.icon className={`w-5 h-5 ${s.color} opacity-60`} />
+                            <span className="text-[10px] uppercase tracking-[0.2em] text-zinc-500 font-bold">Статистика</span>
+                        </div>
+                        <div className="text-3xl font-black text-white font-mono">{s.value}</div>
+                        <div className="text-[11px] text-zinc-500 mt-1 uppercase tracking-widest">{s.label}</div>
+                    </div>
+                ))}
+            </div>
+
             {/* ── Toolbar ── */}
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
-                <div className="relative flex-1 max-w-md">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+            <div className="bg-white/[0.02] border border-white/5 p-4 rounded-[2rem] flex flex-col lg:flex-row items-center justify-between gap-4 backdrop-blur-md sticky top-4 z-40 shadow-2xl">
+                <div className="relative w-full lg:max-w-md group">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-red-500 transition-colors" />
                     <input
                         type="text"
                         value={search}
                         onChange={e => setSearch(e.target.value)}
-                        placeholder="Търси по slug, размер, название..."
-                        className="w-full bg-black/40 border border-white/10 text-white text-sm pl-10 pr-4 py-2.5 focus:outline-none focus:border-red-600/60"
+                        placeholder="Търси по име, слаг или размер..."
+                        className="w-full bg-black/40 border border-white/5 text-white text-sm pl-11 pr-4 py-3.5 focus:outline-none focus:border-red-600/40 rounded-2xl transition-all"
                     />
                 </div>
 
-                <div className="flex items-center gap-2 flex-wrap">
-                    {/* Sort */}
-                     <select
+                <div className="flex items-center gap-3 w-full lg:w-auto overflow-x-auto pb-2 lg:pb-0 hide-scrollbar">
+                    <select
                         value={sortBy}
                         onChange={e => setSortBy(e.target.value as typeof sortBy)}
-                        className="bg-black/40 border border-white/10 text-zinc-300 text-xs uppercase tracking-widest px-3 py-2.5 focus:outline-none focus:border-red-600/60 cursor-pointer"
+                        className="bg-black/60 border border-white/10 text-zinc-300 text-[10px] font-bold uppercase tracking-widest px-4 py-3.5 focus:outline-none rounded-xl cursor-pointer hover:border-red-600/30 transition-all min-w-[140px]"
                     >
-                        <option value="date">Най-нови</option>
+                        <option value="date">Последни</option>
                         <option value="slug">По Slug</option>
-                        <option value="dimensions">По Размер</option>
                         <option value="price">По Цена</option>
-                        <option value="name">По Название</option>
+                        <option value="name">По Име</option>
                     </select>
 
-                    {/* Size Filter */}
                     <select
                         value={sizeFilter}
                         onChange={e => setSizeFilter(e.target.value)}
-                        className="bg-black/40 border border-white/10 text-zinc-300 text-xs uppercase tracking-widest px-3 py-2.5 focus:outline-none focus:border-red-600/60 cursor-pointer"
+                        className="bg-black/60 border border-white/10 text-zinc-300 text-[10px] font-bold uppercase tracking-widest px-4 py-3.5 focus:outline-none rounded-xl cursor-pointer hover:border-red-600/30 transition-all min-w-[140px]"
                     >
-                        <option value="All">Всички размери</option>
+                        <option value="All">Всички Размери</option>
                         {availableSizes.map(size => (
                             <option key={size} value={size}>{size}</option>
                         ))}
@@ -957,13 +1016,13 @@ const ProductsTab: React.FC = () => {
                     <select
                         value={categoryFilter}
                         onChange={e => setCategoryFilter(e.target.value)}
-                        className="bg-black/40 border border-white/10 text-zinc-300 text-xs uppercase tracking-widest px-3 py-2.5 focus:outline-none focus:border-red-600/60 cursor-pointer"
+                        className="bg-black/60 border border-white/10 text-zinc-300 text-[10px] font-bold uppercase tracking-widest px-4 py-3.5 focus:outline-none rounded-xl cursor-pointer hover:border-red-600/30 transition-all min-w-[140px]"
                     >
-                        <option value="All">Всички категории</option>
+                        <option value="All">Всички Категории</option>
                         {availableCategories.map(cat => (
                             <option key={cat} value={cat}>{cat}</option>
                         ))}
-                    </select>
+                     </select>
 
                     {/* Grid / List toggle */}
                     <button
