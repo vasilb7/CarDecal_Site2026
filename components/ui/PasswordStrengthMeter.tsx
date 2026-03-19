@@ -141,29 +141,7 @@ const PasswordStrengthMeter: React.FC<PasswordStrengthMeterProps> = ({
                 </AnimatePresence>
             )}
 
-            {/* Risk Warning for Weak Passwords */}
-            <AnimatePresence>
-                {(strength.level === 'very_weak' || strength.level === 'weak') && (
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.95 }}
-                        className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 mt-2"
-                    >
-                        <div className="flex items-start gap-2.5">
-                            <div className="mt-0.5 w-4 h-4 rounded-full bg-red-500/20 flex items-center justify-center shrink-0">
-                                <span className="text-red-500 text-[10px] font-black">!</span>
-                            </div>
-                            <div>
-                                <h4 className="text-red-500 text-xs font-black uppercase tracking-wider mb-1">Риск при слаба парола</h4>
-                                <p className="text-white/70 text-xs leading-relaxed">
-                                    Използването на слаба парола увеличава риска от неоторизиран достъп до вашия акаунт. Препоръчваме добавянето на главни букви или символи за по-голяма сигурност.
-                                </p>
-                            </div>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+
         </motion.div>
     );
 };

@@ -210,7 +210,8 @@ function AppContent() {
   }
 
   // Onboarding block - strictly force completion before using the site
-  const isOnboardingRequired = isAuthenticated && profile?.onboarding_completed === false;
+  const isEmailUser = user?.app_metadata?.provider === 'email';
+  const isOnboardingRequired = isAuthenticated && profile?.onboarding_completed === false && (!isEmailUser || (!profile?.full_name || !profile?.phone));
 
   if (isOnboardingRequired) {
     return (

@@ -143,19 +143,32 @@ CREATE OR REPLACE FUNCTION "public"."handle_new_user"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public'
     AS $$
-BEGIN
-  INSERT INTO public.profiles (id, email, full_name, avatar_url, phone)
+  INSERT INTO public.profiles (
+    id, 
+    email, 
+    full_name, 
+    avatar_url, 
+    phone,
+    onboarding_completed,
+    is_company,
+    account_type
+  )
   VALUES (
     NEW.id,
     NEW.email,
     COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name', ''),
     COALESCE(NEW.raw_user_meta_data->>'avatar_url', NEW.raw_user_meta_data->>'picture'),
-    NEW.raw_user_meta_data->>'phone'
+    NEW.raw_user_meta_data->>'phone',
+    COALESCE((NEW.raw_user_meta_data->>'onboarding_completed')::boolean, false),
+    COALESCE((NEW.raw_user_meta_data->>'is_company')::boolean, false),
+    COALESCE(NEW.raw_user_meta_data->>'account_type', 'personal')
   )
   ON CONFLICT (id) DO UPDATE SET
     full_name = EXCLUDED.full_name,
     avatar_url = COALESCE(EXCLUDED.avatar_url, profiles.avatar_url),
-    email = EXCLUDED.email;
+    email = EXCLUDED.email,
+    phone = COALESCE(EXCLUDED.phone, profiles.phone),
+    onboarding_completed = COALESCE(EXCLUDED.onboarding_completed, profiles.onboarding_completed);
     
   RETURN NEW;
 END;
@@ -348,6 +361,17 @@ CREATE TABLE IF NOT EXISTS "public"."profiles" (
     "last_full_name" "text",
     "deletion_scheduled_at" timestamp with time zone,
     "deletion_reason" "text",
+    "onboarding_completed" boolean DEFAULT false,
+    "is_company" boolean DEFAULT false,
+    "account_type" "text" DEFAULT 'personal'::"text",
+    "bulstat" "text",
+    "company_person" "text",
+    "vat_registered" boolean DEFAULT false,
+    "vat_number" "text",
+    "company_name" "text",
+    "company_address" "text",
+    "first_name" "text",
+    "last_name" "text",
     CONSTRAINT "profiles_role_check" CHECK (("role" = ANY (ARRAY['user'::"text", 'admin'::"text", 'editor'::"text"])))
 );
 

@@ -10,7 +10,9 @@ import { isValidPhone as isValidBulgarianPhone, isValidFullName, formatToE164, f
 import ReportBugModal from '../components/ReportBugModal';
 import { hasProfanity } from '../lib/profanity';
 import { Turnstile } from '@marsidev/react-turnstile';
-import { Eye, EyeOff, Loader2, CheckCircle2, ArrowLeft, Building2, User, Check } from 'lucide-react';
+import { getTurnstileSiteKey, isLocalEnvironment } from '../lib/turnstile';
+import { Eye, EyeOff, Loader2, CheckCircle2, ArrowLeft, Building2, User, Check, X } from 'lucide-react';
+import PasswordStrengthMeter from '../components/ui/PasswordStrengthMeter';
 
 const GoogleIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -79,6 +81,7 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string>();
+  const turnstileRef = useRef<any>(null);
   
   // Login Fields
   const [loginEmail, setLoginEmail] = useState("");
@@ -121,10 +124,6 @@ export default function AuthPage() {
   }, [user, authLoading, profile]);
 
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>, setter: (v: string) => void) => {
-    const val = e.target.value;
-    if (/[а-яА-Я]/.test(val)) {
-      e.target.value = val.replace(/[а-яА-Я]/g, '');
-    }
     setter(e.target.value);
   };
 
@@ -182,7 +181,11 @@ export default function AuthPage() {
     
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: loginEmail, password: loginPassword, options: { captchaToken }
+        email: loginEmail, 
+        password: loginPassword, 
+        options: { 
+          captchaToken: isLocalEnvironment() ? undefined : captchaToken 
+        }
       });
 
       if (error) {
@@ -194,6 +197,9 @@ export default function AuthPage() {
         } else {
             showToast(error.message, "error");
         }
+        // Reset captcha on failure
+        turnstileRef.current?.reset();
+        setCaptchaToken(undefined);
       } else {
         recordSuccessfulLogin(data?.user?.id).catch(console.error);
         const md = data?.user?.user_metadata || {};
@@ -206,6 +212,8 @@ export default function AuthPage() {
       }
     } catch (err: any) {
       showToast(t('toast.login_error_generic', 'Грешка при вход.'), "error");
+      turnstileRef.current?.reset();
+      setCaptchaToken(undefined);
     } finally {
       setLoading(false);
     }
@@ -242,7 +250,7 @@ export default function AuthPage() {
 
       const pwdValidation = validatePassword(regPassword);
       if (!pwdValidation.isValid) {
-          showToast('Моля, изпълнете изискванията за парола по-долу.', 'error');
+          showToast('Паролата трябва да е поне 8 символа и да съдържа поне една буква.', 'error');
           setLoading(false);
           return;
       }
@@ -266,9 +274,9 @@ export default function AuthPage() {
             last_name: lastName,
             phone: normalizedPhone,
             role: 'user',
-            onboarding_completed: false
+            onboarding_completed: true
           },
-          captchaToken
+          captchaToken: isLocalEnvironment() ? undefined : captchaToken
         }
       });
 
@@ -277,13 +285,21 @@ export default function AuthPage() {
       // After successful signUp, we are either logged in or need confirmation
       // If we have a session/user now, move to onboarding
       if (data?.user) {
-        setView('onboarding');
+        if (data.user.user_metadata?.onboarding_completed) {
+          showToast(t('toast.register_success', 'Регистрацията е успешна!'), 'success');
+          const from = (location.state as any)?.from || '/';
+          navigate(from, { replace: true });
+        } else {
+          setView('onboarding');
+        }
       } else {
         showToast('Моля, проверете имейла си за потвърждение.', 'success');
         setView('login');
       }
     } catch (err: any) {
       showToast(translateAuthError(err), 'error');
+      turnstileRef.current?.reset();
+      setCaptchaToken(undefined);
     } finally {
       setLoading(false);
     }
@@ -350,16 +366,20 @@ export default function AuthPage() {
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(recoveryEmail, {
         redirectTo: `${window.location.origin}/reset-password`,
-        captchaToken,
+        captchaToken: isLocalEnvironment() ? undefined : captchaToken,
       });
 
       if (error) {
         showToast(translateAuthError(error), 'error');
+        turnstileRef.current?.reset();
+        setCaptchaToken(undefined);
       } else {
         setRecoverySent(true);
       }
     } catch (err: any) {
       showToast(translateAuthError(err), 'error');
+      turnstileRef.current?.reset();
+      setCaptchaToken(undefined);
     } finally {
       setLoading(false);
     }
@@ -429,7 +449,12 @@ export default function AuthPage() {
               </div>
 
               <div className="flex justify-center mt-2 min-h-[65px] w-full overflow-hidden">
-                <Turnstile siteKey="0x4AAAAAACn8KBpSOynPkBCf" onSuccess={(token) => setCaptchaToken(token)} options={{ theme: 'dark', size: 'flexible' }} />
+                <Turnstile 
+                  ref={turnstileRef}
+                  siteKey={getTurnstileSiteKey()} 
+                  onSuccess={(token) => setCaptchaToken(token)} 
+                  options={{ theme: 'dark', size: 'flexible' }} 
+                />
               </div>
 
               <button
@@ -525,9 +550,15 @@ export default function AuthPage() {
                 value={regPassword}
                 required
               />
+              <PasswordStrengthMeter password={regPassword} />
 
               <div className="flex justify-center mt-2 min-h-[65px] w-full overflow-hidden">
-                <Turnstile siteKey="0x4AAAAAACn8KBpSOynPkBCf" onSuccess={(token) => setCaptchaToken(token)} options={{ theme: 'dark', size: 'flexible' }} />
+                <Turnstile 
+                  ref={turnstileRef}
+                  siteKey={getTurnstileSiteKey()} 
+                  onSuccess={(token) => setCaptchaToken(token)} 
+                  options={{ theme: 'dark', size: 'flexible' }} 
+                />
               </div>
 
               <button
@@ -647,7 +678,12 @@ export default function AuthPage() {
                   />
                   
                   <div className="flex justify-center mt-2 min-h-[65px] w-full overflow-hidden">
-                    <Turnstile siteKey="0x4AAAAAACn8KBpSOynPkBCf" onSuccess={(token) => setCaptchaToken(token)} options={{ theme: 'dark', size: 'flexible' }} />
+                    <Turnstile 
+                      ref={turnstileRef}
+                      siteKey={getTurnstileSiteKey()} 
+                      onSuccess={(token) => setCaptchaToken(token)} 
+                      options={{ theme: 'dark', size: 'flexible' }} 
+                    />
                   </div>
 
                   <button

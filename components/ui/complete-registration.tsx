@@ -107,12 +107,21 @@ export const CompleteRegistrationModal = () => {
         if (!user || authLoading) {
             needsCompletion = false;
         } else {
-            // Re-check for onboarding_completed if profile is loaded
             const isOnboardingDone = profile?.onboarding_completed ?? false;
             const isEmailUser = user?.app_metadata?.provider === 'email';
 
-            // Only show for non-email users (e.g. Google) who have incomplete data
-            needsCompletion = !isEmailUser && (!userName || !userPhone || !isOnboardingDone);
+            // Email users already provide name/phone during registration
+            // We only need to show this for non-email users (Google) who lack data,
+            // OR if it's an email user who somehow ended up with missing name/phone
+            const missingData = !userName || !userPhone;
+            
+            if (isEmailUser) {
+                // For email users, only show if they are really missing critical info AND not marked as done
+                needsCompletion = missingData && !isOnboardingDone;
+            } else {
+                // For Google users, show if any data is missing OR onboarding is not done
+                needsCompletion = missingData || !isOnboardingDone;
+            }
         }
 
         if (needsCompletion) {
@@ -290,7 +299,8 @@ export const CompleteRegistrationModal = () => {
     };
 
     // Use the same blocking logic as App.tsx
-    const isBlocking = !!user && profile?.onboarding_completed === false;
+    const isEmailUser = user?.app_metadata?.provider === 'email';
+    const isBlocking = !!user && profile?.onboarding_completed === false && (!isEmailUser || (!profile?.full_name || !profile?.phone));
 
     if (!isBlocking && !isOpen) return null;
 

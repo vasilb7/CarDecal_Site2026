@@ -35,19 +35,15 @@ export interface PasswordStrength {
  */
 export function validatePassword(password: string): PasswordValidation {
     const checks: PasswordCheck[] = [
-        { id: 'length', label: 'Минимум 6 символа', passed: password.length >= 6 },
-        { id: 'language', label: 'Само на латиница (без кирилица)', passed: /^[\x20-\x7E]*$/.test(password) },
-        { id: 'lowercase', label: 'Препоръчително: Малка буква (a-z)', passed: /[a-z]/.test(password) },
-        { id: 'uppercase', label: 'Препоръчително: Главна буква (A-Z)', passed: /[A-Z]/.test(password) },
-        { id: 'digit', label: 'Препоръчително: Цифра (0-9)', passed: /\d/.test(password) },
-        { id: 'symbol', label: 'Препоръчително: Специален символ (@#$...)', passed: /[^A-Za-z0-9]/.test(password) },
+        { id: 'length', label: 'Минимум 8 символа', passed: password.length >= 8 },
+        { id: 'letter', label: 'Поне една буква', passed: /[a-zA-Zа-яА-Я]/.test(password) },
     ];
 
-    const isLanguageOk = checks.find(c => c.id === 'language')?.passed ?? true;
-    const isLengthOk = password.length >= 6;
+    const isLengthOk = password.length >= 8;
+    const hasLetter = checks.find(c => c.id === 'letter')?.passed ?? false;
 
-    // We only block if length is < 6 or contains Cyrillic/Illegal chars
-    const isValid = isLengthOk && isLanguageOk;
+    // We block if length is < 8 OR no letter
+    const isValid = isLengthOk && hasLetter;
 
     return {
         checks,
@@ -98,7 +94,7 @@ export function translateAuthError(error: any): string {
 
     // By error code
     const codeMap: Record<string, string> = {
-        'weak_password': 'Паролата се отхвърля от системата като слаба. Моля, добавете ГЛАВНА буква, цифра или я направете по-дълга.',
+        'weak_password': 'Паролата се отхвърля от системата като слаба. Опитайте с по-дълга парола или добавете цифри.',
         'same_password': 'Новата парола не може да е същата като текущата.',
         'email_exists': 'Този имейл адрес вече е регистриран.',
         'user_already_exists': 'Потребител с този имейл вече съществува.',
@@ -127,7 +123,7 @@ export function translateAuthError(error: any): string {
     if (msg.includes('invalid login credentials')) return 'Невалиден имейл или парола.';
     if (msg.includes('email rate limit')) return 'Твърде много опити. Моля, изчакайте преди да опитате отново.';
     if (msg.includes('password') && msg.includes('weak')) return 'Паролата е твърде слаба. Използвайте по-сигурна комбинация.';
-    if (msg.includes('password') && msg.includes('short')) return 'Паролата е твърде кратка. Трябва да е поне 6 символа.';
+    if (msg.includes('password') && msg.includes('short')) return 'Паролата е твърде кратка. Трябва да е поне 8 символа.';
     if (msg.includes('password') && msg.includes('long')) return 'Паролата е твърде дълга. Максимум 64 символа.';
     if (msg.includes('email') && msg.includes('invalid')) return 'Моля, въведете валиден имейл адрес.';
     if (msg.includes('network') || msg.includes('fetch')) return 'Проблем с връзката. Проверете интернет свързаността си.';
