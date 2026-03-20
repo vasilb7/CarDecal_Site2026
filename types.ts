@@ -13,6 +13,7 @@ export interface Product {
   isBestSeller?: boolean;
   isHidden?: boolean;
   top_order?: number | null;
+  display_rank?: number | null;
   // legacy - kept so old references don't break with undefined
   nameBg?: string;
   coverImage?: string;
@@ -28,6 +29,8 @@ export interface Product {
   finish?: string;
   material?: string;
   description?: string;
+  variant_label?: string;
+  variants?: { name: string; avatar?: string }[];
 }
 
 export type ModerationStatus = 'active' | 'temporarily_suspended' | 'permanently_banned';

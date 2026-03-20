@@ -2,9 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { 
-    CheckCircle2, Package, Truck, Calendar, 
-    ArrowRight, Download, Printer, ShoppingBag,
-    Loader2
+    Check, ShoppingBag, History, Printer, X,
+    ArrowRight, Loader2, Sparkles, Trophy
 } from 'lucide-react';
 import { getOrderById, Order } from '../lib/order-api';
 import { useToast } from '../components/Toast/ToastProvider';
@@ -34,8 +33,6 @@ const OrderSuccessPage: React.FC = () => {
         fetchOrder();
     }, [orderId, showToast]);
 
-    const isFreeShipping = order ? order.total_amount >= (150 / 1.95583) : false;
-
     if (loading) {
         return (
             <div className="min-h-screen bg-black flex items-center justify-center">
@@ -53,170 +50,153 @@ const OrderSuccessPage: React.FC = () => {
         );
     }
 
-    const containerVariants = {
-        hidden: { opacity: 0, y: 20 },
-        visible: { 
-            opacity: 1, 
-            y: 0,
-            transition: { duration: 0.6, staggerChildren: 0.1 }
-        }
-    };
-
-    const itemVariants = {
-        hidden: { opacity: 0, y: 10 },
-        visible: { opacity: 1, y: 0 }
-    };
+    const earnedCoins = Math.floor(order.total_amount);
 
     return (
-        <div className="min-h-screen bg-[#050505] pt-32 pb-24 px-4 overflow-hidden relative">
-            <SEO title={`Успешна поръчка #${order?.order_number || ''}`} />
+        <div className="min-h-screen bg-[#050505] flex items-center justify-center p-4 relative overflow-hidden">
+            <SEO title={`Успешна поръчка #${order.order_number}`} />
             
-            {/* Ambient Background */}
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[500px] bg-gradient-to-b from-red-900/10 to-transparent pointer-events-none" />
+            {/* Ambient Background Effects */}
+            <div className="absolute inset-0 bg-gradient-to-b from-red-600/5 via-transparent to-transparent pointer-events-none" />
+            <div className="absolute -top-[20%] -left-[10%] w-[60%] h-[60%] bg-red-600/10 blur-[150px] rounded-full pointer-events-none animate-pulse" />
             
-            <motion.div 
-                variants={containerVariants}
-                initial="hidden"
-                animate="visible"
-                className="max-w-4xl mx-auto relative z-10"
+            {/* Close Button */}
+            <button 
+                onClick={() => navigate('/catalog')}
+                className="absolute top-8 right-8 w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/10 transition-all z-50 group"
             >
-                {/* Status Hero */}
-                <div className="text-center mb-16">
+                <X size={20} className="group-hover:rotate-90 transition-transform duration-300" />
+            </button>
+
+            <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="max-w-xl w-full relative z-10"
+            >
+                <div className="text-center">
+                    {/* Large Checkmark Wrapper */}
                     <motion.div 
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
-                        transition={{ type: "spring", damping: 12, stiffness: 200 }}
-                        className="w-24 h-24 bg-green-500/10 border border-green-500/20 rounded-full flex items-center justify-center mx-auto mb-8 shadow-[0_0_50px_rgba(34,197,94,0.1)]"
+                        transition={{ type: "spring", damping: 15, stiffness: 200, delay: 0.1 }}
+                        className="w-24 h-24 bg-green-500/10 border-2 border-green-500/20 rounded-full flex items-center justify-center mx-auto mb-10 shadow-[0_0_60px_rgba(34,197,94,0.15)] relative"
                     >
-                        <CheckCircle2 className="w-12 h-12 text-green-500" />
-                    </motion.div>
-                    
-                    <motion.h1 
-                        variants={itemVariants}
-                        className="text-4xl md:text-6xl font-black text-white uppercase tracking-tighter mb-4"
-                    >
-                        Поръчката е <span className="text-red-600">Приета!</span>
-                    </motion.h1>
-                    
-                    <motion.p variants={itemVariants} className="text-[#B0BEC5] uppercase tracking-[0.3em] text-xs md:text-sm font-medium opacity-80 max-w-lg mx-auto leading-relaxed">
-                        Благодарим Ви, че избрахте CarDecal. Очаквайте обаждане от наш консултант за потвърждение.
-                    </motion.p>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12 mb-16">
-                    {/* Order Details Card */}
-                    <motion.div variants={itemVariants} className="bg-[#101010] border border-white/5 rounded-[32px] p-8 md:p-10 shadow-2xl">
-                        <div className="flex items-center gap-3 mb-8">
-                            <Package className="w-5 h-5 text-red-600" />
-                            <h2 className="text-xs uppercase tracking-[0.2em] text-white font-black">Информация за поръчката</h2>
-                        </div>
+                        <motion.div
+                            initial={{ pathLength: 0 }}
+                            animate={{ pathLength: 1 }}
+                            transition={{ duration: 0.5, delay: 0.4 }}
+                        >
+                            <Check className="w-10 h-10 text-green-500" strokeWidth={3} />
+                        </motion.div>
                         
-                        <div className="space-y-6">
-                            <div className="flex justify-between items-center pb-4 border-b border-white/5">
-                                <span className="text-[10px] uppercase font-bold tracking-widest text-zinc-500">Номер на поръчка</span>
-                                <span className="text-sm font-black text-white uppercase tracking-wider">#{order.order_number}</span>
+                        {/* Floating elements */}
+                        <motion.div 
+                            animate={{ y: [0, -10, 0] }}
+                            transition={{ duration: 3, repeat: Infinity }}
+                            className="absolute -top-2 -right-2 w-8 h-8 bg-zinc-900 rounded-lg border border-white/5 flex items-center justify-center shadow-xl"
+                        >
+                            <Sparkles className="text-amber-500" size={12} />
+                        </motion.div>
+                    </motion.div>
+
+                    <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.2 }}
+                    >
+                        <h1 className="text-3xl md:text-5xl font-black text-white uppercase tracking-tighter mb-4 leading-none">
+                            Благодарим Ви за <span className="text-red-600">Доверието!</span>
+                        </h1>
+                        <p className="text-zinc-500 font-bold uppercase tracking-[0.2em] text-[10px] md:text-xs max-w-[320px] mx-auto leading-relaxed">
+                            Вашата транзакция бе завършена успешно. Очаквайте обаждане за потвърждение.
+                        </p>
+                    </motion.div>
+
+                    {/* Loyalty Points Card */}
+                    <motion.div 
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.4 }}
+                        className="mt-12 p-1 bg-gradient-to-br from-amber-500/20 via-transparent to-transparent rounded-[2.5rem]"
+                    >
+                        <div className="bg-[#0a0a0a] border border-white/5 p-6 md:p-8 rounded-[2.4rem] relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 p-4 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity">
+                                <Trophy size={100} className="rotate-12" />
                             </div>
-                            <div className="flex justify-between items-center pb-4 border-b border-white/5">
-                                <span className="text-[10px] uppercase font-bold tracking-widest text-zinc-500">Дата</span>
-                                <span className="text-sm font-medium text-white">
-                                    {new Date(order.created_at).toLocaleDateString('bg-BG')}
-                                </span>
+                            
+                            <div className="flex items-center justify-between gap-4 relative z-10">
+                                <div className="flex items-center gap-4 text-left">
+                                    <div className="w-16 h-16 bg-amber-500/10 rounded-2xl flex items-center justify-center border border-amber-500/10 shadow-[0_0_20px_rgba(245,158,11,0.1)]">
+                                        <img src="/CDcoin.png" alt="coin" className="w-8 h-8 object-contain" />
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] text-amber-500/60 font-black uppercase tracking-[0.2em] mb-1">Току-що спечелихте</p>
+                                        <h2 className="text-3xl font-black text-white italic tracking-tight">+{earnedCoins} <span className="text-amber-500">Coins</span></h2>
+                                    </div>
+                                </div>
                             </div>
-                            <div className="flex justify-between items-center pb-4 border-b border-white/5">
-                                <span className="text-[10px] uppercase font-bold tracking-widest text-zinc-500">Статус</span>
-                                <span className="px-3 py-1 bg-red-600/10 border border-red-600/20 text-red-500 text-[10px] font-black uppercase tracking-widest rounded-full">
-                                    Очаква потвърждение
-                                </span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                                <span className="text-[10px] uppercase font-bold tracking-widest text-zinc-500">Обща сума</span>
-                                <div className="flex flex-col items-end">
-                                    <span className="text-xl font-black text-red-600 italic">{order.total_amount.toFixed(2)} €</span>
-                                    <span className="text-[9px] text-zinc-500 font-bold opacity-60">≈ {(order.total_amount * 1.95583).toFixed(2)} лв.</span>
-                                    {isFreeShipping && (
-                                        <span className="text-[8px] font-black text-green-500 uppercase tracking-widest mt-1">Доставка: Безплатна</span>
-                                    )}
+                            
+                            <div className="mt-6 pt-6 border-t border-white/5 flex items-center justify-between text-[10px] font-black uppercase tracking-widest leading-none">
+                                <div className="text-left">
+                                    <p className="text-zinc-600 mb-1.5">Равностойност</p>
+                                    <p className="text-white">{(earnedCoins * 0.01).toFixed(2)} € Отстъпка</p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-zinc-600 mb-1.5">Статус</p>
+                                    <p className="text-amber-500 animate-pulse">Обработка...</p>
                                 </div>
                             </div>
                         </div>
                     </motion.div>
 
-                    {/* Delivery & Next Steps */}
-                    <div className="space-y-8">
-                        <motion.div variants={itemVariants} className="bg-[#101010] border border-white/5 rounded-[32px] p-8 md:p-10 shadow-2xl">
-                            <div className="flex items-center gap-3 mb-6">
-                                <Truck className="w-5 h-5 text-red-600" />
-                                <h2 className="text-xs uppercase tracking-[0.2em] text-white font-black">Доставка</h2>
-                            </div>
-                            <div className="space-y-4">
-                                <p className="text-sm text-white font-semibold uppercase tracking-tight">{order.shipping_details.fullName}</p>
-                                <div className="flex flex-col gap-1">
-                                    <p className="text-zinc-400 text-xs flex items-center gap-2">
-                                        <span className="px-1.5 py-0.5 bg-red-600/20 text-red-500 rounded text-[9px] font-black uppercase">
-                                            {order.shipping_details.deliveryType === 'office' ? 'Еконт Офис' : 'До Адрес'}
-                                        </span>
-                                        {order.shipping_details.city}
-                                    </p>
-                                    <p className="text-zinc-500 text-[11px] italic font-medium">
-                                        {order.shipping_details.deliveryType === 'office' 
-                                            ? order.shipping_details.officeName 
-                                            : order.shipping_details.address}
-                                    </p>
-                                </div>
-                                <p className="text-zinc-400 text-xs pt-2">
-                                    {order.shipping_details.phone}
-                                </p>
-                            </div>
-                        </motion.div>
+                    {/* Quick Access Info */}
+                    <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.6 }}
+                        className="mt-10 grid grid-cols-2 gap-4"
+                    >
+                        <div className="p-4 bg-white/[0.02] border border-white/5 rounded-2xl text-left">
+                            <p className="text-[9px] text-zinc-600 font-black uppercase tracking-widest mb-1.5">Номер на поръчка</p>
+                            <p className="text-xs font-black text-white tracking-widest italic">#{order.order_number}</p>
+                        </div>
+                        <div className="p-4 bg-white/[0.02] border border-white/5 rounded-2xl text-left">
+                            <p className="text-[9px] text-zinc-600 font-black uppercase tracking-widest mb-1.5">Метод на плащане</p>
+                            <p className="text-xs font-black text-white uppercase italic">Наложен платеж</p>
+                        </div>
+                    </motion.div>
 
-                        <motion.div variants={itemVariants} className="bg-white/2 border border-white/5 rounded-[32px] p-8 md:p-10">
-                            <h3 className="text-[10px] uppercase tracking-[0.3em] text-zinc-400 font-black mb-6">Какво следва?</h3>
-                            <div className="space-y-6">
-                                {[
-                                    { step: 1, text: "Проверка на наличност и подготовка." },
-                                    { step: 2, text: "Потвърждение по телефона." },
-                                    { step: 3, text: "Изпращане и доставка до 48ч." }
-                                ].map((s) => (
-                                    <div key={s.step} className="flex gap-4">
-                                        <div className="w-6 h-6 rounded-full border border-red-600/30 flex items-center justify-center text-[10px] font-black text-red-600 shrink-0">{s.step}</div>
-                                        <p className="text-xs text-zinc-300 font-medium leading-relaxed">{s.text}</p>
-                                    </div>
-                                ))}
-                            </div>
-                        </motion.div>
-                    </div>
-                </div>
+                    {/* Action Buttons */}
+                    <motion.div 
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.8 }}
+                        className="mt-10 flex flex-col sm:flex-row items-center gap-4"
+                    >
+                        <Link 
+                            to="/catalog"
+                            className="w-full h-14 bg-white text-black text-[11px] font-black uppercase tracking-[0.3em] rounded-2xl flex items-center justify-center gap-2 hover:bg-zinc-200 transition-all shadow-[0_10px_30px_rgba(255,255,255,0.1)]"
+                        >
+                            Продължи Пазаруването
+                            <ArrowRight size={14} />
+                        </Link>
+                        <Link 
+                            to="/profile"
+                            className="w-full h-14 bg-[#101010] border border-white/5 text-white text-[11px] font-black uppercase tracking-[0.3em] rounded-2xl flex items-center justify-center gap-2 hover:bg-white/5 transition-all"
+                        >
+                            Към Портфейла
+                            <History size={14} className="text-amber-500" />
+                        </Link>
+                    </motion.div>
 
-                {/* Actions */}
-                <motion.div variants={itemVariants} className="flex flex-col md:flex-row items-center justify-center gap-4">
-                    <Link 
-                        to={`/account/orders/${orderId}`}
-                        className="w-full md:w-auto px-10 py-5 bg-white text-black text-xs font-black uppercase tracking-[0.3em] rounded-2xl hover:bg-zinc-200 transition-all flex items-center justify-center gap-3 shadow-xl"
+                    <motion.p 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 0.5 }}
+                        transition={{ delay: 1 }}
+                        className="mt-8 text-[9px] text-zinc-600 font-bold uppercase tracking-[0.3em]"
                     >
-                        Виж детайли
-                        <ArrowRight className="w-4 h-4" />
-                    </Link>
-                    
-                    <Link 
-                        to={`/order/receipt/${orderId}`}
-                        target="_blank"
-                        className="w-full md:w-auto px-10 py-5 bg-[#101010] border border-white/10 text-white text-xs font-black uppercase tracking-[0.3em] rounded-2xl hover:bg-white/5 transition-all flex items-center justify-center gap-3"
-                    >
-                        <Printer className="w-4 h-4 text-red-600" />
-                        Бележка (PDF)
-                    </Link>
-                    
-                    <Link 
-                        to="/catalog"
-                        className="w-full md:w-auto px-10 py-5 text-zinc-500 hover:text-white text-xs font-black uppercase tracking-[0.3em] transition-all flex items-center justify-center gap-3"
-                    >
-                        <ShoppingBag className="w-4 h-4" />
-                        Към магазина
-                    </Link>
-                </motion.div>
-                
-                <div className="mt-16 pt-8 border-t border-white/5 text-center">
-                    <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-[0.4em]">CarDecal – Premium Style & Quality</p>
+                        Изпратихме детайли на имейл: {order.shipping_details.email}
+                    </motion.p>
                 </div>
             </motion.div>
         </div>

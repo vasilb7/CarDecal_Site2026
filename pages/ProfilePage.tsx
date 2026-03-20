@@ -13,6 +13,7 @@ import { AvatarCropModal } from '../components/AvatarCropModal';
 import { isValidPhone as isValidBulgarianPhone, isValidFullName, formatToE164, formatPhoneNumber } from '../lib/utils';
 import DevicesSection from '../components/profile/DevicesSection';
 import AddressesTab from '../components/profile/AddressesTab';
+import WalletTab from '../components/profile/WalletTab';
 import {
     User, Camera, LogOut, Settings, ShoppingBag,
     ChevronRight, Save, Loader2, Lock,
@@ -448,22 +449,7 @@ const SettingsTab: React.FC<{
 
     return (
         <div className="space-y-6">
-            {/* Admin Profile/Global Note */}
-            {profile?.admin_notes && (
-                <motion.div 
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="bg-zinc-900/50 border border-red-600/20 p-6 rounded-3xl flex items-start gap-4 shadow-xl"
-                >
-                    <div className="p-3 rounded-2xl bg-red-600/10 border border-red-600/20 shrink-0">
-                        <Megaphone className="w-6 h-6 text-red-500" />
-                    </div>
-                    <div>
-                        <h4 className="text-sm font-black text-white uppercase tracking-wider mb-1">Важно съобщение за Вашия профил</h4>
-                        <p className="text-zinc-400 text-sm leading-relaxed">{profile.admin_notes}</p>
-                    </div>
-                </motion.div>
-            )}
+
 
             {/* General Settings Card */}
             <div className={cardWrapCls}>
@@ -1118,7 +1104,11 @@ const DashboardGrid: React.FC<{
                     >
                         <div className="flex items-center gap-4 sm:gap-6">
                             <div className="w-10 h-10 sm:w-14 sm:h-14 flex items-center justify-center text-zinc-800 dark:text-zinc-200 group-hover:text-red-600 transition-colors">
-                                <card.icon className="w-6 h-6 sm:w-8 sm:h-8" strokeWidth={1.2} />
+                                {typeof card.icon === 'function' ? (
+                                    <card.icon />
+                                ) : (
+                                    <card.icon className="w-6 h-6 sm:w-8 sm:h-8" strokeWidth={1.2} />
+                                )}
                             </div>
                             <span className="text-zinc-900 dark:text-white font-bold text-sm sm:text-lg tracking-tight">{card.label}</span>
                         </div>
@@ -1325,6 +1315,7 @@ const ProfilePage: React.FC = () => {
 
     const tabs: { id: ProfileTab; label: string; icon: React.ElementType }[] = [
         { id: 'orders',   label: 'Поръчки',   icon: ShoppingBag },
+        { id: 'wallet',   label: 'Портфейл',   icon: Wallet },
         { id: 'settings', label: 'Настройки', icon: Settings },
     ];
 
@@ -1394,11 +1385,12 @@ const ProfilePage: React.FC = () => {
                             />
                         )}
                         
-                        {(activeTab === 'orders' || activeTab === 'settings' || activeTab === 'addresses' || activeTab === 'company' || activeTab === 'favorites') && (
+                        {(activeTab === 'orders' || activeTab === 'settings' || activeTab === 'addresses' || activeTab === 'company' || activeTab === 'favorites' || activeTab === 'wallet') && (
                             <div className={`${activeTab === 'favorites' ? 'max-w-6xl' : 'max-w-4xl'} mx-auto px-6`}>
                                 {activeTab === 'orders' && <OrdersTab orders={orders} loading={ordersLoading} user={user} />}
                                 {activeTab === 'company' && <CompanyTab profile={profile} />}
                                 {activeTab === 'favorites' && <FavoritesTab />}
+                                {activeTab === 'wallet' && <WalletTab onBack={() => setActiveTab('dashboard')} />}
 
                                 {activeTab === 'settings' && (
                                     <SettingsTab
@@ -1415,7 +1407,7 @@ const ProfilePage: React.FC = () => {
                             </div>
                         )}
 
-                        {!['dashboard', 'orders', 'settings', 'addresses', 'company', 'favorites'].includes(activeTab) && (
+                        {!['dashboard', 'orders', 'settings', 'addresses', 'company', 'favorites', 'wallet'].includes(activeTab) && (
 
                             <div className="max-w-4xl mx-auto px-6 py-20 text-center">
                                 <div className="w-24 h-24 bg-zinc-900 border border-white/5 rounded-full flex items-center justify-center mx-auto mb-6 text-zinc-700">
@@ -1447,6 +1439,15 @@ const ProfilePage: React.FC = () => {
                     }}
                 />
             )}
+
+            {/* Hidden Input for Avatar */}
+            <input
+                type="file"
+                ref={avatarInputRef}
+                onChange={handleAvatarFile}
+                accept="image/*"
+                className="hidden"
+            />
         </div>
     );
 };

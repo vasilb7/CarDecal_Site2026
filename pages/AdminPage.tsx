@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { normalizeSearch } from '../lib/search-utils';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useProducts } from '../hooks/useProducts';
+import type { Product } from '../types';
 import { useSiteSettings } from '../context/SiteSettingsContext';
 import {
     LayoutDashboard, Package, Users, User, Settings, LogOut,
@@ -15,7 +16,7 @@ import {
     UserCheck, UserX, Crown, Upload, Video, Film, AlertCircle, Mail,
     Megaphone, Palette, Type, ShoppingBag, Receipt, Printer, Download,
     FileText, BoxSelect, LayoutGrid, ClipboardCheck, Boxes, FileJson, Clock, Bug,
-    Banknote, TrendingUp, Key, ChevronRight, History, Ticket, Building2, Phone, Calendar
+    Banknote, TrendingUp, Key, ChevronRight, History, Ticket, Building2, Phone, Calendar, Send, GripVertical
 } from 'lucide-react';
 import { revokeAllUserDevices } from '../lib/device-service';
 import { useToast } from '../components/Toast/ToastProvider';
@@ -129,18 +130,8 @@ const Lightbox: React.FC<{ src: string; onClose: () => void }> = ({ src, onClose
 
 type AdminTab = 'dashboard' | 'homepage' | 'messages' | 'maintenance' | 'products' | 'users' | 'archived_users' | 'custom_orders' | 'orders' | 'bugs' | 'stealth' | 'security' | 'promo_codes' | 'categories';
 
-interface DBProduct {
-    id: string;
-    slug: string;
-    name: string;
-    avatar: string;
-    wholesale_price_eur: number | null;
-    is_best_seller: boolean;
-    categories: string[];
-    size: string | null;
-    is_hidden: boolean;
+interface DBProduct extends Product {
     updated_at: string;
-    top_order: number | null;
 }
 
 interface DBUser {
@@ -216,30 +207,52 @@ const ProductEditModal: React.FC<{
         };
     }, []);
 
-    const { categories: dbCategories, fetchCategories } = useProducts();
+    const { categories: dbCategories, fetchCategories, getAllProducts } = useProducts();
+    const allProducts = getAllProducts();
 
     const [form, setForm] = useState({
         slug: product?.slug || '',
         name: product?.name || '',
         wholesale_price_eur: product?.wholesale_price_eur?.toString() || '',
         avatar: product?.avatar || '',
-        is_best_seller: product?.is_best_seller || false,
+        is_best_seller: product?.isBestSeller || false,
         size: product?.size || '',
         categories: (product?.categories || []).filter(c => {
             const lc = c.toLowerCase();
             return lc !== 'всички' && !lc.includes('cm') && !/^\d+x\d+$/.test(lc) && !/^\d+×\d+$/.test(lc);
         }).join(', '),
-        is_hidden: product?.is_hidden || false,
+        is_hidden: product?.isHidden || false,
         is_different_item: product ? (product.categories?.includes('Всички') && !product.categories?.includes('Стикери')) : false,
         top_order: product?.top_order?.toString() || '',
         isManualSlug: !!product?.slug,
+        variants: (product?.variants || []).map((v: any) => ({ ...v, __id: Math.random().toString(36).substring(7) })),
+        variant_label: product?.variant_label || '',
     });
+    
+    // Auto-fill rank if missing
+    const autoRank = product?.display_rank || (allProducts.filter(p => p.top_order || p.isBestSeller).length + 1);
+
+    const [swapTarget, setSwapTarget] = useState<Product | null>(null);
+    const [pendingSwap, setPendingSwap] = useState<{ id: string, name: string, rankToThem: number | null } | null>(null);
     const [saving, setSaving] = useState(false);
     const [uploading, setUploading] = useState<string | null>(null);
     const [error, setError] = useState('');
     const [catQuery, setCatQuery] = useState('');
     const [savingCat, setSavingCat] = useState(false);
     const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+
+    const [isDraggingVariants, setIsDraggingVariants] = useState(false);
+    const [bulkUploadStatus, setBulkUploadStatus] = useState({ total: 0, current: 0 });
+
+    useEffect(() => {
+        const val = parseInt(form.top_order);
+        if (!isNaN(val)) {
+            const match = allProducts.find(p => p.top_order === val && p.id !== product?.id);
+            setSwapTarget(match || null);
+        } else {
+            setSwapTarget(null);
+        }
+    }, [form.top_order, allProducts, product?.id]);
 
     const toggleCategorySelection = (catName: string) => {
         let current = form.categories.split(',').map(c => c.trim()).filter(Boolean);
@@ -262,6 +275,87 @@ const ProductEditModal: React.FC<{
         } finally {
             setUploading(null);
         }
+    };
+
+    const handleVariantImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
+        if (!e.target.files?.[0]) return;
+        setUploading(`variant-${index}`);
+        try {
+            const url = await uploadToCloudinary(e.target.files[0], 'Decals');
+            setForm(prev => {
+                const newVariants = [...prev.variants];
+                newVariants[index] = { ...newVariants[index], avatar: url };
+                return { ...prev, variants: newVariants };
+            });
+        } catch (err: any) {
+            setError(err.message || 'Грешка при качване на вариант');
+        } finally {
+            setUploading(null);
+        }
+    };
+
+    const handleVariantsDrop = async (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDraggingVariants(false);
+        if (!e.dataTransfer) return;
+        const files = Array.from(e.dataTransfer.files) as File[];
+        const imageFiles = files.filter(f => f.type.startsWith('image/'));
+        if (imageFiles.length === 0) return;
+        
+        setBulkUploadStatus({ total: imageFiles.length, current: 0 });
+        try {
+            const results = await Promise.all(
+                imageFiles.map(async (file) => {
+                    const url = await uploadToCloudinary(file, 'Decals');
+                    setBulkUploadStatus(prev => ({ ...prev, current: prev.current + 1 }));
+                    const rawName = file.name.split('.').slice(0, -1).join('.');
+                    const name = rawName.replace(/[_-]/g, ' ').trim();
+                    return { name, avatar: url, __id: Math.random().toString(36).substring(7) };
+                })
+            );
+            setForm(prev => ({
+                ...prev,
+                variants: [...prev.variants, ...results]
+            }));
+        } catch (err: any) {
+            setError(err.message || 'Грешка при групово качване');
+        } finally {
+            setBulkUploadStatus({ total: 0, current: 0 });
+        }
+    };
+
+
+    const addVariant = () => {
+        setForm(prev => ({
+            ...prev,
+            variants: [...prev.variants, { name: '', avatar: '', __id: Math.random().toString(36).substring(7) }]
+        }));
+    };
+
+
+    const moveVariant = (index: number, direction: 'up' | 'down') => {
+        const newVariants = [...form.variants];
+        const newIndex = direction === 'up' ? index - 1 : index + 1;
+        if (newIndex < 0 || newIndex >= newVariants.length) return;
+        
+        [newVariants[index], newVariants[newIndex]] = [newVariants[newIndex], newVariants[index]];
+        setForm(prev => ({ ...prev, variants: newVariants }));
+    };
+
+
+    const removeVariant = (index: number) => {
+        setForm(prev => ({
+            ...prev,
+            variants: prev.variants.filter((_, i) => i !== index)
+        }));
+    };
+
+    const updateVariant = (index: number, updates: Partial<{ name: string, avatar: string }>) => {
+        setForm(prev => {
+            const newVariants = [...prev.variants];
+            newVariants[index] = { ...newVariants[index], ...updates };
+            return { ...prev, variants: newVariants };
+        });
     };
 
     /* const eurToBgn = ... */
@@ -297,6 +391,8 @@ const ProductEditModal: React.FC<{
                 top_order: form.top_order ? parseInt(form.top_order) : null,
                 location: 'Произведено от CarDecal',
                 categories: finalCategories,
+                variants: form.variants, 
+                variant_label: form.variant_label, // Add label to payload
                 updated_at: new Date().toISOString(),
             };
 
@@ -307,6 +403,15 @@ const ProductEditModal: React.FC<{
                 const { error } = await supabase.from('products').update(payload).eq('id', product!.id);
                 if (error) throw error;
             }
+
+            // Execute pending swap if any
+            if (pendingSwap) {
+                const { error: swapError } = await supabase.from('products')
+                    .update({ top_order: pendingSwap.rankToThem })
+                    .eq('id', pendingSwap.id);
+                if (swapError) console.error('Swap execution failed:', swapError);
+            }
+
             onSave();
         } catch (e: any) {
             setError(e.message || 'Неизвестна грешка');
@@ -558,6 +663,128 @@ const ProductEditModal: React.FC<{
                         </div>
                     </div>
 
+                    {/* Variants Management */}
+                    <div 
+                        className={`bg-white/[0.02] border transition-all p-5 rounded-2xl relative ${isDraggingVariants ? 'border-blue-500/50 bg-blue-500/5' : 'border-white/5'}`}
+                        onDragOver={(e) => { e.preventDefault(); setIsDraggingVariants(true); }}
+                        onDragLeave={() => setIsDraggingVariants(false)}
+                        onDrop={handleVariantsDrop}
+                    >
+                        {isDraggingVariants && (
+                            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-blue-600/10 backdrop-blur-sm rounded-2xl border-2 border-dashed border-blue-500/50 pointer-events-none">
+                                <Upload className="text-blue-400 mb-2 animate-bounce" size={32} />
+                                <span className="text-blue-400 text-xs font-black uppercase tracking-widest">Пуснете снимките тук</span>
+                            </div>
+                        )}
+
+                        {bulkUploadStatus.total > 0 && (
+                            <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/80 backdrop-blur-xl rounded-2xl border border-white/10 overflow-hidden shadow-2xl">
+                                <div className="relative mb-6">
+                                    <div className="absolute inset-0 bg-blue-500/20 blur-2xl rounded-full" />
+                                    <Loader2 className="text-blue-400 animate-spin relative z-10" size={40} />
+                                </div>
+                                <div className="text-center mb-6">
+                                    <h4 className="text-white text-[11px] font-black uppercase tracking-[0.3em] mb-2 drop-shadow-lg">Качване на варианти...</h4>
+                                    <div className="flex items-center justify-center gap-2">
+                                        <span className="text-blue-400 font-mono text-lg font-black">{bulkUploadStatus.current}</span>
+                                        <span className="text-zinc-600 font-mono text-sm">/</span>
+                                        <span className="text-zinc-500 font-mono text-sm">{bulkUploadStatus.total}</span>
+                                    </div>
+                                </div>
+                                <div className="w-56 h-1.5 bg-white/5 rounded-full overflow-hidden shadow-inner border border-white/5">
+                                    <div 
+                                        className="h-full bg-gradient-to-r from-blue-600 to-blue-400 transition-all duration-500 ease-out shadow-[0_0_20px_rgba(37,99,235,0.6)] rounded-full"
+                                        style={{ width: `${(bulkUploadStatus.current / bulkUploadStatus.total) * 100}%` }}
+                                    />
+                                </div>
+                                <p className="text-zinc-600 text-[8px] uppercase font-bold tracking-widest mt-8">Моля изчакайте, снимките се обработват</p>
+                            </div>
+                        )}
+
+                        <div className="flex items-center justify-between gap-4 mb-4">
+                            <div className="flex-1">
+                                <label className="block text-[10px] uppercase tracking-[0.3em] text-zinc-500 font-black mb-1.5">Име на групата (пр: Цвят)</label>
+                                <input
+                                    type="text"
+                                    value={form.variant_label}
+                                    onChange={e => setForm(p => ({...p, variant_label: e.target.value}))}
+                                    className="w-full bg-black/40 border border-white/5 rounded-xl px-4 py-2 text-xs font-black text-white placeholder:text-zinc-700 outline-none focus:border-blue-500/30 transition-all"
+                                    placeholder="пр: Избери модел"
+                                />
+                            </div>
+                            <button
+                                type="button"
+                                onClick={addVariant}
+                                className="mt-5 p-3 border border-blue-500/30 text-blue-400 hover:bg-blue-500/10 rounded-xl transition-all shadow-[0_0_15px_rgba(59,130,246,0.1)] h-[42px] flex items-center justify-center"
+                            >
+                                <Plus size={18} />
+                            </button>
+                        </div>
+
+                        <div className="space-y-3">
+                            {form.variants.map((v: any, idx: number) => (
+                                <div key={idx} className="flex gap-3 p-3 bg-black/20 border border-white/5 rounded-xl group relative hover:border-white/10 transition-all">
+                                    <div className="flex flex-col gap-0.5 justify-center pr-2 border-r border-white/5">
+                                        <button 
+                                            type="button"
+                                            onClick={() => moveVariant(idx, 'up')}
+                                            disabled={idx === 0}
+                                            className="w-5 h-5 flex items-center justify-center text-zinc-600 hover:text-blue-400 disabled:opacity-0 transition-all hover:bg-white/5 rounded"
+                                        >
+                                            <ChevronUp size={14} strokeWidth={3} />
+                                        </button>
+                                        <button 
+                                            type="button"
+                                            onClick={() => moveVariant(idx, 'down')}
+                                            disabled={idx === form.variants.length - 1}
+                                            className="w-5 h-5 flex items-center justify-center text-zinc-600 hover:text-blue-400 disabled:opacity-0 transition-all hover:bg-white/5 rounded"
+                                        >
+                                            <ChevronDown size={14} strokeWidth={3} />
+                                        </button>
+                                    </div>
+                                    <div className="w-12 h-12 bg-black/40 border border-white/10 rounded-lg overflow-hidden flex-shrink-0 cursor-zoom-in group-hover:border-blue-500/30 transition-all" onClick={() => v.avatar && setLightboxUrl(v.avatar)}>
+                                        {v.avatar ? (
+                                            <img src={v.avatar} className="w-full h-full object-contain" alt="" />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center text-zinc-700">
+                                                <Image size={16} />
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="flex-1 flex flex-col gap-1.5">
+                                        <input
+                                            type="text"
+                                            value={v.name}
+                                            onChange={e => updateVariant(idx, { name: e.target.value })}
+                                            className="bg-transparent border-none p-0 text-xs font-bold text-white placeholder:text-zinc-600 focus:ring-0"
+                                            placeholder="Име на варианта (напр: Бял)"
+                                        />
+                                        <div className="flex items-center gap-3">
+                                            <label className="text-[9px] uppercase font-black text-zinc-500 hover:text-white transition-colors cursor-pointer flex items-center gap-1.5">
+                                                {uploading === `variant-${idx}` ? <Loader2 size={10} className="animate-spin" /> : <Upload size={10} />}
+                                                <span>{v.avatar ? 'Промени снимка' : 'Качи снимка'}</span>
+                                                <input type="file" className="hidden" accept="image/*" onChange={e => handleVariantImageUpload(e, idx)} />
+                                            </label>
+                                            <button
+                                                type="button"
+                                                onClick={() => removeVariant(idx)}
+                                                className="text-[9px] uppercase font-black text-red-500/40 hover:text-red-500 transition-colors flex items-center gap-1"
+                                            >
+                                                <Trash2 size={10} /> Изтрий
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                            {form.variants.length === 0 && (
+                                <div className="py-8 text-center border border-dashed border-white/5 rounded-xl bg-black/10">
+                                    <p className="text-[10px] text-zinc-600 uppercase tracking-[0.2em] font-bold">Няма добавени варианти</p>
+                                </div>
+                            )}
+                        </div>
+
+                    </div>
+
                     {/* Top order */}
                     <div className="bg-gradient-to-br from-red-600/10 to-transparent border border-red-600/20 p-5 rounded-2xl shadow-xl backdrop-blur-sm">
                         <div className="flex items-center gap-3 mb-3">
@@ -569,19 +796,59 @@ const ProductEditModal: React.FC<{
                                 <p className="text-[9px] text-zinc-500 uppercase font-bold tracking-widest mt-0.5">Приоритет в категорията</p>
                             </div>
                         </div>
-                        <div className="flex items-center gap-4">
-                            <div className="relative flex-1">
-                                <input
-                                    type="number" min="1"
-                                    value={form.top_order}
-                                    onChange={e => setForm(p => ({...p, top_order: e.target.value}))}
-                                    className={`${inputClass} !bg-black/60 h-12 text-lg font-black text-white`}
-                                    placeholder="пр: 1, 2, 3..."
-                                />
+                        <div className="flex flex-col gap-4">
+                            <div className="flex items-center gap-4">
+                                <div className="relative flex-1">
+                                    <input
+                                        type="number" min="1"
+                                        value={form.top_order}
+                                        onChange={e => {
+                                            const val = e.target.value;
+                                            setForm(p => ({
+                                                ...p, 
+                                                top_order: val,
+                                                // Auto-activate bestseller if a rank is entered
+                                                is_best_seller: val ? true : p.is_best_seller
+                                            }));
+                                            setPendingSwap(null);
+                                        }}
+                                        className={`${inputClass} !bg-black/60 h-12 text-lg font-black text-white`}
+                                        placeholder={`пр: ${autoRank}`}
+                                    />
+                                    {!form.top_order && (
+                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] text-zinc-500 uppercase font-black">
+                                            Auto: #{autoRank}
+                                        </div>
+                                    )}
+                                </div>
+                                <p className="text-[10px] text-zinc-500 italic flex-1 leading-relaxed">
+                                    Продуктът ще се показва <span className="text-white font-bold not-italic">на първо място</span> в каталога според този номер.
+                                </p>
                             </div>
-                            <p className="text-[10px] text-zinc-500 italic flex-1 leading-relaxed">
-                                Продуктът ще се показва <span className="text-white font-bold not-italic">на първо място</span> в каталога според този номер.
-                            </p>
+
+                            {swapTarget && (
+                                <motion.div 
+                                    initial={{ opacity: 0, x: -10 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    onClick={() => {
+                                        const currentRank = product?.top_order || null;
+                                        const targetRank = swapTarget.top_order;
+                                        setPendingSwap({ id: swapTarget.id, name: swapTarget.name, rankToThem: currentRank });
+                                        setForm(prev => ({ ...prev, top_order: (targetRank || '').toString() }));
+                                        setSwapTarget(null);
+                                        setError('ПЛАНИРАНА РАЗМЯНА: Този продукт ще вземе #' + targetRank + ', а ' + swapTarget.name + ' ще се премести на #' + (currentRank || 'позицията му по бестселър') + ' след като запазите.');
+                                    }}
+                                >
+                                    <div className="w-12 h-12 rounded-lg bg-black/40 border border-white/10 overflow-hidden flex-shrink-0">
+                                        <img src={swapTarget.avatar} className="w-full h-full object-contain" alt="" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="text-[10px] text-yellow-500 uppercase font-black mb-1">Вече заето от:</p>
+                                        <p className="text-xs text-white font-bold truncate">{swapTarget.name}</p>
+                                        <p className="text-[8px] text-yellow-500/60 uppercase font-black mt-1 group-hover:text-yellow-500 transition-colors">Кликни за размяна</p>
+                                    </div>
+                                </motion.div>
+                            )}
                         </div>
                     </div>
 
@@ -590,7 +857,15 @@ const ProductEditModal: React.FC<{
                         <div className="flex items-center gap-3 p-3 bg-white/3 border border-white/5 rounded-2xl hover:bg-white/5 transition-all">
                             <button
                                 type="button"
-                                onClick={() => setForm(p => ({...p, is_best_seller: !p.is_best_seller}))}
+                                onClick={() => setForm(p => {
+                                    const nextValue = !p.is_best_seller;
+                                    return {
+                                        ...p, 
+                                        is_best_seller: nextValue,
+                                        // If turning OFF bestseller, also clear the top_order
+                                        top_order: !nextValue ? '' : p.top_order
+                                    };
+                                })}
                                 className={`w-12 h-6 rounded-full transition-all relative shadow-inner ${form.is_best_seller ? 'bg-red-600 shadow-red-600/40' : 'bg-zinc-800'}`}
                             >
                                 <span className={`absolute top-1 left-1.5 w-4 h-4 bg-white rounded-full transition-transform shadow-md ${form.is_best_seller ? 'translate-x-5' : 'translate-x-0'}`} />
@@ -642,11 +917,10 @@ const ProductEditModal: React.FC<{
 
 // ─── Products Tab ─────────────────────────────────────────────────────────
 const ProductsTab: React.FC = () => {
+    const { products, loading, getAllProducts, fetchCategories, fetchAll } = useProducts();
     const { showToast } = useToast();
-    const [products, setProducts] = useState<DBProduct[]>([]);
-    const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
-    const [editProduct, setEditProduct] = useState<DBProduct | null>(null);
+    const [editProduct, setEditProduct] = useState<Product | null>(null);
     const [isNewProduct, setIsNewProduct] = useState(false);
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
@@ -658,59 +932,27 @@ const ProductsTab: React.FC = () => {
     const itemsPerPage = 20;
 
     const [showHidden, setShowHidden] = useState(false);
-
     const scrollPosRef = useRef<number>(0);
 
-    const fetchProducts = useCallback(async (shouldRestoreScroll = false, silent = false) => {
-        if (shouldRestoreScroll) {
-            scrollPosRef.current = window.scrollY;
-        }
-        if (!silent) setLoading(true);
-        let allData: DBProduct[] = [];
-        let rFrom = 0;
-        const rSize = 1000;
-        
-        while (true) {
-            const { data, error } = await supabase
-                .from('products')
-                .select('id,slug,name,avatar,wholesale_price_eur,is_best_seller,categories,size,is_hidden,updated_at,top_order')
-                .order('id', { ascending: false })
-                .range(rFrom, rFrom + rSize - 1);
-                
-            if (error) break;
-            if (data) allData = [...allData, ...data as DBProduct[]];
-            if (!data || data.length < rSize) break;
-            rFrom += rSize;
-        }
-        
-        setProducts(allData);
-        if (!silent) setLoading(false);
+    const refresh = useCallback(async () => {
+        await fetchAll();
+    }, [fetchAll]);
 
-        if (shouldRestoreScroll) {
-            setTimeout(() => {
-                window.scrollTo({
-                    top: scrollPosRef.current,
-                    behavior: 'instant'
-                });
-            }, 0);
-        }
-    }, []);
-
-    useEffect(() => { fetchProducts(); }, [fetchProducts]);
+    useEffect(() => { refresh(); }, [refresh]);
 
     // Realtime subscription for products
     useEffect(() => {
         const channel = supabase
             .channel('admin_products_realtime')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => {
-                fetchProducts(false, true); // silent refresh
+                refresh(); // silent refresh
             })
             .subscribe();
 
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [fetchProducts]);
+    }, [refresh]);
 
     const availableSizes = useMemo(() => {
         const sizes = new Set<string>();
@@ -741,12 +983,10 @@ const ProductsTab: React.FC = () => {
                 const query = search.toLowerCase().trim();
                 const searchVariations = normalizeSearch(query);
                 const productName = (p.name || '').toLowerCase();
-                const productNameBg = (p.name_bg || '').toLowerCase();
                 const productSlug = (p.slug || '').toLowerCase();
 
                 const searchMatch = searchVariations.some(v => 
                     productName.includes(v) || 
-                    productNameBg.includes(v) ||
                     productSlug.includes(v)
                 );
                 
@@ -762,9 +1002,9 @@ const ProductsTab: React.FC = () => {
             }
 
             if (showHidden) {
-                if (!p.is_hidden) return false;
+                if (!p.isHidden) return false;
             } else {
-                if (p.is_hidden) return false;
+                if (p.isHidden) return false;
             }
 
             return true;
@@ -780,7 +1020,7 @@ const ProductsTab: React.FC = () => {
                 return numA - numB;
             }
             if (sortBy === 'date') {
-                return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+                return 0; // Product interface doesn't have updated_at yet, let's keep it simple
             }
             if (sortBy === 'name') {
                 return a.name.localeCompare(b.name);
@@ -826,7 +1066,6 @@ const ProductsTab: React.FC = () => {
             if (productToDelete) {
                 const imageUrls = [
                     productToDelete.avatar,
-                    productToDelete.cover_image
                 ].filter(Boolean) as string[];
 
                 // Delete all images in parallel
@@ -837,7 +1076,7 @@ const ProductsTab: React.FC = () => {
 
             // 2. Delete entry from Supabase
             await supabase.from('products').delete().eq('id', id);
-            await fetchProducts(true);
+            await refresh();
             showToast('Стикерът е изтрит успешно!', 'success');
         } catch (err: any) {
             console.error('Delete error:', err);
@@ -848,8 +1087,8 @@ const ProductsTab: React.FC = () => {
     };
 
     const totalStickers = products.length;
-    const hiddenCount = products.filter(p => p.is_hidden).length;
-    const bestSellerCount = products.filter(p => p.is_best_seller).length;
+    const hiddenCount = products.filter(p => p.isHidden).length;
+    const bestSellerCount = products.filter(p => p.isBestSeller).length;
 
     return (
         <div className="space-y-8 pb-20">
@@ -939,7 +1178,7 @@ const ProductsTab: React.FC = () => {
                         {showHidden ? 'Само Скрити' : 'Всички Активни'}
                     </button>
 
-                    <button onClick={() => fetchProducts(true)} className="px-4 py-2.5 border border-white/10 text-zinc-400 hover:text-white text-xs uppercase tracking-widest transition-colors flex items-center gap-2">
+                    <button onClick={() => refresh()} className="px-4 py-2.5 border border-white/10 text-zinc-400 hover:text-white text-xs uppercase tracking-widest transition-colors flex items-center gap-2">
                         <RefreshCw className="w-3.5 h-3.5" />
                         Обнови
                     </button>
@@ -978,10 +1217,12 @@ const ProductsTab: React.FC = () => {
                                      />
                                     {/* Badges */}
                                     <div className="absolute top-2 left-2 flex flex-col gap-1">
-                                        {p.is_best_seller && (
-                                            <span className="text-[9px] bg-red-600 text-white px-2 py-0.5 uppercase tracking-widest font-bold">Топ</span>
+                                        {(p.top_order !== null || p.isBestSeller) && (
+                                            <span className="text-[9px] bg-red-600 text-white px-2 py-0.5 uppercase tracking-widest font-black shadow-lg">
+                                                Топ Produkt #{p.display_rank}
+                                            </span>
                                         )}
-                                        {p.is_hidden && (
+                                        {p.isHidden && (
                                             <span className="text-[9px] bg-amber-600 text-white px-2 py-0.5 uppercase tracking-widest font-bold flex items-center gap-1">
                                                 <EyeOff className="w-2.5 h-2.5" /> Скрит
                                             </span>
@@ -1140,7 +1381,7 @@ const ProductsTab: React.FC = () => {
                         product={editProduct}
                         isNew={isNewProduct}
                         onClose={() => { setEditProduct(null); setIsNewProduct(false); }}
-                        onSave={() => { setEditProduct(null); setIsNewProduct(false); fetchProducts(true, true); }}
+                        onSave={() => { setEditProduct(null); setIsNewProduct(false); refresh(); }}
                     />
                 )}
             </AnimatePresence>
@@ -1185,6 +1426,7 @@ const UsersTab: React.FC = () => {
     const [modHistoryLoading, setModHistoryLoading] = useState(false);
     const [modStatusFilter, setModStatusFilter] = useState<'all' | 'active' | 'temporarily_suspended' | 'permanently_banned'>('all');
     const [onboardingFilter, setOnboardingFilter] = useState<'all' | 'completed' | 'pending'>('all'); // Default to showing all users to prevent confusion
+    
 
     
     const [tick, setTick] = useState(0);
@@ -1569,18 +1811,6 @@ const UsersTab: React.FC = () => {
     };
 
 
-    const updateAdminNotes = async (userId: string, notes: string) => {
-        const { error } = await supabase
-            .from('profiles')
-            .update({ admin_notes: notes })
-            .eq('id', userId);
-        
-        if (error) {
-            showToast("Грешка при запазване на бележка", "error");
-        } else {
-            setUsers(prev => prev.map(u => u.id === userId ? { ...u, admin_notes: notes } : u));
-        }
-    };
 
     const confirmDeleteEntirely = async () => {
         if (!deleteModal) return;
@@ -1784,20 +2014,6 @@ const UsersTab: React.FC = () => {
                                     </div>
                                 </div>
 
-                                {/* Quick Admin Notes */}
-                                <div className="flex-1 max-w-full md:max-w-xs md:mx-4" onClick={e => e.stopPropagation()}>
-                                    <div className="relative group/note">
-                                        <textarea
-                                            defaultValue={u.admin_notes || ''}
-                                            onBlur={e => updateAdminNotes(u.id, e.target.value)}
-                                            placeholder="Internal notes..."
-                                            className="w-full bg-black/60 border border-white/5 focus:border-red-600/40 rounded p-2 text-[11px] text-zinc-400 focus:text-white placeholder-zinc-800 focus:outline-none transition-all resize-none h-14 md:h-16 leading-tight font-medium"
-                                        />
-                                        <div className="absolute top-1 right-2 opacity-30">
-                                            <FileText size={10} />
-                                        </div>
-                                    </div>
-                                </div>
 
                                 {/* Actions */}
                                 <div className="flex items-center gap-2 flex-wrap" onClick={e => e.stopPropagation()}>
@@ -1869,6 +2085,7 @@ const UsersTab: React.FC = () => {
                 </div>
             )}
 
+            
             {/* User Profile Modal */}
             <AnimatePresence>
                 {userProfileModal && (
@@ -2170,7 +2387,28 @@ const UserProfileModal: React.FC<{
     const [securityLogs, setSecurityLogs] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [localNotes, setLocalNotes] = useState<string>(user.admin_notes || '');
+    const [noteConfirmModal, setNoteConfirmModal] = useState<boolean>(false);
+    const [updatingId, setUpdatingId] = useState<string | null>(null);
     const { showToast } = useToast();
+
+    const updateAdminNotes = async (userId: string, notes: string) => {
+        setUpdatingId(userId);
+        const { error } = await supabase
+            .from('profiles')
+            .update({ admin_notes: notes })
+            .eq('id', userId);
+        
+        if (error) {
+            showToast("Грешка при изпращане на съобщение", "error");
+        } else {
+            showToast("Съобщението е изпратено успешно", "success");
+            // Also update the local state if needed (though the prop might not update until refresh)
+            // But for the modal, success is enough to indicate it worked.
+        }
+        setUpdatingId(null);
+        setNoteConfirmModal(false);
+    };
 
     const handleExportJSON = (order: RegularOrder) => {
         const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(order, null, 2));
@@ -2727,6 +2965,33 @@ const UserProfileModal: React.FC<{
                             </div>
                         </div>
 
+                        {/* Profile Message / Admin Notes */}
+                        <div>
+                            <h3 className="text-[10px] text-zinc-500 uppercase tracking-widest mb-4 font-black flex items-center gap-2">
+                                <Mail size={12} className="text-red-500" />
+                                Съобщение до профила
+                            </h3>
+                            <div className="space-y-3">
+                                <textarea
+                                    disabled={getEffectiveStatus(user) !== 'active' || updatingId === user.id}
+                                    value={localNotes}
+                                    onChange={(e) => setLocalNotes(e.target.value)}
+                                    placeholder={getEffectiveStatus(user) !== 'active' ? "Недостъпно при бан" : "Напишете съобщение..."}
+                                    className={`w-full bg-zinc-900/50 border ${getEffectiveStatus(user) !== 'active' ? 'border-red-900/20 text-red-500/50' : 'border-white/5 text-white'} rounded-xl p-4 text-xs font-medium placeholder:text-zinc-700 resize-none h-24 focus:ring-1 focus:ring-red-600/50 transition-all outline-none`}
+                                />
+                                {localNotes !== (user.admin_notes || '') && (
+                                    <button 
+                                        disabled={updatingId === user.id}
+                                        onClick={() => setNoteConfirmModal(true)}
+                                        className="w-full py-2.5 bg-red-600 hover:bg-red-700 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-red-600/10 flex items-center justify-center gap-2"
+                                    >
+                                        <Send size={14} />
+                                        Изпрати сега
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
                         {/* Company Data Section */}
                         {(user.is_company || user.company_name) && (
                             <div>
@@ -3016,6 +3281,18 @@ const UserProfileModal: React.FC<{
                         </div>
                     </div>
                 </div>
+
+                {/* Confirm Dialog for Admin Notes */}
+                <ConfirmDialog
+                    isOpen={noteConfirmModal}
+                    title="Изпращане на съобщение"
+                        message={`Сигурни ли сте, че искате да изпратите това съобщение до ${user.full_name || 'потребителя'}? Той ще го види като важно известие при следващото влизане.`}
+                        onConfirm={() => updateAdminNotes(user.id, localNotes)}
+                        onCancel={() => setNoteConfirmModal(false)}
+                        confirmLabel="Изпрати сега"
+                        confirmColor="bg-red-600 hover:bg-red-700 font-black uppercase tracking-widest text-[10px]"
+                        icon={<Mail className="text-red-500" />}
+                    />
             </motion.div>
         </div>
     );

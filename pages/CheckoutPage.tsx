@@ -5,14 +5,14 @@ import {
     ArrowLeft, ShieldCheck, Truck, CreditCard, 
     ChevronRight, MapPin, Phone, User, Mail, 
     CheckCircle2, AlertCircle, Loader2, Package,
-    Edit2, Info, Building2, Check, ChevronDown
+    Edit2, Info, Building2, Check, ChevronDown, Clock
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { useToast } from '../components/Toast/ToastProvider';
 import { isValidPhone as isValidBulgarianPhone, isValidFullName, formatToE164, formatPhoneNumber } from '../lib/utils';
-import { Ticket, X as XIcon } from 'lucide-react';
+import { Ticket, X as XIcon, Sparkles, Wallet } from 'lucide-react';
 import { logPromoCodeUsage } from '../lib/promo-utils';
 import SEO from '../components/SEO';
 
@@ -108,6 +108,32 @@ const CheckoutPage: React.FC = () => {
     });
     const [saveForFuture, setSaveForFuture] = useState(true);
     const [savedAddresses, setSavedAddresses] = useState<any[]>([]);
+    
+    // Loyalty Points State
+    const [userPoints, setUserPoints] = useState(0);
+    const [pendingPoints, setPendingPoints] = useState(0);
+    const [usePoints, setUsePoints] = useState(false);
+
+    useEffect(() => {
+        if (user) {
+            supabase.rpc('get_user_points_balance', { p_user_id: user.id }).then(({ data }) => {
+                setUserPoints(data || 0);
+            });
+            supabase.from('loyalty_points_ledger')
+                .select('amount')
+                .eq('user_id', user.id)
+                .eq('status', 'pending')
+                .then(({ data }) => {
+                    const sum = (data || []).reduce((acc, curr) => acc + curr.amount, 0);
+                    setPendingPoints(sum);
+                });
+        }
+    }, [user]);
+
+    const maxPointsAllowed = Math.floor(subtotal * 100); // 100 points = 1 EUR
+    const pointsToRedeem = usePoints ? Math.min(userPoints, maxPointsAllowed) : 0;
+    const pointsDiscountAmount = pointsToRedeem / 100;
+    const finalTotal = Math.max(0, total - pointsDiscountAmount);
 
     useEffect(() => {
         if (user) {
@@ -297,9 +323,11 @@ const CheckoutPage: React.FC = () => {
             const { data, error } = await supabase.from('orders').insert({
                 user_id: user?.id,
                 items: activeItems,
-                total_amount: total,
+                total_amount: finalTotal,
                 promo_code_id: appliedPromo?.id,
                 promo_discount_amount: promoDiscountAmount,
+                loyalty_points_used: pointsToRedeem,
+                loyalty_discount_amount: pointsDiscountAmount,
                 shipping_details: {
                     ...formData,
                     officeName: formData.deliveryType === 'econt' ? formData.econtOffice : formData.deliveryType === 'speedy' ? formData.speedyOffice : formData.streetAddress
@@ -854,6 +882,64 @@ const CheckoutPage: React.FC = () => {
                                     )}
                                 </div>
 
+                                 {/* Loyalty Points Redemption */}
+                                 {(userPoints > 0 || pendingPoints > 0) && (
+                                     <div className="mb-6 p-5 sm:p-6 bg-amber-500/[0.03] border border-amber-500/10 rounded-2xl relative overflow-hidden group">
+                                         <div className="absolute top-0 right-0 w-20 h-20 bg-amber-500/5 blur-[30px] rounded-full -mr-10 -mt-10" />
+                                         
+                                         <div className="relative z-10">
+                                             <div className="flex items-center justify-between mb-4">
+                                                 <div className="flex items-center gap-2.5">
+                                                     <div className="p-1.5 rounded-lg bg-amber-500/10 border border-amber-500/10">
+                                                         <img src="/CDcoin.png" alt="CDcoin" className="w-4 h-4 object-contain" />
+                                                     </div>
+                                                     <div>
+                                                         <h3 className="text-[10px] font-black text-white uppercase tracking-widest leading-none">Използвай Coins</h3>
+                                                         <p className="text-[9px] text-zinc-500 font-bold uppercase mt-1">Имаш: {userPoints} Coins (€{(userPoints/100).toFixed(2)})</p>
+                                                     </div>
+                                                 </div>
+                                                 <div className="flex items-center gap-2">
+                                                     <input 
+                                                        type="checkbox" 
+                                                        id="usePoints"
+                                                        checked={usePoints}
+                                                        onChange={() => setUsePoints(!usePoints)}
+                                                        disabled={userPoints === 0}
+                                                        className="w-4 h-4 rounded border-white/10 bg-white/5 text-amber-500 focus:ring-amber-500/50"
+                                                     />
+                                                 </div>
+                                             </div>
+                                             
+                                             <div className="space-y-2">
+                                                 <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-wide leading-relaxed">
+                                                     Coins могат да се използват само ако са активирани
+                                                 </p>
+                                                 {pendingPoints > 0 && (
+                                                     <div className="flex items-center gap-1.5 py-1.5 px-3 bg-amber-500/5 rounded-lg border border-amber-500/10">
+                                                         <Clock size={10} className="text-amber-500/60" />
+                                                         <p className="text-[9px] text-amber-500/60 font-black uppercase">
+                                                            {pendingPoints} Coins са в изчакване и още не могат да се използват
+                                                         </p>
+                                                     </div>
+                                                 )}
+                                             </div>
+
+                                             {usePoints && userPoints > 0 && (
+                                                 <motion.div 
+                                                     initial={{ opacity: 0, height: 0 }}
+                                                     animate={{ opacity: 1, height: 'auto' }}
+                                                     className="mt-4 pt-4 border-t border-white/5"
+                                                 >
+                                                     <div className="flex items-baseline justify-between transition-all">
+                                                         <span className="text-[10px] font-black text-zinc-400 uppercase">Приложена отстъпка:</span>
+                                                         <span className="text-sm font-black text-amber-500">-€{pointsDiscountAmount.toFixed(2)}</span>
+                                                     </div>
+                                                 </motion.div>
+                                             )}
+                                         </div>
+                                     </div>
+                                 )}
+
                                 <div className="flex justify-between text-zinc-500">
                                     <span>Междинна сума</span>
                                     <span className="text-zinc-300">{subtotal.toFixed(2)} €</span>
@@ -883,28 +969,49 @@ const CheckoutPage: React.FC = () => {
                                             </span>
                                         )}
                                     </div>
-                                    {isFreeShipping ? (
-                                        <span className="text-green-500 font-black">БЕЗПЛАТНА</span>
-                                    ) : (
-                                        <div className="text-right">
-                                            <span className="italic text-[9px] block">По тарифа на куриера</span>
-                                        </div>
-                                    )}
+                                {isFreeShipping ? (
+                                    <span className="text-green-500 font-black">БЕЗПЛАТНА</span>
+                                ) : (
+                                    <div className="text-right">
+                                        <span className="italic text-[9px] block">По тарифа на куриера</span>
+                                    </div>
+                                )}
+                            </div>
+
+                            {usePoints && (
+                                <div className="flex justify-between items-center bg-amber-500/5 px-4 py-3 rounded-xl border border-amber-500/10 group">
+                                    <div className="flex items-center gap-2">
+                                        <img src="/CDcoin.png" alt="CDcoin" className="w-3.5 h-3.5 object-contain" />
+                                        <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest">ТОЧКИ ЗА ЛОЯЛНОСТ</span>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-xs font-black text-amber-500 italic">-{pointsDiscountAmount.toFixed(2)} €</span>
+                                        <button onClick={() => setUsePoints(false)} className="text-zinc-600 hover:text-white transition-colors p-1">
+                                            <XIcon size={12} />
+                                        </button>
+                                    </div>
                                 </div>
-                                
-                                <div className="pt-6 mt-2 border-t border-white/10 flex justify-between items-end">
+                            )}
+                            
+                            <div className="pt-6 mt-2 border-t border-white/10 flex justify-between items-end">
                                     <div>
                                         <span className="text-white text-xs block mb-1">ОБЩО ЗА ПЛАЩАНЕ</span>
                                         <p className="text-[10px] text-zinc-500 lowercase font-bold opacity-60 italic">~Плащане при доставка</p>
                                     </div>
                                     <div className="text-right">
                                         <div className="flex items-baseline gap-1 justify-end">
-                                            <span className="text-3xl font-black text-red-600 italic">{(total).toFixed(2)}</span>
+                                            <span className="text-3xl font-black text-red-600 italic">{(finalTotal).toFixed(2)}</span>
                                             <span className="text-sm font-black text-red-600">€</span>
                                         </div>
                                         <p className="text-[10px] text-zinc-500 font-bold opacity-70 tracking-tighter mt-1">
-                                            ≈ {(total * 1.95583).toFixed(2)} лв.
+                                            ≈ {(finalTotal * 1.95583).toFixed(2)} лв.
                                         </p>
+                                        <div className="flex items-center justify-end gap-1.5 mt-2 bg-amber-500/5 px-2.5 py-1.5 rounded-lg border border-amber-500/10 w-fit ml-auto">
+                                            <img src="/CDcoin.png" alt="coin" className="w-3 h-3 object-contain" />
+                                            <span className="text-[9px] font-black text-amber-500 uppercase tracking-widest whitespace-nowrap">
+                                                Печелиш {Math.floor(finalTotal)} Coins
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -937,7 +1044,7 @@ const CheckoutPage: React.FC = () => {
                     <div>
                         <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-0.5">ОБЩО</p>
                         <div className="flex items-baseline gap-1">
-                            <span className="text-xl font-black text-white italic">{total.toFixed(2)}</span>
+                            <span className="text-xl font-black text-white italic">{finalTotal.toFixed(2)}</span>
                             <span className="text-xs font-black text-white">€</span>
                         </div>
                     </div>

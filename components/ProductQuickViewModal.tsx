@@ -204,11 +204,17 @@ const ProductQuickViewModal: React.FC = () => {
 
     const priceValue = product?.price_eur ?? product?.wholesalePriceEur ?? 0;
     
-    // Combine main image with card images, ensuring uniqueness
+    // Combine main image with card images and variants, ensuring uniqueness
     const images: string[] = product ? Array.from(new Set([
+        product.avatar,
+        product.coverImage,
         ...(product.cardImages || []),
-        product.coverImage || product.avatar
+        ...(product.variants?.map(v => v.avatar).filter(Boolean) as string[] || [])
     ].filter(Boolean) as string[])) : [];
+
+    // Special handling for the new "variants" system
+    const hasVariants = product?.variants && product.variants.length > 0;
+    const currentVariant = hasVariants ? product.variants[activeIdx] : null;
 
     // Use the unified scroll lock class from index.css
     useEffect(() => {
@@ -258,24 +264,32 @@ const ProductQuickViewModal: React.FC = () => {
         );
     }
 
-    const mainSrc = images[activeIdx] || '';
+    const mainSrc = hasVariants 
+        ? (product.variants![activeIdx]?.avatar || product.avatar)
+        : (images[activeIdx] || product.avatar);
 
     const handleAddToCart = () => {
         if (!product || isAdding) return;
         setIsAdding(true);
         const finalQuantity = Math.max(1, quantity);
+        
+        // Use variant name if available, fallback to legacy variant counting
+        const variantName = hasVariants 
+            ? product.variants![activeIdx]?.name 
+            : (product.cardImages && product.cardImages.length > 0 ? `Вариант ${activeIdx + 1}` : '');
+
         addToCart({
-            id: `${product.slug}-${activeIdx}`,
+            id: `${product.slug}-${hasVariants ? `v-${activeIdx}` : activeIdx}`,
             name: product.name,
             name_bg: product.nameBg || product.name,
-            variant: (product.cardImages && product.cardImages.length > 0) ? `Вариант ${activeIdx + 1}` : '',
+            variant: variantName,
             selectedSize: product.size,
             price: priceValue,
             quantity: finalQuantity,
             image: mainSrc,
             slug: product.slug
         });
-        showToast(`Добавени ${finalQuantity}бр. от ${product.nameBg || product.name}`, "success");
+        showToast(`Добавени ${finalQuantity}бр. от ${product.nameBg || product.name}${variantName ? ` (${variantName})` : ''}`, "success");
         setAddedFeedback(true);
         
         // Use timeout to let cart update completely before unmounting
@@ -439,59 +453,7 @@ const ProductQuickViewModal: React.FC = () => {
                             </TransformWrapper>
                         </div>
 
-                        {/* Variant Selection Buttons - Only if cardImages exist */}
-                        {product.cardImages && product.cardImages.length > 0 && (
-                            <div className="relative shrink-0 z-20 mt-auto pb-6 pt-4">
-                                <div className="absolute left-0 top-0 bottom-10 w-12 bg-gradient-to-r from-[#020202] to-transparent z-30 pointer-events-none lg:hidden" />
-                                <div className="absolute right-0 top-0 bottom-10 w-12 bg-gradient-to-l from-[#020202] to-transparent z-30 pointer-events-none lg:hidden" />
-                                
-                                <div 
-                                    ref={scrollContainerRef}
-                                    onScroll={handleScroll}
-                                    className="relative flex gap-5 overflow-x-auto no-scrollbar justify-start lg:justify-center px-8 md:px-12 pb-6"
-                                >
-                                    {images.map((img, idx) => (
-                                        <button
-                                            key={idx}
-                                            onClick={() => setActiveIdx(idx)}
-                                            className="relative flex-shrink-0 group/thumb py-2"
-                                        >
-                                            <div className={`
-                                                relative w-22 h-22 md:w-26 md:h-26 p-3 rounded-[24px] transition-all duration-500 flex items-center justify-center
-                                                ${activeIdx === idx 
-                                                    ? 'bg-gradient-to-b from-white/[0.12] to-white/[0.04] border border-white/20 shadow-[0_15px_35px_rgba(220,38,38,0.2)]' 
-                                                    : 'bg-white/[0.03] border border-white/[0.05] hover:border-white/10 opacity-40 hover:opacity-100 backdrop-blur-md'
-                                                }
-                                            `}>
-                                                {activeIdx === idx && (
-                                                    <div className="absolute inset-0 bg-red-600/10 blur-2xl rounded-full animate-pulse pointer-events-none" />
-                                                )}
-                                                
-                                                <OptimizedImage 
-                                                    src={img} 
-                                                    alt="" 
-                                                    className={`w-full h-full pointer-events-none select-none transition-all duration-500 drop-shadow-2xl ${activeIdx === idx ? 'scale-110' : 'group-hover/thumb:scale-110'}`}
-                                                    priority={false}
-                                                    widths={[100, 200]}
-                                                    sizes="100px"
-                                                    objectFit="contain"
-                                                />
-                                            </div>
-                                        </button>
-                                    ))}
-                                </div>
 
-                                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-[100px] md:w-[200px] h-[3px] bg-white/10 rounded-full overflow-hidden shadow-[0_1px_2px_rgba(0,0,0,0.5)]">
-                                    <div 
-                                        className="absolute top-0 bottom-0 bg-red-600 rounded-full transition-all duration-100"
-                                        style={{ 
-                                            left: `${(Number.isNaN(scrollProgress) ? 0 : scrollProgress) * (100 - Math.max(20, 100 / images.length))}%`, 
-                                            width: `${Math.max(20, 100 / images.length)}%` 
-                                        }}
-                                    />
-                                </div>
-                            </div>
-                        )}
                     </div>
 
                     {/* RIGHT COLUMN: Details & Actions */}
@@ -500,69 +462,79 @@ const ProductQuickViewModal: React.FC = () => {
                             
                             {/* Header Section */}
                             <div>
-                                <div className="flex items-center justify-between mb-4">
-                                    <div className="flex items-center gap-3">
-                                        <span className="w-8 h-[2px] bg-red-600 rounded-full" />
-                                        <span className="text-[10px] md:text-[11px] uppercase tracking-[0.3em] font-black text-red-600">
+                                <div className="flex items-center gap-3 mb-4 overflow-hidden">
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        <span className="w-6 md:w-8 h-[2px] bg-red-600 rounded-full" />
+                                        <span className="text-[9px] md:text-[11px] uppercase tracking-[0.4em] font-black text-red-600 whitespace-nowrap">
                                             Произведено от CarDecal
                                         </span>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        {product.isBestSeller && (
-                                            <div className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-xl text-white font-black uppercase text-[10px] tracking-widest shadow-2xl">
-                                                Бестселър
-                                            </div>
-                                        )}
-                                        {product.isHidden && (
-                                            <div className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-xl text-white font-black uppercase text-[10px] tracking-widest shadow-2xl">
-                                                Скрито
-                                            </div>
-                                        )}
-                                        {product.size && (
-                                            <div className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-xl text-white font-black uppercase text-[10px] tracking-widest shadow-2xl">
-                                                {product.size}
-                                            </div>
-                                        )}
-                                    </div>
+                                    {product.isHidden && (
+                                        <div className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-xl text-white font-black uppercase text-[10px] tracking-widest shadow-2xl shrink-0">
+                                            Скрито
+                                        </div>
+                                    )}
                                 </div>
-                                <h1 className="text-2xl md:text-3xl xl:text-4xl font-black uppercase tracking-tight leading-tight text-white mb-2 break-words">
-                                    {product.nameBg || product.name}
-                                </h1>
-                                {product.top_order && (
-                                    <div className="flex items-center gap-2 mt-1 mb-4">
-                                        <div className="w-2 h-2 bg-[#D4AF37] rounded-full animate-pulse shadow-[0_0_10px_#D4AF37]" />
+                                {(product.top_order || product.isBestSeller) && (
+                                    <div className="flex items-center gap-2 mb-1.5">
                                         <span className="text-[11px] md:text-xs font-black uppercase tracking-[0.2em] text-[#D4AF37]">
-                                            Топ продукт #{product.top_order}
+                                            Топ продукт {product.display_rank ? `#${product.display_rank}` : ''}
                                         </span>
                                     </div>
                                 )}
+                                <h1 className="text-2xl md:text-3xl xl:text-4xl font-black uppercase tracking-tight leading-tight text-white mb-1 break-words">
+                                    {product.nameBg || product.name}
+                                </h1>
+                                {product.size && (
+                                    <div className="text-zinc-500 font-bold uppercase text-[11px] tracking-[0.2em] mb-6">
+                                        {product.size}
+                                    </div>
+                                )}
+                                {!product.size && <div className="mb-6" />}
                             </div>
 
-                            {/* Variant Selection Buttons - Only if cardImages exist */}
-                            {product.cardImages && product.cardImages.length > 0 && (
+                            {/* Variant Selection UI */}
+                            {(hasVariants || (product.cardImages && product.cardImages.length > 0)) && (
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between">
-                                        <h3 className="text-xs uppercase tracking-[0.2em] font-black text-white">Изберете вариант</h3>
+                                        <div className="flex flex-col gap-1">
+                                            <h3 className="text-[10px] uppercase tracking-[0.2em] font-black text-white/40">
+                                                {product.variant_label || "Изберете вариант"}
+                                            </h3>
+                                            {hasVariants && product.variants![activeIdx] && (
+                                                <span className="text-xs font-bold text-white uppercase tracking-wider">
+                                                    {product.variants![activeIdx].name}
+                                                </span>
+                                            )}
+                                        </div>
                                         <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest bg-white/5 px-2 py-1 rounded-md">
-                                            {activeIdx + 1} / {images.length}
+                                            {activeIdx + 1} / {hasVariants ? product.variants!.length : images.length}
                                         </span>
                                     </div>
-                                    <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-4 gap-3">
-                                        {images.map((_, idx) => (
-                                            <button
-                                                key={idx}
-                                                onClick={() => setActiveIdx(idx)}
-                                                className={`
-                                                    h-12 rounded-xl flex items-center justify-center font-mono font-black text-sm transition-all duration-300 border
-                                                    ${activeIdx === idx 
-                                                        ? 'bg-red-600 border-red-500 text-white shadow-[0_4px_15px_rgba(220,38,38,0.4)]' 
-                                                        : 'bg-white/5 border-white/10 text-white/40 hover:text-white hover:bg-white/10 hover:border-white/20'
-                                                    }
-                                                `}
-                                            >
-                                                {idx + 1}
-                                            </button>
-                                        ))}
+                                    
+                                    <div className="flex flex-wrap gap-2.5">
+                                        {(hasVariants ? product.variants : images).map((vOrImg, idx) => {
+                                            const thumbSrc = typeof vOrImg === 'string' ? vOrImg : vOrImg.avatar || product.avatar;
+                                            return (
+                                                <button
+                                                    key={idx}
+                                                    onClick={() => setActiveIdx(idx)}
+                                                    className={`
+                                                        relative w-14 h-14 rounded-xl overflow-hidden border-2 transition-all p-1
+                                                        ${activeIdx === idx 
+                                                            ? 'border-red-600 bg-red-600/10 scale-105 shadow-[0_0_15px_rgba(220,38,38,0.3)]' 
+                                                            : 'border-white/5 bg-white/5 opacity-40 hover:opacity-100 hover:border-white/20'
+                                                        }
+                                                    `}
+                                                >
+                                                    <img 
+                                                        src={getOptimizedUrl(thumbSrc, { width: 100 })} 
+                                                        className="w-full h-full object-contain"
+                                                        alt=""
+                                                    />
+                                                </button>
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             )}
@@ -570,15 +542,6 @@ const ProductQuickViewModal: React.FC = () => {
                             {/* Product Info Description */}
                             <div className="space-y-4">
                                 <h3 className="text-sm uppercase tracking-[0.2em] font-bold text-white/60">Детайли за продукта</h3>
-                                {product.dimensions && (
-                                    <div className="flex items-center gap-3 p-4 bg-white/5 border border-white/10 rounded-2xl">
-                                        <Maximize2 className="w-5 h-5 text-red-600" />
-                                        <div>
-                                            <span className="block text-[10px] uppercase tracking-widest text-[#888] font-black">Размери</span>
-                                            <span className="block text-lg font-mono font-black text-white">{product.dimensions}</span>
-                                        </div>
-                                    </div>
-                                )}
                                 <div className="text-sm md:text-base text-white/60 leading-relaxed font-medium space-y-4">
                                     <p>• Защита: Пълна водоустойчивост и вграден UV филтър срещу избледняване.</p>
                                     <p>• Издръжливост: Устойчиви на автомивка, високи температури и сняг.</p>

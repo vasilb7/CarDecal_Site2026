@@ -275,6 +275,11 @@ const ProductDetailsPage: React.FC = () => {
                         <div className="flex items-center gap-3 mb-6">
                             <span className="w-10 h-px bg-red-600" />
                             <span className="text-xs uppercase tracking-[0.4em] font-bold text-red-500">{product.location || 'Произведено от CarDecal'}</span>
+                            {product.size && (
+                                <div className="px-2.5 py-1 bg-white/10 border border-white/5 rounded-lg text-white font-black uppercase text-[9px] tracking-widest">
+                                    {product.size}
+                                </div>
+                            )}
                         </div>
 
                         {/* Product Title */}

@@ -24,6 +24,7 @@ import { Loader2 } from "lucide-react";
 import { CompleteRegistrationModal } from "./components/ui/complete-registration";
 import ReportBugModal from "./components/ReportBugModal";
 import UnbanNotification from "./components/UnbanNotification";
+import ImportantProfileNotification from "./components/ImportantProfileNotification";
 import { useToast } from "./hooks/useToast";
 import { useTranslation } from "react-i18next";
 
@@ -473,6 +474,7 @@ function AppContent() {
       {/* Global Modals */}
       <ReportBugModal />
       <UnbanNotification />
+      <ImportantProfileNotification />
     </>
   );
 }

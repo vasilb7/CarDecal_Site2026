@@ -417,13 +417,11 @@ const CatalogPage: React.FC = () => {
 
             return true;
         }).sort((a, b) => {
-            // Priority 1: Top Order (Manually set position 1, 2, 3...)
-            const topA = a.top_order ?? Infinity;
-            const topB = b.top_order ?? Infinity;
+            // Priority 1: Top Display Rank (Dynamically calculated based on priorities)
+            const prioA = a.display_rank ?? Infinity;
+            const prioB = b.display_rank ?? Infinity;
             
-            if (topA !== topB) {
-                return topA - topB;
-            }
+            if (prioA !== prioB) return prioA - prioB;
 
             // Priority 2: Selected Sort Method
             const priceA = a.wholesale_price_eur ?? a.wholesalePriceEur ?? 0;
@@ -451,6 +449,36 @@ const CatalogPage: React.FC = () => {
         ].flatMap(s => s.toLowerCase().split(/\s+/).filter(w => w.length > 2))));
         return dictionary;
     }, [allProducts, dynamicCategories]);
+
+    // Preload next page images for seamless navigation
+    useEffect(() => {
+        if (loading || filteredProducts.length === 0) return;
+        
+        const preloadNextPage = () => {
+            const nextPageIdx = currentPage; // current page is 1-indexed, so nextPageIdx is exactly the start index for slice (currentPage * itemsPerPage)
+            const start = nextPageIdx * itemsPerPage;
+            const end = start + itemsPerPage;
+            const nextPageProducts = filteredProducts.slice(start, end);
+            
+            if (nextPageProducts.length === 0) return;
+
+            nextPageProducts.forEach(product => {
+                if (product.avatar) {
+                    const img = new Image();
+                    // Preload with the same optimization settings used in ProductCard
+                    // width: 400 matches the common card size; f_auto/q_auto are included by default
+                    img.src = getOptimizedUrl(product.avatar, { 
+                        width: 400
+                    });
+                }
+            });
+        };
+
+        // Delay preloading to ensure current page UI and images get priority
+        const timer = setTimeout(preloadNextPage, 1500);
+        return () => clearTimeout(timer);
+    }, [currentPage, filteredProducts, itemsPerPage, loading]);
+
 
     // Search Suggestion Logic
     const searchSuggestion = useMemo(() => {

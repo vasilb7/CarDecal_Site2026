@@ -159,17 +159,18 @@ const RestrictedPage: React.FC = () => {
             const diff = bannedUntil - now;
 
             if (diff <= 0) {
-                // Ban expired! Force reload to re-evaluate AuthContext
                 window.location.href = '/';
                 return;
             }
 
-            // Update human readable countdown if under 1 hour
-            if (diff < 3600000) {
-                const minutes = Math.floor(diff / 60000);
-                const seconds = Math.floor((diff % 60000) / 1000);
-                setTimeLeft(`${minutes}:${seconds < 10 ? '0' : ''}${seconds}`);
-            }
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+            const totalHours = (days * 24) + hours;
+            let timeStr = `${totalHours}ч : ${minutes.toString().padStart(2, '0')}мин : ${seconds.toString().padStart(2, '0')}сек`;
+            setTimeLeft(timeStr);
         };
 
         const timer = setInterval(checkTime, 1000);
@@ -250,14 +251,15 @@ const RestrictedPage: React.FC = () => {
                                     <Clock className="w-3.5 h-3.5 text-zinc-500" />
                                     <span className="text-[10px] uppercase tracking-widest font-bold text-zinc-500">Ограничението изтича</span>
                                 </div>
-                                <p className="text-white font-semibold text-sm">{bannedUntilDate}</p>
                                 {timeLeft && (
-                                    <div className="mt-2 inline-flex items-center gap-2 px-2 py-1 bg-amber-500/10 border border-amber-500/20 rounded-lg">
-                                        <div className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse" />
-                                        <span className="text-[10px] text-amber-500 font-black tracking-widest uppercase">Авто-рефреш след: {timeLeft}</span>
+                                    <div className="mt-4 p-4 rounded-xl bg-amber-500/5 border border-amber-500/10 text-center">
+                                        <div className="text-[10px] uppercase font-black tracking-[0.2em] text-amber-500/60 mb-2">Оставащо време</div>
+                                        <div className="text-2xl font-black text-amber-500 tabular-nums tracking-wider leading-none">
+                                            {timeLeft}
+                                        </div>
                                     </div>
                                 )}
-                                <p className="text-zinc-500 text-xs mt-1">
+                                <p className="text-zinc-500 text-[11px] mt-3">
                                     След изтичането ще имаш пълен достъп до профила си.
                                 </p>
                             </div>
@@ -332,7 +334,7 @@ const RestrictedPage: React.FC = () => {
 
                 {/* Footer branding */}
                 <p className="text-center text-zinc-700 text-[9px] uppercase tracking-[0.3em] mt-6">
-                    CARDECAL.BG
+                    CARDECAL
                 </p>
             </motion.div>
 

@@ -18,6 +18,8 @@ const mapRow = (p: any): Product => ({
   isBestSeller:     !!p.is_best_seller,
   isHidden:         !!p.is_hidden,
   top_order:        p.top_order      ?? null,
+  variant_label:    p.variant_label  || '',
+  variants:         Array.isArray(p.variants) ? p.variants : [],
   // legacy - undefined in new schema
   nameBg:           undefined,
   coverImage:       undefined,
@@ -45,6 +47,7 @@ interface ProductsContextType {
   getFeaturedProducts: (count?: number) => Product[];
   categories: Category[];
   fetchCategories: () => Promise<void>;
+  fetchAll: () => Promise<void>;
 }
 
 const ProductsContext = createContext<ProductsContextType | null>(null);
@@ -65,7 +68,9 @@ export const ProductsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       while (true) {
         const { data, error } = await supabase
           .from('products')
-          .select("id,slug,name,avatar,categories,location,size,wholesale_price_eur,is_best_seller,is_hidden,top_order")
+          .select("id,slug,name,avatar,categories,location,size,wholesale_price_eur,is_best_seller,is_hidden,top_order,variants,variant_label")
+          .order('top_order', { ascending: true, nullsFirst: false })
+          .order('is_best_seller', { ascending: false })
           .order('id', { ascending: false })
           .range(rFrom, rFrom + rSize - 1);
           
@@ -77,9 +82,15 @@ export const ProductsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         rFrom += rSize;
       }
 
-      // Map and sort once at the very end for total stability
-      const finalProducts = allRows.map(mapRow);
-      finalProducts.sort(naturalSort);
+      // Map and assign display ranks sequentially for all top-priority products
+      // They are already sorted by Supabase (top_order ASC -> is_best_seller DESC -> id DESC)
+      let currentRank = 1;
+      const finalProducts = allRows.map(mapRow).map(p => {
+        if (!p.isHidden && (p.top_order !== null || p.isBestSeller)) {
+          p.display_rank = currentRank++;
+        }
+        return p;
+      });
       
       setProducts(finalProducts);
       setLoading(false);
@@ -134,7 +145,9 @@ export const ProductsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const getFeaturedProducts = (count = 6)          : Product[]           => products.filter(p => p.isBestSeller).slice(0, count);
 
   return (
-    <ProductsContext.Provider value={{ products, loading, getAllProducts, getProductBySlug, getFeaturedProducts, categories, fetchCategories }}>
+    <ProductsContext.Provider value={{ products, loading, getAllProducts, getProductBySlug, getFeaturedProducts, categories,    fetchCategories,
+    fetchAll
+  }}>
       {children}
     </ProductsContext.Provider>
   );

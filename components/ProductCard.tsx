@@ -35,10 +35,9 @@ const ProductCard: React.FC<ProductCardProps> = memo(({ product, isPriority = fa
       >
         <div className="bg-[#141414] rounded-[28px] md:rounded-[40px] p-4 md:p-8 flex flex-col justify-between relative shadow-2xl border border-white/[0.03] transition-all duration-500 ease-out h-full overflow-hidden lg:hover:-translate-y-3 lg:hover:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5),0_0_20px_rgba(220,38,38,0.2)] lg:hover:border-red-600/20">
 
-          {/* Best Seller Badge */}
-          {product.isBestSeller && (
-            <div className="absolute top-3 left-3 z-10 px-2 py-1 bg-red-600 text-white text-[8px] font-black uppercase tracking-widest rounded-lg shadow-lg shadow-red-600/40">
-              Best Seller
+          {(product.top_order || product.isBestSeller) && (
+            <div className="absolute top-5 left-5 z-10 px-2 py-1 bg-yellow-600 text-white text-[8px] font-black uppercase tracking-widest rounded-lg shadow-lg shadow-yellow-600/40">
+              {product.display_rank ? `Топ продукт #${product.display_rank}` : 'Топ продукт'}
             </div>
           )}
 
